@@ -1,20 +1,99 @@
 <?xml version="1.0"?>
 
-<project name="LookoutMitigationService-1.0" basedir="." default="release" xmlns:ht="happytrails">
-
-  <!-- This is provided solely so that this package will build
-       out-of-the-box.  Feel free to remove this as soon as you add actual
-       content under the src/ and tst/ directories. -->
-  <property name="allow.empty.sources.dir" value="true" />
+<project name="LookoutMitigationService-1.0" basedir="." default="release" xmlns:ht="happytrails" xmlns:coral="antlib:com.amazon.coral">
 
   <import file="${happytrails.root}/happytrails.xml"/>
 
   <!-- Define HappierTrails property overrides here -->
+  <property name="findbugs.failOnError" value="false"/>
+  <property name="checkstyle.failOnError" value="false"/>
   <property name="tests.additional.jvmargs" value=""/>
 
+  <ht:import file="coral-launcher.xml" optional="false"/>
+	
   <!-- Cobertura doesn't work under JDK-1.7 without UseSplitVerifier -->
   <property name="coverage.additional.jvmargs" value="${tests.additional.jvmargs} -XX:-UseSplitVerifier"/>
 
   <ht:import file="happier-trails.xml"/>
+  
+  <!-- Set any property overrides -->
+  <property name="coral-src.dir" location="${output.dir}/private/src"/>
+  
+  <!-- Create directories -->
+  <target name="init">
+  	<mkdir dir="${coral-src.dir}"/>
+  </target>
+	
+  <!-- Generate the Apollo script to start your service
+    Note: When modifying properties/env/jvmargs/etc here, remember to also
+    update the server target as well
+  -->
+  <target name="start-mitigation-service-script">
+      <coral:apollo target="${output.dir}/bin/startMitigationService.sh">
+      	  <location dir="${basedir}" pattern="spring-configuration/bootstrap.xml"/>  
+      	
+          <sysproperty key="user.timezone" value="UTC"/>
+          <sysproperty key="java.net.preferIPv4Stack" value="true"/>
+      	  <sysproperty key="spring.config.root" value="$${APOLLO_ACTUAL_ENVIRONMENT_ROOT}/spring-configuration/mitigation-service" />
+          
+          <classpath path="${bp:run.classpath}"/>
+
+          <env key="LANG" value="en_US.UTF-8"/>
+          <env key="NLS_LANG" value="American_America.UTF8"/>
+
+          <!-- Heap Sizing -->
+          <!-- Set via brazil-config to vary between prod and other stages -->
+          <jvmarg value="$$JVM_OPTS"/>
+
+          <!-- OOM Conditions -->
+          <jvmarg value="-XX:+HeapDumpOnOutOfMemoryError"/>
+          <jvmarg value="-XX:HeapDumpPath=var/tmp"/>
+          <jvmarg value="-XX:OnOutOfMemoryError=&quot;/bin/kill -9 %p&quot;"/>      	
+      </coral:apollo>
+  </target>	
+
+  <!-- Copy process manager config and spring configuration -->
+  <target name="copy-configs">
+      <copy todir="${output.dir}">
+          <fileset dir="${basedir}">
+          	  <include name="brazil-config/**/*"/>
+              <include name="spring-configuration/**/*"/>
+          </fileset>
+      </copy>
+  </target>
+  
+  <!-- Copy monitoring configuration -->
+  <target name="copy-monitoring">
+      <copy todir="${output.dir}">
+          <fileset dir="${basedir}">
+              <include name="monitoring/**/*"/>
+          </fileset>
+      </copy>
+  </target>
+
+  <target name="build" depends="standard-build,copy-configs,copy-monitoring,start-mitigation-service-script"/>
+	  
+  <target name="server" depends="build">
+    <coral:launch>
+      <location dir="${basedir}" pattern="spring-configuration/bootstrap.xml"/>    	
+
+      <sysproperty key="root" value="${output.dir}"/>
+      <sysproperty key="spring.config.root" value="${output.dir}/spring-configuration/mitigation-service" />
+      <sysproperty key="domain" value="beta"/>
+      <sysproperty key="realm" value="USAmazon"/>
+      <sysproperty key="user.timezone" value="UTC"/>
+	    	
+      <sysproperty key="apollo.OCF.Log4j.logSeverityLevel" value="debug"/>
+      <sysproperty key="apollo.OCF.HttpServer.httpRegularPort" value="8000"/>
+      <sysproperty key="apollo.OCF.HttpServer.httpSecurePort" value="8443"/>
+ 
+      <classpath path="${bp:run.classpath}"/>
+    	
+      <env key="LANG" value="en_US.UTF-8"/>
+      <env key="NLS_LANG" value="American_America.UTF8"/>
+
+      <jvmarg line="-Xmx512M"/>    	
+    </coral:launch>
+  </target>
 
 </project>

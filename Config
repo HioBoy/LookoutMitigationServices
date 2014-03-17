@@ -2,21 +2,8 @@
 
 package.LookoutMitigationService = {
     interfaces = (1.0);
-    deploy = {
-        generic = true;
-    };
-
-    dependencies = {
-        1.0 = {
-        };
-    };
-
-    test-dependencies = {
-        1.0 = {
-            junit = 4;
-        };
-    };
-
+    scope = webservices;
+    
     build-system = happytrails;
     build-environment = {
         chroot = basic;
@@ -27,12 +14,68 @@ package.LookoutMitigationService = {
         1.0 = {
             JDK = 1.7;
             HappierTrails = 3.1;
+            # Build logic for spring integration
+            CoralSpringLauncher = 3.1;                       
+            AWSSimpleWorkflowJavaFlowDeciderAPT = 3.0;
+        };
+    };
+    
+    deploy = {
+        generic = true;
+    };
+
+    dependencies = {
+        1.0 = {
+            LookoutMitigationServiceJavaClient = 1.0;
+            CoralActivity = 1.0;
+            CoralSpring = 3.1;
+            JakartaCommons-logging-api = 1.1;
+            JakartaCommons-lang = 2.6;
+            FindBugsAnnotations = 1.3.7;
+            
+            AWSJavaSDKExternalRelease = 1.7;
+            
+            OdinAWSCredentials = 1.2;
+        };
+    };
+    
+    runtime-dependencies = {
+        1.0 = {
+            JDK = 1.7;
+            # Runtime dependencies for coral
+            JakartaCommons-logging-adapters = 1.1;
+            Bobcat = 1.0;
+            CoralService = 1.0;
+            CoralMetricsQuerylogReporter = 1.0;            
+            # Coral protocol handlers
+            CoralRpcSupport = 1.0;                          
+            LookoutMitigationServiceExplorer = 1.0;
+            
+            # ProcessManager.
+            ProcessManager = 2.2;
+            ProcessManagerCommands = 2.2;
+            ForceRestartProcessManagerCmds = 1.0;
+            
+            MonitoringCore = 1.0;
+            ServiceMonitoring = 2.0;
+            
+            WebsiteLogPusher = 3.2;
+                       
+        };
+    };
+
+    test-dependencies = {
+        1.0 = {
+            junit = 4;
         };
     };
 
     resolves-conflict-dependencies = {
         1.0 = {
-            
+            Openssl = 1.0.x;            
+            AWSJavaClientRuntime = external_release;
+            JakartaCommons-lang = 2.6;
+            JakartaCommons-codec = 1;
         };
     };
 

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+  <!--
+    The Bobcat server offers an easy to use Tomcat-based endpoint. This endpoint is more performant and vetted by
+    security for use in production scenarios.
+   -->
+   
+  <bean class="com.amazon.coral.service.bobcat.BobcatServer" destroy-method="cancel" depends-on="logger">
+    <constructor-arg>
+      <bean class="com.amazon.coral.service.EndpointConfig">
+        <property name="metricsFactory" ref="metricsFactory"/>
+        <property name="orchestrator" ref="orchestrator"/>
+        <property name="numThreads" value="10"/>
+        <property name="uri" value="http://0.0.0.0:${apollo.OCF.HttpServer.httpRegularPort}, https://0.0.0.0:${apollo.OCF.HttpServer.httpSecurePort}"/>
+      </bean>
+    </constructor-arg>
+  </bean>
+
+</beans>
+

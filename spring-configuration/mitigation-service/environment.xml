@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+   
+    <!--   
+    The LoggingHelper is an assistant for configuring your Logging API. It
+    will report to you which Logging implementation is effective and
+    simplify your configuration for the LOG4J backend.
+    -->
+    <bean id="logger" class="com.amazon.coral.spring.LoggingHelper">
+        <property name="properties">
+            <props>
+                <!-- Configure an appender -->
+                <prop key="log4j.appender.APPLICATION">com.amazon.coral.logging.DailyRollingFileAppender</prop>
+                <prop key="log4j.appender.APPLICATION.layout">org.apache.log4j.PatternLayout</prop>
+                <prop key="log4j.appender.APPLICATION.layout.ConversionPattern">%d{DATE} [%p] %X{RequestId} (%t) %c: %m%n</prop>
+                <prop key="log4j.appender.APPLICATION.Append">true</prop>
+                <prop key="log4j.appender.APPLICATION.DatePattern">&apos;.&apos;yyyy-MM-dd-HH</prop>
+                <prop key="log4j.appender.APPLICATION.Encoding">UTF8</prop>
+                <prop key="log4j.appender.APPLICATION.File">${root}/var/output/logs/LookoutMitigationService.log</prop>
+                <prop key="log4j.appender.APPLICATION.Threshold">ALL</prop>                
+
+                <!-- Configure an appender for the wire log-->
+                <prop key="log4j.appender.WIRE">com.amazon.coral.logging.DailyRollingFileAppender</prop>
+                <prop key="log4j.appender.WIRE.layout">org.apache.log4j.PatternLayout</prop>
+                <prop key="log4j.appender.WIRE.layout.ConversionPattern">%d{DATE} [%p] %X{RequestId} (%t) %c: %m%n</prop>
+                <prop key="log4j.appender.WIRE.Append">true</prop>
+                <prop key="log4j.appender.WIRE.DatePattern">&apos;.&apos;yyyy-MM-dd-HH</prop>
+                <prop key="log4j.appender.WIRE.Encoding">UTF8</prop>
+                <prop key="log4j.appender.WIRE.File">${root}/var/output/logs/wire.log</prop>
+                <prop key="log4j.appender.WIRE.Threshold">ALL</prop>
+
+                <!-- Swap the rootLogger in -->
+                <prop key="log4j.rootLogger">INFO, APPLICATION</prop>
+
+                <!-- Adjust log levels -->
+                <prop key="log4j.logger.WIRE">INFO, WIRE</prop>
+                <prop key="log4j.logger.CLASSPATH">OFF</prop>
+                <prop key="log4j.logger.com.amazon.coral">ERROR</prop>
+                <prop key="log4j.logger.com.amazon.coral.reflect">OFF</prop>
+                <prop key="log4j.logger.com.amazonaws">ERROR</prop>
+                <prop key="log4j.logger.org.apache">ERROR</prop>
+                <prop key="log4j.logger.com.amazon.lookout">${apollo.OCF.Log4j.logSeverityLevel}</prop>
+                <prop key="log4j.logger.com.amazon.aws158">${apollo.OCF.Log4j.logSeverityLevel}</prop>
+                
+            </props>
+        </property>
+    </bean>
+
+    <!--
+    The MetricsFactory is an aide that will help you configure Querylog
+    support for your application.
+    See https://w.amazon.com/?Coral/Manual/MetricsAPI
+    -->
+    <bean id="metricsFactory" class="com.amazon.coral.metrics.helper.MetricsHelper">
+        <property name="reporters">
+            <list>
+                <bean class="com.amazon.coral.metrics.helper.QuerylogHelper">
+                    <property name="filename" value="${root}/var/output/logs/service_log"/>
+                </bean>
+            </list>
+        </property>
+        <property name="program" value="LookoutMitigationService"/>
+        <property name="marketplace" value="${realm}"/>
+    </bean>
+    
+</beans>
