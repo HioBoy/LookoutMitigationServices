@@ -1,0 +1,44 @@
+# -*-perl-*-
+
+package.LookoutMitigationService = {
+    interfaces = (1.0);
+    deploy = {
+        generic = true;
+    };
+
+    dependencies = {
+        1.0 = {
+        };
+    };
+
+    test-dependencies = {
+        1.0 = {
+            junit = 4;
+        };
+    };
+
+    build-system = happytrails;
+    build-environment = {
+        chroot = basic;
+        network-access = blocked;
+    };
+
+    build-tools = {
+        1.0 = {
+            JDK = 1.7;
+            HappierTrails = 3.1;
+        };
+    };
+
+    resolves-conflict-dependencies = {
+        1.0 = {
+            
+        };
+    };
+
+    # For more information on how to declare targets for HappyTrails packages
+    # see: https://w.amazon.com/?BrazilBuildSystem/HappyTrails/GettingStarted
+    targets = {
+        LookoutMitigationService-1.0 = { type = javalibrary; };
+    };
+};
