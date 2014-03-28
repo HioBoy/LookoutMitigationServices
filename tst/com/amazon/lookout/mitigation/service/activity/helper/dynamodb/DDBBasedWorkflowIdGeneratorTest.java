@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
@@ -31,9 +33,13 @@ public class DDBBasedWorkflowIdGeneratorTest {
     
     private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
     
-    @Before
-    public void setUpOnce() {
+    @BeforeClass
+    public static void setUpOnce() {
         TestUtils.configure();
+    }
+    
+    @Before
+    public void setUpBeforeTest() {
         when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
     }
     
@@ -41,7 +47,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * Test the normal case where the workflowId can be updated right away in DDB for getting the new workflowId.
      */
     @SuppressWarnings("unchecked")
-    //@Test
+    @Test
     public void testGenerateWorkflowIdHappyCase() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
         
@@ -65,7 +71,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * Test the case where a new workflowId is requested for a non-existent mitigation template.
      * We should expect an exception to be throw in this case.
      */
-    //@Test
+    @Test
     public void testGenerateWorkflowIdBadTemplateCase() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         String testDomain = "beta";
@@ -84,7 +90,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * In this test we fail twice, but the third time we should expect back results. 
      */
     @SuppressWarnings("unchecked")
-    //@Test
+    @Test
     public void testRetryOnSomeFailures() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
         when(generator.getUpdateRetrySleepMillis()).thenReturn(1);
@@ -112,7 +118,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * Test the case where we might get failures on all DDB calls. We should expect an exception to be thrown back. 
      */
     @SuppressWarnings("unchecked")
-    //@Test
+    @Test
     public void testFailureToUpdate() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
         when(generator.getUpdateRetrySleepMillis()).thenReturn(1);
@@ -138,7 +144,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * In this case we expect an exception to be thrown back.
      */
     @SuppressWarnings("unchecked")
-    //@Test
+    @Test
     public void testFailureToIdentifyForceUpdate() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
         when(generator.getUpdateRetrySleepMillis()).thenReturn(1);
@@ -167,7 +173,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * In this case we expect an exception to be thrown back.
      */
     @SuppressWarnings("unchecked")
-    //@Test
+    @Test
     public void testFailureToForceUpdate() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
         when(generator.getUpdateRetrySleepMillis()).thenReturn(1);
@@ -199,7 +205,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * In this case we expect an exception to be thrown back.
      */
     @SuppressWarnings("unchecked")
-    //@Test
+    @Test
     public void testFailureBlockedUpdate() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
         when(generator.getUpdateRetrySleepMillis()).thenReturn(1);
@@ -230,7 +236,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * In this case we expect a forced update.
      */
     @SuppressWarnings("unchecked")
-    //@Test
+    @Test
     public void testForceUpdate() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
         when(generator.getUpdateRetrySleepMillis()).thenReturn(1);
@@ -270,7 +276,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * Test the normal case where the client calls to confirm acquiring workflowId and the lock in DDB is released cleanly.
      */
     @SuppressWarnings("unchecked")
-    //@Test
+    @Test
     public void testConfirmAcquiringWorkflowIdHappyCase() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
         
@@ -283,7 +289,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * Test the case where the client calls to confirm acquiring workflowId for a template which doesn't exist.
      * We expect an exception to be thrown in this case.
      */
-    //@Test
+    @Test
     public void testConfirmFailsOnBadTemplate() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
         
@@ -302,7 +308,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * Test the case when all the update requests to DDB fail. We expect an exception to be thrown back in this case.
      */
     @SuppressWarnings("unchecked")
-    //@Test
+    @Test
     public void testConfirmFailsWhenAllUpdatesFail() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
         
@@ -324,7 +330,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * Test the case where some of the update requests to DDB fail, but we recover after a few retries.
      */
     @SuppressWarnings("unchecked")
-    //@Test
+    @Test
     public void testConfirmSuccessfulyAfterFewTransientFailures() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
          
@@ -343,7 +349,7 @@ public class DDBBasedWorkflowIdGeneratorTest {
      * We expect to not retry in such cases and fail fast, throwing back an exception.
      */
     @SuppressWarnings("unchecked")
-    //@Test
+    @Test
     public void testConfirmFailsFastOnConditionalCheckFailedException() {
         DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
          
