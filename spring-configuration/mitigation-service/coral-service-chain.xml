@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation=
+    "http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <!--
+    Construct an orchestrator using the Orchestrator helper. The only thing
+    you'll need to provide is a configured Chain.
+    -->
+    <bean id="orchestrator" class="com.amazon.coral.service.helper.OrchestratorHelper">
+        <constructor-arg>
+            <ref bean="chain"/>
+        </constructor-arg>
+        <constructor-arg value="30000"/> 
+    </bean>
+
+    <!-- Configure the Chain which contains the list of Handlers to apply -->
+    <bean id="chain" class="com.amazon.coral.service.helper.ChainHelper" depends-on="logger">
+        <property name="handlers">
+            <list>
+                <bean class="com.amazon.coral.service.Log4jAwareRequestIdHandler"/>
+                
+                <bean class="com.amazon.coral.service.HttpHandler"/>
+                <bean class="com.amazon.coral.service.PingHandler"/>
+                
+                <!-- Here are protocol handlers. You need at least one.-->
+                <bean class="com.amazon.coral.service.http.HttpBindingHandler"/>
+                <bean class="com.amazon.coral.service.HttpRpcHandler"/>
+                
+                <bean class="com.amazon.coral.service.ModelHandler"/>
+                <bean class="com.amazon.coral.service.http.ContentHandler"/>
+                <bean class="com.amazon.coral.validate.ValidationHandler"/>
+                
+                <!-- This always comes last.-->
+                <bean class="com.amazon.coral.spring.SpringActivityHandler"/>
+            </list>
+        </property>
+    </bean>
+    
+</beans>
