@@ -39,12 +39,12 @@
                 <!-- Adjust log levels -->
                 <prop key="log4j.logger.WIRE">INFO, WIRE</prop>
                 <prop key="log4j.logger.CLASSPATH">OFF</prop>
-                <prop key="log4j.logger.com.amazon.coral">ERROR</prop>
-                <prop key="log4j.logger.com.amazon.coral.reflect">OFF</prop>
-                <prop key="log4j.logger.com.amazonaws">ERROR</prop>
-                <prop key="log4j.logger.org.apache">ERROR</prop>
-                <prop key="log4j.logger.com.amazon.lookout">${apollo.OCF.Log4j.logSeverityLevel}</prop>
-                <prop key="log4j.logger.com.amazon.aws158">${apollo.OCF.Log4j.logSeverityLevel}</prop>
+                <prop key="log4j.logger.com.amazon.coral">INFO</prop>
+                <prop key="log4j.logger.com.amazon.coral.reflect">INFO</prop>
+                <prop key="log4j.logger.com.amazonaws">INFO</prop>
+                <prop key="log4j.logger.org.apache">INFO</prop>
+                <prop key="log4j.logger.com.amazon.lookout">INFO</prop>
+                <prop key="log4j.logger.com.amazon.aws158">INFO</prop>
                 
             </props>
         </property>

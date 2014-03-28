@@ -8,17 +8,20 @@
     The Bobcat server offers an easy to use Tomcat-based endpoint. This endpoint is more performant and vetted by
     security for use in production scenarios.
    -->
-   
-  <bean class="com.amazon.coral.service.bobcat.BobcatServer" destroy-method="cancel" depends-on="logger">
-    <constructor-arg>
-      <bean class="com.amazon.coral.service.EndpointConfig">
-        <property name="metricsFactory" ref="metricsFactory"/>
-        <property name="orchestrator" ref="orchestrator"/>
-        <property name="numThreads" value="10"/>
-        <property name="uri" value="http://0.0.0.0:${apollo.OCF.HttpServer.httpRegularPort}, https://0.0.0.0:${apollo.OCF.HttpServer.httpSecurePort}"/>
-      </bean>
-    </constructor-arg>
+  <bean class="com.amazon.coral.spring.director.live.LivePlan">
+      <property name="plainTarget" ref="bobcat"/>
   </bean>
-
+  
+  <bean name="bobcat" class="com.amazon.coral.service.bobcat.BobcatServer">  
+      <constructor-arg>
+          <bean class="com.amazon.coral.service.bobcat.BobcatEndpointConfig">
+              <property name="metricsFactory" ref="metricsFactory"/>
+              <property name="orchestrator" ref="orchestrator"/>
+              <property name="numThreads" value="10"/>
+              <property name="uri" value="http://0.0.0.0:${apollo.OCF.HttpServer.httpRegularPort}, https://0.0.0.0:${apollo.OCF.HttpServer.httpSecurePort}"/>
+          </bean>
+      </constructor-arg>
+  </bean>  
+    
 </beans>
 

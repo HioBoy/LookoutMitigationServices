@@ -45,7 +45,7 @@ package.LookoutMitigationService = {
             JDK = 1.7;
             # Runtime dependencies for coral
             JakartaCommons-logging-adapters = 1.1;
-            Bobcat = 1.0;
+            Bobcat = 2.0;
             CoralService = 1.0;
             CoralMetricsQuerylogReporter = 1.0;            
             # Coral protocol handlers
@@ -56,6 +56,7 @@ package.LookoutMitigationService = {
             ProcessManager = 2.2;
             ProcessManagerCommands = 2.2;
             ForceRestartProcessManagerCmds = 1.0;
+            BrazilConfigGlobal = 1.0;
             
             MonitoringCore = 1.0;
             ServiceMonitoring = 2.0;
