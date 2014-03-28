@@ -83,6 +83,8 @@ public class DDBBasedWorkflowIdGenerator implements WorkflowIdGenerator {
         this.dynamoDBClient = dynamoDBClient;
         
         // We have a separate table per domain (beta,gamma,prod) - hence we compute the appropriate table name using value of domain here.
+        // We do an uppercase for the passed domain to not rely on the caller to pass it in the right case since this string might be used
+        // for other purposes such as metrics.
         Validate.notEmpty(domain);
         this.workflowIdGenerationTableName = WORKFLOW_ID_GENERATION_TABLE_PREFIX + domain.toUpperCase();
     }
@@ -91,7 +93,8 @@ public class DDBBasedWorkflowIdGenerator implements WorkflowIdGenerator {
      * Generate a new workflowId using the steps mentioned here: https://w.amazon.com/index.php/Lookout/Design/LookoutMitigationService/Details#Data_Model_Usage
      * @param mitigationTemplate Mitigation template used in the request.
      * @param metrics
-     * @return workflowId generated using the DynamoDBTable.
+     * @return workflowId generated using the DynamoDBTable. We throw an InternalServerError500 if we couldn't find the mapping since we expect the caller to have 
+     *                    validated the request and hence the template for its validity before calling this generator.
      */
     @Override
     public long generateWorkflowId(@Nonnull String mitigationTemplate, @Nonnull TSDMetrics metrics) {
@@ -125,9 +128,16 @@ public class DDBBasedWorkflowIdGenerator implements WorkflowIdGenerator {
      * @param mitigationTemplate MitigationTemplate used in the request.
      * @oaram workflowId The new workflowId that is being confirmed.
      * @param metrics
+     * @return void. We don't return anything from this method. But we do throw an exception if we couldn't unlock the row in DDB. 
+     *               We also throw an InternalServerError500 if we couldn't find the mapping since we expect the caller to have 
+     *               validated the request and hence the template for its validity before calling this generator.
      */
     @Override
-    public void confirmAcquiringWorkflowId(String mitigationTemplate, long workflowId, TSDMetrics metrics) {
+    public void confirmAcquiringWorkflowId(@Nonnull String mitigationTemplate, long workflowId, @Nonnull TSDMetrics metrics) {
+        Validate.notEmpty(mitigationTemplate);
+        Validate.isTrue(workflowId >= 0);
+        Validate.notNull(metrics);
+        
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedWorkflowIdGenerator.confirmAcquiringWorkflowId");
         int attemptNum = 0;
         try {
@@ -214,13 +224,16 @@ public class DDBBasedWorkflowIdGenerator implements WorkflowIdGenerator {
                     
                     if (attemptNum < DDB_UPDATE_MAX_RETRIES) {
                         try {
-                        	long sleepMillis = getUpdateRetrySleepMillis() * attemptNum;
-                        	System.out.println("Sleeping for: " + sleepMillis + " millis. AttemptNum: " + attemptNum + " Millis: " + getUpdateRetrySleepMillis());
+                            long sleepMillis = getUpdateRetrySleepMillis() * attemptNum;
+                            System.out.println("Sleeping for: " + sleepMillis + " millis. AttemptNum: " + attemptNum + " Millis: " + getUpdateRetrySleepMillis());
                             Thread.sleep(sleepMillis);
                         } catch (InterruptedException ignored) {}
                     }
                 }
             }
+            
+            // Total number of attempts is 1 less than the current value for attemptNum.
+            int totNumAttempts = attemptNum - 1;
             
             if ((blockingItem != null) && shouldForceUpdate(blockingItem, keyValues, subMetrics)) {
                 expectedValues = generateExpectedAttributeValuesForForceUpdate(blockingItem);
@@ -228,14 +241,14 @@ public class DDBBasedWorkflowIdGenerator implements WorkflowIdGenerator {
                     UpdateItemResult result = forceUpdateWorkflowIdInDDB(attributeUpdates, keyValues, expectedValues, subMetrics);
                     return getWorkflowIdFromUpdatedItem(result);
                 } catch (Exception ex) {
-                    String msg = WORKFLOW_ID_GENERATION_FAILURE_LOG_KEY + ": Unable to update workflowIdTable to get a new workflowId after: " + (attemptNum + 1) + " number of attempts. " +
+                    String msg = WORKFLOW_ID_GENERATION_FAILURE_LOG_KEY + ": Unable to update workflowIdTable to get a new workflowId after: " + totNumAttempts + " number of attempts. " +
                             "TableName: " + workflowIdGenerationTableName + " AttributesToUpdate: " + attributeUpdates + " for key: " + keyValues + " BlockingItem: " + 
                             blockingItem + ", ExpectedValues for blocking item: " + expectedValues;
                     LOG.warn(msg, ex);
                     throw new RuntimeException(msg);
                 }
             } else {
-                String msg = WORKFLOW_ID_GENERATION_FAILURE_LOG_KEY + ": Unable to update workflowIdTable to get a new workflowId after: " + (attemptNum + 1) + " number of attempts. " +
+                String msg = WORKFLOW_ID_GENERATION_FAILURE_LOG_KEY + ": Unable to update workflowIdTable to get a new workflowId after: " + totNumAttempts + " number of attempts. " +
                         "TableName: " + workflowIdGenerationTableName + " AttributesToUpdate: " + attributeUpdates + " for key: " + keyValues + " BlockingItem: " + 
                         blockingItem + ", ExpectedValues for blocking item: " + expectedValues;
            
@@ -289,7 +302,8 @@ public class DDBBasedWorkflowIdGenerator implements WorkflowIdGenerator {
     
     /**
      * Protected to allow for unit-tests. Simply delegates update to the DynamoDBHelper.
-     * Note that this method is identical to the updateItemInDDB method defined above, but having this separate method makes unit-testing much easier and hence the decision.
+     * Note that this method is identical to the updateItemInDDB method defined above, but having this separate method makes unit-testing much easier 
+     * to validate the number of times we attempt to force update and hence the decision.
      * @param attributeUpdates AttributeValues to update.
      * @param keyValues Key corresponding to the row that needs the update.
      * @param expectedValues Values we expect for certain fields in the row before we execute the update.

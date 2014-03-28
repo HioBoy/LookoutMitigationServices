@@ -13,7 +13,7 @@ import com.amazon.lookout.mitigation.service.mitigations.MitigationTemplate;
 public class MitigationTemplateToDeviceMapper {
     private static final ImmutableMap<String, DeviceNameAndScope> templateToDeviceNameAndScopeMapping = 
             new ImmutableMap.Builder<String, DeviceNameAndScope>().put(MitigationTemplate.Router_RateLimit_Route53Customer, new DeviceNameAndScope(DeviceName.POP_ROUTER, DeviceScope.GLOBAL))
-                                                                    .build();
+                                                                  .build();
     
     // String used by clients in case they fail to find a mapping. Using a standard tag as the prefix allows us to monitor for such cases using logscans.
     public static final String MISSING_DEVICE_MAPPING_KEY = "[MISSING_DEVICE_MAPPING]";
