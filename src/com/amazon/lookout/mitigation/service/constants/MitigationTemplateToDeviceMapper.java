@@ -1,15 +1,17 @@
 package com.amazon.lookout.mitigation.service.constants;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazon.coral.google.common.collect.ImmutableMap;
-import com.amazon.lookout.mitigation.service.mitigations.MitigationTemplate;
+import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 
 /**
  * MitigationTemplateToDeviceMapper maintains a mapping for each template, of which device they correspond to.
  * The device is represented by DeviceNameAndScope wrapper, to represent the deviceName and deviceScope.
  *
  */
+@ThreadSafe
 public class MitigationTemplateToDeviceMapper {
     private static final ImmutableMap<String, DeviceNameAndScope> templateToDeviceNameAndScopeMapping = 
             new ImmutableMap.Builder<String, DeviceNameAndScope>().put(MitigationTemplate.Router_RateLimit_Route53Customer, new DeviceNameAndScope(DeviceName.POP_ROUTER, DeviceScope.GLOBAL))

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +24,8 @@ import org.mockito.Mockito;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
-import com.amazon.lookout.mitigation.service.mitigations.MitigationTemplate;
+import com.amazon.lookout.mitigation.service.constants.DeviceScope;
+import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
@@ -270,6 +272,59 @@ public class DDBBasedWorkflowIdGeneratorTest {
         assertNull(caughtException);
         verify(generator, times(1)).forceUpdateWorkflowIdInDDB(anyMap(), anyMap(), anyMap(), any(TSDMetrics.class));
         assertEquals(newWorkflowId, workflowIdInResponse);
+    }
+    
+    /**
+     * Test the case where we might get workflowIds which are out of our expected range. 
+     * In this case we expect an exception to be thrown back.
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testOutOfRangeWorkflowIds() {
+        DDBBasedWorkflowIdGenerator generator = mock(DDBBasedWorkflowIdGenerator.class);
+        
+        UpdateItemResult result = new UpdateItemResult();
+        Map<String, AttributeValue> updatedValues = new HashMap<>();
+        updatedValues.put(DDBBasedWorkflowIdGenerator.STATUS_KEY, new AttributeValue("LOCKED"));
+        
+        // Test the case if the workflowId is lesser than the expected min value.
+        long workflowIdInResponse = DeviceScope.GLOBAL.getMinWorkflowId() - 1;
+        AttributeValue workflowIdInResponseAttributeValue = new AttributeValue();
+        workflowIdInResponseAttributeValue.setN(String.valueOf(workflowIdInResponse));
+        updatedValues.put(DDBBasedWorkflowIdGenerator.WORKFLOW_ID_KEY, workflowIdInResponseAttributeValue);
+        result.setAttributes(updatedValues);
+        when(generator.updateItemInDDB(anyMap(), anyMap(), anyMap(), any(TSDMetrics.class))).thenReturn(result);
+        
+        when(generator.generateWorkflowId(anyString(), any(TSDMetrics.class))).thenCallRealMethod();
+        
+        Throwable caughtException = null;
+        try {
+            generator.generateWorkflowId(MitigationTemplate.Router_RateLimit_Route53Customer, tsdMetrics);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+
+        reset(tsdMetrics);
+        reset(generator);
+        
+        // Now test the case if the workflowId is greater than the expected max value.
+        workflowIdInResponse = DeviceScope.GLOBAL.getMaxWorkflowId() + 1;
+        workflowIdInResponseAttributeValue = new AttributeValue();
+        workflowIdInResponseAttributeValue.setN(String.valueOf(workflowIdInResponse));
+        updatedValues.put(DDBBasedWorkflowIdGenerator.WORKFLOW_ID_KEY, workflowIdInResponseAttributeValue);
+        result.setAttributes(updatedValues);
+        when(generator.updateItemInDDB(anyMap(), anyMap(), anyMap(), any(TSDMetrics.class))).thenReturn(result);
+        
+        when(generator.generateWorkflowId(anyString(), any(TSDMetrics.class))).thenCallRealMethod();
+        
+        caughtException = null;
+        try {
+            generator.generateWorkflowId(MitigationTemplate.Router_RateLimit_Route53Customer, tsdMetrics);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
     }
     
     /**

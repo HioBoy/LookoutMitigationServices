@@ -15,6 +15,7 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.activity.helper.WorkflowIdGenerator;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeAction;
@@ -116,7 +117,17 @@ public class DDBBasedWorkflowIdGenerator implements WorkflowIdGenerator {
             Map<String, AttributeValue> keyValues = generateKeyForUpdate(deviceNameAndScope);
             Map<String, ExpectedAttributeValue> expectedAttributeValues = generateExpectedAttributeValuesForLocking();
             
-            return getWorkflowIdFromDDB(attributeValueUpdates, keyValues, expectedAttributeValues, subMetrics);
+            long workflowId = getWorkflowIdFromDDB(attributeValueUpdates, keyValues, expectedAttributeValues, subMetrics);
+            
+            // Sanity check to ensure the workflowId is within the expected range. Log a fatal if it isn't, since otherwise something has gone terribly wrong.
+            DeviceScope deviceScope = deviceNameAndScope.getDeviceScope();
+            if ((workflowId < deviceScope.getMinWorkflowId()) || (workflowId > deviceScope.getMaxWorkflowId())) {
+                String msg = "Received workflowId = " + workflowId + " which is out of the valid range for the device scope: " + deviceScope.name() +
+                             " expectedMin: " + deviceScope.getMinWorkflowId() + " expectedMax: " + deviceScope.getMaxWorkflowId();
+                LOG.fatal(msg);
+                throw new InternalServerError500(msg);
+            }
+            return workflowId;
         } finally {
             subMetrics.end();
         }
