@@ -14,7 +14,10 @@
         <constructor-arg>
             <ref bean="chain"/>
         </constructor-arg>
-        <constructor-arg value="30000"/> 
+        <!-- waiting for 5 minutes for coral framework to clean up its thread. 
+             More detail can be found here: https://issues.amazon.com/SF-1578 
+        -->
+        <constructor-arg value="300000"/> 
     </bean>
 
     <!-- Configure the Chain which contains the list of Handlers to apply -->

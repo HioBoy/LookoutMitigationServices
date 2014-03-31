@@ -55,6 +55,7 @@ package.LookoutMitigationService = {
             # ProcessManager.
             ProcessManager = 2.2;
             ProcessManagerCommands = 2.2;
+            ProcessManagerBrazilConfig = 1.0;
             ForceRestartProcessManagerCmds = 1.0;
             BrazilConfigGlobal = 1.0;
             
