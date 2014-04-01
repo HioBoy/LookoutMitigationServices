@@ -28,7 +28,6 @@ import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 
 @ThreadSafe
 public class Route53SingleCustomerMitigationValidator implements DeviceBasedServiceTemplateValidator {
-    
     private static final Log LOG = LogFactory.getLog(Route53SingleCustomerMitigationValidator.class);
     
     private final ServiceSubnetsMatcher serviceSubnetsMatcher;

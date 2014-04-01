@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
@@ -21,6 +22,7 @@ import com.amazon.aws158.commons.net.IPUtils;
  * It is responsible to help clients figure out if a subnet or a list of subnets belong to a single service.
  *
  */
+@ThreadSafe
 public class ServiceSubnetsMatcher {
     private static final Log LOG = LogFactory.getLog(ServiceSubnetsMatcher.class);
     
@@ -82,7 +84,6 @@ public class ServiceSubnetsMatcher {
         for (Map.Entry<String, List<String>> serviceSubnets : serviceSubnetsMap.entrySet()) {
             String serviceName = serviceSubnets.getKey();
             
-            
             for (String subnet : serviceSubnets.getValue()) {
                 // Obtain the ip address in the subnet mask as an int.
                 String[] subnetParts = subnet.split(SUBNET_MASK_DELIMITER);
@@ -120,7 +121,9 @@ public class ServiceSubnetsMatcher {
      * @param subnetToCheck Subnet to check against the service's subnets.
      * @return String representing serviceName for the service whose subnet matches (or is a super-set) the input subnet. Null otherwise.
      */
-    public String getServiceForSubnet(String subnetToCheck) {
+    public String getServiceForSubnet(@Nonnull String subnetToCheck) {
+        Validate.notEmpty(subnetToCheck);
+        
         String matchedServiceName = null;
         
         String ipAddress = subnetToCheck;
@@ -158,7 +161,9 @@ public class ServiceSubnetsMatcher {
      * @param subnetsToCheck List of subnets to check against service's subnets.
      * @return String representing serviceName for the service whose subnets matches (or is a super-set) the input subnets. Null otherwise.
      */
-    public String getServiceForSubnets(List<String> subnetsToCheck) {
+    public String getServiceForSubnets(@Nonnull List<String> subnetsToCheck) {
+        Validate.notEmpty(subnetsToCheck);
+        
         String serviceForAllSubnets = null;
         
         for (String subnet : subnetsToCheck) {

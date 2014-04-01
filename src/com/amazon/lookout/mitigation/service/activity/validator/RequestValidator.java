@@ -3,6 +3,7 @@ package com.amazon.lookout.mitigation.service.activity.validator;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
@@ -22,6 +23,7 @@ import com.google.common.collect.Sets;
  * is responsible for such checks.  
  *
  */
+@ThreadSafe
 public class RequestValidator {
     private static final Log LOG = LogFactory.getLog(RequestValidator.class);
     
