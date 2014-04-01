@@ -26,6 +26,9 @@ import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDevic
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 
+/**
+ * Validator for Route53's single customer based mitigation templates.
+ */
 @ThreadSafe
 public class Route53SingleCustomerMitigationValidator implements DeviceBasedServiceTemplateValidator {
     private static final Log LOG = LogFactory.getLog(Route53SingleCustomerMitigationValidator.class);
