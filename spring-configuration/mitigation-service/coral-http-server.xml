@@ -12,7 +12,7 @@
       <property name="plainTarget" ref="bobcat"/>
   </bean>
   
-  <bean name="bobcat" class="com.amazon.coral.service.bobcat.BobcatServer" depends-on="logger>  
+  <bean name="bobcat" class="com.amazon.coral.service.bobcat.BobcatServer" depends-on="logger">  
       <constructor-arg>
           <bean class="com.amazon.coral.service.bobcat.BobcatEndpointConfig">
               <property name="metricsFactory" ref="metricsFactory"/>
