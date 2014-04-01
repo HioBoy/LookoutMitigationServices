@@ -186,16 +186,21 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
         Long maxWorkflowId = null;
         try {
             Set<String> attributesToGet = generateAttributesToGet();
+            
+            // Index to use is null if we query by DeviceName + WorkflowId - since we then use the primary key of the table.
+            // If we query using DeviceName + UpdateWorkfowId - we set indexToUse to the name of LSI corresponding to these keys.
+            String indexToUse = null;
             Map<String, Condition> keyConditions = null;
             if (maxWorkflowIdOnLastAttempt == null) {
                 keyConditions = getKeysForActiveMitigationsForDevice(deviceName);
+                indexToUse = DDBBasedRequestStorageHandler.UNEDITED_MITIGATIONS_LSI_NAME;
             } else {
                 keyConditions = getKeysForDeviceAndWorkflowId(deviceName, maxWorkflowIdOnLastAttempt);
             }
 
             Map<String, AttributeValue> lastEvaluatedKey = null;
 
-            QueryResult result = getActiveMitigationsForDevice(deviceName, attributesToGet, keyConditions, lastEvaluatedKey, subMetrics);
+            QueryResult result = getActiveMitigationsForDevice(deviceName, attributesToGet, keyConditions, lastEvaluatedKey, indexToUse, subMetrics);
             subMetrics.addCount(NUM_ACTIVE_MITIGATIONS_FOR_DEVICE, result.getCount());
 
             if (result.getCount() > 0) {
@@ -207,7 +212,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
 
             lastEvaluatedKey = result.getLastEvaluatedKey();
             while (lastEvaluatedKey != null) {
-                result = getActiveMitigationsForDevice(deviceName, attributesToGet, keyConditions, lastEvaluatedKey, subMetrics);
+                result = getActiveMitigationsForDevice(deviceName, attributesToGet, keyConditions, lastEvaluatedKey, indexToUse, subMetrics);
                 subMetrics.addCount(NUM_ACTIVE_MITIGATIONS_FOR_DEVICE, result.getCount());
 
                 if (result.getCount() > 0) {
@@ -229,7 +234,8 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
     private Set<String> generateAttributesToGet() {
         Set<String> attributesToGet = Sets.newHashSet(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, DDBBasedRequestStorageHandler.MITIGATION_DEFINITION_HASH_KEY, 
                                                       DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, 
-                                                      DDBBasedRequestStorageHandler.MITIGATION_DEFINITION_KEY, DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY);
+                                                      DDBBasedRequestStorageHandler.MITIGATION_DEFINITION_KEY, DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY,
+                                                      DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY);
         return attributesToGet;
     }
 
