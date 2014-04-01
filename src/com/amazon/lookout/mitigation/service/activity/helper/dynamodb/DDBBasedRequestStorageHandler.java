@@ -75,7 +75,9 @@ public abstract class DDBBasedRequestStorageHandler {
     protected static final int DDB_PUT_ITEM_MAX_ATTEMPTS = 3;
     private static final int DDB_PUT_ITEM_RETRY_SLEEP_MILLIS_MULTIPLIER = 100;
     
-    public final static int UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS = 0;
+    public static final int UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS = 0;
+    
+    protected static final String UNEDITED_MITIGATIONS_LSI_NAME = "UpdateWorkflowId-index";
     
     private final DataConverter jsonDataConverter = new JsonDataConverter();
     
@@ -207,11 +209,18 @@ public abstract class DDBBasedRequestStorageHandler {
         attributeValue = new AttributeValue(metadata.getDescription());
         attributesInItemToStore.put(USER_DESC_KEY, attributeValue);
         
-        attributeValue = new AttributeValue().withSS(metadata.getRelatedTickets());
-        attributesInItemToStore.put(RELATED_TICKETS_KEY, attributeValue);
+        // Related tickets isn't a required attribute, hence checking if it has been provided before creating a corresponding AttributeValue for it.
+        if ((metadata.getRelatedTickets() != null) && !metadata.getRelatedTickets().isEmpty()) {
+	        attributeValue = new AttributeValue().withSS(metadata.getRelatedTickets());
+	        attributesInItemToStore.put(RELATED_TICKETS_KEY, attributeValue);
+        }
         
-        attributeValue = new AttributeValue().withSS(request.getLocation());
-        attributesInItemToStore.put(LOCATIONS_KEY, attributeValue);
+        // For some templates (eg: Router_RateLimit_Route53Customer) we don't expect location to be provided (eg: in some cases we would deploy to all non-BW POPs)
+        // Hence checking absence of location before creating a corresponding AttributeValue for it.
+        if ((request.getLocation() != null) && !request.getLocation().isEmpty()) {
+        	attributeValue = new AttributeValue().withSS(request.getLocation());
+            attributesInItemToStore.put(LOCATIONS_KEY, attributeValue);
+        }
         
         String mitigationDefinitionJSONString = getJSONDataConverter().toData(request.getMitigationDefinition()); 
         attributeValue = new AttributeValue(mitigationDefinitionJSONString);
@@ -259,11 +268,12 @@ public abstract class DDBBasedRequestStorageHandler {
      * @param attributesToGet Set of attributes to retrieve for each active mitigation.
      * @param keyConditions Map of String (attributeName) and Condition - Condition represents constraint on the attribute. Eg: >= 5.
      * @param lastEvaluatedKey Last evaluated key, to handle paginated response.
+     * @param indexToUse Specifies the index to use for issuing the query against DDB. Null implies we will query the primary key.
      * @param metrics
      * @return QueryResult representing the result from issuing this query to DDB.
      */
     protected QueryResult getActiveMitigationsForDevice(String deviceName, Set<String> attributesToGet, Map<String, Condition> keyConditions, 
-                                                        Map<String, AttributeValue> lastEvaluatedKey, TSDMetrics metrics) {
+                                                        Map<String, AttributeValue> lastEvaluatedKey, String indexToUse, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getActiveMitigationsForDevice");
         int numAttempts = 0;
         try {
@@ -277,6 +287,9 @@ public abstract class DDBBasedRequestStorageHandler {
                     request.setKeyConditions(keyConditions);
                     if (lastEvaluatedKey != null) {
                         request.setExclusiveStartKey(lastEvaluatedKey);
+                    }
+                    if ((indexToUse != null) && !indexToUse.isEmpty()) {
+                        request.setIndexName(indexToUse);
                     }
                     return queryDynamoDB(request, subMetrics);
                 } catch (Exception ex) {
