@@ -94,7 +94,7 @@ public class DDBBasedRequestStorageHandlerTest {
         when(storageHandler.generateAttributesToStore(request, deviceNameAndScope, workflowId, requestType.name(), mitigationVersion)).thenCallRealMethod();
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(storageHandler).putItemInDDB(anyMap(), any(TSDMetrics.class));
-        when(storageHandler.getSleepMillisMultiplierOnPutRetry()).thenReturn((long) 1);
+        when(storageHandler.getSleepMillisMultiplierOnPutRetry()).thenReturn(1);
         
         Throwable caughtException = null;
         try {
@@ -125,7 +125,7 @@ public class DDBBasedRequestStorageHandlerTest {
         when(storageHandler.generateAttributesToStore(request, deviceNameAndScope, workflowId, requestType.name(), mitigationVersion)).thenCallRealMethod();
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         doThrow(new RuntimeException()).when(storageHandler).putItemInDDB(anyMap(), any(TSDMetrics.class));
-        when(storageHandler.getSleepMillisMultiplierOnPutRetry()).thenReturn((long) 1);
+        when(storageHandler.getSleepMillisMultiplierOnPutRetry()).thenReturn(1);
         
         Throwable caughtException = null;
         try {

@@ -75,6 +75,8 @@ public abstract class DDBBasedRequestStorageHandler {
     protected static final int DDB_PUT_ITEM_MAX_ATTEMPTS = 3;
     private static final int DDB_PUT_ITEM_RETRY_SLEEP_MILLIS_MULTIPLIER = 100;
     
+    public final static int UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS = 0;
+    
     private final DataConverter jsonDataConverter = new JsonDataConverter();
     
     private final AmazonDynamoDBClient dynamoDBClient;
@@ -245,7 +247,7 @@ public abstract class DDBBasedRequestStorageHandler {
             attributesInItemToStore.put(POST_DEPLOY_CHECKS_DEFINITION_KEY, attributeValue);
         }
         
-        attributeValue = new AttributeValue().withN(String.valueOf(0));
+        attributeValue = new AttributeValue().withN(String.valueOf(UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS));
         attributesInItemToStore.put(UPDATE_WORKFLOW_ID_KEY, attributeValue);
         
         return attributesInItemToStore;
@@ -265,7 +267,6 @@ public abstract class DDBBasedRequestStorageHandler {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getActiveMitigationsForDevice");
         int numAttempts = 0;
         try {
-            
             // Attempt to query DDB for a fixed number of times. If query was successful, return the QueryResult, else when the loop endsthrow back an exception.
             while (numAttempts++ < DDB_QUERY_MAX_ATTEMPTS) {
                 try {
@@ -286,7 +287,7 @@ public abstract class DDBBasedRequestStorageHandler {
 
                     if (numAttempts < DDB_QUERY_MAX_ATTEMPTS) {
                         try {
-                            Thread.sleep((long) (DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts));
+                            Thread.sleep(DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
                         } catch (InterruptedException ignored) {}
                     }
                 }
@@ -335,7 +336,7 @@ public abstract class DDBBasedRequestStorageHandler {
      * Protected for unit-testing, to allow injecting this value. 
      * @return long multiplier for sleeping on each failure when calling PutItem on DDB.
      */
-    protected long getSleepMillisMultiplierOnPutRetry() {
+    protected int getSleepMillisMultiplierOnPutRetry() {
         return DDB_PUT_ITEM_RETRY_SLEEP_MILLIS_MULTIPLIER;
     }
 

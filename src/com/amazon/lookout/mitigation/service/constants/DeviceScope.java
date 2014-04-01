@@ -13,7 +13,7 @@ package com.amazon.lookout.mitigation.service.constants;
  * 
  */
 public enum DeviceScope {
-    GLOBAL(0, 1000000);
+    GLOBAL(1, 1000000);
     
     private long minWorkflowId;
     private long maxWorkflowId;

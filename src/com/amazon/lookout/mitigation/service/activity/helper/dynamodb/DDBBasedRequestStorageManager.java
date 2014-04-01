@@ -99,7 +99,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @return New instance of DDBBasedCreateRequestStorageHandler
      */
     private DDBBasedCreateRequestStorageHandler getCreateRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain, 
-                                                                                 TemplateBasedRequestValidator templateBasedValidator) {
+                                                                               TemplateBasedRequestValidator templateBasedValidator) {
         return new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
     }
     

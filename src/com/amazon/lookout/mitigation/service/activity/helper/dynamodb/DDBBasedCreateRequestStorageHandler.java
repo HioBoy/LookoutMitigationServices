@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
@@ -38,8 +39,8 @@ import com.google.common.collect.Sets;
  * As part of persisting this request, based on the existing requests in the table, this handler also determines the workflowId 
  * to be used for the current request.
  */
+@ThreadSafe
 public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageHandler implements RequestStorageHandler {
-
     private static final Log LOG = LogFactory.getLog(DDBBasedCreateRequestStorageHandler.class);
 
     // Num Attempts + Retry Sleep Configs.
@@ -52,6 +53,8 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
     // Keys for TSDMetric property.
     private static final String NUM_ACTIVE_MITIGATIONS_FOR_DEVICE = "NumActiveMitigations";
     private static final String NUM_ATTEMPTS_TO_STORE_CREATE_REQUEST = "NumCreateRequestStoreAttempts";
+    
+    private static final int INITIAL_MITIGATION_VERSION = 1;
 
     private final DataConverter jsonDataConverter = new JsonDataConverter();
 
@@ -66,7 +69,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
 
     /**
      * Stores the create request into the DDB Table. While storing, it identifies the new workflowId to be associated with this request and returns back the same.
-     *  * The algorithm it uses to identify the workflowId to use is:
+     * The algorithm it uses to identify the workflowId to use is:
      * 1. Identify the deviceNameAndScope that corresponds to this request.
      * 2. Query for all active mitigations for this device.
      * 3. If no active mitigations exist for this device, check with the deviceScope enum and start with the minimum value corresponding to the scope.
@@ -110,9 +113,9 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                                                              mitigationName, mitigationTemplate, maxWorkflowId, subMetrics);
 
                 long newWorkflowId = 0;
-                // If we didn't get any workflows for the same deviceName and deviceScope, we simply assign the newWorkflowId to be 1 more than the min for this deviceScope.
+                // If we didn't get any workflows for the same deviceName and deviceScope, we simply assign the newWorkflowId to be the min for this deviceScope.
                 if (maxWorkflowId == null) {
-                    newWorkflowId = deviceNameAndScope.getDeviceScope().getMinWorkflowId() + 1;
+                    newWorkflowId = deviceNameAndScope.getDeviceScope().getMinWorkflowId();
                 } else {
                     // Increment the maxWorkflowId to use as the newWorkflowId and sanity check to ensure the new workflowId is still within the expected range.
                     newWorkflowId = ++maxWorkflowId;
@@ -120,7 +123,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 }
 
                 try {
-                    storeRequestInDDB(createMitigationRequest, deviceNameAndScope, newWorkflowId, RequestType.CreateRequest.name(), 1, subMetrics);
+                    storeRequestInDDB(createMitigationRequest, deviceNameAndScope, newWorkflowId, RequestType.CreateRequest.name(), INITIAL_MITIGATION_VERSION, subMetrics);
                     return newWorkflowId;
                 } catch (Exception ex) {
                     String msg = "Caught exception when storing create request in DDB with newWorkflowId: " + newWorkflowId + " for DeviceName: " + deviceName + 
@@ -129,7 +132,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
 
                     if (numAttempts < NEW_WORKFLOW_ID_MAX_ATTEMPTS) {
                         try {
-                            Thread.sleep((long) (NEW_WORKFLOW_ID_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts));
+                            Thread.sleep(NEW_WORKFLOW_ID_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
                         } catch (InterruptedException ignored) {}
                     }
                 }
@@ -178,7 +181,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
      * @return Max WorkflowId for existing mitigations. Null if no mitigations exist for this deviceName and deviceScope.
      */
     protected Long getMaxWorkflowIdFromDDBTable(String deviceName, String deviceScope, MitigationDefinition mitigationDefinition, int mitigationDefinitionHash, 
-                                                  String mitigationName, String mitigationTemplate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
+                                                String mitigationName, String mitigationTemplate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHandler.getMaxWorkflowIdFromDDBTable");
         Long maxWorkflowId = null;
         try {
@@ -270,7 +273,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 // since the workflow which updated it would also be part of our query result.
                 if (item.containsKey(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY)) {
                     Long updateWorkflowId = Long.parseLong(item.get(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY).getN());
-                    if ((updateWorkflowId != null) && (updateWorkflowId > 0)) {
+                    if ((updateWorkflowId != null) && (updateWorkflowId > UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS)) {
                         continue;
                     }
                 }
@@ -315,7 +318,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
 
         keyValues = new HashSet<>();
         keyValue = new AttributeValue();
-        keyValue.setN(String.valueOf(0));
+        keyValue.setN(String.valueOf(UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS));
         keyValues.add(keyValue);
 
         condition = new Condition();
@@ -360,12 +363,16 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
     }
 
     /**
-     * NOTE: we currently check if 2 definitions are exactly identical. There could be cases where 2 definitions are equivalent, but not identical (eg:
+     * We currently check if 2 definitions are exactly identical. There could be cases where 2 definitions are equivalent, but not identical (eg:
      * when they have the same constraints, but the constraints are in different order) - in those cases we don't treat them as identical for now.
      * We could do so, by enforcing a particular ordering to the mitigation definitions when we persist the definition - however it might get tricky
      * to do so for different use-cases, eg: for IPTables maybe the user crafted rules such that they are in a certain order for a specific reason.
      * We could have a deeper-check based on the template - which checks if 2 mitigations are equivalent, but we don't have a strong use-case for such as of now, 
      * hence keeping the comparison simple for now.
+     * 
+     * We also first check if the hashcode for json representation of the definition matches - which acts as a shortcut to avoid deep inspection of the definitions
+     * for non-identical strings.
+     *  
      * Protected for unit-testing.
      * @param existingDefinitionAsJSONString MitigationDefinition for an existing mitigation represented as a JSON string.
      * @param existingMitigationName MitigationName for the existing mitigation.
@@ -379,8 +386,8 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
      *               based checks for verifying if the new mitigation can coexist with the new mitigation being requested.
      */
     protected void checkDuplicateDefinition(String existingDefinitionAsJSONString, String existingMitigationName, String existingMitigationTemplate,  
-                                              String newMitigationName, String newMitigationTemplate, MitigationDefinition newDefinition, 
-                                              int newDefinitionHash, TSDMetrics metrics) {
+                                            String newMitigationName, String newMitigationTemplate, MitigationDefinition newDefinition, 
+                                            int newDefinitionHash, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHelper.checkDuplicateDefinition");
         try {
             int existingMitigationHash = existingDefinitionAsJSONString.hashCode();

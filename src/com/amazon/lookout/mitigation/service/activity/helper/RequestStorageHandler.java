@@ -9,6 +9,6 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
  *
  */
 public interface RequestStorageHandler {
-	
-	public long storeRequestForWorkflow(MitigationModificationRequest mitigationRequest, TSDMetrics metrics);
+    
+    public long storeRequestForWorkflow(MitigationModificationRequest mitigationRequest, TSDMetrics metrics);
 }
