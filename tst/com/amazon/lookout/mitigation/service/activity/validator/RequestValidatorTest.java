@@ -70,7 +70,7 @@ public class RequestValidatorTest {
         
         Throwable caughtException = null;
         try {
-            validator.validateCreateRequest(request, tsdMetrics);
+            validator.validateCreateRequest(request);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -104,7 +104,7 @@ public class RequestValidatorTest {
         
         Throwable caughtException = null;
         try {
-            validator.validateCreateRequest(request, tsdMetrics);
+            validator.validateCreateRequest(request);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -140,7 +140,7 @@ public class RequestValidatorTest {
         
         Throwable caughtException = null;
         try {
-            validator.validateCreateRequest(request, tsdMetrics);
+            validator.validateCreateRequest(request);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -150,7 +150,7 @@ public class RequestValidatorTest {
         request.setMitigationTemplate("BadTemplate");
         caughtException = null;
         try {
-            validator.validateCreateRequest(request, tsdMetrics);
+            validator.validateCreateRequest(request);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -186,7 +186,7 @@ public class RequestValidatorTest {
         
         Throwable caughtException = null;
         try {
-            validator.validateCreateRequest(request, tsdMetrics);
+            validator.validateCreateRequest(request);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -197,7 +197,7 @@ public class RequestValidatorTest {
         request.setServiceName("BadServiceName");
         caughtException = null;
         try {
-            validator.validateCreateRequest(request, tsdMetrics);
+            validator.validateCreateRequest(request);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -228,7 +228,7 @@ public class RequestValidatorTest {
         
         Throwable caughtException = null;
         try {
-            validator.validateCreateRequest(request, tsdMetrics);
+            validator.validateCreateRequest(request);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -264,7 +264,7 @@ public class RequestValidatorTest {
         
         Throwable caughtException = null;
         try {
-            validator.validateCreateRequest(request, tsdMetrics);
+            validator.validateCreateRequest(request);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -300,7 +300,7 @@ public class RequestValidatorTest {
         
         Throwable caughtException = null;
         try {
-            validator.validateCreateRequest(request, tsdMetrics);
+            validator.validateCreateRequest(request);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -336,7 +336,7 @@ public class RequestValidatorTest {
         
         Throwable caughtException = null;
         try {
-            validator.validateCreateRequest(request, tsdMetrics);
+            validator.validateCreateRequest(request);
         } catch (Exception ex) {
             caughtException = ex;
         }

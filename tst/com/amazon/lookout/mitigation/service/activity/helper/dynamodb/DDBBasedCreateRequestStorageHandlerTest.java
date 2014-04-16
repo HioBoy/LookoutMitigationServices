@@ -212,7 +212,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
             caughtException = ex;
         }
         assertNull(caughtException);
-        verify(templateBasedValidator, times(1)).validateCoexistenceForTemplateAndDevice(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
+        verify(templateBasedValidator, times(1)).validateCoexistenceForTemplateAndDevice(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), any(MitigationDefinition.class));
     }
     
     /**
@@ -241,7 +241,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
             caughtException = ex;
         }
         assertNull(caughtException);
-        verify(templateBasedValidator, times(1)).validateCoexistenceForTemplateAndDevice(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
+        verify(templateBasedValidator, times(1)).validateCoexistenceForTemplateAndDevice(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), any(MitigationDefinition.class));
     }
     
     /**
@@ -268,7 +268,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof DuplicateDefinitionException400);
-        verify(templateBasedValidator, times(0)).validateCoexistenceForTemplateAndDevice(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
+        verify(templateBasedValidator, times(0)).validateCoexistenceForTemplateAndDevice(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), any(MitigationDefinition.class));
     }
     
     /**

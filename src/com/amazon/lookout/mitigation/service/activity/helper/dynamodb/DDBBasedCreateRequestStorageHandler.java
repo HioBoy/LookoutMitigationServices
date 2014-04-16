@@ -407,7 +407,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 throw new DuplicateDefinitionException400(msg);
             }
             getTemplateBasedValidator().validateCoexistenceForTemplateAndDevice(newMitigationTemplate, newMitigationName, newDefinition, existingMitigationTemplate, 
-                                                                                  existingMitigationName, existingDefinition, subMetrics);
+                                                                                existingMitigationName, existingDefinition);
         } finally {
             subMetrics.end();
         }
