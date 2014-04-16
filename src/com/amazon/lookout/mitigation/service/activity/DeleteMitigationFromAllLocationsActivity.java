@@ -18,7 +18,7 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
-import com.amazon.lookout.mitigation.service.commons.LookoutMitigationServiceConstants;
+import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
@@ -32,7 +32,7 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
 
         Metrics tsdMetrics = getMetrics();
         // This counter is used to calculate the service workload for this operation.
-        tsdMetrics.addCount(LookoutMitigationServiceConstants.REQUEST_ENACTED, 1, Unit.ONE);
+        tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_SUCCESS, 1, Unit.ONE);
         MitigationModificationResponse mitigationModificationResponse = null;
         try {            
             LOG.info(String.format("Request for DeleteMitigationFromAllLocationsActivity: %s.", ReflectionToStringBuilder.toString(deleteMitigationFromAllLocationsRequest)));  
@@ -41,16 +41,16 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             mitigationModificationResponse.setMitigationName(deleteMitigationFromAllLocationsRequest.getMitigationName());            
             mitigationModificationResponse.setServiceName(deleteMitigationFromAllLocationsRequest.getServiceName());
             
-            tsdMetrics.addCount(LookoutMitigationServiceConstants.INTERNAL_FAILURE, 0, Unit.ONE);
+            tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_FAILURE, 0, Unit.ONE);
         } catch (BadRequest400 badRequest) {   
 
             LOG.warn(String.format("Bad request while fulfilling request for DeleteMitigationFromAllLocationsActivity: %s.", ReflectionToStringBuilder.toString(deleteMitigationFromAllLocationsRequest)), badRequest);
-            tsdMetrics.addCount(LookoutMitigationServiceConstants.INTERNAL_FAILURE, 0, Unit.ONE);
+            tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_FAILURE, 0, Unit.ONE);
             throw badRequest;
         } catch (Exception internalError) {       
 
             LOG.error(String.format("Internal error while fulfilling request for DeleteMitigationFromAllLocationsActivity: %s.", ReflectionToStringBuilder.toString(deleteMitigationFromAllLocationsRequest)), internalError);
-            tsdMetrics.addCount(LookoutMitigationServiceConstants.INTERNAL_FAILURE, 1, Unit.ONE);
+            tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_FAILURE, 1, Unit.ONE);
             throw new InternalServerError500(internalError.getMessage(), internalError);
         }      
         

@@ -30,6 +30,8 @@
                 <bean class="com.amazon.coral.service.http.HttpBindingHandler"/>
                 <bean class="com.amazon.coral.service.HttpRpcHandler"/>
                 
+                <!-- TODO Turn ON authentication when service is registered with AWSAuth -->
+                <!-- ref bean="AuthenticationHandler"/-->
                 <bean class="com.amazon.coral.service.ModelHandler"/>
                 <bean class="com.amazon.coral.service.http.ContentHandler"/>
                 <bean class="com.amazon.coral.validate.ValidationHandler"/>
@@ -39,5 +41,23 @@
             </list>
         </property>
     </bean>
+    
+    <bean id="AuthenticationHandler" class="com.amazon.coral.service.ARSAuthenticationHelper" depends-on="appConfigHelper">
+        <constructor-arg>
+            <bean class="com.amazon.coral.service.AwsAuthNConfig">
+                <property name="signingSchemes" value="V4"/>
+                <property name="region" value="${apollo.OCF.LookoutMitigationService.arsAuthNRegion}"/>
+                <property name="service" value="lookoutmitigationservice"/>
+                <property name="vendorCode" value="lookoutmitigationservice"/>
+                <property name="authNCache" ref="AuthNCache"/>
+                <property name="policyCache" ref="PolicyCache"/>
+                <property name="headersToSecure" value=""/>
+            </bean>
+        </constructor-arg>
+    </bean>
+    
+    <!-- Given that we only have a handful of unique callers using the service, using HashMapCache should be totally fine for our use-case. -->
+    <bean id="AuthNCache" class="amazon.cache.impl.HashMapCache"/>
+    <bean id="PolicyCache" class="amazon.cache.impl.HashMapCache"/>
     
 </beans>

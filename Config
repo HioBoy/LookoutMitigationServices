@@ -37,6 +37,13 @@ package.LookoutMitigationService = {
             LookoutMitigationWorkFlowWorker = 1.0;
             
             OdinAWSCredentials = 1.2;
+            
+            AWS158Commons = 1.1;
+            DaasControlAPIServiceJavaClient = 1.0;
+            EdgeOperatorServiceJavaClient = 1.0;
+            
+            OWASPOutputEncoder = 1.0; # Dependency on the binaryTrie implementation in this package, used for subnet matching.
+            LookoutMitigationServiceCommons = 1.0;
         };
     };
     
@@ -77,6 +84,11 @@ package.LookoutMitigationService = {
             AWSJavaClientRuntime = external_release;
             JakartaCommons-lang = 2.6;
             JakartaCommons-codec = 1;
+            
+            OdinAWSCredentials = 1.2;
+            SpringBeans = 3.1;
+            SpringCore = 3.1;
+            log4j = 1.2.15;
         };
     };
 

@@ -77,7 +77,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate(), tsdMetrics);
+            route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate());
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -96,7 +96,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate(), tsdMetrics);
+            route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate());
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -113,12 +113,12 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         MitigationModificationRequest request = createMitigationModificationRequest();
         
-        doThrow(new IllegalArgumentException()).when(route53SingleCustomerValidator).validateRequestForTemplateAndDevice(any(MitigationModificationRequest.class), anyString(), any(DeviceNameAndScope.class), any(TSDMetrics.class));
+        doThrow(new IllegalArgumentException()).when(route53SingleCustomerValidator).validateRequestForTemplateAndDevice(any(MitigationModificationRequest.class), anyString(), any(DeviceNameAndScope.class));
         
         Throwable caughtException = null;
         try {
-            doCallRealMethod().when(route53SingleCustomerValidator).validateRequestForTemplate(any(MitigationModificationRequest.class), anyString(), any(TSDMetrics.class));
-            route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate(), tsdMetrics);
+            doCallRealMethod().when(route53SingleCustomerValidator).validateRequestForTemplate(any(MitigationModificationRequest.class), anyString());
+            route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate());
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -139,7 +139,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, tsdMetrics);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -160,7 +160,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, tsdMetrics);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -181,7 +181,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, tsdMetrics);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -203,7 +203,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, tsdMetrics);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -225,7 +225,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, tsdMetrics);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -248,7 +248,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, tsdMetrics);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -271,7 +271,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, tsdMetrics);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -296,7 +296,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, tsdMetrics);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -308,7 +308,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, tsdMetrics);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -328,7 +328,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         Throwable caughtException = null;
         try {
             route53SingleCustomerValidator.validateCoexistenceForTemplateAndDevice("Template1", "Mitigation1", definition1, MitigationTemplate.Router_RateLimit_Route53Customer, 
-                                                                                   "Mitigation2", definition2, tsdMetrics);
+                                                                                   "Mitigation2", definition2);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -346,7 +346,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         Throwable caughtException = null;
         try {
             route53SingleCustomerValidator.validateCoexistenceForTemplateAndDevice(MitigationTemplate.Router_RateLimit_Route53Customer, "Mitigation1", definition1, MitigationTemplate.Router_RateLimit_Route53Customer, 
-                                                                                   "Mitigation2", definition2, tsdMetrics);
+                                                                                   "Mitigation2", definition2);
         } catch (Exception ex) {
             caughtException = ex;
         }
