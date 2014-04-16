@@ -1,6 +1,8 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -9,7 +11,6 @@ import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.omg.PortableInterceptor.INACTIVE;
 
 import com.amazon.aws158.commons.net.IPUtils;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
@@ -35,8 +36,9 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     
     // A list of chars that cannot be in the filterName as they may affect the configuration file due to the filterName being stored in a comment.
     // Refer original router mitigation UI code: http://tiny/11bh4sghs/codeamazpackLookblob58b6src
-    private static final String ROUTER_MITIGATION_NAME_INVALID_FILTER_CHARS = "\n|\r|\u0085|\u2028|\u2029|/\\*|\\*/";
-    
+    private static final String INVALID_ROUTER_MITIGATION_NAME_CHARS = "\n|\r|\u0085|\u2028|\u2029|/\\*|\\*/";
+    private static final Pattern INVALID_ROUTER_MITIGATION_NAME_PATTERN = Pattern.compile(INVALID_ROUTER_MITIGATION_NAME_CHARS);
+        
     private final ServiceSubnetsMatcher serviceSubnetsMatcher;
     
     public Route53SingleCustomerMitigationValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher) {
@@ -87,9 +89,9 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     private void validateMitigationName(String mitigationName, String mitigationTemplate) {
         switch (mitigationTemplate) {
         case MitigationTemplate.Router_RateLimit_Route53Customer:
-            if (mitigationName.contains(ROUTER_MITIGATION_NAME_INVALID_FILTER_CHARS)) {
-                String msg = "For the template: " + mitigationTemplate + " the mitigation name cannot contain any of the following characters: " + 
-                             ROUTER_MITIGATION_NAME_INVALID_FILTER_CHARS + " instead found: " + mitigationName;
+            Matcher matcher = INVALID_ROUTER_MITIGATION_NAME_PATTERN.matcher(mitigationName);
+            if (matcher.find()) {
+                String msg = "Invalid mitigationName + " + mitigationName + " found for template: " + mitigationTemplate + ". Name cannot contain any control characters.";
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
             }

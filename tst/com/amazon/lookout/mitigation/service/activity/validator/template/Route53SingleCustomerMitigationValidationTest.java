@@ -353,4 +353,59 @@ public class Route53SingleCustomerMitigationValidationTest {
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof DuplicateDefinitionException400);
     }
+    
+    /**
+     * Test the case where we have one or more of the restricted special characters in the mitigation name.
+     * We expect an exception to be thrown back in this case.
+     */
+    @Test
+    public void testValidateRequestForTemplateAndDeviceBadMitigationName() {
+        ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(subnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
+        
+        Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
+        
+        MitigationModificationRequest request = createMitigationModificationRequest();
+        request.setMitigationName("Some\u2028Name!");
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        Throwable caughtException = null;
+        try {
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        
+        request.setMitigationName("Some\nName!");
+        caughtException = null;
+        try {
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        
+        request.setMitigationName("/*Name!");
+        caughtException = null;
+        try {
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        
+        request.setMitigationName("Name!*/");
+        caughtException = null;
+        try {
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+    }
 }

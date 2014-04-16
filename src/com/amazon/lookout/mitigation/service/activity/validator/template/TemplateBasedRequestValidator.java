@@ -36,21 +36,7 @@ public class TemplateBasedRequestValidator {
      */
     public TemplateBasedRequestValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher) {
         Validate.notNull(serviceSubnetsMatcher);
-        
-        ImmutableMap.Builder<String, ServiceTemplateValidator> serviceTemplateValidatorMapBuilder = new ImmutableMap.Builder<>();
-        for (String mitigationTemplate : MitigationTemplate.values()) {
-            switch (mitigationTemplate) {
-            case MitigationTemplate.Router_RateLimit_Route53Customer:
-                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getRoute53SingleCustomerValidator(serviceSubnetsMatcher));
-                break;
-            default:
-                String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". Each template must be associated with some validation checks.";
-                LOG.error(msg);
-                // We throw an internal server error since at this point this request should have been checked for having valid inputs, including the template name. 
-                throw new IllegalStateException(msg);
-            }
-        }
-        serviceTemplateValidatorMap = serviceTemplateValidatorMapBuilder.build();
+        serviceTemplateValidatorMap = getServiceTemplateValidatorMap(serviceSubnetsMatcher);
     }
     
     /**
@@ -115,13 +101,13 @@ public class TemplateBasedRequestValidator {
     }
     
     /**
-     * Return the ServiceTemplateValidator based on the mitigationTemplate passed as input.
+     * Return the ServiceTemplateValidator based on the mitigationTemplate passed as input. Protected for unit-testing.
      * @param mitigationTemplate MitigationTemplate used in the request.
      * @return ServiceTemplateValidator corresponding to the mitigation template passed as input. 
      *         If a validator cannot be found for this template, we throw an InternalServerError since this request should have been 
      *         validated to have a valid template when this check is performed.
      */
-    private ServiceTemplateValidator getValidator(String mitigationTemplate) {
+    protected ServiceTemplateValidator getValidator(String mitigationTemplate) {
         ServiceTemplateValidator templateBasedValidator = serviceTemplateValidatorMap.get(mitigationTemplate);
         if (templateBasedValidator == null) {
             String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". There should be a validator associated with each valid mitigation template. ";
@@ -138,5 +124,27 @@ public class TemplateBasedRequestValidator {
      */
     protected Route53SingleCustomerMitigationValidator getRoute53SingleCustomerValidator(ServiceSubnetsMatcher subnetsMatcher) {
         return new Route53SingleCustomerMitigationValidator(subnetsMatcher);
+    }
+
+    /**
+     * Returns map of templateName to ServiceTemplateValidator corresponding to the template.
+     * @param serviceSubnetsMatcher ServiceSubnetsMatcher that is used by some of the ServiceTemplateValidators.
+     * @return ImmutableMap of templateName to ServiceTemplateValidator corresponding to the template.
+     */
+    private ImmutableMap<String, ServiceTemplateValidator> getServiceTemplateValidatorMap(ServiceSubnetsMatcher serviceSubnetsMatcher) {
+        ImmutableMap.Builder<String, ServiceTemplateValidator> serviceTemplateValidatorMapBuilder = new ImmutableMap.Builder<>();
+        for (String mitigationTemplate : MitigationTemplate.values()) {
+            switch (mitigationTemplate) {
+            case MitigationTemplate.Router_RateLimit_Route53Customer:
+                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getRoute53SingleCustomerValidator(serviceSubnetsMatcher));
+                break;
+            default:
+                String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". Each template must be associated with some validation checks.";
+                LOG.error(msg);
+                // We throw an internal server error since at this point this request should have been checked for having valid inputs, including the template name. 
+                throw new IllegalStateException(msg);
+            }
+        }
+        return serviceTemplateValidatorMapBuilder.build();
     }
 }
