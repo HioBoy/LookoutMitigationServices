@@ -17,8 +17,8 @@ import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatch
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 
 /**
- * TemplateBasedRequestValidator is responsible for performing depe validations based on the template passed as input to the request.
- * Based on the template, this validator invokes appropriate validator to delegate the validation check to.
+ * TemplateBasedRequestValidator is responsible for performing deep validations based on the template passed as input to the request.
+ * Based on the template, this validator invokes the appropriate validator to delegate the validation check to.
  *
  */
 @ThreadSafe
@@ -47,7 +47,7 @@ public class TemplateBasedRequestValidator {
                 String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". Each template must be associated with some validation checks.";
                 LOG.error(msg);
                 // We throw an internal server error since at this point this request should have been checked for having valid inputs, including the template name. 
-                throw new InternalServerError500(msg);
+                throw new IllegalStateException(msg);
             }
         }
         serviceTemplateValidatorMap = serviceTemplateValidatorMapBuilder.build();
@@ -72,7 +72,7 @@ public class TemplateBasedRequestValidator {
             
             LOG.debug("Calling validator for service: " + templateBasedValidator.getServiceNameToValidate() + " for template: " + mitigationTemplate + " for request: " +
                       ReflectionToStringBuilder.toString(createRequest));
-            templateBasedValidator.validateRequestForTemplate(createRequest, mitigationTemplate, subMetrics);
+            templateBasedValidator.validateRequestForTemplate(createRequest, mitigationTemplate);
         } finally {
             subMetrics.end();
         }
@@ -90,7 +90,7 @@ public class TemplateBasedRequestValidator {
      */
     public void validateCoexistenceForTemplateAndDevice(@Nonnull String templateForNewDefinition, @Nonnull String nameForNewDefinition, @Nonnull MitigationDefinition newDefinition, 
                                                         @Nonnull String templateForExistingDefinition, @Nonnull String nameForExistingDefinition, 
-                                                        @Nonnull MitigationDefinition existingDefinition, @Nonnull TSDMetrics metrics) {
+                                                        @Nonnull MitigationDefinition existingDefinition) {
         Validate.notEmpty(templateForNewDefinition);
         Validate.notEmpty(nameForNewDefinition);
         Validate.notNull(newDefinition);
@@ -98,15 +98,19 @@ public class TemplateBasedRequestValidator {
         Validate.notEmpty(nameForExistingDefinition);
         Validate.notNull(existingDefinition);
         
-        TSDMetrics subMetrics = metrics.newSubMetrics("TemplateBasedRequestValidator.validateCoexistenceForTemplateAndDevice");
-        try {
-            ServiceTemplateValidator templateBasedValidator = getValidator(templateForNewDefinition);
+        ServiceTemplateValidator templateBasedValidator = getValidator(templateForNewDefinition);
+        
+        // Delegate the check to template specific validator.
+        templateBasedValidator.validateCoexistenceForTemplateAndDevice(templateForNewDefinition, nameForNewDefinition, newDefinition, templateForExistingDefinition, 
+                                                                       nameForExistingDefinition, existingDefinition);
+        
+        // Perform a symmetrical check if the templates are different, to ensure we check the validator for the existing mitigation as well.
+        if (!templateForExistingDefinition.equals(templateForNewDefinition)) {
+            templateBasedValidator = getValidator(templateForExistingDefinition);
             
             // Delegate the check to template specific validator.
-            templateBasedValidator.validateCoexistenceForTemplateAndDevice(templateForNewDefinition, nameForNewDefinition, newDefinition, templateForExistingDefinition, 
-                                                                           nameForExistingDefinition, existingDefinition, subMetrics);
-        } finally {
-            subMetrics.end();
+            templateBasedValidator.validateCoexistenceForTemplateAndDevice(templateForExistingDefinition, nameForExistingDefinition, existingDefinition, 
+                                                                           templateForNewDefinition, nameForNewDefinition, newDefinition);
         }
     }
     

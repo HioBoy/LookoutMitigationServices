@@ -28,7 +28,7 @@ public class ServiceSubnetsMatcher {
     
     private static final String SUBNET_MASK_DELIMITER = "/";
     
-    private class ServiceSubnet {
+    private static class ServiceSubnet {
         private final String serviceName;
         private final String subnet;
         private final int maskLength;
