@@ -54,7 +54,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
     private static final String NUM_ACTIVE_MITIGATIONS_FOR_DEVICE = "NumActiveMitigations";
     private static final String NUM_ATTEMPTS_TO_STORE_CREATE_REQUEST = "NumCreateRequestStoreAttempts";
     
-    private static final int INITIAL_MITIGATION_VERSION = 1;
+    public static final int INITIAL_MITIGATION_VERSION = 1;
 
     private final DataConverter jsonDataConverter = new JsonDataConverter();
 
