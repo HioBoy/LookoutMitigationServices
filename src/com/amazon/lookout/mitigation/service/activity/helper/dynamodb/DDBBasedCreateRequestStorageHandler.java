@@ -293,6 +293,14 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 String existingDefinitionAsJSONString = item.get(DDBBasedRequestStorageHandler.MITIGATION_DEFINITION_KEY).getS();
                 String existingMitigationName = item.get(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY).getS();
                 String existingMitigationTemplate = item.get(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY).getS();
+                
+                // Check if the mitigation name for the existing mitigation and the new mitigation are the same. If so, throw back an exception.
+                if (existingMitigationName.equals(newDefinitionName)) {
+                    String msg = "MitigationName: " + existingMitigationName + " already exists for device: " + deviceName + ". Existing mitigation template: " + 
+                                 existingMitigationTemplate + ". New mitigation template: " + newDefinitionTemplate;
+                    LOG.warn(msg);
+                    throw new IllegalArgumentException(msg);
+                }
 
                 checkDuplicateDefinition(existingDefinitionAsJSONString, existingMitigationName, existingMitigationTemplate, 
                                          newDefinitionName, newDefinitionTemplate, newDefinition, newDefinitionHashCode, subMetrics);
