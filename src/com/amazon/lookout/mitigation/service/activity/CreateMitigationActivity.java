@@ -59,6 +59,7 @@ public class CreateMitigationActivity extends Activity {
     @Operation("CreateMitigation")
     @Documentation("CreateMitigation")
     public @Nonnull MitigationModificationResponse enact(@Nonnull MitigationModificationRequest createMitigationRequest) {
+        // Wrap the CoralMetrics for this activity in a TSDMetrics instance.
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics());
         
         String requestId = getRequestId().toString();
@@ -87,8 +88,8 @@ public class CreateMitigationActivity extends Activity {
             
             // Step5. Start workflow.
             DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(createMitigationRequest.getMitigationTemplate());
-            workflowStarter.startWorkflow(workflowId, createMitigationRequest, requestId, DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, 
-            						      deviceNameAndScope.getDeviceName().name(), tsdMetrics);
+            workflowStarter.startWorkflow(workflowId, createMitigationRequest, DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, 
+                                          deviceNameAndScope.getDeviceName().name(), tsdMetrics);
             
             // Step6. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
@@ -121,5 +122,5 @@ public class CreateMitigationActivity extends Activity {
             }
             tsdMetrics.end();
         }
-    } 
+    }
 }
