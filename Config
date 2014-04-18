@@ -26,7 +26,6 @@ package.LookoutMitigationService = {
 
     dependencies = {
         1.0 = {
-            LookoutMitigationServiceJavaClient = 1.0;
             CoralActivity = 1.0;
             CoralSpring = 3.1;
             JakartaCommons-logging-api = 1.1;
@@ -44,6 +43,9 @@ package.LookoutMitigationService = {
             
             OWASPOutputEncoder = 1.0; # Dependency on the binaryTrie implementation in this package, used for subnet matching.
             LookoutMitigationServiceCommons = 1.0;
+            
+            JavaAmazonLdapUtils = 1.2;
+            CoralSpringLauncher = 3.1;
         };
     };
     
