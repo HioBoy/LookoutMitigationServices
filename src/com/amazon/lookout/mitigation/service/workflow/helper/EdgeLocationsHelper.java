@@ -39,6 +39,7 @@ public class EdgeLocationsHelper implements Runnable {
     private static final String CLOUDFRONT_POP_NAMES_REFRESH_METRIC = "EdgeServicesRefresh";
     private static final String BLACKWATCH_POP_CHECK_METRIC = "BlackwatchCheck";
     
+    // Maintain a flag that indicates that the refresh of POP names and the checks if they are Blackwatch capable have been completed at least once.
     private final AtomicBoolean locationsRefreshAtleastOnce = new AtomicBoolean(false);
     
     // Maintain a copy of all POPs known to this locations helper.
