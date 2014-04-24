@@ -48,9 +48,6 @@ public class EdgeLocationsHelper implements Runnable {
     // Maintain a copy of all POPs known to this locations helper which have Blackwatch hosts installed.
     private final CopyOnWriteArraySet<String> blackwatchPOPs = new CopyOnWriteArraySet<>();
     
-    // Maintain a copy of all POPs known to this locations helper which don't have any Blackwatch hosts installed.
-    private final CopyOnWriteArraySet<String> nonBlackwatchPOPs = new CopyOnWriteArraySet<>();
-    
     private final EdgeOperatorServiceClient cloudfrontClient;
     private final DaasControlAPIServiceV20100701Client daasClient;
     private final BlackwatchLocationsHelper bwLocationsHelper;
@@ -111,7 +108,7 @@ public class EdgeLocationsHelper implements Runnable {
         }
         
         if (locationsRefreshAtleastOnce.get()) {
-            return nonBlackwatchPOPs;
+            return (Sets.difference(allPOPs, blackwatchPOPs));
         } else {
             String msg = "Unable to refresh the list of POPs for this getAllNonBlackwatchPOPs call";
             LOG.error(msg);
@@ -202,11 +199,6 @@ public class EdgeLocationsHelper implements Runnable {
             if (!refreshedBWPOPs.equals(blackwatchPOPs)) {
                 blackwatchPOPs.addAll(refreshedBWPOPs);
                 popsUpdated = true;
-            }
-            
-            // If either of the pops list or blackwatch pops list has changed, then also update the nonBlackwatch pops list.
-            if (popsUpdated) {
-                nonBlackwatchPOPs.addAll(Sets.difference(allPOPs, blackwatchPOPs));
             }
             
             if (allActionsSuccessful) {
