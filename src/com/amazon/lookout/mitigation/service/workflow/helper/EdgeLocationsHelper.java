@@ -108,7 +108,7 @@ public class EdgeLocationsHelper implements Runnable {
         }
         
         if (locationsRefreshAtleastOnce.get()) {
-        	return (Sets.difference(allPOPs, blackwatchPOPs));
+            return (Sets.difference(allPOPs, blackwatchPOPs));
         } else {
             String msg = "Unable to refresh the list of POPs for this getAllNonBlackwatchPOPs call";
             LOG.error(msg);
