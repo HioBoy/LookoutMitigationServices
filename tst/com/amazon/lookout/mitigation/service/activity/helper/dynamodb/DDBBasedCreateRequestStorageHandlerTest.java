@@ -95,6 +95,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         metadata.setUser("lookout");
         metadata.setToolName("lookoutui");
         metadata.setDescription("why not?");
+        metadata.setRelatedTickets(Lists.newArrayList("12345"));
         request.setMitigationActionMetadata(metadata);
         
         MitigationDefinition definition = defaultCreateMitigationDefinition();

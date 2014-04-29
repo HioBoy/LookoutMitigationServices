@@ -22,8 +22,12 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.model.AttributeAction;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.AttributeValueUpdate;
 import com.amazonaws.services.dynamodbv2.model.Condition;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
+import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.simpleworkflow.flow.DataConverter;
@@ -43,6 +47,7 @@ public abstract class DDBBasedRequestStorageHandler {
     // Below is a list of all the attributes we store in the MitigationRequests table.
     public static final String DEVICE_NAME_KEY = "DeviceName";
     public static final String WORKFLOW_ID_KEY = "WorkflowId";
+    public static final String SWF_RUN_ID_KEY = "SWFRunId";
     public static final String DEVICE_SCOPE_KEY = "DeviceScope";
     public static final String WORKFLOW_STATUS_KEY = "WorkflowStatus";
     public static final String MITIGATION_NAME_KEY = "MitigationName";
@@ -67,6 +72,7 @@ public abstract class DDBBasedRequestStorageHandler {
     // Keys for TSDMetrics.
     private static final String NUM_DDB_PUT_ITEM_ATTEMPTS_KEY = "NumPutAttempts";
     private static final String NUM_DDB_QUERY_ATTEMPTS_KEY = "NumDDBQueryAttempts";
+    private static final String NUM_DDB_UPDATE_ITEM_ATTEMPTS_KEY = "NumDDBUpdateAttempts";
     
     // Retry and sleep configs.
     private static final int DDB_QUERY_MAX_ATTEMPTS = 3;
@@ -74,6 +80,10 @@ public abstract class DDBBasedRequestStorageHandler {
     
     protected static final int DDB_PUT_ITEM_MAX_ATTEMPTS = 3;
     private static final int DDB_PUT_ITEM_RETRY_SLEEP_MILLIS_MULTIPLIER = 100;
+    
+    // Slightly higher number of retries for updating item, since we've already done a whole lot of work for creating the item.
+    protected static final int DDB_UPDATE_ITEM_MAX_ATTEMPTS = 5;
+    private static final int DDB_UPDATE_ITEM_RETRY_SLEEP_MILLIS_MULTIPLIER = 100;
     
     public static final int UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS = 0;
     
@@ -177,7 +187,7 @@ public abstract class DDBBasedRequestStorageHandler {
         attributeValue = new AttributeValue(deviceNameAndScope.getDeviceScope().name());
         attributesInItemToStore.put(DEVICE_SCOPE_KEY, attributeValue);
         
-        attributeValue = new AttributeValue(WorkflowStatus.CREATED);
+        attributeValue = new AttributeValue(WorkflowStatus.SCHEDULED);
         attributesInItemToStore.put(WORKFLOW_STATUS_KEY, attributeValue);
         
         attributeValue = new AttributeValue(request.getMitigationName());
@@ -211,14 +221,14 @@ public abstract class DDBBasedRequestStorageHandler {
         
         // Related tickets isn't a required attribute, hence checking if it has been provided before creating a corresponding AttributeValue for it.
         if ((metadata.getRelatedTickets() != null) && !metadata.getRelatedTickets().isEmpty()) {
-	        attributeValue = new AttributeValue().withSS(metadata.getRelatedTickets());
-	        attributesInItemToStore.put(RELATED_TICKETS_KEY, attributeValue);
+            attributeValue = new AttributeValue().withSS(metadata.getRelatedTickets());
+            attributesInItemToStore.put(RELATED_TICKETS_KEY, attributeValue);
         }
         
         // For some templates (eg: Router_RateLimit_Route53Customer) we don't expect location to be provided (eg: in some cases we would deploy to all non-BW POPs)
         // Hence checking absence of location before creating a corresponding AttributeValue for it.
         if ((request.getLocation() != null) && !request.getLocation().isEmpty()) {
-        	attributeValue = new AttributeValue().withSS(request.getLocation());
+            attributeValue = new AttributeValue().withSS(request.getLocation());
             attributesInItemToStore.put(LOCATIONS_KEY, attributeValue);
         }
         
@@ -320,6 +330,66 @@ public abstract class DDBBasedRequestStorageHandler {
     }
     
     /**
+     * Responsible for recording the SWFRunId corresponding to the workflow request just created in DDB.
+     * @param deviceName DeviceName corresponding to the workflow being run.
+     * @param workflowId WorkflowId for the workflow being run.
+     * @param runId SWF assigned runId for the running instance of this workflow.
+     * @param metrics
+     */
+    public void updateRunIdForWorkflowRequest(@Nonnull String deviceName, long workflowId, @Nonnull String runId, @Nonnull TSDMetrics metrics) {
+    	Validate.notEmpty(deviceName);
+    	Validate.isTrue(workflowId > 0);
+    	Validate.notEmpty(runId);
+    	Validate.notNull(metrics);
+    	
+        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.updateRunIdForWorkflowRequest");
+        int numAttempts = 0;
+        try {
+            Map<String, AttributeValue> key = new HashMap<>();
+            key.put(DEVICE_NAME_KEY, new AttributeValue(deviceName));
+            key.put(WORKFLOW_ID_KEY, new AttributeValue().withN(String.valueOf(workflowId)));
+            
+            Map<String, AttributeValueUpdate> attributeUpdates = new HashMap<>();
+            attributeUpdates.put(SWF_RUN_ID_KEY, new AttributeValueUpdate(new AttributeValue(runId), AttributeAction.PUT));
+
+            Map<String, ExpectedAttributeValue> expected = new HashMap<>();
+            ExpectedAttributeValue absentValueExpectation = new ExpectedAttributeValue();
+            absentValueExpectation.setExists(false);
+            expected.put(SWF_RUN_ID_KEY, absentValueExpectation);
+            
+            // Attempt to update DDB for a fixed number of times.
+            while (numAttempts++ < DDB_UPDATE_ITEM_MAX_ATTEMPTS) {
+	            try {
+	                updateItemInDynamoDB(attributeUpdates, key, expected);
+	                return;
+	            } catch (ConditionalCheckFailedException ex) {
+	                String msg = "For workflowId: " + workflowId + " for device: " + deviceName + " attempted runId update: " + runId + 
+	                             ", but caught a ConditionalCheckFailedException indicating runId was already updated!";
+	                LOG.error(msg, ex);
+	                throw new RuntimeException(msg, ex);
+	            } catch (Exception ex) {
+	                String msg = "Caught Exception when updating runId to :" + runId + " for device: " + deviceName + 
+	                             " for workflowId: " + workflowId + ". Attempts so far: " + numAttempts;
+	                LOG.warn(msg, ex);
+	
+	               if (numAttempts < DDB_UPDATE_ITEM_MAX_ATTEMPTS) {
+	                   try {
+	                       Thread.sleep(getSleepMillisMultiplierOnUpdateRetry() * numAttempts);
+	                   } catch (InterruptedException ignored) {}
+	               }
+	            }
+            }
+            
+            String msg = "Unable to update runId to :" + runId + " for device: " + deviceName + 
+            		     " for workflowId: " + workflowId + " after " + numAttempts + " number of attempts.";
+            throw new RuntimeException(msg);
+        } finally {
+            subMetrics.addCount(NUM_DDB_UPDATE_ITEM_ATTEMPTS_KEY, numAttempts);
+            subMetrics.end();
+        }
+    }
+    
+    /**
      * Issues a query against the DDBTable. Delegates the call to DynamoDBHelper for calling the query DDB API.
      * Protected for unit tests.
      * @param request Request to be queried.
@@ -327,7 +397,7 @@ public abstract class DDBBasedRequestStorageHandler {
      * @return QueryResult corresponding to the result of the query.
      */
     protected QueryResult queryDynamoDB(QueryRequest request, TSDMetrics metrics) {
-        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHelper.queryDynamoDB");
+        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.queryDynamoDB");
         try {
             return DynamoDBHelper.queryItemAttributesFromTable(dynamoDBClient, request, false);
         } finally {
@@ -351,6 +421,26 @@ public abstract class DDBBasedRequestStorageHandler {
      */
     protected int getSleepMillisMultiplierOnPutRetry() {
         return DDB_PUT_ITEM_RETRY_SLEEP_MILLIS_MULTIPLIER;
+    }
+    
+    /**
+     * Helper to return the multiplier for sleeping on each failure when calling UpdateItem on DDB.
+     * Protected for unit-testing, to allow injecting this value. 
+     * @return long multiplier for sleeping on each failure when calling UpdateItem on DDB.
+     */
+    protected int getSleepMillisMultiplierOnUpdateRetry() {
+        return DDB_UPDATE_ITEM_RETRY_SLEEP_MILLIS_MULTIPLIER;
+    }
+    
+    /**
+     * Delegates the call to DynamoDBHelper. protected to allow for unit-testing.
+     * @param tableName TableName where the update needs to happen.
+     * @param attributeUpdates AttributeValues that represent the update that needs to happen.
+     * @param key Represents the item key that needs to be updates.
+     * @param expected Represents the conditions that must exist before the update is run.
+     */
+    protected void updateItemInDynamoDB(Map<String, AttributeValueUpdate> attributeUpdates, Map<String, AttributeValue> key, Map<String, ExpectedAttributeValue> expected) {
+        DynamoDBHelper.updateItem(dynamoDBClient, mitigationRequestsTableName, attributeUpdates, key, expected, null, null, null);
     }
 
 }

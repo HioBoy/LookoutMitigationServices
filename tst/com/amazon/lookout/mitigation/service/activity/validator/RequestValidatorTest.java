@@ -306,7 +306,7 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("Tool used to create this request not defined"));
+        assertTrue(caughtException.getMessage().startsWith("No tool specified in the mitigation action metadata"));
     }
     
     /**
@@ -342,6 +342,6 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("Description for this mitigation request not defined"));
+        assertTrue(caughtException.getMessage().startsWith("No description specified in the mitigation action metadata"));
     }
 }

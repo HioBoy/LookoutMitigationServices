@@ -11,4 +11,6 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 public interface RequestStorageHandler {
     
     public long storeRequestForWorkflow(MitigationModificationRequest mitigationRequest, TSDMetrics metrics);
+    
+    public void updateRunIdForWorkflowRequest(String deviceName, long workflowId, String runId, TSDMetrics metrics);
 }

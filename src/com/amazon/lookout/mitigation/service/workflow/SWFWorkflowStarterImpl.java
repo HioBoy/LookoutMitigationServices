@@ -14,6 +14,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsHelperManager;
 import com.amazon.lookout.workflow.LookoutMitigationWorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.flow.StartWorkflowOptions;
+import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowType;
 
@@ -47,39 +48,62 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
         Validate.notNull(templateBasedLocationsHelper);
         this.templateBasedLocationsHelper = templateBasedLocationsHelper;
     }
+    
+    /**
+     * Create a new workflow client which will be used to run the new workflow.
+     * @param workflowId WorkflowId to use for the new workflow to be run.
+     * @param request MitigationModificationRequest request passed by the client.
+     * @param deviceName device on which the workflow steps are to be run.
+     * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to check for workflowId's uniqueness.
+     * @return WorkflowClientExternal Representing the client that should be used to start running this workflow.
+     */
+    @Override
+    public WorkflowClientExternal createSWFWorkflowClient(long workflowId, @Nonnull MitigationModificationRequest request, @Nonnull String deviceName, @Nonnull TSDMetrics metrics) {
+        Validate.isTrue(workflowId > 0);
+        Validate.notNull(request);
+        Validate.notEmpty(deviceName);
+        Validate.notNull(metrics);
+        
+        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.createSWFWorkflowClient");
+        try {
+            String mitigationTemplate = request.getMitigationTemplate();
+            
+            // Get workflow client for this template + device.
+            return workflowClientProvider.getWorkflowClient(mitigationTemplate, deviceName, workflowId, subMetrics);
+        } finally {
+            subMetrics.end();
+        }
+    }
 
     /**
-     * Start the workflow for the request passed as input.
+     * Start the workflow using the WorkflowExternalClient and request instance passed as input.
      * @param workflowId WorkflowId to use for the new workflow to be run.
      * @param request MitigationModificationRequest request passed by the client.
      * @param mitigationVersion Version to use for this mitigation.
      * @param deviceName device on which the workflow steps are to be run.
      * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to check for workflowId's uniqueness.
+     * @return String representing the runId that SWF assigns to our workflow.
      */
     @Override
-    public void startWorkflow(long workflowId, @Nonnull MitigationModificationRequest request, int mitigationVersion, @Nonnull String deviceName, @Nonnull TSDMetrics metrics) {
+    public void startWorkflow(long workflowId, @Nonnull MitigationModificationRequest request, int mitigationVersion, @Nonnull String deviceName, 
+                              @Nonnull WorkflowClientExternal workflowExternalClient, @Nonnull TSDMetrics metrics) {
         Validate.isTrue(workflowId > 0);
         Validate.notNull(request);
         Validate.isTrue(mitigationVersion > 0);
         Validate.notEmpty(deviceName);
+        Validate.notNull(workflowExternalClient);
         Validate.notNull(metrics);
         
         TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.startWorkflow");
         try {
-            String mitigationTemplate = request.getMitigationTemplate();
-            
-            // Get workflow client for this template + device.
-            LookoutMitigationWorkflowClientExternal workflowClient = 
-                    (LookoutMitigationWorkflowClientExternal) workflowClientProvider.getWorkflowClient(mitigationTemplate, deviceName, workflowId, subMetrics);
-            
             // Add workflow properties to request metrics.
-            WorkflowExecution workflowExecution = workflowClient.getWorkflowExecution();
+            WorkflowExecution workflowExecution = workflowExternalClient.getWorkflowExecution();
             String swfWorkflowId = workflowExecution.getWorkflowId();
             String swfRunId = workflowExecution.getRunId();
             subMetrics.addProperty(WORKFLOW_ID_METRIC_PROPERTY_KEY, swfWorkflowId);
             subMetrics.addProperty(WORKFLOW_SWF_RUN_ID_METRIC_PROPERTY_KEY, swfRunId);
             
-            WorkflowType workflowType = workflowClient.getWorkflowType();
+            WorkflowType workflowType = workflowExternalClient.getWorkflowType();
             String workflowTypeName = workflowType.getName();
             String workflowTypeVersion = workflowType.getVersion();
             subMetrics.addProperty(WORKFLOW_TYPE_NAME_METRIC_PROPERTY_KEY, workflowTypeName);
@@ -92,8 +116,15 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             // we might have locations based on the templateName, hence checking with the templateBasedLocationsHelper and also passing it the original request to have the entire context.
             Set<String> locationsToDeploy = templateBasedLocationsHelper.getLocationsForDeployment(request);
             
-            // Start running the workflow.
-            workflowClient.startMitigationWorkflow(workflowId, locationsToDeploy, request, mitigationVersion, deviceName, workflowOptions);
+            if (workflowExternalClient instanceof LookoutMitigationWorkflowClientExternal) {
+                // Start running the workflow.
+                ((LookoutMitigationWorkflowClientExternal) workflowExternalClient).startMitigationWorkflow(workflowId, locationsToDeploy, request, mitigationVersion, deviceName, workflowOptions);
+            } else {
+                String msg = "WorkflowExternalClient is of type: " + workflowExternalClient.getClass().getName() + ". Currently there exists no setup to run workflow of this type. For workflowId: " + 
+                             workflowId + " on device: " + deviceName + " with mitigationVersion: " + mitigationVersion + " for request: " + ReflectionToStringBuilder.toString(request);
+                LOG.error(msg);
+                throw new IllegalStateException(msg);
+            }
             
             LOG.debug("Started workflow for workflowId: " + workflowId + " in SWF, with SWFWorkflowId: " + swfWorkflowId + " SWFRunId: " + swfRunId + 
                       " WorkflowType: " + workflowTypeName + " WorkflowTypeVersion: " + workflowTypeVersion + " for request: " + ReflectionToStringBuilder.toString(request) + 

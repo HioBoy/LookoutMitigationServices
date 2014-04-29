@@ -29,6 +29,7 @@ import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDevic
 import com.amazon.lookout.mitigation.service.constants.RequestType;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
+import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
@@ -86,17 +87,24 @@ public class CreateMitigationActivity extends Activity {
             // Step4. Persist this request in DDB and get back the workflowId associated with this request.
             long workflowId = requestStorageManager.storeRequestForWorkflow(createMitigationRequest, RequestType.CreateRequest, tsdMetrics);
             
-            // Step5. Start workflow.
+            // Step5. Create new workflow client to be used for running the workflow.
             DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(createMitigationRequest.getMitigationTemplate());
-            workflowStarter.startWorkflow(workflowId, createMitigationRequest, DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, 
-                                          deviceNameAndScope.getDeviceName().name(), tsdMetrics);
+            String deviceName = deviceNameAndScope.getDeviceName().name();
+            WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, createMitigationRequest, deviceName, tsdMetrics);
             
-            // Step6. Return back the workflowId to the client.
+            // Step6. Update the record for this workflow request and store the runId that SWF associates with this workflow.
+            String swfRunId = workflowClient.getWorkflowExecution().getRunId();
+            requestStorageManager.updateRunIdForWorkflowRequest(deviceName, workflowId, swfRunId, RequestType.CreateRequest, tsdMetrics);
+            
+            // Step7. Now that the request has been updated with the swfRunId associated with this SWF workflow run, start running the workflow.
+            workflowStarter.startWorkflow(workflowId, createMitigationRequest, DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, deviceName, workflowClient, tsdMetrics);
+            
+            // Step8. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
             mitigationModificationResponse.setMitigationName(createMitigationRequest.getMitigationName());
             mitigationModificationResponse.setServiceName(createMitigationRequest.getServiceName());
             mitigationModificationResponse.setJobId(workflowId);
-            mitigationModificationResponse.setRequestStatus(WorkflowStatus.CREATED);
+            mitigationModificationResponse.setRequestStatus(WorkflowStatus.SCHEDULED);
             
             return mitigationModificationResponse;
         } catch (IllegalArgumentException ex) {

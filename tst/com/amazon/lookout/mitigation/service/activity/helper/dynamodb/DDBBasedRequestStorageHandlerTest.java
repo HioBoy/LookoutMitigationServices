@@ -36,6 +36,7 @@ import com.amazon.lookout.mitigation.service.constants.RequestType;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
+import com.google.common.collect.Lists;
 
 @SuppressWarnings("unchecked")
 public class DDBBasedRequestStorageHandlerTest {
@@ -143,6 +144,7 @@ public class DDBBasedRequestStorageHandlerTest {
         DDBBasedRequestStorageHandler storageHandler = mock(DDBBasedRequestStorageHandler.class);
         
         MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.createMitigationModificationRequest();
+        request.setLocation(Lists.newArrayList("POP1", "POP2"));
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         Long workflowId = (long) 1;
         RequestType requestType = RequestType.CreateRequest;
@@ -168,7 +170,7 @@ public class DDBBasedRequestStorageHandlerTest {
         
         assertTrue(attributesToStore.containsKey(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY));
         String workflowStatus = attributesToStore.get(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY).getS();
-        assertEquals(workflowStatus, WorkflowStatus.CREATED);
+        assertEquals(workflowStatus, WorkflowStatus.SCHEDULED);
         
         assertTrue(attributesToStore.containsKey(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY));
         String mitigationName = attributesToStore.get(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY).getS();
@@ -237,4 +239,67 @@ public class DDBBasedRequestStorageHandlerTest {
         assertFalse(attributesToStore.containsKey(DDBBasedRequestStorageHandler.POST_DEPLOY_CHECKS_DEFINITION_KEY));
     }
     
+    /**
+     * Test the case where the update for swf runId goes through just fine.
+     */
+    @Test
+    public void testUpdateSWFRunId() {
+        DDBBasedRequestStorageHandler storageHandler = mock(DDBBasedRequestStorageHandler.class);
+        
+        doCallRealMethod().when(storageHandler).updateRunIdForWorkflowRequest(anyString(), anyLong(), anyString(), any(TSDMetrics.class));
+        
+        Throwable caughtException = null;
+        try {
+            storageHandler.updateRunIdForWorkflowRequest("TestDevice", (long) 1, "TestSWFRunId", TestUtils.newNopTsdMetrics());
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNull(caughtException);
+        
+        verify(storageHandler, times(1)).updateItemInDynamoDB(anyMap(), anyMap(), anyMap());
+    }
+    
+    /**
+     * Test the case where the update for swf runId has a couple of exceptions, but goes through just fine on retrying.
+     */
+    @Test
+    public void testUpdateSWFRunIdAfterRetries() {
+        DDBBasedRequestStorageHandler storageHandler = mock(DDBBasedRequestStorageHandler.class);
+        doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(storageHandler).updateItemInDynamoDB(anyMap(), anyMap(), anyMap());
+        when(storageHandler.getSleepMillisMultiplierOnUpdateRetry()).thenReturn(1);
+        
+        doCallRealMethod().when(storageHandler).updateRunIdForWorkflowRequest(anyString(), anyLong(), anyString(), any(TSDMetrics.class));
+        
+        Throwable caughtException = null;
+        try {
+            storageHandler.updateRunIdForWorkflowRequest("TestDevice", (long) 1, "TestSWFRunId", TestUtils.newNopTsdMetrics());
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNull(caughtException);
+        
+        verify(storageHandler, times(3)).updateItemInDynamoDB(anyMap(), anyMap(), anyMap());
+    }
+    
+    /**
+     * Test the case where the update for swf runId doesn't goes through even after retries.
+     */
+    @Test
+    public void testUnSuccessfulUpdateSWFRunId() {
+        DDBBasedRequestStorageHandler storageHandler = mock(DDBBasedRequestStorageHandler.class);
+        doThrow(new RuntimeException()).when(storageHandler).updateItemInDynamoDB(anyMap(), anyMap(), anyMap());
+        when(storageHandler.getSleepMillisMultiplierOnUpdateRetry()).thenReturn(1);
+        
+        doCallRealMethod().when(storageHandler).updateRunIdForWorkflowRequest(anyString(), anyLong(), anyString(), any(TSDMetrics.class));
+        
+        Throwable caughtException = null;
+        try {
+            storageHandler.updateRunIdForWorkflowRequest("TestDevice", (long) 1, "TestSWFRunId", TestUtils.newNopTsdMetrics());
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        verify(storageHandler, times(5)).updateItemInDynamoDB(anyMap(), anyMap(), anyMap());
+    }
+
 }

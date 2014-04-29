@@ -6,7 +6,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 import org.apache.commons.lang.Validate;
-import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -78,13 +77,6 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
         try {
             subMetrics.addProperty(REQUEST_TYPE_PROPERTY_KEY, requestType.name());
             RequestStorageHandler storageHandler = getRequestStorageHandler(requestType);
-            if (storageHandler == null) {
-                String msg = NO_STORAGE_HANDLE_FOUND_LOG_TAG + " - No RequestStorageHandler found for request: " + requestType.name() +
-                             ", Request: " + ReflectionToStringBuilder.toString(request);
-                LOG.warn(msg);
-                throw new InternalServerError500(msg);
-            }
-            
             return storageHandler.storeRequestForWorkflow(request, subMetrics);
         } finally {
             subMetrics.end();
@@ -104,12 +96,38 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
     }
     
     /**
+     * Responsible for recording the SWFRunId corresponding to the workflow request just created in DDB.
+     * @param deviceName DeviceName corresponding to the workflow being run.
+     * @param workflowId WorkflowId for the workflow being run.
+     * @param runId SWF assigned runId for the running instance of this workflow.
+     * @param requestType Instance of the RequestType enum, useful for delegating the update to the RequestStorageHandler corresponding to this request.
+     * @param metrics
+     */
+    public void updateRunIdForWorkflowRequest(@Nonnull String deviceName, long workflowId, @Nonnull String runId, 
+                                              @Nonnull RequestType requestType, @Nonnull TSDMetrics metrics) {
+        Validate.notEmpty(deviceName);
+        Validate.isTrue(workflowId > 0);
+        Validate.notEmpty(runId);
+        Validate.notNull(requestType);
+        Validate.notNull(metrics);
+        
+        RequestStorageHandler handler = getRequestStorageHandler(requestType);
+        handler.updateRunIdForWorkflowRequest(deviceName, workflowId, runId, metrics);
+    }
+    
+    /**
      * Helper to get the RequestStorageHandler corresponding to the request type. Protected for unit-tests.
      * @param requestType
      * @return RequestStorageHandler instance corresponding to the requestType passed as input.
      */
     protected RequestStorageHandler getRequestStorageHandler(RequestType requestType) {
-        return requestTypeToStorageHandler.get(requestType);
+        RequestStorageHandler storageHandler = requestTypeToStorageHandler.get(requestType);
+        if (storageHandler == null) {
+            String msg = NO_STORAGE_HANDLE_FOUND_LOG_TAG + " - No RequestStorageHandler found for requestType: " + requestType.name();
+            LOG.warn(msg);
+            throw new InternalServerError500(msg);
+        }
+        return storageHandler;
     }
 
 }
