@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 
 import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
@@ -36,6 +37,21 @@ import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionDetail;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfo;
 import com.google.common.collect.Lists;
 
+/**
+ * This class is responsible for cleaning up any workflows which are marked as closed in SWF, but the DDB status shows otherwise.
+ * The steps this reaper follows are:
+ * 1. Query DDB Requests table to see which workflows are currently running, along with their start times.
+ * 2. For each of such workflows, we also query their instances which aren't yet marked as complete.
+ * 3.1 For each of such workflows, if they have a SWFRunId associated with it, we query SWF API to figure out if this workflow is still considered as running by SWF. 
+ *     If it isn't so, then we check the timestamp of when SWF considered this workflow as closed and if it is above a certain threshold, we perform clean-up steps (4-5).
+ * 3.2 For workflows with no SWFRunId - these could be because they're just being created and have no associated in SWF. For these, we don't query SWF, but simply check
+ *     how long has it been since this request was created. If it has been above a threshold number of minutes - it implies this workflow request didn't succeed, in which 
+ *     case too we perform the clean-up steps (4-5).
+ * 4. For workflows to be cleaned up - we first update the instance status to Completed for the instances that were marked as incomplete.
+ * 5. Only if all the instances have been updated, we go ahead and flip the workflow status to failed, to indicate that this workflow didn't shut down gracefully.
+ * 
+ */
+@ThreadSafe
 public class SWFFailedWorkflowReaper implements Runnable {
     private static final Log LOG = LogFactory.getLog(SWFFailedWorkflowReaper.class);
     

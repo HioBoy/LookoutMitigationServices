@@ -337,11 +337,11 @@ public abstract class DDBBasedRequestStorageHandler {
      * @param metrics
      */
     public void updateRunIdForWorkflowRequest(@Nonnull String deviceName, long workflowId, @Nonnull String runId, @Nonnull TSDMetrics metrics) {
-    	Validate.notEmpty(deviceName);
-    	Validate.isTrue(workflowId > 0);
-    	Validate.notEmpty(runId);
-    	Validate.notNull(metrics);
-    	
+        Validate.notEmpty(deviceName);
+        Validate.isTrue(workflowId > 0);
+        Validate.notEmpty(runId);
+        Validate.notNull(metrics);
+        
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.updateRunIdForWorkflowRequest");
         int numAttempts = 0;
         try {
@@ -359,29 +359,29 @@ public abstract class DDBBasedRequestStorageHandler {
             
             // Attempt to update DDB for a fixed number of times.
             while (numAttempts++ < DDB_UPDATE_ITEM_MAX_ATTEMPTS) {
-	            try {
-	                updateItemInDynamoDB(attributeUpdates, key, expected);
-	                return;
-	            } catch (ConditionalCheckFailedException ex) {
-	                String msg = "For workflowId: " + workflowId + " for device: " + deviceName + " attempted runId update: " + runId + 
-	                             ", but caught a ConditionalCheckFailedException indicating runId was already updated!";
-	                LOG.error(msg, ex);
-	                throw new RuntimeException(msg, ex);
-	            } catch (Exception ex) {
-	                String msg = "Caught Exception when updating runId to :" + runId + " for device: " + deviceName + 
-	                             " for workflowId: " + workflowId + ". Attempts so far: " + numAttempts;
-	                LOG.warn(msg, ex);
-	
-	               if (numAttempts < DDB_UPDATE_ITEM_MAX_ATTEMPTS) {
-	                   try {
-	                       Thread.sleep(getSleepMillisMultiplierOnUpdateRetry() * numAttempts);
-	                   } catch (InterruptedException ignored) {}
-	               }
-	            }
+                try {
+                    updateItemInDynamoDB(attributeUpdates, key, expected);
+                    return;
+                } catch (ConditionalCheckFailedException ex) {
+                    String msg = "For workflowId: " + workflowId + " for device: " + deviceName + " attempted runId update: " + runId + 
+                                 ", but caught a ConditionalCheckFailedException indicating runId was already updated!";
+                    LOG.error(msg, ex);
+                    throw new RuntimeException(msg, ex);
+                } catch (Exception ex) {
+                    String msg = "Caught Exception when updating runId to :" + runId + " for device: " + deviceName + 
+                                 " for workflowId: " + workflowId + ". Attempts so far: " + numAttempts;
+                    LOG.warn(msg, ex);
+    
+                   if (numAttempts < DDB_UPDATE_ITEM_MAX_ATTEMPTS) {
+                       try {
+                           Thread.sleep(getSleepMillisMultiplierOnUpdateRetry() * numAttempts);
+                       } catch (InterruptedException ignored) {}
+                   }
+                }
             }
             
             String msg = "Unable to update runId to :" + runId + " for device: " + deviceName + 
-            		     " for workflowId: " + workflowId + " after " + numAttempts + " number of attempts.";
+                         " for workflowId: " + workflowId + " after " + numAttempts + " number of attempts.";
             throw new RuntimeException(msg);
         } finally {
             subMetrics.addCount(NUM_DDB_UPDATE_ITEM_ATTEMPTS_KEY, numAttempts);
