@@ -27,6 +27,7 @@ package.LookoutMitigationService = {
     dependencies = {
         1.0 = {
             LookoutMitigationServiceJavaClient = 1.0;
+            AWS158Commons = 1.1;
             CoralActivity = 1.0;
             CoralSpring = 3.1;
             JakartaCommons-logging-api = 1.1;
@@ -35,7 +36,8 @@ package.LookoutMitigationService = {
             
             AWSJavaSDKExternalRelease = 1.7;
             LookoutMitigationWorkFlowWorker = 1.0;
-            
+
+            CoralAwsAuthentication = 1.1; # To support authenticating/authorizing calls to LookoutMitigationService.
             OdinAWSCredentials = 1.2;
         };
     };
@@ -69,6 +71,7 @@ package.LookoutMitigationService = {
     test-dependencies = {
         1.0 = {
             junit = 4;
+            Mockito = 1.9.5;
         };
     };
 
@@ -79,6 +82,8 @@ package.LookoutMitigationService = {
             AWSJavaClientRuntime = external_release;
             JakartaCommons-lang = 2.6;
             JakartaCommons-codec = 1;
+            log4j = 1.2;
+            Mockito = 1.9.5;
         };
     };
 

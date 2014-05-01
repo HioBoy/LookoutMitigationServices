@@ -32,7 +32,7 @@
                 <!-- Here are protocol handlers. You need at least one.-->
                 <bean class="com.amazon.coral.service.http.HttpBindingHandler"/>
                 <bean class="com.amazon.coral.service.HttpRpcHandler"/>
-                
+                <ref bean="AuthenticationHandler"/>
                 <bean class="com.amazon.coral.service.ModelHandler"/>
                 <bean class="com.amazon.coral.service.http.ContentHandler"/>
                 <bean class="com.amazon.coral.validate.ValidationHandler"/>
@@ -43,4 +43,25 @@
         </property>
     </bean>
     
+    <bean id="AuthenticationHandler" class="com.amazon.coral.service.ARSAuthenticationHelper" depends-on="appConfigHelper">
+        <constructor-arg>
+    	    <bean class="com.amazon.coral.service.AwsAuthNConfig">
+    	        <property name="signingSchemes" value="V4" />
+     	        <property name="region" ref="${realm}.arsAuthNRegion" />
+     	        <property name="service" value="lookout" />
+     	        <property name="vendorCode" value="lookout" />
+     	        <property name="authNCache" ref="AuthNCache" />
+     	        <property name="policyCache" ref="PolicyCache" />
+     	        <property name="headersToSecure" value="" />
+            </bean>
+        </constructor-arg>
+    </bean>
+
+    <!-- 
+    HashMapCache are generally disapproved in Prod because real customer traffic could 
+    overwhelm the cache. We do not expect that many number of diverse clients or very 
+    high volumes of requests to overwhelm the HashMapCache for LookoutMitigationService.
+    --> 
+    <bean id="AuthNCache" class="amazon.cache.impl.HashMapCache" />
+    <bean id="PolicyCache" class="amazon.cache.impl.HashMapCache" />
 </beans>
