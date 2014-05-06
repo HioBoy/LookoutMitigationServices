@@ -14,7 +14,6 @@ import com.amazon.coral.annotation.Operation;
 import com.amazon.coral.annotation.Service;
 import com.amazon.coral.service.Activity;
 import com.amazon.coral.validate.Validated;
-import com.amazon.lookout.activities.model.RequestType;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DeleteMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
@@ -27,6 +26,7 @@ import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceC
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
+import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 
 @ThreadSafe

@@ -12,12 +12,12 @@ import org.apache.commons.logging.LogFactory;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.google.common.collect.ImmutableMap;
 import com.amazon.coral.google.common.collect.Maps;
-import com.amazon.lookout.activities.model.RequestType;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
+import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 
 /**

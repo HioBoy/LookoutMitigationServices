@@ -1,8 +1,8 @@
 package com.amazon.lookout.mitigation.service.workflow;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.activities.model.RequestType;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 
 /**

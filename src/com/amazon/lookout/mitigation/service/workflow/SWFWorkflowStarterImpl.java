@@ -10,9 +10,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.activities.model.RequestType;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsHelperManager;
+import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.workflow.LookoutMitigationWorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.flow.StartWorkflowOptions;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
