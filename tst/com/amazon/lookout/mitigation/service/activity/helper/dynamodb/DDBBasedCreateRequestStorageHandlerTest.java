@@ -88,6 +88,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public static MitigationModificationRequest createMitigationModificationRequest() {
         MitigationModificationRequest request = new MitigationModificationRequest();
         request.setMitigationName("TestMitigationName");
+        request.setMitigationVersion(1);
         request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
         request.setServiceName(ServiceName.Route53);
         

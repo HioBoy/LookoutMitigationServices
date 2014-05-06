@@ -27,6 +27,7 @@ public class RequestValidatorTest {
     private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
     
     private final String mitigationName = "TestMitigationName";
+    private final int mitigationVersion = 1;
     private final String mitigationTemplate = MitigationTemplate.Router_RateLimit_Route53Customer;
     private final String serviceName = ServiceName.Route53;
     private final String userName = "TestUserName";
@@ -50,6 +51,7 @@ public class RequestValidatorTest {
     public void testHappyCase() {
         MitigationModificationRequest request = new MitigationModificationRequest();
         request.setMitigationName(mitigationName);
+        request.setMitigationVersion(mitigationVersion);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
         
@@ -84,6 +86,7 @@ public class RequestValidatorTest {
     @Test
     public void testMissingMitigationName() {
         MitigationModificationRequest request = new MitigationModificationRequest();
+        request.setMitigationVersion(mitigationVersion);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
         
@@ -114,6 +117,43 @@ public class RequestValidatorTest {
     }
     
     /**
+     * Test the case where the request is missing the mitigationName 
+     * We expect an exception to be thrown in this case.
+     */
+    @Test
+    public void testMissingMitigationVersion() {
+        MitigationModificationRequest request = new MitigationModificationRequest();
+        request.setMitigationName(mitigationName);
+        request.setMitigationTemplate(mitigationTemplate);
+        request.setServiceName(serviceName);
+        
+        MitigationActionMetadata metadata = new MitigationActionMetadata();
+        metadata.setUser(userName);
+        metadata.setToolName(toolName);
+        metadata.setDescription(description);
+        request.setMitigationActionMetadata(metadata);
+        
+        SimpleConstraint constraint = new SimpleConstraint();
+        constraint.setAttributeName(PacketAttributesEnumMapping.DESTINATION_IP.name());
+        constraint.setAttributeValues(Lists.newArrayList("1.2.3.4"));
+        MitigationDefinition definition = new MitigationDefinition();
+        definition.setConstraint(constraint);
+        request.setMitigationDefinition(definition);
+        
+        RequestValidator validator = new RequestValidator();
+        
+        Throwable caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        assertTrue(caughtException.getMessage().startsWith("Invalid mitigation version found."));
+    }
+    
+    /**
      * Test the case where the request is missing the mitigationTemplate
      * We expect an exception to be thrown in this case.
      */
@@ -121,6 +161,7 @@ public class RequestValidatorTest {
     public void testMissingOrInvalidMitigationTemplate() {
         MitigationModificationRequest request = new MitigationModificationRequest();
         request.setMitigationName(mitigationName);
+        request.setMitigationVersion(mitigationVersion);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -167,6 +208,7 @@ public class RequestValidatorTest {
     public void testMissingOrInvalidServiceName() {
         MitigationModificationRequest request = new MitigationModificationRequest();
         request.setMitigationName(mitigationName);
+        request.setMitigationVersion(mitigationVersion);
         request.setMitigationTemplate(mitigationTemplate);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -214,6 +256,7 @@ public class RequestValidatorTest {
     public void testMissingMitigationActionMetadata() {
         MitigationModificationRequest request = new MitigationModificationRequest();
         request.setMitigationName(mitigationName);
+        request.setMitigationVersion(mitigationVersion);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
         
@@ -245,6 +288,7 @@ public class RequestValidatorTest {
     public void testMissingUserName() {
         MitigationModificationRequest request = new MitigationModificationRequest();
         request.setMitigationName(mitigationName);
+        request.setMitigationVersion(mitigationVersion);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
         
@@ -281,6 +325,7 @@ public class RequestValidatorTest {
     public void testMissingToolName() {
         MitigationModificationRequest request = new MitigationModificationRequest();
         request.setMitigationName(mitigationName);
+        request.setMitigationVersion(mitigationVersion);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
         
@@ -317,6 +362,7 @@ public class RequestValidatorTest {
     public void testMissingMitigationDescription() {
         MitigationModificationRequest request = new MitigationModificationRequest();
         request.setMitigationName(mitigationName);
+        request.setMitigationVersion(mitigationVersion);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
         

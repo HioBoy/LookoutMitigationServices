@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,15 +17,19 @@ import org.joda.time.DateTimeZone;
 
 import com.amazon.aws158.commons.dynamo.DynamoDBHelper;
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.activities.model.RequestType;
+import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeAction;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.AttributeValueUpdate;
+import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
@@ -121,7 +126,7 @@ public abstract class DDBBasedRequestStorageHandler {
             // Try for a fixed number of times to store the item into DDB. If we succeed, we simply return, else we exit the loop and throw back an exception.
             while (numAttempts++ < DDB_PUT_ITEM_MAX_ATTEMPTS) {
                 try {
-                    putItemInDDB(attributeValuesInItem, subMetrics);
+                	putItemInDDB(attributeValuesInItem, subMetrics);
                     return;
                 } catch (Exception ex) {
                     String msg = "Caught exception when inserting item: " + attributeValuesInItem + " into table: " + mitigationRequestsTableName + 
@@ -203,7 +208,7 @@ public abstract class DDBBasedRequestStorageHandler {
         attributesInItemToStore.put(SERVICE_NAME_KEY, attributeValue);
         
         DateTime now = new DateTime(DateTimeZone.UTC);
-        attributeValue = new AttributeValue(String.valueOf(now.getMillis()));
+        attributeValue = new AttributeValue().withN(String.valueOf(now.getMillis()));
         attributesInItemToStore.put(REQUEST_DATE_KEY, attributeValue);
         
         attributeValue = new AttributeValue(requestType);
@@ -270,6 +275,24 @@ public abstract class DDBBasedRequestStorageHandler {
         attributesInItemToStore.put(UPDATE_WORKFLOW_ID_KEY, attributeValue);
         
         return attributesInItemToStore;
+    }
+    
+    protected Map<String, ExpectedAttributeValue> generateExpectedAttributeValues(MitigationModificationRequest request, DeviceNameAndScope deviceNameAndScope, 
+                                                                                   long workflowId, RequestType requestType, int mitigationVersion) {
+        Map<String, ExpectedAttributeValue> expectations = new HashMap<>();
+        
+        String mitigationName = request.getMitigationName();
+        ExpectedAttributeValue expectedAttributeValue = new ExpectedAttributeValue();
+        expectedAttributeValue.setValue(new AttributeValue(mitigationName));
+        expectedAttributeValue.setExists(false);
+        expectations.put(MITIGATION_NAME_KEY, expectedAttributeValue);
+        
+        expectedAttributeValue = new ExpectedAttributeValue();
+        expectedAttributeValue.setValue(new AttributeValue(deviceNameAndScope.getDeviceName().name()));
+        expectedAttributeValue.setExists(false);
+        expectations.put(DEVICE_NAME_KEY, expectedAttributeValue);
+        
+        return expectations;
     }
     
     /**
@@ -441,6 +464,86 @@ public abstract class DDBBasedRequestStorageHandler {
      */
     protected void updateItemInDynamoDB(Map<String, AttributeValueUpdate> attributeUpdates, Map<String, AttributeValue> key, Map<String, ExpectedAttributeValue> expected) {
         DynamoDBHelper.updateItem(dynamoDBClient, mitigationRequestsTableName, attributeUpdates, key, expected, null, null, null);
+    }
+    
+    /**
+     * Check if the new workflowId we're going to use is within the valid range for this deviceScope.
+     * @param workflowId
+     * @param deviceNameAndScope
+     */
+    protected void sanityCheckWorkflowId(long workflowId, DeviceNameAndScope deviceNameAndScope) {
+        DeviceScope deviceScope = deviceNameAndScope.getDeviceScope();
+        if ((workflowId < deviceScope.getMinWorkflowId()) || (workflowId > deviceScope.getMaxWorkflowId())) {
+            String msg = "Received workflowId = " + workflowId + " which is out of the valid range for the device scope: " + deviceScope.name() +
+                         " expectedMin: " + deviceScope.getMinWorkflowId() + " expectedMax: " + deviceScope.getMaxWorkflowId();
+            LOG.fatal(msg);
+            throw new InternalServerError500(msg);
+        }
+    }
+    
+    /**
+     * Generate the keys for querying active mitigations for the device passed as input. Protected for unit-testing.
+     * An active mitigation is one whose UpdateWorkflowId column hasn't been updated in the MitigationRequests table.
+     * @param deviceName Device for whom we need to find the active mitigations.
+     * @return Keys for querying active mitigations for the device passed as input.
+     */
+    protected Map<String, Condition> getKeysForActiveMitigationsForDevice(String deviceName) {
+        Map<String, Condition> keyConditions = new HashMap<>();
+        
+        Set<AttributeValue> keyValues = new HashSet<>();
+        AttributeValue keyValue = new AttributeValue(deviceName);
+        keyValues.add(keyValue);
+
+        Condition condition = new Condition();
+        condition.setComparisonOperator(ComparisonOperator.EQ);
+        condition.setAttributeValueList(keyValues);
+
+        keyConditions.put(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY, condition);
+
+        keyValues = new HashSet<>();
+        keyValue = new AttributeValue();
+        keyValue.setN(String.valueOf(UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS));
+        keyValues.add(keyValue);
+
+        condition = new Condition();
+        condition.setComparisonOperator(ComparisonOperator.EQ);
+        condition.setAttributeValueList(keyValues);
+        keyConditions.put(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY, condition);
+
+        return keyConditions;
+    }
+
+    /**
+     * Generate the keys for querying mitigations for the device passed as input and whose workflowIds are equal or greater than the workflowId passed as input.
+     * Protected for unit-testing
+     * @param deviceName Device for whom we need to find the active mitigations.
+     * @param workflowId WorkflowId which we need to constraint our query by. We should be querying for existing mitigations whose workflowIds are >= this value.
+     * @return Keys for querying mitigations for the device passed as input with workflowIds >= the workflowId passed as input above.
+     */
+    protected Map<String, Condition> getKeysForDeviceAndWorkflowId(String deviceName, Long workflowId) {
+        Map<String, Condition> keyConditions = new HashMap<>();
+
+        Set<AttributeValue> keyValues = new HashSet<>();
+        AttributeValue keyValue = new AttributeValue(deviceName);
+        keyValues.add(keyValue);
+
+        Condition condition = new Condition();
+        condition.setComparisonOperator(ComparisonOperator.EQ);
+        condition.setAttributeValueList(keyValues);
+
+        keyConditions.put(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY, condition);
+
+        keyValues = new HashSet<>();
+        keyValue = new AttributeValue();
+        keyValue.setN(String.valueOf(workflowId));
+        keyValues.add(keyValue);
+
+        condition = new Condition();
+        condition.setComparisonOperator(ComparisonOperator.GE);
+        condition.setAttributeValueList(keyValues);
+        keyConditions.put(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, condition);
+
+        return keyConditions;
     }
 
 }

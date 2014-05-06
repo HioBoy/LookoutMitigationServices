@@ -13,8 +13,8 @@ import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.activities.model.RequestType;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
-import com.amazon.lookout.mitigation.service.constants.RequestType;
 
 public class DDBBasedRequestStorageManagerTest {
     private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);

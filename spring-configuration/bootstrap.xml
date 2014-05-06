@@ -18,4 +18,6 @@
     order.
     -->
     <import resource="file:${spring.config.root}/*.xml" />
+    <import resource="file:${spring.config.root}/region/*.xml" />
+    <import resource="file:${spring.config.root}/domain/*.xml" />
 </beans>

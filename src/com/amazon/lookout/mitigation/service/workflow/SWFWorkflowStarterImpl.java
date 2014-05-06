@@ -10,6 +10,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.activities.model.RequestType;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsHelperManager;
 import com.amazon.lookout.workflow.LookoutMitigationWorkflowClientExternal;
@@ -79,14 +80,16 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * Start the workflow using the WorkflowExternalClient and request instance passed as input.
      * @param workflowId WorkflowId to use for the new workflow to be run.
      * @param request MitigationModificationRequest request passed by the client.
+     * @param requestType Type of the request for which we need to start the workflow.
      * @param mitigationVersion Version to use for this mitigation.
      * @param deviceName device on which the workflow steps are to be run.
+     * @param workflowExternalClient Pass the WorkflowClient to start the workflow.
      * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to check for workflowId's uniqueness.
      * @return String representing the runId that SWF assigns to our workflow.
      */
     @Override
-    public void startWorkflow(long workflowId, @Nonnull MitigationModificationRequest request, int mitigationVersion, @Nonnull String deviceName, 
-                              @Nonnull WorkflowClientExternal workflowExternalClient, @Nonnull TSDMetrics metrics) {
+    public void startWorkflow(long workflowId, @Nonnull MitigationModificationRequest request, @Nonnull RequestType requestType, int mitigationVersion, 
+                              @Nonnull String deviceName, @Nonnull WorkflowClientExternal workflowExternalClient, @Nonnull TSDMetrics metrics) {
         Validate.isTrue(workflowId > 0);
         Validate.notNull(request);
         Validate.isTrue(mitigationVersion > 0);
@@ -118,7 +121,7 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             
             if (workflowExternalClient instanceof LookoutMitigationWorkflowClientExternal) {
                 // Start running the workflow.
-                ((LookoutMitigationWorkflowClientExternal) workflowExternalClient).startMitigationWorkflow(workflowId, locationsToDeploy, request, mitigationVersion, deviceName, workflowOptions);
+                ((LookoutMitigationWorkflowClientExternal) workflowExternalClient).startMitigationWorkflow(workflowId, locationsToDeploy, request, requestType, mitigationVersion, deviceName, workflowOptions);
             } else {
                 String msg = "WorkflowExternalClient is of type: " + workflowExternalClient.getClass().getName() + ". Currently there exists no setup to run workflow of this type. For workflowId: " + 
                              workflowId + " on device: " + deviceName + " with mitigationVersion: " + mitigationVersion + " for request: " + ReflectionToStringBuilder.toString(request);
@@ -144,4 +147,5 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
         startWorkflowOptions.setTaskStartToCloseTimeoutSeconds(DEFAULT_WORKFLOW_DECISION_TASK_TIMEOUT_SECONDS);
         return startWorkflowOptions;
     }
+    
 }

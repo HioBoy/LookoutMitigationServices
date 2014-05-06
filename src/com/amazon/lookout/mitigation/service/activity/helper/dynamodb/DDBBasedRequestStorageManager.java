@@ -12,12 +12,12 @@ import org.apache.commons.logging.LogFactory;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.google.common.collect.ImmutableMap;
 import com.amazon.coral.google.common.collect.Maps;
+import com.amazon.lookout.activities.model.RequestType;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
-import com.amazon.lookout.mitigation.service.constants.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 
 /**
@@ -54,8 +54,11 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
     private EnumMap<RequestType, RequestStorageHandler> getRequestTypeToStorageHandlerMap(AmazonDynamoDBClient dynamoDBClient, String domain, 
                                                                                           TemplateBasedRequestValidator templateBasedValidator) {
         EnumMap<RequestType, RequestStorageHandler> requestStorageHandlerMap = new EnumMap<RequestType, RequestStorageHandler>(RequestType.class);
-        DDBBasedCreateRequestStorageHandler createStorageHandler = getCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
+        DDBBasedCreateRequestStorageHandler createStorageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         requestStorageHandlerMap.put(RequestType.CreateRequest, createStorageHandler);
+        
+        DDBBasedDeleteRequestStorageHandler deleteStorageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
+        requestStorageHandlerMap.put(RequestType.DeleteRequest, deleteStorageHandler);
         
         return requestStorageHandlerMap;
     }
@@ -81,18 +84,6 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
         } finally {
             subMetrics.end();
         }
-    }
-    
-    /**
-     * Helper method to create an instance of DDBBasedCreateRequestStorageHandler.
-     * @param dynamoDBClient
-     * @param domain
-     * @param templateBasedValidator
-     * @return New instance of DDBBasedCreateRequestStorageHandler
-     */
-    private DDBBasedCreateRequestStorageHandler getCreateRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain, 
-                                                                               TemplateBasedRequestValidator templateBasedValidator) {
-        return new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
     }
     
     /**

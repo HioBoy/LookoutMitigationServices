@@ -14,6 +14,7 @@ import com.amazon.coral.annotation.Operation;
 import com.amazon.coral.annotation.Service;
 import com.amazon.coral.service.Activity;
 import com.amazon.coral.validate.Validated;
+import com.amazon.lookout.activities.model.RequestType;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
@@ -26,7 +27,6 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.Templat
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
-import com.amazon.lookout.mitigation.service.constants.RequestType;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
@@ -97,11 +97,13 @@ public class CreateMitigationActivity extends Activity {
             requestStorageManager.updateRunIdForWorkflowRequest(deviceName, workflowId, swfRunId, RequestType.CreateRequest, tsdMetrics);
             
             // Step7. Now that the request has been updated with the swfRunId associated with this SWF workflow run, start running the workflow.
-            workflowStarter.startWorkflow(workflowId, createMitigationRequest, DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, deviceName, workflowClient, tsdMetrics);
+            workflowStarter.startWorkflow(workflowId, createMitigationRequest, RequestType.CreateRequest, 
+                                          DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, deviceName, workflowClient, tsdMetrics);
             
             // Step8. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
             mitigationModificationResponse.setMitigationName(createMitigationRequest.getMitigationName());
+            mitigationModificationResponse.setDeviceName(deviceName);
             mitigationModificationResponse.setServiceName(createMitigationRequest.getServiceName());
             mitigationModificationResponse.setJobId(workflowId);
             mitigationModificationResponse.setRequestStatus(WorkflowStatus.SCHEDULED);

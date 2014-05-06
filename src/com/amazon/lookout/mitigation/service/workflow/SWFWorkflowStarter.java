@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.workflow;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.activities.model.RequestType;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 
@@ -13,5 +14,6 @@ public interface SWFWorkflowStarter {
     public WorkflowClientExternal createSWFWorkflowClient(long workflowId, MitigationModificationRequest request, String deviceName, TSDMetrics metrics);
     
     // Start a new workflow based on the input parameters.
-    public void startWorkflow(long workflowId, MitigationModificationRequest request, int mitigationVersion, String deviceName, WorkflowClientExternal workflowExternalClient, TSDMetrics metrics);
+    public void startWorkflow(long workflowId, MitigationModificationRequest request, RequestType requestType, int mitigationVersion, String deviceName, 
+                              WorkflowClientExternal workflowExternalClient, TSDMetrics metrics);
 }

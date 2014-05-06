@@ -29,10 +29,10 @@ import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.activities.model.RequestType;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
-import com.amazon.lookout.mitigation.service.constants.RequestType;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
@@ -189,7 +189,7 @@ public class DDBBasedRequestStorageHandlerTest {
         assertEquals(serviceName, request.getServiceName());
         
         assertTrue(attributesToStore.containsKey(DDBBasedRequestStorageHandler.REQUEST_DATE_KEY));
-        String requestDateString = attributesToStore.get(DDBBasedRequestStorageHandler.REQUEST_DATE_KEY).getS();
+        String requestDateString = attributesToStore.get(DDBBasedRequestStorageHandler.REQUEST_DATE_KEY).getN();
         DateTime requestDateTime = new DateTime(Long.parseLong(requestDateString));
         DateTime now = new DateTime(DateTimeZone.UTC);
         Duration duration = new Duration(requestDateTime, now);
@@ -301,5 +301,4 @@ public class DDBBasedRequestStorageHandlerTest {
         assertNotNull(caughtException);
         verify(storageHandler, times(5)).updateItemInDynamoDB(anyMap(), anyMap(), anyMap());
     }
-
 }
