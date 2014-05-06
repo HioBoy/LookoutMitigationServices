@@ -79,11 +79,11 @@ public class DDBBasedRequestStorageManagerTest {
         DDBBasedRequestStorageManager storageManager = mock(DDBBasedRequestStorageManager.class);
         
         MitigationModificationRequest request = new MitigationModificationRequest();
-        RequestType requestType = RequestType.CreateRequest;
+        RequestType requestType = RequestType.DeleteRequest;
         
-        DDBBasedCreateRequestStorageHandler createRequestStorageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
-        when(createRequestStorageHandler.storeRequestForWorkflow(request, tsdMetrics)).thenThrow(new RuntimeException());
-        when(storageManager.getRequestStorageHandler(requestType)).thenReturn(createRequestStorageHandler);
+        DDBBasedDeleteRequestStorageHandler deleteRequestStorageHandler = mock(DDBBasedDeleteRequestStorageHandler.class);
+        when(deleteRequestStorageHandler.storeRequestForWorkflow(request, tsdMetrics)).thenThrow(new RuntimeException());
+        when(storageManager.getRequestStorageHandler(requestType)).thenReturn(deleteRequestStorageHandler);
         
         when(storageManager.storeRequestForWorkflow(request, requestType, tsdMetrics)).thenCallRealMethod();
         

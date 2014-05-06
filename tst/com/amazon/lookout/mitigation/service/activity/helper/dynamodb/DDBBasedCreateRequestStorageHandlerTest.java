@@ -51,8 +51,6 @@ import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
-import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.google.common.collect.Lists;
@@ -88,7 +86,6 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public static MitigationModificationRequest createMitigationModificationRequest() {
         MitigationModificationRequest request = new MitigationModificationRequest();
         request.setMitigationName("TestMitigationName");
-        request.setMitigationVersion(1);
         request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
         request.setServiceName(ServiceName.Route53);
         
@@ -153,59 +150,6 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     }
     
     /**
-     * Test the keys that are generated for querying active mitigations for a device.
-     */
-    @Test
-    public void testGetKeysForActiveMitigationsForDevice() {
-        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
-        DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
-        
-        MitigationModificationRequest request = createMitigationModificationRequest();
-        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
-        Map<String, Condition> keyValues = storageHandler.getKeysForActiveMitigationsForDevice(deviceNameAndScope.getDeviceName().name());
-        
-        assertTrue(keyValues.containsKey(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY));
-        Condition condition = keyValues.get(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY);
-        assertEquals(condition.getComparisonOperator(), ComparisonOperator.EQ.name());
-        assertEquals(condition.getAttributeValueList().size(), 1);
-        assertEquals(condition.getAttributeValueList().get(0), new AttributeValue(deviceNameAndScope.getDeviceName().name()));
-        
-        assertTrue(keyValues.containsKey(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY));
-        condition = keyValues.get(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY);
-        assertEquals(condition.getComparisonOperator(), ComparisonOperator.EQ.name());
-        assertEquals(condition.getAttributeValueList().size(), 1);
-        assertEquals(condition.getAttributeValueList().get(0), new AttributeValue().withN("0"));
-    }
-    
-    /**
-     * Test the keys that are generated for querying mitigations for a device also constraining by a workflowId.
-     */
-    @Test
-    public void testGetKeysForDeviceAndWorkflowId() {
-        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
-        DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
-        
-        long workflowId = 5;
-        MitigationModificationRequest request = createMitigationModificationRequest();
-        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
-        Map<String, Condition> keyValues = storageHandler.getKeysForDeviceAndWorkflowId(deviceNameAndScope.getDeviceName().name(), workflowId);
-        
-        assertTrue(keyValues.containsKey(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY));
-        Condition condition = keyValues.get(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY);
-        assertEquals(condition.getComparisonOperator(), ComparisonOperator.EQ.name());
-        assertEquals(condition.getAttributeValueList().size(), 1);
-        assertEquals(condition.getAttributeValueList().get(0), new AttributeValue(deviceNameAndScope.getDeviceName().name()));
-        
-        assertTrue(keyValues.containsKey(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY));
-        condition = keyValues.get(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY);
-        assertEquals(condition.getComparisonOperator(), ComparisonOperator.GE.name());
-        assertEquals(condition.getAttributeValueList().size(), 1);
-        assertEquals(condition.getAttributeValueList().get(0), new AttributeValue().withN(String.valueOf(workflowId)));
-    }
-    
-    /**
      * Test the case where the new mitigation has the same mitigation name as an existing one.
      * We should expect an IllegalArgumentException to be thrown back.
      */
@@ -233,6 +177,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         items.put(DDBBasedRequestStorageHandler.MITIGATION_DEFINITION_KEY, new AttributeValue(existingDefinitionJsonString));
         items.put(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, new AttributeValue(request.getMitigationName()));
         items.put(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, new AttributeValue("Some other template"));
+        items.put(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, new AttributeValue("CreateRequest"));
         
         QueryResult queryResult = mock(QueryResult.class);
         when(queryResult.getItems()).thenReturn(Lists.newArrayList(items));
@@ -540,7 +485,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", "random").withNumericAttribute("WorkflowId", 3).withNumericAttribute("UpdateWorkflowId", 0)
                                                          .withStringAttribute("WorkflowStatus", "SCHEDULED").withStringAttribute("MitigationName", request.getMitigationName())
-                                                         .withStringAttribute("MitigationTemplate", request.getMitigationTemplate()).withStringAttribute("MitigationDefinition", definitionAsJsonString);
+                                                         .withStringAttribute("MitigationTemplate", request.getMitigationTemplate()).withStringAttribute("MitigationDefinition", definitionAsJsonString)
+                                                         .withStringAttribute("RequestType", "CreateRequest");
+        
         Map<String, AttributeValue> lastEvaluatedKey = new HashMap<>();
         lastEvaluatedKey.put("key1", new AttributeValue("value1"));
         QueryResult result1 = new QueryResult().withCount(1).withItems(itemBuilder.build());
@@ -594,7 +541,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         String existingDefinitionJsonString = jsonDataConverter.toData(existingDefinition);
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withNumericAttribute("WorkflowId", 3)
                                                          .withStringAttribute("WorkflowStatus", "SCHEDULED").withStringAttribute("MitigationName", "RandomName1")
-                                                         .withStringAttribute("MitigationTemplate", existingMitigationTemplate1).withStringAttribute("MitigationDefinition", existingDefinitionJsonString);
+                                                         .withStringAttribute("MitigationTemplate", existingMitigationTemplate1).withStringAttribute("MitigationDefinition", existingDefinitionJsonString)
+                                                         .withStringAttribute("RequestType", "CreateRequest");
         Map<String, AttributeValue> lastEvaluatedKey = new HashMap<>();
         lastEvaluatedKey.put("key1", new AttributeValue("value1"));
         QueryResult result1 = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(lastEvaluatedKey);
@@ -602,7 +550,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         String existingMitigationTemplate2 = "RandomTemplate2";
         itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withNumericAttribute("WorkflowId", 3)
                                           .withStringAttribute("WorkflowStatus", "SCHEDULED").withStringAttribute("MitigationName", "RandomName2")
-                                          .withStringAttribute("MitigationTemplate", existingMitigationTemplate2).withStringAttribute("MitigationDefinition", definitionAsJsonString);
+                                          .withStringAttribute("MitigationTemplate", existingMitigationTemplate2).withStringAttribute("MitigationDefinition", definitionAsJsonString)
+                                          .withStringAttribute("RequestType", "CreateRequest");
         QueryResult result2 = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(null);
                 
         Long workflowIdToReturn = (long) 3;
@@ -677,14 +626,16 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         String existingDefinitionJsonString = jsonDataConverter.toData(existingDefinition);
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withNumericAttribute("WorkflowId", 3)
                                                          .withStringAttribute("WorkflowStatus", "SCHEDULED").withStringAttribute("MitigationName", "RandomName1")
-                                                         .withStringAttribute("MitigationTemplate", request.getMitigationTemplate()).withStringAttribute("MitigationDefinition", existingDefinitionJsonString);
+                                                         .withStringAttribute("MitigationTemplate", request.getMitigationTemplate()).withStringAttribute("MitigationDefinition", existingDefinitionJsonString)
+                                                         .withStringAttribute("RequestType", "CreateRequest");
         Map<String, AttributeValue> lastEvaluatedKey = new HashMap<>();
         lastEvaluatedKey.put("key1", new AttributeValue("value1"));
         QueryResult result1 = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(lastEvaluatedKey);
         
         itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withNumericAttribute("WorkflowId", 3)
                                           .withStringAttribute("WorkflowStatus", "SCHEDULED").withStringAttribute("MitigationName", "RandomName1")
-                                          .withStringAttribute("MitigationTemplate", "RandomTemplate1").withStringAttribute("MitigationDefinition", existingDefinitionJsonString);
+                                          .withStringAttribute("MitigationTemplate", "RandomTemplate1").withStringAttribute("MitigationDefinition", existingDefinitionJsonString)
+                                          .withStringAttribute("RequestType", "CreateRequest");
         QueryResult result2 = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(null);
                 
         Long workflowIdToReturn = (long) 3;
@@ -741,7 +692,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", "SomeOtherDeviceScope").withStringAttribute("WorkflowStatus", "SUCCESSFUL")
-                                                         .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString);
+                                                         .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString).withStringAttribute("RequestType", "CreateRequest");
         QueryResult queryResult = new QueryResult().withCount(1).withItems(itemBuilder.build());
         
         Throwable caughtException = null;
@@ -775,7 +726,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         long existingWorkflowId = 1;
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withStringAttribute("WorkflowStatus", "SUCCESSFUL")
                                                          .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString).withNumericAttribute("WorkflowId", existingWorkflowId)
-                                                         .withNumericAttribute("UpdateWorkflowId", 2);
+                                                         .withNumericAttribute("UpdateWorkflowId", 2).withStringAttribute("RequestType", "CreateRequest");
                                                          
         QueryResult queryResult = new QueryResult().withCount(1).withItems(itemBuilder.build());
         
@@ -810,7 +761,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         long existingWorkflowId = 1;
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withStringAttribute("WorkflowStatus", "FAILED")
-                                                         .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString).withNumericAttribute("WorkflowId", existingWorkflowId);
+                                                         .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString).withNumericAttribute("WorkflowId", existingWorkflowId)
+                                                         .withStringAttribute("RequestType", "CreateRequest");
                                                          
         QueryResult queryResult = new QueryResult().withCount(1).withItems(itemBuilder.build());
         
@@ -849,19 +801,22 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         long existingWorkflowId1 = 1;
         DDBItemBuilder itemBuilder1 = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withStringAttribute("WorkflowStatus", "SUCCESSFUL")
                                                           .withStringAttribute("MitigationName", "Mitigation1").withStringAttribute("MitigationTemplate", request.getMitigationTemplate())
-                                                          .withStringAttribute("MitigationDefinition", existingDefinitionJsonString1).withNumericAttribute("WorkflowId", existingWorkflowId1);
+                                                          .withStringAttribute("MitigationDefinition", existingDefinitionJsonString1).withNumericAttribute("WorkflowId", existingWorkflowId1)
+                                                          .withStringAttribute("RequestType", "CreateRequest");
         
         existingDefinition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_PORT.name(), Lists.newArrayList("53"));
         String existingDefinitionJsonString2 = new JsonDataConverter().toData(existingDefinition);
         long existingWorkflowId2 = 2;
         DDBItemBuilder itemBuilder2 = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withStringAttribute("WorkflowStatus", "SCHEDULED")
                                                           .withStringAttribute("MitigationName", "Mitigation2").withStringAttribute("MitigationTemplate", request.getMitigationTemplate())
-                                                            .withStringAttribute("MitigationDefinition", existingDefinitionJsonString2).withNumericAttribute("WorkflowId", existingWorkflowId2);
+                                                          .withStringAttribute("MitigationDefinition", existingDefinitionJsonString2).withNumericAttribute("WorkflowId", existingWorkflowId2)
+                                                          .withStringAttribute("RequestType", "CreateRequest");
         
         long existingWorkflowId3 = 3;
         DDBItemBuilder itemBuilder3 = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withStringAttribute("WorkflowStatus", "FAILED")
                                                           .withStringAttribute("MitigationName", "Mitigation3").withStringAttribute("MitigationTemplate", request.getMitigationTemplate())
-                                                            .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString).withNumericAttribute("WorkflowId", existingWorkflowId3);
+                                                          .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString).withNumericAttribute("WorkflowId", existingWorkflowId3)
+                                                          .withStringAttribute("RequestType", "CreateRequest");
                                                          
         QueryResult queryResult = new QueryResult().withCount(1).withItems(itemBuilder1.build()).withItems(itemBuilder2.build()).withItems(itemBuilder3.build());
         
@@ -900,19 +855,21 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         long existingWorkflowId1 = 1;
         DDBItemBuilder itemBuilder1 = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withStringAttribute("WorkflowStatus", "SUCCESSFUL")
                                                           .withStringAttribute("MitigationName", "Mitigation1").withStringAttribute("MitigationTemplate", request.getMitigationTemplate())
-                                                          .withStringAttribute("MitigationDefinition", existingDefinitionJsonString1).withNumericAttribute("WorkflowId", existingWorkflowId1);
+                                                          .withStringAttribute("MitigationDefinition", existingDefinitionJsonString1).withNumericAttribute("WorkflowId", existingWorkflowId1)
+                                                          .withStringAttribute("RequestType", "CreateRequest");
         
         long existingWorkflowId2 = 2;
         DDBItemBuilder itemBuilder2 = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withStringAttribute("WorkflowStatus", "SCHEDULED")
                                                           .withStringAttribute("MitigationName", "Mitigation2").withStringAttribute("MitigationTemplate", request.getMitigationTemplate())
-                                                            .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString).withNumericAttribute("WorkflowId", existingWorkflowId2);
+                                                          .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString).withNumericAttribute("WorkflowId", existingWorkflowId2)
+                                                          .withStringAttribute("RequestType", "CreateRequest");
         
         QueryResult queryResult = new QueryResult().withCount(1).withItems(itemBuilder1.build()).withItems(itemBuilder2.build());
         
         Throwable caughtException = null;
         try {
             storageHandler.checkDuplicatesAndGetMaxWorkflowId(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, request.getMitigationDefinition(), 
-                                                                newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
+                                                              newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -978,6 +935,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         Throwable caughtException = null;
         try {
             when(storageHandler.storeRequestForWorkflow(any(MitigationModificationRequest.class), any(TSDMetrics.class))).thenCallRealMethod();
+            doCallRealMethod().when(storageHandler).sanityCheckWorkflowId(anyLong(), any(DeviceNameAndScope.class));
             storageHandler.storeRequestForWorkflow(request, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;

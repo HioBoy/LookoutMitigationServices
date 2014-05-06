@@ -24,7 +24,6 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
-import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeAction;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -275,24 +274,6 @@ public abstract class DDBBasedRequestStorageHandler {
         attributesInItemToStore.put(UPDATE_WORKFLOW_ID_KEY, attributeValue);
         
         return attributesInItemToStore;
-    }
-    
-    protected Map<String, ExpectedAttributeValue> generateExpectedAttributeValues(MitigationModificationRequest request, DeviceNameAndScope deviceNameAndScope, 
-                                                                                   long workflowId, RequestType requestType, int mitigationVersion) {
-        Map<String, ExpectedAttributeValue> expectations = new HashMap<>();
-        
-        String mitigationName = request.getMitigationName();
-        ExpectedAttributeValue expectedAttributeValue = new ExpectedAttributeValue();
-        expectedAttributeValue.setValue(new AttributeValue(mitigationName));
-        expectedAttributeValue.setExists(false);
-        expectations.put(MITIGATION_NAME_KEY, expectedAttributeValue);
-        
-        expectedAttributeValue = new ExpectedAttributeValue();
-        expectedAttributeValue.setValue(new AttributeValue(deviceNameAndScope.getDeviceName().name()));
-        expectedAttributeValue.setExists(false);
-        expectations.put(DEVICE_NAME_KEY, expectedAttributeValue);
-        
-        return expectations;
     }
     
     /**

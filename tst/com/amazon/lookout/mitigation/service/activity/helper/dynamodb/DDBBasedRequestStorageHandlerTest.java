@@ -30,11 +30,15 @@ import org.junit.Test;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
+import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.google.common.collect.Lists;
 
@@ -300,5 +304,58 @@ public class DDBBasedRequestStorageHandlerTest {
         }
         assertNotNull(caughtException);
         verify(storageHandler, times(5)).updateItemInDynamoDB(anyMap(), anyMap(), anyMap());
+    }
+    
+    /**
+     * Test the keys that are generated for querying active mitigations for a device.
+     */
+    @Test
+    public void testGetKeysForActiveMitigationsForDevice() {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, "test", templateBasedValidator);
+        
+        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.createMitigationModificationRequest();
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        Map<String, Condition> keyValues = storageHandler.getKeysForActiveMitigationsForDevice(deviceNameAndScope.getDeviceName().name());
+        
+        assertTrue(keyValues.containsKey(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY));
+        Condition condition = keyValues.get(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY);
+        assertEquals(condition.getComparisonOperator(), ComparisonOperator.EQ.name());
+        assertEquals(condition.getAttributeValueList().size(), 1);
+        assertEquals(condition.getAttributeValueList().get(0), new AttributeValue(deviceNameAndScope.getDeviceName().name()));
+        
+        assertTrue(keyValues.containsKey(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY));
+        condition = keyValues.get(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY);
+        assertEquals(condition.getComparisonOperator(), ComparisonOperator.EQ.name());
+        assertEquals(condition.getAttributeValueList().size(), 1);
+        assertEquals(condition.getAttributeValueList().get(0), new AttributeValue().withN("0"));
+    }
+    
+    /**
+     * Test the keys that are generated for querying mitigations for a device also constraining by a workflowId.
+     */
+    @Test
+    public void testGetKeysForDeviceAndWorkflowId() {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, "test", templateBasedValidator);
+        
+        long workflowId = 5;
+        MitigationModificationRequest request = DDBBasedDeleteRequestStorageHandlerTest.createDeleteMitigationRequest();
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        Map<String, Condition> keyValues = storageHandler.getKeysForDeviceAndWorkflowId(deviceNameAndScope.getDeviceName().name(), workflowId);
+        
+        assertTrue(keyValues.containsKey(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY));
+        Condition condition = keyValues.get(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY);
+        assertEquals(condition.getComparisonOperator(), ComparisonOperator.EQ.name());
+        assertEquals(condition.getAttributeValueList().size(), 1);
+        assertEquals(condition.getAttributeValueList().get(0), new AttributeValue(deviceNameAndScope.getDeviceName().name()));
+        
+        assertTrue(keyValues.containsKey(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY));
+        condition = keyValues.get(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY);
+        assertEquals(condition.getComparisonOperator(), ComparisonOperator.GE.name());
+        assertEquals(condition.getAttributeValueList().size(), 1);
+        assertEquals(condition.getAttributeValueList().get(0), new AttributeValue().withN(String.valueOf(workflowId)));
     }
 }

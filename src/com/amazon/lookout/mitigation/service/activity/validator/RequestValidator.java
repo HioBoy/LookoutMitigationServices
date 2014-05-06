@@ -67,7 +67,7 @@ public class RequestValidator {
         Validate.notNull(request);
         validateCommonRequestParameters(request.getMitigationName(), request.getMitigationTemplate(), request.getServiceName(), request.getMitigationActionMetadata());
         
-        if ((request.getLocation() != null) || !request.getLocation().isEmpty()) {
+        if ((request.getLocation() != null) && !request.getLocation().isEmpty()) {
             String msg = "Locations not expected to be set for delete request since we delete the mitigation from all locations, instead found: " + request.getLocation();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
