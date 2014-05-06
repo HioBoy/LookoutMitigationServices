@@ -7,6 +7,7 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
+import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -40,8 +41,7 @@ public class RequestValidator {
      */
     public void validateCreateRequest(@Nonnull MitigationModificationRequest request) {
         Validate.notNull(request);
-        
-        validateCommonRequestParameters(request.getMitigationName(), request.getMitigationTemplate(), request.getServiceName(), request.getMitigationActionMetadata());
+        validateCommonRequestParameters(request);
         
         if (request.getMitigationDefinition() == null) {
             String msg = "No mitigation definition found.";
@@ -65,7 +65,7 @@ public class RequestValidator {
      */
     public void validateDeleteRequest(@Nonnull DeleteMitigationRequest request) {
         Validate.notNull(request);
-        validateCommonRequestParameters(request.getMitigationName(), request.getMitigationTemplate(), request.getServiceName(), request.getMitigationActionMetadata());
+        validateCommonRequestParameters(request);
         
         if ((request.getLocation() != null) && !request.getLocation().isEmpty()) {
             String msg = "Locations not expected to be set for delete request since we delete the mitigation from all locations, instead found: " + request.getLocation();
@@ -93,57 +93,63 @@ public class RequestValidator {
      * @param serviceName Service corresponding to the mitigation in the request by the client.
      * @param actionMetadata Instance of MitigationActionMetadata specifying some of the metadata related to this action.
      */
-    private void validateCommonRequestParameters(String mitigationName, String mitigationTemplate, String serviceName, MitigationActionMetadata actionMetadata) {
+    private void validateCommonRequestParameters(MitigationModificationRequest request) {
+        String mitigationName = request.getMitigationName();
         if (StringUtils.isEmpty(mitigationName)) {
-            String msg = "Null or empty mitigation name found.";
+            String msg = "Null or empty mitigation name found in request: " + ReflectionToStringBuilder.toString(request);
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
+        String mitigationTemplate = request.getMitigationTemplate();
         if (StringUtils.isEmpty(mitigationTemplate)) {
-            String msg = "Null or empty mitigation template found.";
+            String msg = "Null or empty mitigation template found in request: " + ReflectionToStringBuilder.toString(request);
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
         if (!mitigationTemplates.contains(mitigationTemplate)) {
-            String msg = "Invalid mitigation template found. Valid mitigation templates are: " + mitigationTemplates;
+            String msg = "Invalid mitigation template found in request: " + ReflectionToStringBuilder.toString(request) +
+                         ". Valid mitigation templates are: " + mitigationTemplates;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
+        String serviceName = request.getServiceName();
         if (StringUtils.isEmpty(serviceName)) {
-            String msg = "Null or empty service name found.";
+            String msg = "Null or empty service name found in request: " + ReflectionToStringBuilder.toString(request);
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
         if (!serviceNames.contains(serviceName)) {
-            String msg = "Invalid service name found. Valid service names are: " + serviceNames;
+            String msg = "Invalid service name found in request: " + ReflectionToStringBuilder.toString(request) +
+                         " Valid service names are: " + serviceNames;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
+        MitigationActionMetadata actionMetadata = request.getMitigationActionMetadata();
         if (actionMetadata == null) {
-            String msg = "No MitigationActionMetadata found.";
+            String msg = "No MitigationActionMetadata found in request: " + ReflectionToStringBuilder.toString(request);
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
         if ((actionMetadata.getUser() == null) || (actionMetadata.getUser().isEmpty())) {
-            String msg = "No user defined in the mitigation action metadata.";
+            String msg = "No user defined in the mitigation action metadata in request: " + ReflectionToStringBuilder.toString(request);
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
         if (StringUtils.isEmpty(actionMetadata.getToolName())) {
-            String msg = "No tool specified in the mitigation action metadata.";
+            String msg = "No tool specified in the mitigation action metadata in request: " + ReflectionToStringBuilder.toString(request);
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
         if (StringUtils.isEmpty(actionMetadata.getDescription())) {
-            String msg = "No description specified in the mitigation action metadata.";
+            String msg = "No description specified in the mitigation action metadata in request: " + ReflectionToStringBuilder.toString(request);
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }

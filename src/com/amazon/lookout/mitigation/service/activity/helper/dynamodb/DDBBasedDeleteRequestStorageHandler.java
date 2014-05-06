@@ -239,7 +239,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
      */
     protected Pair<Long, Boolean> evaluateActiveMitigationsForDDBQueryResult(String deviceName, String deviceScope, QueryResult result, String mitigationNameToDelete, 
                                                                              String templateForMitigationToDelete, int versionToDelete, boolean foundMitigationToDelete, TSDMetrics metrics) {
-        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedDeleteRequestStorageHelper.evaluateActiveMitigationsForDDBQueryResult");
+        TSDMetrics subMetrics = metrics.newSubMetrics("evaluateActiveMitigationsForDDBQueryResult");
         try {
             Long maxWorkflowId = null;
             for (Map<String, AttributeValue> item : result.getItems()) {
