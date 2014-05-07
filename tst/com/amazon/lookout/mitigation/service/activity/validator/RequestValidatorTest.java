@@ -7,8 +7,6 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
-
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -16,10 +14,10 @@ import org.junit.Test;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.aws158.commons.tst.TestUtils;
-import com.amazon.lookout.mitigation.service.DeleteMitigationRequest;
+import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
+import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
-import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
@@ -51,7 +49,7 @@ public class RequestValidatorTest {
      */
     @Test
     public void testHappyCase() {
-        MitigationModificationRequest request = new MitigationModificationRequest();
+        CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
@@ -86,7 +84,7 @@ public class RequestValidatorTest {
      */
     @Test
     public void testMissingMitigationName() {
-        MitigationModificationRequest request = new MitigationModificationRequest();
+        CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
         
@@ -122,7 +120,7 @@ public class RequestValidatorTest {
      */
     @Test
     public void testMissingOrInvalidMitigationTemplate() {
-        MitigationModificationRequest request = new MitigationModificationRequest();
+        CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setServiceName(serviceName);
         
@@ -168,7 +166,7 @@ public class RequestValidatorTest {
      */
     @Test
     public void testMissingOrInvalidServiceName() {
-        MitigationModificationRequest request = new MitigationModificationRequest();
+        CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(mitigationTemplate);
         
@@ -215,7 +213,7 @@ public class RequestValidatorTest {
      */
     @Test
     public void testMissingMitigationActionMetadata() {
-        MitigationModificationRequest request = new MitigationModificationRequest();
+        CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
@@ -246,7 +244,7 @@ public class RequestValidatorTest {
      */
     @Test
     public void testMissingUserName() {
-        MitigationModificationRequest request = new MitigationModificationRequest();
+        CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
@@ -282,7 +280,7 @@ public class RequestValidatorTest {
      */
     @Test
     public void testMissingToolName() {
-        MitigationModificationRequest request = new MitigationModificationRequest();
+        CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
@@ -318,7 +316,7 @@ public class RequestValidatorTest {
      */
     @Test
     public void testMissingMitigationDescription() {
-        MitigationModificationRequest request = new MitigationModificationRequest();
+        CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
@@ -353,7 +351,7 @@ public class RequestValidatorTest {
      */
     @Test
     public void testValidateDeleteRequestHappyCase() {
-        DeleteMitigationRequest request = new DeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);
@@ -377,86 +375,12 @@ public class RequestValidatorTest {
     }
     
     /**
-     * Test the case for a delete request with locations provided as input. 
-     * We expect an exception to be thrown in this case.
-     */
-    @Test
-    public void testDeleteRequestWithLocations() {
-        DeleteMitigationRequest request = new DeleteMitigationRequest();
-        request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(mitigationTemplate);
-        request.setServiceName(serviceName);
-        request.setMitigationVersion(2);
-        
-        MitigationActionMetadata metadata = new MitigationActionMetadata();
-        metadata.setUser(userName);
-        metadata.setToolName(toolName);
-        metadata.setDescription("Test description");
-        request.setMitigationActionMetadata(metadata);
-        
-        request.setLocation(Lists.newArrayList("POP1", "POP2"));
-        
-        RequestValidator validator = new RequestValidator();
-        
-        Throwable caughtException = null;
-        try {
-            validator.validateDeleteRequest(request);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-        assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("Locations not expected to be set for delete request"));
-    }
-    
-    /**
-     * Test the case for a delete request with mitigation definition provided as input. 
-     * We expect an exception to be thrown in this case.
-     */
-    @Test
-    public void testDeleteRequestWithDefinition() {
-        DeleteMitigationRequest request = new DeleteMitigationRequest();
-        request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(mitigationTemplate);
-        request.setServiceName(serviceName);
-        request.setMitigationVersion(2);
-        
-        MitigationActionMetadata metadata = new MitigationActionMetadata();
-        metadata.setUser(userName);
-        metadata.setToolName(toolName);
-        metadata.setDescription("Test description");
-        request.setMitigationActionMetadata(metadata);
-        
-        // Set an empty locations list. This should not cause an exception.
-        request.setLocation(new ArrayList<String>());
-        
-        SimpleConstraint constraint = new SimpleConstraint();
-        constraint.setAttributeName(PacketAttributesEnumMapping.DESTINATION_IP.name());
-        constraint.setAttributeValues(Lists.newArrayList("1.2.3.4"));
-        MitigationDefinition definition = new MitigationDefinition();
-        definition.setConstraint(constraint);
-        request.setMitigationDefinition(definition);
-        
-        RequestValidator validator = new RequestValidator();
-        
-        Throwable caughtException = null;
-        try {
-            validator.validateDeleteRequest(request);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-        assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("Mitigation Definition not expected to be set for delete request"));
-    }
-    
-    /**
      * Test the case for a delete request with no mitigation version provided as input. 
      * We expect an exception to be thrown in this case.
      */
     @Test
     public void testDeleteRequestWithInvalidMitigationVersion() {
-        DeleteMitigationRequest request = new DeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(serviceName);

@@ -16,7 +16,9 @@ import com.amazon.aws158.commons.net.IPUtils;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.lookout.mitigation.service.ActionType;
 import com.amazon.lookout.mitigation.service.Constraint;
+import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
+import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
@@ -75,10 +77,21 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         Validate.notNull(deviceNameAndScope);
         
         String mitigationName = request.getMitigationName();
-        MitigationDefinition mitigationDefinition = request.getMitigationDefinition();
+        
+        MitigationDefinition mitigationDefinition = null;
+        List<String> locationsToApplyMitigation = null;
+        // Extract mitigationDefinition and locations from Create/Edit Mitigation Requests only.
+        if (request instanceof CreateMitigationRequest) {
+            locationsToApplyMitigation = ((CreateMitigationRequest) request).getLocation();
+            mitigationDefinition = ((CreateMitigationRequest) request).getMitigationDefinition();
+        }
+        if (request instanceof EditMitigationRequest) {
+            locationsToApplyMitigation = ((EditMitigationRequest) request).getLocation();
+            mitigationDefinition = ((EditMitigationRequest) request).getMitigationDefinition();
+        }
+        
         Constraint mitigationConstraint = mitigationDefinition.getConstraint();
         ActionType mitigationAction = mitigationDefinition.getAction();
-        List<String> locationsToApplyMitigation = request.getLocation();
         
         validateMitigationName(mitigationName, mitigationTemplate);
         validateLocationsToApply(locationsToApplyMitigation, mitigationTemplate);

@@ -37,7 +37,7 @@ public class TestSWFWorkflowStarterImpl {
         TemplateBasedLocationsHelperManager mockTemplateBasedLocationsHelper = mock(TemplateBasedLocationsHelperManager.class);
         when(mockTemplateBasedLocationsHelper.getLocationsForDeployment(any(MitigationModificationRequest.class))).thenReturn(Sets.newHashSet("POP1", "POP2"));
         
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.createMitigationModificationRequest();
+        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
         
         WorkflowExecution workflowExecution = new WorkflowExecution().withRunId("TestRunId").withWorkflowId("TestWorkflowId");
         WorkflowType workflowType = new WorkflowType().withName("TestWorkflowName").withVersion("TestVersion");

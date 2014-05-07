@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.model.RequestType;
 
@@ -44,7 +45,7 @@ public class DDBBasedRequestStorageManagerTest {
         
         when(storageManager.storeRequestForWorkflow(any(MitigationModificationRequest.class), any(RequestType.class), any(TSDMetrics.class))).thenCallRealMethod();
         
-        MitigationModificationRequest request = new MitigationModificationRequest();
+        CreateMitigationRequest request = new CreateMitigationRequest();
         long workflowId = storageManager.storeRequestForWorkflow(request, RequestType.CreateRequest, tsdMetrics);
         assertEquals(workflowId, workflowIdToReturn);
     }
@@ -56,7 +57,7 @@ public class DDBBasedRequestStorageManagerTest {
     @Test
     public void testNoStorageHandlerCase() {
         DDBBasedRequestStorageManager storageManager = mock(DDBBasedRequestStorageManager.class);
-        MitigationModificationRequest request = new MitigationModificationRequest();
+        CreateMitigationRequest request = new CreateMitigationRequest();
         RequestType requestType = RequestType.CreateRequest;
         when(storageManager.storeRequestForWorkflow(request, requestType, tsdMetrics)).thenCallRealMethod();
         when(storageManager.getRequestStorageHandler(any(RequestType.class))).thenReturn(null);
@@ -78,7 +79,7 @@ public class DDBBasedRequestStorageManagerTest {
     public void testStorageHandlerExceptionCase() {
         DDBBasedRequestStorageManager storageManager = mock(DDBBasedRequestStorageManager.class);
         
-        MitigationModificationRequest request = new MitigationModificationRequest();
+        CreateMitigationRequest request = new CreateMitigationRequest();
         RequestType requestType = RequestType.DeleteRequest;
         
         DDBBasedDeleteRequestStorageHandler deleteRequestStorageHandler = mock(DDBBasedDeleteRequestStorageHandler.class);

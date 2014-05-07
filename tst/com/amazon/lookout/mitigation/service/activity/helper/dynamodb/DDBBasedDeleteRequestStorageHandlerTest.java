@@ -31,7 +31,7 @@ import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
-import com.amazon.lookout.mitigation.service.DeleteMitigationRequest;
+import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
@@ -61,8 +61,8 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
     }
     
-    public static DeleteMitigationRequest createDeleteMitigationRequest() {
-        DeleteMitigationRequest request = new DeleteMitigationRequest();
+    public static DeleteMitigationFromAllLocationsRequest createDeleteMitigationRequest() {
+        DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
         request.setMitigationName("TestMitigationName");
         request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
         request.setServiceName(ServiceName.Route53);
@@ -105,7 +105,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         Map<String, AttributeValue> items = new HashMap<>();
@@ -161,7 +161,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
@@ -193,7 +193,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
@@ -226,7 +226,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
@@ -258,7 +258,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
@@ -291,7 +291,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
@@ -324,7 +324,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
@@ -357,7 +357,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         DDBItemBuilder itemBuilder1 = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, "Mitigation1")
@@ -406,7 +406,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         DDBItemBuilder itemBuilder1 = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, "Mitigation1")
@@ -458,7 +458,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         DDBBasedDeleteRequestStorageHandler spiedStorageHandler = spy(storageHandler);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         DDBItemBuilder itemBuilder1 = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, "Mitigation1")
@@ -513,7 +513,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         DDBBasedDeleteRequestStorageHandler spiedStorageHandler = spy(storageHandler);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         QueryResult queryResult = new QueryResult().withCount(0);
@@ -540,7 +540,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         DDBBasedDeleteRequestStorageHandler spiedStorageHandler = spy(storageHandler);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         QueryResult queryResult = new QueryResult().withCount(0);
@@ -580,12 +580,12 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         DDBBasedDeleteRequestStorageHandler spiedStorageHandler = spy(storageHandler);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         
         doReturn(Pair.from((long) 5, true)).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
         doThrow(new RuntimeException()).when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), 
-                                                                                    anyString(), anyInt(), any(TSDMetrics.class));
+        																			any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         Throwable caughtException = null;
         try {
@@ -597,7 +597,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         assertTrue(caughtException.getMessage().startsWith(DDBBasedDeleteRequestStorageHandler.DELETE_REQUEST_STORAGE_FAILED_LOG_PREFIX));
         
         verify(spiedStorageHandler, times(DDBBasedDeleteRequestStorageHandler.NEW_WORKFLOW_ID_MAX_ATTEMPTS)).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class),
-                                                                                                                               anyLong(), anyString(), anyInt(), any(TSDMetrics.class));
+                                                                                                                               anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
     }
     
     /**
@@ -609,13 +609,13 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         DDBBasedDeleteRequestStorageHandler spiedStorageHandler = spy(storageHandler);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         long maxWorkflowId = 5;
         
         doReturn(Pair.from(maxWorkflowId, true)).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
         doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), 
-                                                                                         anyString(), anyInt(), any(TSDMetrics.class));
+        																														any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         Long newWorkflowId = null;
         newWorkflowId = spiedStorageHandler.storeRequestForWorkflow(request, tsdMetrics);
@@ -623,7 +623,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         assertNotNull(newWorkflowId);
         assertEquals((long) newWorkflowId, maxWorkflowId + 1);
         
-        verify(spiedStorageHandler, times(3)).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), anyString(), anyInt(), any(TSDMetrics.class));
+        verify(spiedStorageHandler, times(3)).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
     }
     
     /**
@@ -635,12 +635,12 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         DDBBasedDeleteRequestStorageHandler spiedStorageHandler = spy(storageHandler);
         
-        DeleteMitigationRequest request = createDeleteMitigationRequest();
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         long maxWorkflowId = 5;
         
         doReturn(Pair.from(maxWorkflowId, true)).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
-        doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), anyString(), anyInt(), any(TSDMetrics.class));
+        doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         Long newWorkflowId = null;
         newWorkflowId = spiedStorageHandler.storeRequestForWorkflow(request, tsdMetrics);
@@ -648,7 +648,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         assertNotNull(newWorkflowId);
         assertEquals((long) newWorkflowId, maxWorkflowId + 1);
         
-        verify(spiedStorageHandler, times(1)).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), anyString(), anyInt(), any(TSDMetrics.class));
+        verify(spiedStorageHandler, times(1)).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
     }
 
 }

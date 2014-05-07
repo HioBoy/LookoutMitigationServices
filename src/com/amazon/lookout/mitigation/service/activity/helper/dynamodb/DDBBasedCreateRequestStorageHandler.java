@@ -12,6 +12,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
@@ -73,14 +74,16 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
      * 5. If when storing the request we encounter an exception, it could be either because someone else started using the maxWorkflowId+1 workflowId for that device
      *    or it is some transient exception. In either case, we query the DDB table once again for mitigations >= maxWorkflowId for the device and
      *    continue with step 4. 
-     * @param createMitigationRequest Request to be stored.
+     * @param request Request to be stored.
      * @param metrics
      * @return The workflowId that this request was stored with, using the algorithm above.
      */
     @Override
-    public long storeRequestForWorkflow(@Nonnull MitigationModificationRequest createMitigationRequest, @Nonnull TSDMetrics metrics) {
-        Validate.notNull(createMitigationRequest);
+    public long storeRequestForWorkflow(@Nonnull MitigationModificationRequest request, @Nonnull TSDMetrics metrics) {
+        Validate.notNull(request);
         Validate.notNull(metrics);
+        
+        CreateMitigationRequest createMitigationRequest = (CreateMitigationRequest) request;
 
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHandler.storeRequestForWorkflow");
         int numAttempts = 0;
@@ -118,7 +121,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 }
 
                 try {
-                    storeRequestInDDB(createMitigationRequest, deviceNameAndScope, newWorkflowId, RequestType.CreateRequest.name(), INITIAL_MITIGATION_VERSION, subMetrics);
+                    storeRequestInDDB(createMitigationRequest, deviceNameAndScope, newWorkflowId, RequestType.CreateRequest, INITIAL_MITIGATION_VERSION, subMetrics);
                     return newWorkflowId;
                 } catch (Exception ex) {
                     String msg = "Caught exception when storing create request in DDB with newWorkflowId: " + newWorkflowId + " for DeviceName: " + deviceName + 

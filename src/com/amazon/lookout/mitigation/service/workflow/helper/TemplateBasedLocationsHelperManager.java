@@ -6,6 +6,8 @@ import javax.annotation.Nonnull;
 
 import org.apache.commons.lang.Validate;
 
+import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
+import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.google.common.collect.ImmutableMap;
@@ -42,6 +44,13 @@ public class TemplateBasedLocationsHelperManager {
             return templateBasedLocationsHelper.getLocationsForDeployment(request);
         }
         
-        return Sets.newHashSet(request.getLocation());
+        if (request instanceof CreateMitigationRequest) {
+            return Sets.newHashSet(((CreateMitigationRequest) request).getLocation());
+        }
+        
+        if (request instanceof EditMitigationRequest) {
+            return Sets.newHashSet(((EditMitigationRequest) request).getLocation());
+        }
+        return Sets.newHashSet();
     }
 }

@@ -17,13 +17,17 @@ import org.joda.time.DateTimeZone;
 
 import com.amazon.aws158.commons.dynamo.DynamoDBHelper;
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
+import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
+import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
+import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeAction;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -116,7 +120,7 @@ public abstract class DDBBasedRequestStorageHandler {
      * @param metrics
      */
     protected void storeRequestInDDB(MitigationModificationRequest request, DeviceNameAndScope deviceNameAndScope, long workflowId, 
-                                     String requestType, int mitigationVersion, TSDMetrics metrics) {
+                                     RequestType requestType, int mitigationVersion, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHandler.storeRequestInDDB");
         int numAttempts = 0;
         try {
@@ -125,7 +129,7 @@ public abstract class DDBBasedRequestStorageHandler {
             // Try for a fixed number of times to store the item into DDB. If we succeed, we simply return, else we exit the loop and throw back an exception.
             while (numAttempts++ < DDB_PUT_ITEM_MAX_ATTEMPTS) {
                 try {
-                	putItemInDDB(attributeValuesInItem, subMetrics);
+                    putItemInDDB(attributeValuesInItem, subMetrics);
                     return;
                 } catch (Exception ex) {
                     String msg = "Caught exception when inserting item: " + attributeValuesInItem + " into table: " + mitigationRequestsTableName + 
@@ -179,7 +183,7 @@ public abstract class DDBBasedRequestStorageHandler {
      * @return Map of String (attributeName) -> AttributeValue.
      */
     protected Map<String, AttributeValue> generateAttributesToStore(MitigationModificationRequest request, DeviceNameAndScope deviceNameAndScope, 
-                                                                    long workflowId, String requestType, int mitigationVersion) {
+                                                                    long workflowId, RequestType requestType, int mitigationVersion) {
         Map<String, AttributeValue> attributesInItemToStore = new HashMap<>();
         
         AttributeValue attributeValue = new AttributeValue(deviceNameAndScope.getDeviceName().name());
@@ -191,7 +195,7 @@ public abstract class DDBBasedRequestStorageHandler {
         attributeValue = new AttributeValue(deviceNameAndScope.getDeviceScope().name());
         attributesInItemToStore.put(DEVICE_SCOPE_KEY, attributeValue);
         
-        attributeValue = new AttributeValue(WorkflowStatus.SCHEDULED);
+        attributeValue = new AttributeValue(WorkflowStatus.RUNNING);
         attributesInItemToStore.put(WORKFLOW_STATUS_KEY, attributeValue);
         
         attributeValue = new AttributeValue(request.getMitigationName());
@@ -210,7 +214,7 @@ public abstract class DDBBasedRequestStorageHandler {
         attributeValue = new AttributeValue().withN(String.valueOf(now.getMillis()));
         attributesInItemToStore.put(REQUEST_DATE_KEY, attributeValue);
         
-        attributeValue = new AttributeValue(requestType);
+        attributeValue = new AttributeValue(requestType.name());
         attributesInItemToStore.put(REQUEST_TYPE_KEY, attributeValue);
         
         MitigationActionMetadata metadata = request.getMitigationActionMetadata();
@@ -229,20 +233,35 @@ public abstract class DDBBasedRequestStorageHandler {
             attributesInItemToStore.put(RELATED_TICKETS_KEY, attributeValue);
         }
         
-        // For some templates (eg: Router_RateLimit_Route53Customer) we don't expect location to be provided (eg: in some cases we would deploy to all non-BW POPs)
-        // Hence checking absence of location before creating a corresponding AttributeValue for it.
-        if ((request.getLocation() != null) && !request.getLocation().isEmpty()) {
-            attributeValue = new AttributeValue().withSS(request.getLocation());
-            attributesInItemToStore.put(LOCATIONS_KEY, attributeValue);
+        // We currently don't allow the delete API to specify locations, since we delete a mitigation from all locations it is deployed to. Hence only check locations for Create/Edit.
+        // Similarly, specifying MitigationDefinition only makes sense for the Create/Edit requests and hence extracting it only for such requests.
+        if ((requestType == RequestType.CreateRequest) || (requestType == RequestType.EditRequest)) {
+            List<String> locations = null;
+            MitigationDefinition mitigationDefinition = null;
+            
+            if (requestType == RequestType.CreateRequest) {
+                locations = ((CreateMitigationRequest) request).getLocation();
+                mitigationDefinition = ((CreateMitigationRequest) request).getMitigationDefinition();
+            } else {
+                locations = ((EditMitigationRequest) request).getLocation();
+                mitigationDefinition = ((EditMitigationRequest) request).getMitigationDefinition();
+            }
+            
+            // For some templates (eg: Router_RateLimit_Route53Customer) we don't expect location to be provided (eg: in some cases we would deploy to all non-BW POPs)
+            // Hence checking absence of location before creating a corresponding AttributeValue for it.
+            if ((locations != null) && !locations.isEmpty()) {
+                attributeValue = new AttributeValue().withSS(locations);
+                attributesInItemToStore.put(LOCATIONS_KEY, attributeValue);
+            }
+            
+            String mitigationDefinitionJSONString = getJSONDataConverter().toData(mitigationDefinition); 
+            attributeValue = new AttributeValue(mitigationDefinitionJSONString);
+            attributesInItemToStore.put(MITIGATION_DEFINITION_KEY, attributeValue);
+            
+            int mitigationDefinitionHashCode = mitigationDefinitionJSONString.hashCode();
+            attributeValue = new AttributeValue().withN(String.valueOf(mitigationDefinitionHashCode));
+            attributesInItemToStore.put(MITIGATION_DEFINITION_HASH_KEY, attributeValue);
         }
-        
-        String mitigationDefinitionJSONString = getJSONDataConverter().toData(request.getMitigationDefinition()); 
-        attributeValue = new AttributeValue(mitigationDefinitionJSONString);
-        attributesInItemToStore.put(MITIGATION_DEFINITION_KEY, attributeValue);
-        
-        int mitigationDefinitionHashCode = mitigationDefinitionJSONString.hashCode();
-        attributeValue = new AttributeValue().withN(String.valueOf(mitigationDefinitionHashCode));
-        attributesInItemToStore.put(MITIGATION_DEFINITION_HASH_KEY, attributeValue);
         
         List<MitigationDeploymentCheck> deploymentChecks = request.getPreDeploymentChecks();
         if ((deploymentChecks == null) || deploymentChecks.isEmpty()) {

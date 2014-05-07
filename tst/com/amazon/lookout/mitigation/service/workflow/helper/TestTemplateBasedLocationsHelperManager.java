@@ -12,6 +12,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
 import com.google.common.collect.Lists;
@@ -33,7 +34,7 @@ public class TestTemplateBasedLocationsHelperManager {
         Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
         
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.createMitigationModificationRequest();
+        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
         List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");
         request.setLocation(requestLocations);
         
@@ -51,7 +52,7 @@ public class TestTemplateBasedLocationsHelperManager {
         Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
         
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.createMitigationModificationRequest();
+        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
         List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");
         request.setLocation(requestLocations);
         request.setMitigationTemplate("SomeRandomTemplate");

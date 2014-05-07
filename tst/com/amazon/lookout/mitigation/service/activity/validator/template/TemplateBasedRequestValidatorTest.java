@@ -47,7 +47,7 @@ public class TemplateBasedRequestValidatorTest {
         when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher);
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.createMitigationModificationRequest();
+        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
         Throwable caughtException = null;
         try {
             templateBasedValidator.validateCreateRequestForTemplate(request, tsdMetrics);
@@ -67,7 +67,7 @@ public class TemplateBasedRequestValidatorTest {
         when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher);
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.createMitigationModificationRequest();
+        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
         request.setMitigationTemplate("BadTemplate");
         Throwable caughtException = null;
         try {
@@ -90,7 +90,7 @@ public class TemplateBasedRequestValidatorTest {
         when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(null);
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher);
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.createMitigationModificationRequest();
+        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
         Throwable caughtException = null;
         try {
             templateBasedValidator.validateCreateRequestForTemplate(request, tsdMetrics);

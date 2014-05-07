@@ -11,7 +11,8 @@ import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.amazon.lookout.mitigation.service.DeleteMitigationRequest;
+import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
+import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
@@ -39,7 +40,7 @@ public class RequestValidator {
      * @param request MitigationModificationRequest representing the input to the CreateMitigationAPI.
      * @return void. Doesn't return any values. Will throw back an IllegalArgumentException if any of the input parameters aren't considered valid.
      */
-    public void validateCreateRequest(@Nonnull MitigationModificationRequest request) {
+    public void validateCreateRequest(@Nonnull CreateMitigationRequest request) {
         Validate.notNull(request);
         validateCommonRequestParameters(request);
         
@@ -63,21 +64,9 @@ public class RequestValidator {
      * @param request Instance of DeleteMitigationFromAllLocationsRequest representing the input to the DeleteMitigationAPI.
      * @return void. Doesn't return any values. Will throw back an IllegalArgumentException if any of the input parameters aren't considered valid.
      */
-    public void validateDeleteRequest(@Nonnull DeleteMitigationRequest request) {
+    public void validateDeleteRequest(@Nonnull DeleteMitigationFromAllLocationsRequest request) {
         Validate.notNull(request);
         validateCommonRequestParameters(request);
-        
-        if ((request.getLocation() != null) && !request.getLocation().isEmpty()) {
-            String msg = "Locations not expected to be set for delete request since we delete the mitigation from all locations, instead found: " + request.getLocation();
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        if (request.getMitigationDefinition() != null) {
-            String msg = "Mitigation Definition not expected to be set for delete request, instead found: " + request.getMitigationDefinition();
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
         
         if (request.getMitigationVersion() < 1) {
             String msg = "Version of the mitigation to be deleted should be set to >=1, instead found: " + request.getMitigationVersion();

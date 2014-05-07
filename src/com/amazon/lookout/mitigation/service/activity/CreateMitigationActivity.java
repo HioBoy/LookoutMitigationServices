@@ -15,9 +15,9 @@ import com.amazon.coral.annotation.Service;
 import com.amazon.coral.service.Activity;
 import com.amazon.coral.validate.Validated;
 import com.amazon.lookout.mitigation.service.BadRequest400;
+import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
-import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandler;
@@ -59,7 +59,7 @@ public class CreateMitigationActivity extends Activity {
     @Validated
     @Operation("CreateMitigation")
     @Documentation("CreateMitigation")
-    public @Nonnull MitigationModificationResponse enact(@Nonnull MitigationModificationRequest createMitigationRequest) {
+    public @Nonnull MitigationModificationResponse enact(@Nonnull CreateMitigationRequest createMitigationRequest) {
         // Wrap the CoralMetrics for this activity in a TSDMetrics instance.
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics());
         
@@ -106,7 +106,7 @@ public class CreateMitigationActivity extends Activity {
             mitigationModificationResponse.setDeviceName(deviceName);
             mitigationModificationResponse.setServiceName(createMitigationRequest.getServiceName());
             mitigationModificationResponse.setJobId(workflowId);
-            mitigationModificationResponse.setRequestStatus(WorkflowStatus.SCHEDULED);
+            mitigationModificationResponse.setRequestStatus(WorkflowStatus.RUNNING);
             
             return mitigationModificationResponse;
         } catch (IllegalArgumentException ex) {

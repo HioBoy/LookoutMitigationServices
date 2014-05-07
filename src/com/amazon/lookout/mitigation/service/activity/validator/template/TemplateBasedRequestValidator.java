@@ -132,7 +132,7 @@ public class TemplateBasedRequestValidator {
      * @return ImmutableMap of templateName to ServiceTemplateValidator corresponding to the template.
      */
     private ImmutableMap<String, ServiceTemplateValidator> getServiceTemplateValidatorMap(ServiceSubnetsMatcher serviceSubnetsMatcher) {
-        ImmutableMap.Builder<String, ServiceTemplateValidator> serviceTemplateValidatorMapBuilder = new ImmutableMap.Builder<>();
+        ImmutableMap.Builder<String, ServiceTemplateValidator> serviceTemplateValidatorMapBuilder = ImmutableMap.builder();
         for (String mitigationTemplate : MitigationTemplate.values()) {
             switch (mitigationTemplate) {
             case MitigationTemplate.Router_RateLimit_Route53Customer:

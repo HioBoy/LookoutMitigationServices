@@ -20,6 +20,7 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.lookout.mitigation.service.CompositeOrConstraint;
+import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
@@ -49,8 +50,8 @@ public class Route53SingleCustomerMitigationValidationTest {
         when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
     }
     
-    private MitigationModificationRequest createMitigationModificationRequest() {
-        MitigationModificationRequest request = new MitigationModificationRequest();
+    private CreateMitigationRequest generateCreateMitigationRequest() {
+        CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName("TestMitigationName");
         request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
         request.setServiceName(ServiceName.Route53);
@@ -73,7 +74,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         when(subnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         
         Throwable caughtException = null;
         try {
@@ -91,7 +92,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         when(subnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         request.setMitigationTemplate("SomeRandomTemplate");
         
         Throwable caughtException = null;
@@ -111,7 +112,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         when(subnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         
         doThrow(new IllegalArgumentException()).when(route53SingleCustomerValidator).validateRequestForTemplateAndDevice(any(MitigationModificationRequest.class), anyString(), any(DeviceNameAndScope.class));
         
@@ -131,7 +132,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         request.setLocation(Lists.newArrayList("POP1", "POP2"));
         request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
         
@@ -152,7 +153,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         request.getMitigationDefinition().setAction(new RateLimitAction());
         request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
         
@@ -173,7 +174,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         request.getMitigationDefinition().setConstraint(new CompositeOrConstraint());
         request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
         
@@ -194,7 +195,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         SimpleConstraint simpleConstraint = new SimpleConstraint();
         simpleConstraint.setAttributeName("randomValue");
         request.getMitigationDefinition().setConstraint(simpleConstraint);
@@ -216,7 +217,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         SimpleConstraint simpleConstraint = new SimpleConstraint();
         simpleConstraint.setAttributeName(PacketAttributesEnumMapping.SOURCE_IP.name());
         request.getMitigationDefinition().setConstraint(simpleConstraint);
@@ -238,7 +239,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         SimpleConstraint simpleConstraint = new SimpleConstraint();
         simpleConstraint.setAttributeName(PacketAttributesEnumMapping.DESTINATION_IP.name());
         simpleConstraint.setAttributeValues(Lists.newArrayList("1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7", "5.6.7.8"));
@@ -261,7 +262,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         SimpleConstraint simpleConstraint = new SimpleConstraint();
         simpleConstraint.setAttributeName(PacketAttributesEnumMapping.DESTINATION_IP.name());
         simpleConstraint.setAttributeValues(Lists.newArrayList("1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7", "5.6.7.8/30"));
@@ -284,7 +285,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         SimpleConstraint simpleConstraint = new SimpleConstraint();
         simpleConstraint.setAttributeName(PacketAttributesEnumMapping.DESTINATION_IP.name());
         simpleConstraint.setAttributeValues(Lists.newArrayList("1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7", "5.6.7.8"));
@@ -365,7 +366,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
-        MitigationModificationRequest request = createMitigationModificationRequest();
+        CreateMitigationRequest request = generateCreateMitigationRequest();
         request.setMitigationName("Some\u2028Name!");
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         

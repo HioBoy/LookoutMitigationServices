@@ -15,7 +15,7 @@ import com.amazon.coral.annotation.Service;
 import com.amazon.coral.service.Activity;
 import com.amazon.coral.validate.Validated;
 import com.amazon.lookout.mitigation.service.BadRequest400;
-import com.amazon.lookout.mitigation.service.DeleteMitigationRequest;
+import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
@@ -52,7 +52,7 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
     @Validated
     @Operation("DeleteMitigationFromAllLocations")
     @Documentation("DeleteMitigationFromAllLocations")
-    public @Nonnull MitigationModificationResponse enact(@Nonnull DeleteMitigationRequest deleteRequest) {
+    public @Nonnull MitigationModificationResponse enact(@Nonnull DeleteMitigationFromAllLocationsRequest deleteRequest) {
         // Wrap the CoralMetrics for this activity in a TSDMetrics instance.
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics());
         
@@ -99,7 +99,7 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             mitigationModificationResponse.setDeviceName(deviceName);
             mitigationModificationResponse.setServiceName(deleteRequest.getServiceName());
             mitigationModificationResponse.setJobId(workflowId);
-            mitigationModificationResponse.setRequestStatus(WorkflowStatus.SCHEDULED);
+            mitigationModificationResponse.setRequestStatus(WorkflowStatus.RUNNING);
             
             return mitigationModificationResponse;
         } catch (IllegalArgumentException ex) {

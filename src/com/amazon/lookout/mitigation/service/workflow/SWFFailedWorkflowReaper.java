@@ -352,7 +352,7 @@ public class SWFFailedWorkflowReaper implements Runnable {
             updates.put(WORKFLOW_STATUS_KEY, workflowStatusUpdate);
             
             Map<String, ExpectedAttributeValue> expectations = new HashMap<>();
-            ExpectedAttributeValue workflowStatusExpectation = new ExpectedAttributeValue(new AttributeValue(WorkflowStatus.SCHEDULED));
+            ExpectedAttributeValue workflowStatusExpectation = new ExpectedAttributeValue(new AttributeValue(WorkflowStatus.RUNNING));
             workflowStatusExpectation.setExists(true);
             expectations.put(WORKFLOW_STATUS_KEY, workflowStatusExpectation);
             
@@ -376,7 +376,7 @@ public class SWFFailedWorkflowReaper implements Runnable {
         queryConditions.put(DEVICE_NAME_KEY, new Condition().withAttributeValueList(conditionAttributes).withComparisonOperator(ComparisonOperator.EQ));
         
         conditionAttributes = new ArrayList<>();
-        conditionAttributes.add(new AttributeValue(WorkflowStatus.SCHEDULED));
+        conditionAttributes.add(new AttributeValue(WorkflowStatus.RUNNING));
         queryConditions.put(WORKFLOW_STATUS_KEY, new Condition().withAttributeValueList(conditionAttributes).withComparisonOperator(ComparisonOperator.EQ));
         request.setKeyConditions(queryConditions);
         

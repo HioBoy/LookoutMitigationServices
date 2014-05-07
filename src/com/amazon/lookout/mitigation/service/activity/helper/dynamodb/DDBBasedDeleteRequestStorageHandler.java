@@ -11,7 +11,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.mitigation.service.DeleteMitigationRequest;
+import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
@@ -70,7 +70,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedDeleteRequestStorageHandler.storeRequestForWorkflow");
         int numAttempts = 0;
         try {
-            DeleteMitigationRequest deleteRequest = (DeleteMitigationRequest) request;
+            DeleteMitigationFromAllLocationsRequest deleteRequest = (DeleteMitigationFromAllLocationsRequest) request;
             
             String mitigationName = deleteRequest.getMitigationName();
             String mitigationTemplate = deleteRequest.getMitigationTemplate();
@@ -108,7 +108,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                 }
 
                 try {
-                    storeRequestInDDB(deleteRequest, deviceNameAndScope, newWorkflowId, RequestType.DeleteRequest.name(), deleteRequest.getMitigationVersion(), subMetrics);
+                    storeRequestInDDB(deleteRequest, deviceNameAndScope, newWorkflowId, RequestType.DeleteRequest, deleteRequest.getMitigationVersion(), subMetrics);
                     return newWorkflowId;
                 } catch (Exception ex) {
                     String msg = "Caught exception when storing delete request in DDB with newWorkflowId: " + newWorkflowId + " for DeviceName: " + deviceName + 
