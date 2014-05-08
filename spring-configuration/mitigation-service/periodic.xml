@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="hours" class="java.util.concurrent.TimeUnit" factory-method="valueOf">
+        <constructor-arg value="HOURS"/>
+    </bean>
+
+    <bean id="minutes" class="java.util.concurrent.TimeUnit" factory-method="valueOf">
+        <constructor-arg value="MINUTES"/>
+    </bean>
+
+    <bean id="seconds" class="java.util.concurrent.TimeUnit" factory-method="valueOf">
+        <constructor-arg value="SECONDS"/>
+    </bean>
+
+    <bean id="milliseconds" class="java.util.concurrent.TimeUnit" factory-method="valueOf">
+        <constructor-arg value="MILLISECONDS"/>
+    </bean>
+
+    <bean id="metronome" class="com.amazon.aws158.commons.periodic.Metronome">
+        <property name="threadPoolSize" value="2"/>
+        <property name="work">
+            <set>
+                <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
+                    <property name="runnable" ref="edgeLocationsHelper"/>
+                    <property name="period" value="30"/>
+                    <property name="timeUnit" ref="minutes"/>
+                </bean>
+                <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
+                    <property name="runnable" ref="swfFailedWorkflowReaper"/>
+                    <property name="period" value="15"/>
+                    <property name="timeUnit" ref="minutes"/>
+                </bean>
+            </set>
+        </property>
+    </bean>
+    
+    <bean id="swfFailedWorkflowReaper" class="com.amazon.lookout.mitigation.service.workflow.SWFFailedWorkflowReaper">
+        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
+        <constructor-arg name="swfClient" ref="swfClient"/>
+        <constructor-arg name="mitigationServiceDomain" value="${domain}"/>
+        <constructor-arg name="swfDomainName" value="${domain}.swfDomainName"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+    </bean>
+
+</beans>
