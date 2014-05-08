@@ -40,7 +40,7 @@
                 <prop key="log4j.logger.WIRE">INFO, WIRE</prop>
                 <prop key="log4j.logger.CLASSPATH">OFF</prop>
                 <prop key="log4j.logger.com.amazon.coral">ERROR</prop>
-                <prop key="log4j.logger.com.amazon.coral.reflect">OFF</prop>
+                <prop key="log4j.logger.com.amazon.coral.reflect">ERROR</prop>
                 <prop key="log4j.logger.com.amazonaws">ERROR</prop>
                 <prop key="log4j.logger.org.apache">ERROR</prop>
                 <prop key="log4j.logger.com.amazon.lookout">${apollo.OCF.Log4j.logSeverityLevel}</prop>
@@ -65,6 +65,14 @@
         </property>
         <property name="program" value="LookoutMitigationService"/>
         <property name="marketplace" value="${realm}"/>
+    </bean>
+    
+    <!--  Initialize AppConfig -->
+    <bean name="appConfigHelper" class="amazon.platform.config.AppConfigHelper">
+        <property name="appName" value="LookoutMitigationService"/>
+        <property name="domain" value="${domain}"/>
+        <property name="realm" value="${realm}"/>
+        <property name="root" value="${root}"/>
     </bean>
     
 </beans>

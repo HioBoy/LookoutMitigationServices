@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow;
 
+import java.beans.ConstructorProperties;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
@@ -11,7 +12,7 @@ import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
-import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsHelperManager;
+import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.workflow.LookoutMitigationWorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.flow.StartWorkflowOptions;
@@ -40,14 +41,15 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
     private static final long DEFAULT_WORKFLOW_DECISION_TASK_TIMEOUT_SECONDS = 60;
     
     private final SWFWorkflowClientProvider workflowClientProvider;
-    private final TemplateBasedLocationsHelperManager templateBasedLocationsHelper;
+    private final TemplateBasedLocationsManager templateBasedLocationsManager;
     
-    public SWFWorkflowStarterImpl(@Nonnull SWFWorkflowClientProvider workflowClientProvider, @Nonnull TemplateBasedLocationsHelperManager templateBasedLocationsHelper) {
+    @ConstructorProperties({"swfWorkflowProvider", "templateBasedLocationsManager"})
+    public SWFWorkflowStarterImpl(@Nonnull SWFWorkflowClientProvider workflowClientProvider, @Nonnull TemplateBasedLocationsManager templateBasedLocationsManager) {
         Validate.notNull(workflowClientProvider);
         this.workflowClientProvider = workflowClientProvider;
         
-        Validate.notNull(templateBasedLocationsHelper);
-        this.templateBasedLocationsHelper = templateBasedLocationsHelper;
+        Validate.notNull(templateBasedLocationsManager);
+        this.templateBasedLocationsManager = templateBasedLocationsManager;
     }
     
     /**
@@ -117,7 +119,7 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             
             // Get locations where we need to run this workflow. In most cases it is provided by the client, but for some templates
             // we might have locations based on the templateName, hence checking with the templateBasedLocationsHelper and also passing it the original request to have the entire context.
-            Set<String> locationsToDeploy = templateBasedLocationsHelper.getLocationsForDeployment(request);
+            Set<String> locationsToDeploy = templateBasedLocationsManager.getLocationsForDeployment(request);
             
             if (workflowExternalClient instanceof LookoutMitigationWorkflowClientExternal) {
                 // Start running the workflow.

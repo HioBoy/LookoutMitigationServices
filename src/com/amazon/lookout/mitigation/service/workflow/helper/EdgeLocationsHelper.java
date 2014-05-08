@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
+import java.beans.ConstructorProperties;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -54,6 +55,7 @@ public class EdgeLocationsHelper implements Runnable {
     private final int sleepBetweenRetriesInMillis;
     private final MetricsFactory metricsFactory;
 
+    @ConstructorProperties({"cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries", "metricsFactory"})
     public EdgeLocationsHelper(@Nonnull EdgeOperatorServiceClient cloudfrontClient, @Nonnull DaasControlAPIServiceV20100701Client daasClient,
                                @Nonnull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, @Nonnull MetricsFactory metricsFactory) {
         Validate.notNull(cloudfrontClient);
