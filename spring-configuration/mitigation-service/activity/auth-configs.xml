@@ -71,7 +71,7 @@
                 <ref bean="LookoutMitigationServiceExplorer"/>
             </list>
         </entry>
-        <entry key="deleteMitigationsFromAllLocations">
+        <entry key="deleteMitigationFromAllLocations">
             <list>
                 <ref bean="Route53PopRouterClient"/>
                 <ref bean="LookoutMitigationServiceExplorer"/>

@@ -80,7 +80,7 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             String serviceName = deleteRequest.getServiceName();
             
             // Step1. Authorize this request.
-            boolean isAuthorized = authorizer.isClientAuthorized(getIdentity(), serviceName, OPERATION_NAME_FOR_AUTH_CHECK);
+            boolean isAuthorized = authorizer.isClientAuthorized(getIdentity(), serviceName, deviceName, OPERATION_NAME_FOR_AUTH_CHECK);
             if (!isAuthorized) {
                 authorizer.setAuthorizedFlag(getIdentity(), false);
                 
