@@ -36,19 +36,22 @@
                 <!-- ContentHandler has to be before the AuthenticationHandler to be able to use the Explorer. -->
                 <bean class="com.amazon.coral.service.http.ContentHandler"/>
                 
+                <!-- Commenting Authentication until the auth issues are fixed
                 <ref bean="AuthenticationHandler"/>
+                -->
                 
                 <bean class="com.amazon.coral.service.ModelHandler"/>
                 <bean class="com.amazon.coral.validate.ValidationHandler"/>
                 
                 <!-- This always comes last.-->
                 <bean class="com.amazon.coral.spring.SpringActivityHandler">
+                    <!-- Commenting Authentication until the auth issues are fixed
                     <property name="globalInterceptorClassNames">
-                        <list>
+                        <list-->
                             <!-- We have to provide the fully-qualified class name for the global interceptors. -->
-                            <value>com.amazon.lookout.mitigation.service.interceptors.ActivityAuthorizationInterceptor</value>
+                            <!-- value>com.amazon.lookout.mitigation.service.interceptors.ActivityAuthorizationInterceptor</value>
                         </list>
-                    </property>
+                    </property-->
                 </bean>
             </list>
         </property>
