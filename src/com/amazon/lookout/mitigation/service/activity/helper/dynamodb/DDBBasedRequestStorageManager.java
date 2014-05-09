@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
+import java.beans.ConstructorProperties;
 import java.util.EnumMap;
 
 import javax.annotation.Nonnull;
@@ -35,6 +36,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
 
     private final ImmutableMap<RequestType, RequestStorageHandler> requestTypeToStorageHandler;
     
+    @ConstructorProperties({"dynamoDBClient", "domain", "templateBasedValidator"})
     public DDBBasedRequestStorageManager(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain, 
                                          @Nonnull TemplateBasedRequestValidator templateBasedValidator) {
         Validate.notNull(dynamoDBClient);

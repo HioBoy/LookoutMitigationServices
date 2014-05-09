@@ -14,7 +14,10 @@
         <constructor-arg>
             <ref bean="chain"/>
         </constructor-arg>
-        <constructor-arg value="30000"/>
+        <!-- waiting for 5 minutes for coral framework to clean up its thread. 
+             More detail can be found here: https://issues.amazon.com/SF-1578 
+        -->
+        <constructor-arg value="300000"/> 
     </bean>
 
     <!-- Configure the Chain which contains the list of Handlers to apply -->
@@ -30,34 +33,73 @@
                 <bean class="com.amazon.coral.service.http.HttpBindingHandler"/>
                 <bean class="com.amazon.coral.service.HttpRpcHandler"/>
                 
-                <!-- TODO Turn ON authentication when service is registered with AWSAuth -->
-                <!-- ref bean="AuthenticationHandler"/-->
-                <bean class="com.amazon.coral.service.ModelHandler"/>
+                <!-- ContentHandler has to be before the AuthenticationHandler to be able to use the Explorer. -->
                 <bean class="com.amazon.coral.service.http.ContentHandler"/>
+                
+                <!-- Commenting Authentication until the auth issues are fixed
+                <ref bean="AuthenticationHandler"/>
+                -->
+                
+                <bean class="com.amazon.coral.service.ModelHandler"/>
                 <bean class="com.amazon.coral.validate.ValidationHandler"/>
                 
                 <!-- This always comes last.-->
-                <bean class="com.amazon.coral.spring.SpringActivityHandler"/>
+                <bean class="com.amazon.coral.spring.SpringActivityHandler">
+                    <!-- Commenting Authentication until the auth issues are fixed
+                    <property name="globalInterceptorClassNames">
+                        <list-->
+                            <!-- We have to provide the fully-qualified class name for the global interceptors. -->
+                            <!-- value>com.amazon.lookout.mitigation.service.interceptors.ActivityAuthorizationInterceptor</value>
+                        </list>
+                    </property-->
+                </bean>
             </list>
         </property>
     </bean>
     
     <bean id="AuthenticationHandler" class="com.amazon.coral.service.ARSAuthenticationHelper" depends-on="appConfigHelper">
+        <constructor-arg ref="AuthNConfig"/>
+        <constructor-arg ref="AuthRuntimeClient"/>
+    </bean>
+
+    <bean id="AuthNConfig" class="com.amazon.coral.service.AwsAuthNConfig">
+        <property name="signingSchemes" value="V4"/>
+        <property name="region" value="${realm}"/> <!-- Auth in the same region as the region where the service runs -->
+        <property name="service" value="lookout"/>
+        <property name="vendorCode" value="lookout"/>
+        <property name="headersToSecure" value=""/>
+    </bean>
+
+    <bean id="AuthRuntimeFactory" class="aws.auth.client.impl.AuthRuntimeClientFactory">
+        <property name="authenticateResultCache" ref="AuthNCache"/>
+        <property name="policyCache" ref="PolicyCache"/>
+        <property name="configuration" ref="ArcConfig"/>
+    </bean>
+
+    <bean id="AuthRuntimeClient" factory-bean="AuthRuntimeFactory" factory-method="newAuthRuntimeClient"/>
+
+    <!--
+    HashMapCache are generally disapproved in Prod because real customer traffic could
+    overwhelm the cache. We do not expect that many number of diverse clients or very
+    high volumes of requests to overwhelm the HashMapCache for LookoutMitigationService.
+    -->
+    <bean id="AuthNCache" class="amazon.cache.Cache">
         <constructor-arg>
-            <bean class="com.amazon.coral.service.AwsAuthNConfig">
-                <property name="signingSchemes" value="V4"/>
-                <property name="region" value="${apollo.OCF.LookoutMitigationService.arsAuthNRegion}"/>
-                <property name="service" value="lookoutmitigationservice"/>
-                <property name="vendorCode" value="lookoutmitigationservice"/>
-                <property name="authNCache" ref="AuthNCache"/>
-                <property name="policyCache" ref="PolicyCache"/>
-                <property name="headersToSecure" value=""/>
-            </bean>
+            <bean class="amazon.cache.impl.HashMapCache"/>
         </constructor-arg>
     </bean>
-    
-    <!-- Given that we only have a handful of unique callers using the service, using HashMapCache should be totally fine for our use-case. -->
-    <bean id="AuthNCache" class="amazon.cache.impl.HashMapCache"/>
-    <bean id="PolicyCache" class="amazon.cache.impl.HashMapCache"/>
-    
+
+    <bean id="PolicyCache" class="amazon.cache.Cache">
+        <constructor-arg>
+            <bean class="amazon.cache.impl.HashMapCache"/>
+        </constructor-arg>
+    </bean>
+
+    <bean id="ArcConfig" class="aws.auth.client.config.Configuration">
+        <!-- Set the qualifier for selecting the coral client config and ARS endpoint (S3 has a dedicated one, -->
+        <!-- if your service does not have, simply put "${domain}.${realm}" -->
+        <property name="Qualifier" value="${domain}.${realm}"/>
+        <!-- Set vendor name to scope the policies that ARS returns -->
+        <property name="Vendor" value="lookout"/>
+    </bean>
 </beans>

@@ -29,7 +29,7 @@ public class TestTemplateBasedLocationsHelperManager {
     public void testGetLocationsForDeploymentBasedOnTemplate() {
         EdgeLocationsHelper locationsHelper = mock(EdgeLocationsHelper.class);
         Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper);
-        TemplateBasedLocationsHelperManager manager = new TemplateBasedLocationsHelperManager(helper);
+        TemplateBasedLocationsManager manager = new TemplateBasedLocationsManager(helper);
         
         Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
@@ -47,7 +47,7 @@ public class TestTemplateBasedLocationsHelperManager {
     public void testGetLocationsForDeploymentBasedOnRequest() {
         EdgeLocationsHelper locationsHelper = mock(EdgeLocationsHelper.class);
         Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper);
-        TemplateBasedLocationsHelperManager manager = new TemplateBasedLocationsHelperManager(helper);
+        TemplateBasedLocationsManager manager = new TemplateBasedLocationsManager(helper);
         
         Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);

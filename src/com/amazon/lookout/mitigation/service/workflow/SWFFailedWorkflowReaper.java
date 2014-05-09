@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow;
 
+import java.beans.ConstructorProperties;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -144,6 +145,7 @@ public class SWFFailedWorkflowReaper implements Runnable {
         }
     }
     
+    @ConstructorProperties({"dynamoDBClient", "swfClient", "mitigationServiceDomain", "swfDomainName", "metricsFactory"})
     public SWFFailedWorkflowReaper(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull AmazonSimpleWorkflowClient swfClient, 
                                    @Nonnull String domain, @Nonnull String swfDomain, @Nonnull MetricsFactory metricsFactory) {
         Validate.notNull(dynamoDBClient);

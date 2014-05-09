@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
+import java.beans.ConstructorProperties;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -32,11 +33,19 @@ public class BlackwatchLocationsHelper {
     private static final int MAX_LDAP_ATTEMPTS = 3;
     private static final int SLEEP_BETWEEN_ATTEMPTS_IN_MILLIS = 500;
     
-    private final LdapProvider ldapProvider;
+    private static final String GAMMA_IAD_POP_NAME = "G-IAD5";
     
-    public BlackwatchLocationsHelper(@Nonnull LdapProvider ldapProvider) {
+    private final LdapProvider ldapProvider;
+    // This flag exists solely to be used in gamma - to indicate that this helper should treat Gamma BW POP as a non-BW POP.
+    // This flag is handy when testing out workflows in gamma, where we have only 1 router where we could apply mitigations, which also happens to be a Gamma BW POP.
+    private final boolean overrideGammaBWPOPAsNonBW;
+
+    @ConstructorProperties({"ldapProvider", "overrideGammaBWPOPAsNonBW"})
+    public BlackwatchLocationsHelper(@Nonnull LdapProvider ldapProvider, boolean overrideGammaBWPOPAsNonBW) {
         Validate.notNull(ldapProvider);
         this.ldapProvider = ldapProvider;
+        
+        this.overrideGammaBWPOPAsNonBW = overrideGammaBWPOPAsNonBW;
     }
     
     /**
@@ -67,17 +76,19 @@ public class BlackwatchLocationsHelper {
                         Thread.sleep(SLEEP_BETWEEN_ATTEMPTS_IN_MILLIS);
                     } catch (InterruptedException ignored) {}
                 } else {
-                	String msg = "Unable to poll LDAP to find if Blackwatch has hosts built in pop: " + popName + " after: " + numAttempts + " number of attempts";
-                	LOG.error(msg);
-                	throw new RuntimeException(msg);
+                    String msg = "Unable to poll LDAP to find if Blackwatch has hosts built in pop: " + popName + " after: " + numAttempts + " number of attempts";
+                    LOG.error(msg);
+                    throw new RuntimeException(msg);
                 }
             }
         }
         
-        if (!serversList.isEmpty()) {
+        // Check if we need to force the gamma IAD POP to return as a BW POP.
+        if (popName.toUpperCase().equals(GAMMA_IAD_POP_NAME) && overrideGammaBWPOPAsNonBW) {
             return true;
         }
-        return false;
+        
+        return !serversList.isEmpty();
     }
     
     /**
@@ -88,8 +99,8 @@ public class BlackwatchLocationsHelper {
     protected String createBWHostclassForPOP(String popName) {
         String hostclass = HOSTCLASS_START_STR + popName.toUpperCase() + HOSTCLASS_END_STR;
         
-        // Include an edge-case for the BlackWatch gamma IAD5 host class so we can grab the right agent hosts
-        if (popName.toUpperCase().equals("G-IAD5")) {
+        // Include an edge-case for the BlackWatch gamma host class so we can grab the right agent hosts.
+        if (popName.toUpperCase().equals(GAMMA_IAD_POP_NAME)) {
             hostclass = HOSTCLASS_START_STR + "G-IAD" + HOSTCLASS_END_STR;
         }
         return hostclass;

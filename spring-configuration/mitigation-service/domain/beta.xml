@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+    
+    <bean id="beta.daasControlAPIServiceURL" class="java.lang.String">
+        <constructor-arg value="http://daas-control-api-gamma.amazon.com:80"/> <!-- Use gamma endpoint for beta as well, since we don't have any beta POPs. -->
+    </bean>
+    
+    <bean id="beta.edgeOperatorServiceURL" class="java.lang.String">
+        <constructor-arg value="http://edge-operator-service-gamma.amazon.com:80"/> <!-- Use gamma endpoint for beta as well, since we don't have any beta POPs. -->
+    </bean>
+    
+    <bean id="beta.swfDomainName" class="java.lang.String">
+        <constructor-arg value="Lookout-Beta-Domain"/>
+    </bean>
+    
+     <!-- Lookout creates up to two IAM groups per ServiceName+DeviceName. The two IAM groups are used to grant write and read-only accesses.
+          Lookout also creates an IAM user for each of the above IAM groups. Requests are signed by credentials of one of the above IAM users.
+          An IAM user can belong to more than one IAM groups, allowing it to perform operations on multiple ServiceName+DeviceName combinations. -->
+
+    <!-- AWS GroupID to client mapping for beta stage. -->
+    <!-- Note that these AWS GroupIDs are returned when groups are created using CLI, not via the console. -->
+    <util:map id="beta.groupIdToClientMap" map-class="java.util.HashMap">
+        <entry key="AGPAJMDYDWZ4RQG3YOGE4" value-ref="Route53PopRouterClient"/>
+        <entry key="AGPAJNAL2QPQEKZSUOBNU" value-ref="Route53PopRouterReadOnlyClient"/>
+        <entry key="AGPAIQ4WM7VX6WRLCGFG4" value-ref="LookoutMitigationServiceExplorer"/>
+        <entry key="AGPAIJY24ST6EHLK563H4" value-ref="Route53AnyDeviceReadOnlyClient"/>
+    </util:map>
+    
+</beans>

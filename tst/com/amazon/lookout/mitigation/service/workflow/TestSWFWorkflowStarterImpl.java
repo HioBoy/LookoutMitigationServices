@@ -14,7 +14,7 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
-import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsHelperManager;
+import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.workflow.LookoutMitigationWorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
@@ -34,7 +34,7 @@ public class TestSWFWorkflowStarterImpl {
         SWFWorkflowClientProvider mockWorkflowClientProvider = mock(SWFWorkflowClientProvider.class);
         when(mockWorkflowClientProvider.getWorkflowClient(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(mockWorkflowClient);
         
-        TemplateBasedLocationsHelperManager mockTemplateBasedLocationsHelper = mock(TemplateBasedLocationsHelperManager.class);
+        TemplateBasedLocationsManager mockTemplateBasedLocationsHelper = mock(TemplateBasedLocationsManager.class);
         when(mockTemplateBasedLocationsHelper.getLocationsForDeployment(any(MitigationModificationRequest.class))).thenReturn(Sets.newHashSet("POP1", "POP2"));
         
         MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();

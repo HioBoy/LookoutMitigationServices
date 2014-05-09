@@ -70,7 +70,7 @@ public class TestEdgeLocationsHelper {
         when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
         
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false);
         Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
         List<Object> hosts = new ArrayList<>();
         hosts.add("POP5");
@@ -108,7 +108,7 @@ public class TestEdgeLocationsHelper {
         when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
         
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false);
         Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
         List<Object> hosts = new ArrayList<>();
         hosts.add("POP5");
@@ -161,7 +161,7 @@ public class TestEdgeLocationsHelper {
         when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
         
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false);
         Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
         List<Object> hosts = new ArrayList<>();
         hosts.add("POP5");
@@ -213,7 +213,7 @@ public class TestEdgeLocationsHelper {
         when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
         
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false);
         when(provider.search(anyString(), anyString(), anyInt(), anyList())).thenThrow(new RuntimeException());
         
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
@@ -270,7 +270,7 @@ public class TestEdgeLocationsHelper {
         when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
         
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false);
         Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
         List<Object> hosts = new ArrayList<>();
         hosts.add("POP5");

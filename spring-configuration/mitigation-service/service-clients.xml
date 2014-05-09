@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+    
+    <bean id="dynamoDBClient" class="com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient">
+        <constructor-arg index="0" ref="${realm}.dynamoDBCredentialsProvider"/>
+    </bean>
+    
+    <bean id="swfClient" class="com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient">
+        <constructor-arg index="0" ref="${realm}.swfCredentialsProvider"/>
+        <property name="endpoint" ref="${realm}.swfEndpoint"/>
+    </bean>
+
+    <bean id="daasControlAPIServiceClient" class="com.amazon.daas.control.DaasControlAPIServiceV20100701ClientImpl">
+        <constructor-arg>
+            <bean class="com.amazon.coral.service.PassiveOrchestrator">
+                <constructor-arg ref="DaasControlAPIServiceClientChain" />
+                <constructor-arg>
+                    <bean factory-bean="ModelIndexFactory" factory-method="newModelIndex" />
+                </constructor-arg>
+            </bean>
+        </constructor-arg>
+    </bean>
+
+    <bean id="edgeOperatorServiceClient" class="com.amazon.edge.service.EdgeOperatorServiceClientImpl">
+        <constructor-arg>
+            <bean class="com.amazon.coral.service.PassiveOrchestrator">
+                <constructor-arg ref="EdgeOperatorServiceClientChain" />
+                <constructor-arg>
+                    <bean factory-bean="ModelIndexFactory" factory-method="newModelIndex" />
+                </constructor-arg>
+            </bean>
+        </constructor-arg>
+    </bean>
+
+    <bean id="edgeTimeoutConfig" class="com.amazon.coral.client.TimeoutHandler">
+        <constructor-arg>
+            <map>
+                <entry key="DaasControlAPIServiceV20100701/*" value="5000" /> <!-- Timeout in ms -->
+                <entry key="EdgeOperatorService/*" value="5000" /> <!-- Timeout in ms -->
+            </map>
+        </constructor-arg>
+    </bean>
+
+    <bean id="DaasControlAPIServiceClientChain" class="com.amazon.coral.service.helper.ChainHelper">
+        <property name="handlers">
+            <list>
+                <ref bean="edgeTimeoutConfig"/>
+                <bean class="com.amazon.coral.client.HttpDestinationClientHandler">
+                    <constructor-arg ref="${domain}.daasControlAPIServiceURL"/> <!-- DaasControlAPIService runs only in IAD, hence using different endpoints only based on the domain. -->
+                </bean>
+                <bean class="com.amazon.coral.client.HttpRpcClientHandler">
+                    <constructor-arg index="0" value="BINARY"/> <!-- value of "BINARY" will use the faster binary format -->
+                </bean>
+                <bean class="com.amazon.coral.client.JakartaHttpHandler"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="EdgeOperatorServiceClientChain" class="com.amazon.coral.service.helper.ChainHelper">
+        <property name="handlers">
+            <list>
+                <ref bean="edgeTimeoutConfig" />
+                <bean class="com.amazon.coral.client.HttpDestinationClientHandler">
+                    <constructor-arg ref="${domain}.edgeOperatorServiceURL" /> <!-- EdgeOperatorService runs only in IAD, hence using different endpoints only based on the domain. -->
+                </bean>
+                <bean class="com.amazon.coral.client.HttpRpcClientHandler">
+                    <constructor-arg index="0" value="BINARY" /> <!-- value of "BINARY" will use the faster binary format -->
+                </bean>
+                <bean class="com.amazon.coral.client.JakartaHttpHandler"/>
+            </list>
+        </property>
+    </bean>
+    
+    <bean id="ModelIndexFactory" class="com.amazon.coral.model.reflect.DetectedModelIndexFactory"/>
+
+</beans>

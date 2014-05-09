@@ -1,5 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity;
 
+import java.beans.ConstructorProperties;
+
 import javax.annotation.Nonnull;
 
 import org.apache.commons.lang.Validate;
@@ -13,11 +15,13 @@ import com.amazon.coral.annotation.Documentation;
 import com.amazon.coral.annotation.Operation;
 import com.amazon.coral.annotation.Service;
 import com.amazon.coral.service.Activity;
+import com.amazon.coral.service.Identity;
 import com.amazon.coral.validate.Validated;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
+import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandler;
@@ -26,6 +30,7 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.Templat
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
+import com.amazon.lookout.mitigation.service.helpers.AWSUserGroupBasedAuthorizer;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.model.RequestType;
@@ -36,13 +41,17 @@ import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 public class CreateMitigationActivity extends Activity {
     private static final Log LOG = LogFactory.getLog(CreateMitigationActivity.class);
     
+    private static final String OPERATION_NAME_FOR_AUTH_CHECK = "createMitigation";
+    
     private final RequestValidator requestValidator;
     private final TemplateBasedRequestValidator templateBasedValidator;
     private final RequestStorageManager requestStorageManager;
     private final SWFWorkflowStarter workflowStarter;
+    private final AWSUserGroupBasedAuthorizer authorizer;
     
+    @ConstructorProperties({"requestValidator", "templateBasedValidator", "requestStorageManager", "swfWorkflowStarter", "authorizer"})
     public CreateMitigationActivity(@Nonnull RequestValidator requestValidator, @Nonnull TemplateBasedRequestValidator templateBasedValidator, 
-                                    @Nonnull RequestStorageManager requestStorageManager, @Nonnull SWFWorkflowStarter workflowStarter) {
+                                    @Nonnull RequestStorageManager requestStorageManager, @Nonnull SWFWorkflowStarter workflowStarter, @Nonnull AWSUserGroupBasedAuthorizer authorizer) {
         Validate.notNull(requestValidator);
         this.requestValidator = requestValidator;
         
@@ -54,71 +63,82 @@ public class CreateMitigationActivity extends Activity {
         
         Validate.notNull(workflowStarter);
         this.workflowStarter = workflowStarter;
+        
+        Validate.notNull(authorizer);
+        this.authorizer = authorizer;
     }
 
     @Validated
     @Operation("CreateMitigation")
     @Documentation("CreateMitigation")
-    public @Nonnull MitigationModificationResponse enact(@Nonnull CreateMitigationRequest createMitigationRequest) {
+    public @Nonnull MitigationModificationResponse enact(@Nonnull CreateMitigationRequest createRequest) {
         // Wrap the CoralMetrics for this activity in a TSDMetrics instance.
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics());
         
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;
         try {
-            LOG.debug(String.format("CreateMitigationActivity called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(createMitigationRequest)));
+            LOG.debug(String.format("CreateMitigationActivity called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(createRequest)));
+            
+            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(createRequest.getMitigationTemplate());
+            String deviceName = deviceNameAndScope.getDeviceName().name();
+            String serviceName = createRequest.getServiceName();
             
             // Step1. Authorize this request.
-            // TODO - Once we have the auth model finalized, we should perform authorization checks here.
-            // LookoutMitigationServiceAuthorizer authorizer; (dependency injected in the constructor)
-            // boolean isAuthorized = authorizer.authorizeRequest(createMitigationRequest.getServiceName(), createMitigationRequest.getMitigationTemplate(), createMitigationRequest.getMitigationActionMetadata());
-            // if (!isAuthorized) {
-            //     MitigationActionMetadata metadata = createMitigationRequest.getMitigationActionMetadata();
-            //     throw new IllegalArgumentException(metadata.getUser() + " not authorized to CreateMitigation for service: " + createMitigationRequest.getServiceName() + 
-            //                                        " using mitigation template: " + createMitigationRequest.getMitigationTemplate());
-            // }
+            boolean isAuthorized = authorizer.isClientAuthorized(getIdentity(), serviceName, deviceName, OPERATION_NAME_FOR_AUTH_CHECK);
+            if (!isAuthorized) {
+                authorizer.setAuthorizedFlag(getIdentity(), false);
+                
+                MitigationActionMetadata metadata = createRequest.getMitigationActionMetadata();
+                String msg = metadata.getUser() + " not authorized to call CreateMitigation for service: " + createRequest.getServiceName() + 
+                             " for device: " + deviceName + " using mitigation template: " + createRequest.getMitigationTemplate() + ". Request signed with AccessKeyId: " + 
+                             getIdentity().getAttribute(Identity.AWS_ACCESS_KEY) + " and belonging to groups: " + getIdentity().getAttribute(Identity.AWS_USER_GROUPS);
+                LOG.info(msg);
+                throw new IllegalArgumentException(msg);
+            } else {
+                authorizer.setAuthorizedFlag(getIdentity(), true);
+            }
             
             // Step2. Validate this request.
-            requestValidator.validateCreateRequest(createMitigationRequest);
+            requestValidator.validateCreateRequest(createRequest);
             
             // Step3. Validate this request based on the template.
-            templateBasedValidator.validateCreateRequestForTemplate(createMitigationRequest, tsdMetrics);
+            templateBasedValidator.validateCreateRequestForTemplate(createRequest, tsdMetrics);
             
             // Step4. Persist this request in DDB and get back the workflowId associated with this request.
-            long workflowId = requestStorageManager.storeRequestForWorkflow(createMitigationRequest, RequestType.CreateRequest, tsdMetrics);
+            long workflowId = requestStorageManager.storeRequestForWorkflow(createRequest, RequestType.CreateRequest, tsdMetrics);
             
             // Step5. Create new workflow client to be used for running the workflow.
-            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(createMitigationRequest.getMitigationTemplate());
-            String deviceName = deviceNameAndScope.getDeviceName().name();
-            WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, createMitigationRequest, deviceName, tsdMetrics);
+            
+            WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, createRequest, deviceName, tsdMetrics);
             
             // Step6. Update the record for this workflow request and store the runId that SWF associates with this workflow.
             String swfRunId = workflowClient.getWorkflowExecution().getRunId();
             requestStorageManager.updateRunIdForWorkflowRequest(deviceName, workflowId, swfRunId, RequestType.CreateRequest, tsdMetrics);
             
             // Step7. Now that the request has been updated with the swfRunId associated with this SWF workflow run, start running the workflow.
-            workflowStarter.startWorkflow(workflowId, createMitigationRequest, RequestType.CreateRequest, 
+            workflowStarter.startWorkflow(workflowId, createRequest, RequestType.CreateRequest, 
                                           DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, deviceName, workflowClient, tsdMetrics);
             
             // Step8. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
-            mitigationModificationResponse.setMitigationName(createMitigationRequest.getMitigationName());
+            mitigationModificationResponse.setMitigationName(createRequest.getMitigationName());
             mitigationModificationResponse.setDeviceName(deviceName);
-            mitigationModificationResponse.setServiceName(createMitigationRequest.getServiceName());
+            mitigationModificationResponse.setServiceName(serviceName);
             mitigationModificationResponse.setJobId(workflowId);
             mitigationModificationResponse.setRequestStatus(WorkflowStatus.RUNNING);
             
             return mitigationModificationResponse;
         } catch (IllegalArgumentException ex) {
-            String msg = String.format("Caught IllegalArgumentException in CreateMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createMitigationRequest));
+            String msg = String.format("Caught IllegalArgumentException in CreateMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
             throw new BadRequest400(msg, ex);
         } catch (DuplicateDefinitionException400 ex) {
-            String msg = String.format("Caught DuplicateDefinitionException in CreateMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createMitigationRequest));
+            String msg = String.format("Caught DuplicateDefinitionException in CreateMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
             throw ex;
         } catch (Exception internalError) {
-            String msg = String.format("Internal error while fulfilling request for CreateMitigationActivity: for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createMitigationRequest));
+            String msg = String.format("Internal error while fulfilling request for CreateMitigationActivity: for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.error(msg, internalError);
             requestSuccessfullyProcessed = false;
             throw new InternalServerError500(msg);

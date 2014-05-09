@@ -1,5 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity;
 
+import java.beans.ConstructorProperties;
+
 import javax.annotation.Nonnull;
 
 import org.apache.commons.lang.Validate;
@@ -13,17 +15,20 @@ import com.amazon.coral.annotation.Documentation;
 import com.amazon.coral.annotation.Operation;
 import com.amazon.coral.annotation.Service;
 import com.amazon.coral.service.Activity;
+import com.amazon.coral.service.Identity;
 import com.amazon.coral.validate.Validated;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
+import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
+import com.amazon.lookout.mitigation.service.helpers.AWSUserGroupBasedAuthorizer;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.model.RequestType;
@@ -34,11 +39,16 @@ import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 public class DeleteMitigationFromAllLocationsActivity extends Activity {
     private static final Log LOG = LogFactory.getLog(DeleteMitigationFromAllLocationsActivity.class);
     
+    private static final String OPERATION_NAME_FOR_AUTH_CHECK = "deleteMitigationFromAllLocations";
+    
     private final RequestValidator requestValidator;
     private final RequestStorageManager requestStorageManager;
     private final SWFWorkflowStarter workflowStarter;
-    
-    public DeleteMitigationFromAllLocationsActivity(@Nonnull RequestValidator requestValidator, @Nonnull RequestStorageManager requestStorageManager, @Nonnull SWFWorkflowStarter workflowStarter) {
+    private final AWSUserGroupBasedAuthorizer authorizer;
+
+    @ConstructorProperties({"requestValidator", "requestStorageManager", "swfWorkflowStarter", "authorizer"})
+    public DeleteMitigationFromAllLocationsActivity(@Nonnull RequestValidator requestValidator, @Nonnull RequestStorageManager requestStorageManager, 
+                                                    @Nonnull SWFWorkflowStarter workflowStarter, @Nonnull AWSUserGroupBasedAuthorizer authorizer) {
         Validate.notNull(requestValidator);
         this.requestValidator = requestValidator;
         
@@ -47,6 +57,9 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
         
         Validate.notNull(workflowStarter);
         this.workflowStarter = workflowStarter;
+        
+        Validate.notNull(authorizer);
+        this.authorizer = authorizer;
     }
 
     @Validated
@@ -61,15 +74,25 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
         try {
             LOG.debug(String.format("DeleteMitigationFromAllLocations called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(deleteRequest)));
             
+            String mitigationTemplate = deleteRequest.getMitigationTemplate();
+            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
+            String deviceName = deviceNameAndScope.getDeviceName().name();
+            String serviceName = deleteRequest.getServiceName();
+            
             // Step1. Authorize this request.
-            // TODO - Once we have the auth changes finalized, we should perform authorization checks here.
-            // LookoutMitigationServiceAuthorizer authorizer; (dependency injected in the constructor)
-            // boolean isAuthorized = authorizer.authorizeRequest(deleteRequest.getServiceName(), deleteRequest.getMitigationTemplate(), deleteRequest.getMitigationActionMetadata());
-            // if (!isAuthorized) {
-            //     MitigationActionMetadata metadata = deleteRequest.getMitigationActionMetadata();
-            //     throw new IllegalArgumentException(metadata.getUser() + " not authorized to DeleteMitigation for service: " + deleteRequest.getServiceName() + 
-            //                                        " using mitigation template: " + deleteRequest.getMitigationTemplate());
-            // }
+            boolean isAuthorized = authorizer.isClientAuthorized(getIdentity(), serviceName, deviceName, OPERATION_NAME_FOR_AUTH_CHECK);
+            if (!isAuthorized) {
+                authorizer.setAuthorizedFlag(getIdentity(), false);
+                
+                MitigationActionMetadata metadata = deleteRequest.getMitigationActionMetadata();
+                String msg = metadata.getUser() + " not authorized to call DeleteMitigationFromAllLocations for service: " + serviceName + 
+                             " for device: " + deviceName + " using mitigation template: " + mitigationTemplate + ". Request signed with AccessKeyId: " + 
+                             getIdentity().getAttribute(Identity.AWS_ACCESS_KEY) + " and belonging to groups: " + getIdentity().getAttribute(Identity.AWS_USER_GROUPS);
+                LOG.info(msg);
+                throw new IllegalArgumentException(msg);
+            } else {
+                authorizer.setAuthorizedFlag(getIdentity(), true);
+            }
             
             // Step2. Validate this request.
             requestValidator.validateDeleteRequest(deleteRequest);
@@ -82,8 +105,6 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             long workflowId = requestStorageManager.storeRequestForWorkflow(deleteRequest, RequestType.DeleteRequest, tsdMetrics);
             
             // Step5. Create new workflow client to be used for running the workflow.
-            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(deleteRequest.getMitigationTemplate());
-            String deviceName = deviceNameAndScope.getDeviceName().name();
             WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, deleteRequest, deviceName, tsdMetrics);
             
             // Step6. Update the record for this workflow request and store the runId that SWF associates with this workflow.

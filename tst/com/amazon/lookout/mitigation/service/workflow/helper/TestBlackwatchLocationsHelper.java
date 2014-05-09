@@ -35,7 +35,7 @@ public class TestBlackwatchLocationsHelper {
     @Test
     public void testForBlackwatchPOP() {
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider);
+        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider, false);
         
         Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
         List<Object> hosts = new ArrayList<>();
@@ -53,7 +53,7 @@ public class TestBlackwatchLocationsHelper {
     @Test
     public void testForNonBlackwatchPOP() {
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider);
+        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider, false);
         
         List<Map<String, List<Object>>> result = new ArrayList<>();
         
@@ -65,7 +65,7 @@ public class TestBlackwatchLocationsHelper {
     @Test
     public void testBWHostclassNameForPOP() {
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider);
+        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider, false);
         
         String bwHostclass = helper.createBWHostclassForPOP(BLACKWATCH_POP);
         
@@ -75,7 +75,7 @@ public class TestBlackwatchLocationsHelper {
     @Test
     public void testRetriesOnFailure() {
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider);
+        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider, false);
         
         Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
         List<Object> hosts = new ArrayList<>();
@@ -94,7 +94,7 @@ public class TestBlackwatchLocationsHelper {
     @Test
     public void testThrowExceptionOnFailure() {
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider);
+        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider, false);
         
         Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
         List<Object> hosts = new ArrayList<>();

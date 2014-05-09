@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+    
+    <bean id="clientAuthorizer" class="com.amazon.lookout.mitigation.service.helpers.AWSUserGroupBasedAuthorizer">
+        <constructor-arg index="0" ref="${domain}.groupIdToClientMap" />
+        <constructor-arg index="1" ref="operationToClientsMap" />
+        <constructor-arg index="2" ref="operationsToAuthWithWriteCredentials" />
+    </bean>
+
+    <bean id="Route53PopRouterReadOnlyClient" class="java.lang.String">
+        <constructor-arg>
+            <bean class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+                <property name="staticField" value="com.amazon.lookout.mitigation.service.helpers.AWSUserGroupBasedAuthorizer.ROUTE53_POP_ROUTER_READONLY_CLIENT"/>
+            </bean>
+        </constructor-arg>
+    </bean>
+
+    <bean id="Route53PopRouterClient" class="java.lang.String">
+        <constructor-arg>
+            <bean class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+                <property name="staticField" value="com.amazon.lookout.mitigation.service.helpers.AWSUserGroupBasedAuthorizer.ROUTE53_POP_ROUTER_CLIENT"/>
+            </bean>
+        </constructor-arg>
+    </bean>
+
+    <bean id="Route53AnyDeviceReadOnlyClient" class="java.lang.String">
+        <constructor-arg>
+            <bean class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+                <property name="staticField" value="com.amazon.lookout.mitigation.service.helpers.AWSUserGroupBasedAuthorizer.ROUTE53_ANY_DEVICE_READONLY_CLIENT"/>
+            </bean>
+        </constructor-arg>
+    </bean>
+
+
+    <bean id="LookoutMitigationServiceExplorer" class="java.lang.String">
+        <constructor-arg>
+            <bean class="org.springframework.beans.factory.config.FieldRetrievingFactoryBean">
+                <property name="staticField" value="com.amazon.lookout.mitigation.service.helpers.AWSUserGroupBasedAuthorizer.LOOKOUT_MITIGATION_SERVICE_EXPLORER"/>
+            </bean>
+        </constructor-arg>
+    </bean>
+    
+     <!-- Only the operations that need to be checked go here. -->
+    <util:map id="operationToClientsMap" map-class="java.util.HashMap">
+        <entry key="createMitigation">
+            <list>
+                <ref bean="Route53PopRouterClient"/>
+                <ref bean="LookoutMitigationServiceExplorer"/>
+            </list>
+        </entry>
+        <entry key="addLocationsToMitigation">
+            <list>
+                <ref bean="Route53PopRouterClient"/>
+                <ref bean="LookoutMitigationServiceExplorer"/>
+            </list>
+        </entry>
+        <entry key="removeLocationsFromMitigation">
+            <list>
+                <ref bean="Route53PopRouterClient"/>
+                <ref bean="LookoutMitigationServiceExplorer"/>
+            </list>
+        </entry>
+        <entry key="editMitigation">
+            <list>
+                <ref bean="Route53PopRouterClient"/>
+                <ref bean="LookoutMitigationServiceExplorer"/>
+            </list>
+        </entry>
+        <entry key="deleteMitigationFromAllLocations">
+            <list>
+                <ref bean="Route53PopRouterClient"/>
+                <ref bean="LookoutMitigationServiceExplorer"/>
+            </list>
+        </entry>
+        <entry key="getRequestStatus">
+            <list>
+                <ref bean="Route53PopRouterClient"/>
+                <ref bean="LookoutMitigationServiceExplorer"/>
+            </list>
+        </entry>
+        <entry key="getMitigationInfo">
+            <list>
+                <ref bean="Route53PopRouterClient"/>
+                <ref bean="LookoutMitigationServiceExplorer"/>
+                <!-- To authorize users with read only access -->
+                <ref bean="Route53PopRouterReadOnlyClient"/>
+            </list>
+        </entry>
+        <entry key="listMitigations">
+            <list>
+                <ref bean="Route53PopRouterClient"/>
+                <ref bean="LookoutMitigationServiceExplorer"/>
+                <!-- To authorize users with read only access -->
+                <ref bean="Route53PopRouterReadOnlyClient"/>
+            </list>
+        </entry>
+    </util:map>
+    
+    <bean id="operationsToAuthWithWriteCredentials" class="java.util.ArrayList">
+        <constructor-arg>
+            <list>
+                <value>createMitigation</value>
+                <value>addLocationsToMitigation</value>
+                <value>removeLocationsFromMitigation</value>
+                <value>editMitigation</value>
+                <value>deleteMitigationFromAllLocations</value>
+                <value>getRequestStatus</value>
+            </list>
+          </constructor-arg>
+      </bean>
+    
+</beans>

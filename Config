@@ -34,7 +34,8 @@ package.LookoutMitigationService = {
             
             AWSJavaSDKExternalRelease = 1.7;
             LookoutMitigationWorkFlowWorker = 1.0;
-            
+
+            CoralAwsAuthentication = 1.1; # To support authenticating/authorizing calls to LookoutMitigationService.
             OdinAWSCredentials = 1.2;
             
             AWS158Commons = 1.1;
@@ -46,6 +47,9 @@ package.LookoutMitigationService = {
             
             JavaAmazonLdapUtils = 1.2;
             CoralSpringLauncher = 3.1;
+            CoralClientHttp = 1.0;
+
+            LookoutMitigationServiceExplorer = 1.0;
         };
     };
     
@@ -54,7 +58,7 @@ package.LookoutMitigationService = {
             JDK = 1.7;
             # Runtime dependencies for coral
             JakartaCommons-logging-adapters = 1.1;
-            Bobcat = 1.0;
+            Bobcat = 2.0;
             CoralService = 1.0;
             CoralMetricsQuerylogReporter = 1.0;            
             # Coral protocol handlers
@@ -64,18 +68,23 @@ package.LookoutMitigationService = {
             # ProcessManager.
             ProcessManager = 2.2;
             ProcessManagerCommands = 2.2;
+            ProcessManagerBrazilConfig = 1.0;
             ForceRestartProcessManagerCmds = 1.0;
+            BrazilConfigGlobal = 1.0;
             
             MonitoringCore = 1.0;
             ServiceMonitoring = 2.0;
             
-            WebsiteLogPusher = 3.2;                                              
+            WebsiteLogPusher = 3.2;        
+            
+            EdgeSetupVLANIptables = 1.0;                                      
         };
     };
 
     test-dependencies = {
         1.0 = {
             junit = 4;
+            Mockito = 1.9.5;
         };
     };
 
@@ -90,7 +99,8 @@ package.LookoutMitigationService = {
             OdinAWSCredentials = 1.2;
             SpringBeans = 3.1;
             SpringCore = 3.1;
-            log4j = 1.2.15;
+            log4j = 1.2;
+            Mockito = 1.9.5;
         };
     };
 
