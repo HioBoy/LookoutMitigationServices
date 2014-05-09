@@ -145,39 +145,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         Throwable caughtException = null;
         try {
             storageHandler.evaluateActiveMitigationsForDDBQueryResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
-                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), false, tsdMetrics);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNull(caughtException);
-    }
-    
-    /**
-     * Test the case where we have a similar delete request, however they differ for the device scopes - so both of those requests are valid.
-     * We don't expect any Exception to be thrown back.
-     */
-    @Test
-    public void testSameDeletesForDifferentDeviceScopes() {
-        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
-        
-        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
-        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
-        
-        DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
-                                                         .withNumericAttribute(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, request.getMitigationVersion())
-                                                         .withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, request.getMitigationTemplate())
-                                                         .withStringAttribute(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, "SomeOtherDeviceScope")
-                                                         .withStringAttribute(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, WorkflowStatus.SUCCEEDED)
-                                                         .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 2)
-                                                         .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.DeleteRequest.name());
-
-        QueryResult queryResult = new QueryResult().withCount(1).withItems(itemBuilder.build());
-        
-        Throwable caughtException = null;
-        try {
-            storageHandler.evaluateActiveMitigationsForDDBQueryResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
-                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), false, tsdMetrics);
+                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -210,7 +178,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         Throwable caughtException = null;
         try {
             storageHandler.evaluateActiveMitigationsForDDBQueryResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
-                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), false, tsdMetrics);
+                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -242,7 +210,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         Throwable caughtException = null;
         try {
             storageHandler.evaluateActiveMitigationsForDDBQueryResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
-                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), false, tsdMetrics);
+                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -274,7 +242,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         Throwable caughtException = null;
         try {
             storageHandler.evaluateActiveMitigationsForDDBQueryResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
-                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), false, tsdMetrics);
+                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -307,7 +275,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         Throwable caughtException = null;
         try {
             storageHandler.evaluateActiveMitigationsForDDBQueryResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
-                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), false, tsdMetrics);
+                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -340,7 +308,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         Throwable caughtException = null;
         try {
             storageHandler.evaluateActiveMitigationsForDDBQueryResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
-                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), false, tsdMetrics);
+                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -368,15 +336,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
                                                           .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 20)
                                                           .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.CreateRequest.name());
 
-        DDBItemBuilder itemBuilder2 = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
-                                                          .withNumericAttribute(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, 4)
-                                                          .withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, request.getMitigationTemplate())
-                                                          .withStringAttribute(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, "OtherScope")
-                                                          .withStringAttribute(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, WorkflowStatus.SUCCEEDED)
-                                                          .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 27)
-                                                          .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.EditRequest.name());
-
-        DDBItemBuilder itemBuilder3 = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, "Mitigation3")
+        DDBItemBuilder itemBuilder2 = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, "Mitigation3")
                                                           .withNumericAttribute(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, 2)
                                                           .withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, request.getMitigationTemplate())
                                                           .withStringAttribute(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, deviceNameAndScope.getDeviceScope().name())
@@ -384,11 +344,11 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
                                                           .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 34)
                                                           .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.DeleteRequest.name());
         
-        QueryResult queryResult = new QueryResult().withCount(3).withItems(itemBuilder1.build()).withItems(itemBuilder2.build()).withItems(itemBuilder3.build());
+        QueryResult queryResult = new QueryResult().withCount(3).withItems(itemBuilder1.build()).withItems(itemBuilder2.build());
         
         Pair<Long, Boolean> evalResult = null;
         evalResult = storageHandler.evaluateActiveMitigationsForDDBQueryResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
-                                                                                 request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), false, tsdMetrics);
+                                                                               request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), tsdMetrics);
         assertNotNull(evalResult);
         long maxWorkflowId = Pair.get1(evalResult);
         assertEquals(maxWorkflowId, 34);
@@ -437,7 +397,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         
         Pair<Long, Boolean> evalResult = null;
         evalResult = storageHandler.evaluateActiveMitigationsForDDBQueryResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
-                                                                               request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), false, tsdMetrics);
+                                                                               request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), tsdMetrics);
         assertNotNull(evalResult);
         
         long maxWorkflowId = Pair.get1(evalResult);
@@ -487,7 +447,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         
         QueryResult queryResult1 = new QueryResult().withCount(1).withItems(itemBuilder1.build()).withLastEvaluatedKey(new HashMap<String, AttributeValue>());
         QueryResult queryResult2 = new QueryResult().withCount(2).withItems(itemBuilder2.build()).withItems(itemBuilder3.build());
-        doReturn(queryResult1).doReturn(queryResult2).when(spiedStorageHandler).getActiveMitigationsForDevice(anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
+        doReturn(queryResult1).doReturn(queryResult2).when(spiedStorageHandler).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
         
         Pair<Long, Boolean> evalResult = null;
         evalResult = spiedStorageHandler.evaluateActiveMitigations(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), request.getMitigationName(), 
@@ -500,7 +460,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         boolean foundMitigationToDelete = Pair.get2(evalResult);
         assertTrue(foundMitigationToDelete);
         
-        verify(spiedStorageHandler, times(2)).getActiveMitigationsForDevice(anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
+        verify(spiedStorageHandler, times(2)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
     }
     
     /**
@@ -517,7 +477,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         QueryResult queryResult = new QueryResult().withCount(0);
-        doReturn(queryResult).when(spiedStorageHandler).getActiveMitigationsForDevice(anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
+        doReturn(queryResult).when(spiedStorageHandler).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
         
         Pair<Long, Boolean> evalResult = null;
         evalResult = spiedStorageHandler.evaluateActiveMitigations(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), request.getMitigationName(), 
@@ -544,7 +504,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         QueryResult queryResult = new QueryResult().withCount(0);
-        doReturn(queryResult).when(spiedStorageHandler).getActiveMitigationsForDevice(anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
+        doReturn(queryResult).when(spiedStorageHandler).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
         
         Pair<Long, Boolean> evalResult = null;
         evalResult = spiedStorageHandler.evaluateActiveMitigations(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), request.getMitigationName(), 
@@ -561,7 +521,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         verify(spiedStorageHandler, times(0)).getKeysForDeviceAndWorkflowId(anyString(), anyLong());
         
         reset(spiedStorageHandler);
-        doReturn(queryResult).when(spiedStorageHandler).getActiveMitigationsForDevice(anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
+        doReturn(queryResult).when(spiedStorageHandler).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
         
         // Now check the case where we pass the maxWorkflowId from the last run.
         evalResult = spiedStorageHandler.evaluateActiveMitigations(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), request.getMitigationName(), 
@@ -585,7 +545,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         doReturn(Pair.from((long) 5, true)).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
         doThrow(new RuntimeException()).when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), 
-        																			any(RequestType.class), anyInt(), any(TSDMetrics.class));
+                                                                                    any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         Throwable caughtException = null;
         try {
@@ -615,7 +575,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         doReturn(Pair.from(maxWorkflowId, true)).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
         doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), 
-        																														any(RequestType.class), anyInt(), any(TSDMetrics.class));
+                                                                                                                                any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         Long newWorkflowId = null;
         newWorkflowId = spiedStorageHandler.storeRequestForWorkflow(request, tsdMetrics);

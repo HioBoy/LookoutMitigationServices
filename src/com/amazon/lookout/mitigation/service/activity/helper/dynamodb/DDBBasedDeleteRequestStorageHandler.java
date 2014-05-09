@@ -84,6 +84,9 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
             Long maxWorkflowId = null;
             boolean activeMitigationToDeleteFound = false;
             
+            // Holds a reference to the last caught exception, to report that back if all retries fail.
+            Throwable lastCaughtException = null;
+            
             // Get the max workflowId for existing mitigations, increment it by 1 and store it in the DDB. Return back the new workflowId
             // if successful, else end the loop and throw back an exception.
             while (numAttempts++ < NEW_WORKFLOW_ID_MAX_ATTEMPTS) {
@@ -111,9 +114,11 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                     storeRequestInDDB(deleteRequest, deviceNameAndScope, newWorkflowId, RequestType.DeleteRequest, deleteRequest.getMitigationVersion(), subMetrics);
                     return newWorkflowId;
                 } catch (Exception ex) {
+                    lastCaughtException = ex;
+                    
                     String msg = "Caught exception when storing delete request in DDB with newWorkflowId: " + newWorkflowId + " for DeviceName: " + deviceName + 
                                  " and deviceScope: " + deviceScope + " AttemptNum: " + numAttempts + ". For request: " + ReflectionToStringBuilder.toString(deleteRequest);
-                    LOG.warn(msg);
+                    LOG.warn(msg, ex);
 
                     if (numAttempts < NEW_WORKFLOW_ID_MAX_ATTEMPTS) {
                         try {
@@ -128,8 +133,8 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
 
             String msg = DELETE_REQUEST_STORAGE_FAILED_LOG_PREFIX + "- Unable to store delete request : " + ReflectionToStringBuilder.toString(deleteRequest) +
                          " after " + numAttempts + " attempts";
-            LOG.warn(msg);
-            throw new RuntimeException(msg);
+            LOG.warn(msg, lastCaughtException);
+            throw new RuntimeException(msg, lastCaughtException);
         } finally {
             subMetrics.addCount(NUM_ATTEMPTS_TO_STORE_DELETE_REQUEST, numAttempts);
             subMetrics.end();
@@ -159,8 +164,6 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
     protected Pair<Long, Boolean> evaluateActiveMitigations(String deviceName, String deviceScope, String mitigationName, String mitigationTemplate, int mitigationVersion, 
                                                             Long maxWorkflowIdOnLastAttempt, boolean definitionToDeleteFound, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("evaluateActiveMitigations");
-        Long maxWorkflowId = null;
-        Pair<Long, Boolean> activeMitigationsEvalResult = Pair.from(null, false);
         try {
             Set<String> attributesToGet = generateAttributesToGet();
             
@@ -179,28 +182,33 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
             }
 
             Map<String, AttributeValue> lastEvaluatedKey = null;
-
-            QueryResult result = getActiveMitigationsForDevice(deviceName, attributesToGet, keyConditions, lastEvaluatedKey, indexToUse, subMetrics);
-            subMetrics.addCount(NUM_ACTIVE_MITIGATIONS_FOR_DEVICE, result.getCount());
-
-            if (result.getCount() > 0) {
-                activeMitigationsEvalResult = evaluateActiveMitigationsForDDBQueryResult(deviceName, deviceScope, result, mitigationName, mitigationTemplate, 
-                                                                                         mitigationVersion, definitionToDeleteFound, subMetrics);
-            } else {
-                return Pair.from(maxWorkflowId, definitionToDeleteFound);
-            }
-
-            lastEvaluatedKey = result.getLastEvaluatedKey();
-            while (lastEvaluatedKey != null) {
-                result = getActiveMitigationsForDevice(deviceName, attributesToGet, keyConditions, lastEvaluatedKey, indexToUse, subMetrics);
+            Long maxWorkflowId = null;
+            do {
+                QueryResult result = getActiveMitigationsForDevice(deviceName, deviceScope, attributesToGet, keyConditions, lastEvaluatedKey, indexToUse, subMetrics);
                 subMetrics.addCount(NUM_ACTIVE_MITIGATIONS_FOR_DEVICE, result.getCount());
-
+                
                 if (result.getCount() > 0) {
-                    activeMitigationsEvalResult = evaluateActiveMitigationsForDDBQueryResult(deviceName, deviceScope, result, mitigationName, mitigationTemplate, 
-                                                                                             mitigationVersion, definitionToDeleteFound, subMetrics);
+                    Pair<Long, Boolean> evalOutcomeForQueryResult = evaluateActiveMitigationsForDDBQueryResult(deviceName, deviceScope, result, mitigationName, 
+                                                                                                               mitigationTemplate, mitigationVersion, subMetrics);
+                    
+                    Long maxWorkflowIdFromNewResults = Pair.get1(evalOutcomeForQueryResult);
+                    boolean definitionToDeleteFoundInQueryResult = Pair.get2(evalOutcomeForQueryResult);
+                    
+                    // If the maxWorkflowId found in the current set of DDB results is greater than the one cached in the maxWorkflowId variable, update it.
+                    if ((maxWorkflowId == null) || ((maxWorkflowIdFromNewResults != null) && (maxWorkflowIdFromNewResults > maxWorkflowId))) {
+                        maxWorkflowId = maxWorkflowIdFromNewResults;
+                    }
+                    
+                    // If we hadn't found the definition to delete as yet, but did in the set of DDB results just evaluated, then flip the definitionToDeleteFound to true.
+                    if (!definitionToDeleteFound && definitionToDeleteFoundInQueryResult) {
+                        definitionToDeleteFound = true;
+                    }
                 }
+
                 lastEvaluatedKey = result.getLastEvaluatedKey();
-            }
+            } while(lastEvaluatedKey != null);
+
+            Pair<Long, Boolean> activeMitigationsEvalResult = Pair.from(maxWorkflowId, definitionToDeleteFound);
             return activeMitigationsEvalResult;
         } finally {
             subMetrics.end();
@@ -222,7 +230,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
     /**
      * From the QueryResult iterate through the mitigations for this device, skip the inactive one and ones that don't match the 
      * deviceScope. For the active ones, track the workflowId of the existing mitigation - so at the end of the iteration we return 
-     * back the max of the workflowIds for the currently deployed mitigations. Also check the active mitigation to locate the mitigation that we wish to be deleted.
+     * back the max of the workflowIds for the active mitigations represented in the QueryResult. Also check the active mitigation to locate the mitigation that we wish to be deleted.
      * We throw an exception if we find this is a duplicate delete request. Protected for unit-testing.
      * @param deviceName DeviceName for which the new mitigation needs to be created.
      * @param deviceScope Scope for the device on which the new mitigation is to be created. 
@@ -231,24 +239,19 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
      * @param templateForMitigationToDelete Template used for the new mitigation being created.
      * @param versionToDelete Version of the mitigation to be deleted. If we find another active version of the same mitigation, then we throw an exception since there 
      *        must be only 1 active version of a mitigation and it is possible that the mitigation this client is requesting to be deleted has been updated by another client.
-     * @param foundMitigationToDelete Flag identifying the fact whether we have already found the mitigation definition corresponding to this delete request.
      * @param metrics
      * @return Pair of <Long, Boolean>, where the Long value represents the max WorkflowId for existing mitigations. Null if no mitigations exist for this deviceName and deviceScope.
      *         The Boolean value in the Pair represents if we saw an active mitigation definition corresponding to this delete request. If we don't find such a mitigation, we simply
      *         fill it up with the value of foundMitigationToDelete input param.
      */
     protected Pair<Long, Boolean> evaluateActiveMitigationsForDDBQueryResult(String deviceName, String deviceScope, QueryResult result, String mitigationNameToDelete, 
-                                                                             String templateForMitigationToDelete, int versionToDelete, boolean foundMitigationToDelete, TSDMetrics metrics) {
+                                                                             String templateForMitigationToDelete, int versionToDelete, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("evaluateActiveMitigationsForDDBQueryResult");
         try {
             Long maxWorkflowId = null;
+            boolean foundMitigationToDelete = false;
+            
             for (Map<String, AttributeValue> item : result.getItems()) {
-                // Check if this existing mitigation was for the same scope as the new request.
-                String existingMitigationDeviceScope = item.get(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY).getS();
-                if (!existingMitigationDeviceScope.equals(deviceScope)) {
-                    continue;
-                }
-                
                 long existingMitigationWorkflowId = Long.parseLong(item.get(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY).getN());
                 if (maxWorkflowId == null) {
                     maxWorkflowId = existingMitigationWorkflowId;
@@ -259,8 +262,8 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                 // Check if the existing mitigation workflow was later updated by another request. If so, we don't check this mitigation workflow,
                 // since the workflow which updated it would also be part of our query result.
                 if (item.containsKey(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY)) {
-                    Long updateWorkflowId = Long.parseLong(item.get(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY).getN());
-                    if ((updateWorkflowId != null) && (updateWorkflowId > UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS)) {
+                    long updateWorkflowId = Long.parseLong(item.get(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY).getN());
+                    if (updateWorkflowId > UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS) {
                         continue;
                     }
                 }
@@ -275,7 +278,6 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                 int existingMitigationVersion = Integer.parseInt(item.get(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY).getN());
                 String existingMitigationTemplate = item.get(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY).getS();
                 String existingRequestType = item.get(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY).getS();
-                long existingWorkflowId = Long.parseLong(item.get(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY).getN());
                 
                 if (existingMitigationName.equals(mitigationNameToDelete)) {
                     // The delete request must be for the latest version of this mitigation.
@@ -296,7 +298,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                     
                     // If we notice an existing delete request for the same mitigationName and version, then throw back an exception.
                     if (existingRequestType.equals(RequestType.DeleteRequest.name())) {
-                        String msg = "Found an existing delete workflow with workflowId: " + existingWorkflowId + "for mitigation: " + mitigationNameToDelete + " when requesting delete for version: " + 
+                        String msg = "Found an existing delete workflow with workflowId: " + existingMitigationWorkflowId + "for mitigation: " + mitigationNameToDelete + " when requesting delete for version: " + 
                                          versionToDelete + " for device: " + deviceName + " in deviceScope: " + deviceScope + " corresponding to template: " + templateForMitigationToDelete;
                         LOG.warn(msg);
                         throw new IllegalArgumentException(msg);
