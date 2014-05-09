@@ -47,6 +47,7 @@ package.LookoutMitigationService = {
             
             JavaAmazonLdapUtils = 1.2;
             CoralSpringLauncher = 3.1;
+            CoralClientHttp = 1.0;
 
             LookoutMitigationServiceExplorer = 1.0;
         };

@@ -63,7 +63,6 @@
     <bean id="edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
         <constructor-arg name="cloudfrontClient" ref="edgeOperatorServiceClient"/>
         <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>
-        <constructor-arg name="domain" value="${domain}"/>
         <constructor-arg name="bwLocationsHelper" ref="bwLocationsHelper"/>
         <constructor-arg name="millisToSleepBetweenRetries" value="500"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>

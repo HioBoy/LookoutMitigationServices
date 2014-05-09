@@ -82,12 +82,16 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             // Step1. Authorize this request.
             boolean isAuthorized = authorizer.isClientAuthorized(getIdentity(), serviceName, OPERATION_NAME_FOR_AUTH_CHECK);
             if (!isAuthorized) {
+                authorizer.setAuthorizedFlag(getIdentity(), false);
+                
                 MitigationActionMetadata metadata = deleteRequest.getMitigationActionMetadata();
                 String msg = metadata.getUser() + " not authorized to call DeleteMitigationFromAllLocations for service: " + serviceName + 
                              " for device: " + deviceName + " using mitigation template: " + mitigationTemplate + ". Request signed with AccessKeyId: " + 
                              getIdentity().getAttribute(Identity.AWS_ACCESS_KEY) + " and belonging to groups: " + getIdentity().getAttribute(Identity.AWS_USER_GROUPS);
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
+            } else {
+                authorizer.setAuthorizedFlag(getIdentity(), true);
             }
             
             // Step2. Validate this request.
