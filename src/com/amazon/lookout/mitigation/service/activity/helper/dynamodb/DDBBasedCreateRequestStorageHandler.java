@@ -104,25 +104,28 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
             String mitigationDefinitionAsJSONString = getJSONDataConverter().toData(mitigationDefinition);
             int mitigationDefinitionHash = mitigationDefinitionAsJSONString.hashCode();
 
-            Long maxWorkflowId = null;
+            Long prevMaxWorkflowId = null;
+            Long currMaxWorkflowId = null;
             
             // Get the max workflowId for existing mitigations, increment it by 1 and store it in the DDB. Return back the new workflowId
             // if successful, else end the loop and throw back an exception.
             while (numAttempts++ < DDB_ACTIVITY_MAX_ATTEMPTS) {
+            	prevMaxWorkflowId = currMaxWorkflowId;
+            	
                 // First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
-                maxWorkflowId = getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, mitigationName, mitigationTemplate, maxWorkflowId, subMetrics);
+                currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName, deviceScope, currMaxWorkflowId, subMetrics);
                 
                 // Next, check if we have any duplicate mitigations already in place.
                 queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, mitigationDefinitionHash, 
-                                                  mitigationName, mitigationTemplate, maxWorkflowId, subMetrics);
+                                                  mitigationName, mitigationTemplate, prevMaxWorkflowId, subMetrics);
                 
                 long newWorkflowId = 0;
                 // If we didn't get any workflows for the same deviceName and deviceScope, we simply assign the newWorkflowId to be the min for this deviceScope.
-                if (maxWorkflowId == null) {
+                if (currMaxWorkflowId == null) {
                     newWorkflowId = deviceNameAndScope.getDeviceScope().getMinWorkflowId();
                 } else {
                     // Increment the maxWorkflowId to use as the newWorkflowId and sanity check to ensure the new workflowId is still within the expected range.
-                    newWorkflowId = ++maxWorkflowId;
+                    newWorkflowId = currMaxWorkflowId + 1;
                     sanityCheckWorkflowId(newWorkflowId, deviceNameAndScope);
                 }
 
@@ -133,12 +136,12 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                     String msg = "Caught exception when storing create request in DDB with newWorkflowId: " + newWorkflowId + " for DeviceName: " + deviceName + 
                                  " and deviceScope: " + deviceScope + " AttemptNum: " + numAttempts + ". For request: " + ReflectionToStringBuilder.toString(createMitigationRequest);
                     LOG.warn(msg);
-
-                    if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
-                        try {
-                            Thread.sleep(DDB_ACTIVITY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
-                        } catch (InterruptedException ignored) {}
-                    }
+                }
+                
+                if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
+                    try {
+                        Thread.sleep(DDB_ACTIVITY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
+                    } catch (InterruptedException ignored) {}
                 }
             }
             
@@ -219,7 +222,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                     }
                 }
                 
-                if (numAttempts >= DDB_ACTIVITY_MAX_ATTEMPTS) {
+                if (numAttempts > DDB_ACTIVITY_MAX_ATTEMPTS) {
                     String msg = CREATE_REQUEST_STORAGE_FAILED_LOG_PREFIX + " - Unable to query active mitigations for device: " + deviceName + " and deviceScope: " + 
                                  deviceScope + ", keyConditions: " + keyConditions + ", indexToUse: " + indexToUse + " after " + numAttempts + " attempts";
                     LOG.warn(msg, lastCaughtException);
@@ -227,28 +230,6 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 }
                 checkForDuplicatesFromDDBResult(deviceName, deviceScope, result, mitigationDefinition, mitigationDefinitionHash, mitigationName, mitigationTemplate, subMetrics);
             } while (lastEvaluatedKey != null);
-        } finally {
-            subMetrics.end();
-        }
-    }
-
-    /**
-     * Get the max workflowId for all the active mitigations currently in place for this device.
-     * Protected for unit-testing.
-     * @param deviceName DeviceName for which the new mitigation needs to be created.
-     * @param deviceScope DeviceScope for the device where the new mitigation needs to be created.
-     * @param mitigationName Name of the new mitigation being created.
-     * @param mitigationTemplate Template being used for the new mitigation being created.
-     * @param maxWorkflowIdOnLastAttempt If we had queried this DDB before, we could query for mitigations greaterThanOrEqual to this maxWorkflowId
-     *                                   seen from the last attempt, else this value is null and we simply query all active mitigations for this device.
-     * @param metrics
-     * @return Max WorkflowId for existing mitigations. Null if no mitigations exist for this deviceName and deviceScope.
-     */
-    protected Long getMaxWorkflowIdFromDDBTable(String deviceName, String deviceScope, String mitigationName, String mitigationTemplate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
-        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHandler.getMaxWorkflowIdFromDDBTable");
-        try {
-            Set<String> attributesToGet = generateAttributesToGet();
-            return getMaxWorkflowIdForDevice(deviceName, deviceScope, attributesToGet, maxWorkflowIdOnLastAttempt, subMetrics);
         } finally {
             subMetrics.end();
         }

@@ -305,13 +305,11 @@ public abstract class DDBBasedRequestStorageHandler {
      * Called by the concrete implementations of this StorageHandler to find all the currently active mitigations for a device.
      * @param deviceName Device corresponding to whom all active mitigations need to be determined.
      * @param deviceScope Device scope for the device where all the active mitigations need to be determined.
-     * @param attributesToGet Set of attributes to retrieve for each active mitigation.
-     * @param keyConditions Map of String (attributeName) and Condition - Condition represents constraint on the attribute. Eg: >= 5.
      * @param lastEvaluatedKey Last evaluated key, to handle paginated response.
      * @param metrics
      * @return Long representing the max of the workflowId from the workflows that currently exist in the DDB tables.
      */
-    protected Long getMaxWorkflowIdForDevice(String deviceName, String deviceScope, Set<String> attributesToGet, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
+    protected Long getMaxWorkflowIdForDevice(String deviceName, String deviceScope, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getMaxWorkflowIdForDevice");
         try {
             Map<String, Condition> keyConditions = getKeysForDeviceAndWorkflowId(deviceName, maxWorkflowIdOnLastAttempt);
@@ -319,7 +317,7 @@ public abstract class DDBBasedRequestStorageHandler {
             Map<String, AttributeValue> lastEvaluatedKey = null;
             do {
                 QueryRequest request = new QueryRequest();
-                request.setAttributesToGet(attributesToGet);
+                request.setAttributesToGet(Collections.singleton(WORKFLOW_ID_KEY));
                 request.setTableName(mitigationRequestsTableName);
                 request.setConsistentRead(true);
                 request.setKeyConditions(keyConditions);
@@ -346,9 +344,8 @@ public abstract class DDBBasedRequestStorageHandler {
                         queryResult = queryDynamoDB(request, subMetrics);
                         break;
                     } catch (Exception ex) {
-                        String msg = "Caught Exception when trying to query for active mitigations for device: " + deviceName + 
-                                     " attributesToGet " + attributesToGet + " with consistentRead and keyConditions: " + keyConditions +
-                                     ". Attempt so far: " + numAttempts;
+                        String msg = "Caught Exception when trying to query for active mitigations for device: " + deviceName + " for deviceScope: " + deviceScope + 
+                                     " maxWorkflowIdOnLastAttempt: " + maxWorkflowIdOnLastAttempt + " with consistentRead and keyConditions: " + keyConditions + ". Attempt so far: " + numAttempts;
                         LOG.warn(msg, ex);
                     }
                     
@@ -363,14 +360,15 @@ public abstract class DDBBasedRequestStorageHandler {
                     // Actual number of attempts is 1 greater than the current value since we increment numAttempts after the check for the loop above.
                     numAttempts = numAttempts - 1;
     
-                    String msg = "Unable to query DDB for active mitigations for device: " + deviceName + " attributesToGet " + attributesToGet + 
-                                 " with consistentRead: " + "and keyConditions: " + keyConditions + ". Total NumAttempts: " + numAttempts;
+                    String msg = "Unable to query DDB for active mitigations for device: " + deviceName + " for deviceScope: " + deviceScope + " maxWorkflowIdOnLastAttempt: " + 
+                                 maxWorkflowIdOnLastAttempt + " with consistentRead and keyConditions: " + keyConditions + ". Total NumAttempts: " + numAttempts;
                     LOG.warn(msg);
                     throw new RuntimeException(msg);
                 }
                 
                 lastEvaluatedKey = queryResult.getLastEvaluatedKey();
                 if (queryResult.getCount() > 0) {
+                    // Since we query the primary key and set the index to be iterated in the reverse order, the first result we get back is the max workflowId.
                     return Long.parseLong(queryResult.getItems().get(0).get(WORKFLOW_ID_KEY).getN());
                 }
             } while (lastEvaluatedKey != null);

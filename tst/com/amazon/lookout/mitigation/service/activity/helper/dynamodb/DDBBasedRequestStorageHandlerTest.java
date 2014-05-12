@@ -393,11 +393,11 @@ public class DDBBasedRequestStorageHandlerTest {
         QueryResult result = new QueryResult().withCount(2).withItems(Lists.newArrayList(item1, item2));
         when(storageHandler.queryDynamoDB(any(QueryRequest.class), any(TSDMetrics.class))).thenReturn(result);
         
-        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
-        Long workflowId = storageHandler.getMaxWorkflowIdForDevice(deviceName, deviceScope, Sets.newHashSet("WorkflowId"), null, tsdMetrics);
+        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        Long workflowId = storageHandler.getMaxWorkflowIdForDevice(deviceName, deviceScope, null, tsdMetrics);
         
         assertEquals((long) workflowId, workflowIdToReturn);
-        verify(storageHandler, times(1)).getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         verify(storageHandler, times(1)).queryDynamoDB(any(QueryRequest.class), any(TSDMetrics.class));
     }
     
@@ -460,12 +460,12 @@ public class DDBBasedRequestStorageHandlerTest {
         QueryResult result2 = new QueryResult().withCount(2).withItems(Lists.newArrayList(item1, item2));
         when(storageHandler.queryDynamoDB(request2, subMetrics)).thenReturn(result2);
         
-        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
         when(storageHandler.getKeysForDeviceAndWorkflowId(anyString(), anyLong())).thenCallRealMethod();
-        Long workflowId = storageHandler.getMaxWorkflowIdForDevice(deviceName, deviceScope, Sets.newHashSet("WorkflowId"), workflowIdToReturn, tsdMetrics);
+        Long workflowId = storageHandler.getMaxWorkflowIdForDevice(deviceName, deviceScope, workflowIdToReturn, tsdMetrics);
         
         assertEquals((long) workflowId, workflowIdToReturn);
-        verify(storageHandler, times(1)).getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         verify(storageHandler, times(2)).queryDynamoDB(any(QueryRequest.class), any(TSDMetrics.class));
     }
     
@@ -490,11 +490,11 @@ public class DDBBasedRequestStorageHandlerTest {
         QueryResult result = new QueryResult().withCount(2).withItems(Lists.newArrayList(item1, item2));
         when(storageHandler.queryDynamoDB(any(QueryRequest.class), any(TSDMetrics.class))).thenReturn(result);
         
-        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
-        Long workflowId = storageHandler.getMaxWorkflowIdForDevice(deviceName, deviceScope, Sets.newHashSet("WorkflowId"), null, tsdMetrics);
+        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        Long workflowId = storageHandler.getMaxWorkflowIdForDevice(deviceName, deviceScope, null, tsdMetrics);
         
         assertEquals((long) workflowId, workflowIdToReturn);
-        verify(storageHandler, times(1)).getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         verify(storageHandler, times(1)).queryDynamoDB(any(QueryRequest.class), any(TSDMetrics.class));
     }
     

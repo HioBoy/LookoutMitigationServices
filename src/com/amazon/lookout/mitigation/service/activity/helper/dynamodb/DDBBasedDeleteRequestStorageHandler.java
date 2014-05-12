@@ -84,7 +84,8 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
             String deviceName = deviceNameAndScope.getDeviceName().name();
             String deviceScope = deviceNameAndScope.getDeviceScope().name();
 
-            Long maxWorkflowId = null;
+            Long prevMaxWorkflowId = null;
+            Long currMaxWorkflowId = null;
             boolean activeMitigationToDeleteFound = false;
             
             // Holds a reference to the last caught exception, to report that back if all retries fail.
@@ -93,24 +94,26 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
             // Get the max workflowId for existing mitigations, increment it by 1 and store it in the DDB. Return back the new workflowId
             // if successful, else end the loop and throw back an exception.
             while (numAttempts++ < DDB_ACTIVITY_MAX_ATTEMPTS) {
+            	prevMaxWorkflowId = currMaxWorkflowId;
+            	
                 // First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
-                maxWorkflowId = getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, mitigationName, mitigationTemplate, maxWorkflowId, subMetrics);
+                currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName, deviceScope, prevMaxWorkflowId, subMetrics);
                 
                 // Evaluate the currently active mitigations to get back a boolean flag indicating if the mitigation to delete exists.
                 // The evaluation will also throw a DuplicateRequestException in case it finds that this delete request is a duplicate.
                 activeMitigationToDeleteFound = evaluateActiveMitigations(deviceName, deviceScope, mitigationName, mitigationTemplate, mitigationVersion, 
-                                                                          maxWorkflowId, activeMitigationToDeleteFound, subMetrics);
-
+                                                                          prevMaxWorkflowId, activeMitigationToDeleteFound, subMetrics);
+                
                 long newWorkflowId = 0;
                 // If we didn't get any active workflows for the same deviceName and deviceScope or if we didn't find any mitigation corresponding to our delete request, throw back an exception.
-                if ((maxWorkflowId == null) || !activeMitigationToDeleteFound) {
+                if ((currMaxWorkflowId == null) || !activeMitigationToDeleteFound) {
                     String msg = "No active mitigation to delete found when querying for deviceName: " + deviceName + " deviceScope: " + deviceScope + 
                                  ", for request: " + ReflectionToStringBuilder.toString(deleteRequest);
                     LOG.warn(msg);
                     throw new RuntimeException(msg);
                 } else {
                     // Increment the maxWorkflowId to use as the newWorkflowId and sanity check to ensure the new workflowId is still within the expected range.
-                    newWorkflowId = ++maxWorkflowId;
+                    newWorkflowId = currMaxWorkflowId + 1;
                     sanityCheckWorkflowId(newWorkflowId, deviceNameAndScope);
                 }
 
@@ -141,27 +144,6 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
             throw new RuntimeException(msg, lastCaughtException);
         } finally {
             subMetrics.addCount(NUM_ATTEMPTS_TO_STORE_DELETE_REQUEST, numAttempts);
-            subMetrics.end();
-        }
-    }
-    
-    /**
-     * Get the max workflowId for all the active mitigations currently in place for this device. Protected for unit-testing.
-     * @param deviceName DeviceName for which the new mitigation needs to be created.
-     * @param deviceScope DeviceScope for the device where the new mitigation needs to be created.
-     * @param mitigationName Name of the new mitigation being created.
-     * @param mitigationTemplate Template being used for the new mitigation being created.
-     * @param maxWorkflowIdOnLastAttempt If we had queried this DDB before, we could query for mitigations greaterThanOrEqual to this maxWorkflowId
-     *                                   seen from the last attempt, else this value is null and we simply query all active mitigations for this device.
-     * @param metrics
-     * @return Max WorkflowId for existing mitigations. Null if no mitigations exist for this deviceName and deviceScope.
-     */
-    protected Long getMaxWorkflowIdFromDDBTable(String deviceName, String deviceScope, String mitigationName, String mitigationTemplate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
-        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedDeleteRequestStorageHandler.getMaxWorkflowIdFromDDBTable");
-        try {
-            Set<String> attributesToGet = generateAttributesToGet();
-            return getMaxWorkflowIdForDevice(deviceName, deviceScope, attributesToGet, maxWorkflowIdOnLastAttempt, subMetrics);
-        } finally {
             subMetrics.end();
         }
     }

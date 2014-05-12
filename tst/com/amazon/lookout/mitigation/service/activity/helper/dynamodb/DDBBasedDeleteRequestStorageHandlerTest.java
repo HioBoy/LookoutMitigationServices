@@ -331,11 +331,6 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         String deviceName = DeviceName.POP_ROUTER.name();
         String deviceScope = DeviceScope.GLOBAL.name();
         
-        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
-        
-        String mitigationName = request.getMitigationName();
-        String mitigationTemplate = request.getMitigationTemplate();
-        
         long workflowIdToReturn = (long) 3;
         
         DDBItemBuilder itemBuilder = new DDBItemBuilder().withNumericAttribute("WorkflowId", workflowIdToReturn);
@@ -343,12 +338,11 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         
         when(storageHandler.queryDynamoDB(any(QueryRequest.class), any(TSDMetrics.class))).thenReturn(result);
         
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
-        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
-        Long workflowId = storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, mitigationName, mitigationTemplate, null, tsdMetrics);
+        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        Long workflowId = storageHandler.getMaxWorkflowIdForDevice(deviceName, deviceScope, null, tsdMetrics);
         
         assertEquals((long) workflowId, workflowIdToReturn);
-        verify(storageHandler, times(1)).getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
     }
     
     /**
@@ -393,12 +387,11 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         QueryResult queryResult2 = new QueryResult().withCount(2).withItems(itemBuilder2.build()).withItems(itemBuilder3.build());
         doReturn(queryResult1).doReturn(queryResult2).when(spiedStorageHandler).queryDynamoDB(any(QueryRequest.class), any(TSDMetrics.class));
         
-        long maxWorkflowId = spiedStorageHandler.getMaxWorkflowIdFromDDBTable(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), 
-                                                                              request.getMitigationName(), request.getMitigationTemplate(), null, tsdMetrics);
+        long maxWorkflowId = spiedStorageHandler.getMaxWorkflowIdForDevice(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), null, tsdMetrics);
 
         assertEquals(maxWorkflowId, 34);
         verify(spiedStorageHandler, times(0)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class));
-        verify(spiedStorageHandler, times(1)).getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class));
+        verify(spiedStorageHandler, times(1)).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
     }
     
     /**
@@ -417,14 +410,8 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         String deviceName = DeviceName.POP_ROUTER.name();
         String deviceScope = DeviceScope.GLOBAL.name();
         
-        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
-        
-        String mitigationName = request.getMitigationName();
-        String mitigationTemplate = request.getMitigationTemplate();
-        
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
-        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
-        Long workflowId = storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, mitigationName, mitigationTemplate, null, tsdMetrics);
+        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        Long workflowId = storageHandler.getMaxWorkflowIdForDevice(deviceName, deviceScope, null, tsdMetrics);
         assertNull(workflowId);
     }
     
@@ -473,7 +460,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         
         DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         
-        doReturn((long) 12).when(spiedStorageHandler).getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doReturn((long) 12).when(spiedStorageHandler).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         doReturn(true).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
         doThrow(new RuntimeException()).when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), 
@@ -504,7 +491,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         long maxWorkflowId = 5;
         
-        doReturn(maxWorkflowId).when(spiedStorageHandler).getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doReturn(maxWorkflowId).when(spiedStorageHandler).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         doReturn(true).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
         doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), 
@@ -517,6 +504,17 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         assertEquals((long) newWorkflowId, maxWorkflowId + 1);
         
         verify(spiedStorageHandler, times(3)).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        String deviceName = deviceNameAndScope.getDeviceName().name();
+        String deviceScope = deviceNameAndScope.getDeviceScope().name();
+        String mitigationName = request.getMitigationName();
+        String mitigationTemplate = request.getMitigationTemplate();
+        int mitigationVersion = request.getMitigationVersion();
+        TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedDeleteRequestStorageHandler.storeRequestForWorkflow");
+        
+        verify(spiedStorageHandler, times(1)).evaluateActiveMitigations(deviceName, deviceScope, mitigationName, mitigationTemplate, mitigationVersion, null, false, subMetrics);
+        verify(spiedStorageHandler, times(2)).evaluateActiveMitigations(deviceName, deviceScope, mitigationName, mitigationTemplate, mitigationVersion, maxWorkflowId, true, subMetrics);
     }
     
     /**
@@ -530,9 +528,8 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DDBBasedDeleteRequestStorageHandler spiedStorageHandler = spy(storageHandler);
         
         DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
-        //long maxWorkflowId = 5;
         
-        doReturn(null).when(spiedStorageHandler).getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doReturn(null).when(spiedStorageHandler).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         doReturn(true).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
         doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
@@ -559,7 +556,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         long maxWorkflowId = 5;
         
-        doReturn(maxWorkflowId).when(spiedStorageHandler).getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doReturn(maxWorkflowId).when(spiedStorageHandler).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         doReturn(true).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
         doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
