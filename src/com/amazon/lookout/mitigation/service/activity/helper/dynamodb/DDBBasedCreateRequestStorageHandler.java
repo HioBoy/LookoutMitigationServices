@@ -109,12 +109,12 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
             // Get the max workflowId for existing mitigations, increment it by 1 and store it in the DDB. Return back the new workflowId
             // if successful, else end the loop and throw back an exception.
             while (numAttempts++ < DDB_ACTIVITY_MAX_ATTEMPTS) {
-            	// First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
+                // First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
                 maxWorkflowId = getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, mitigationName, mitigationTemplate, maxWorkflowId, subMetrics);
                 
                 // Next, check if we have any duplicate mitigations already in place.
                 queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, mitigationDefinitionHash, 
-                                          		  mitigationName, mitigationTemplate, maxWorkflowId, subMetrics);
+                                                  mitigationName, mitigationTemplate, maxWorkflowId, subMetrics);
                 
                 long newWorkflowId = 0;
                 // If we didn't get any workflows for the same deviceName and deviceScope, we simply assign the newWorkflowId to be the min for this deviceScope.
@@ -155,15 +155,28 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
         }
     }
     
+    /**
+     * Query DDB and check if there exists a duplicate request for the create request being processed. Protected for unit-testing.
+     * @param deviceName DeviceName for which the new mitigation needs to be created.
+     * @param deviceScope DeviceScope for the device where the new mitigation needs to be created.
+     * @param mitigationDefinition Mitigation definition for the new create request.
+     * @param mitigationDefinitionHash Hashcode of json representation of the mitigation definition in the new create request.
+     * @param mitigationName Name of the new mitigation being created.
+     * @param mitigationTemplate Template being used for the new mitigation being created.
+     * @param maxWorkflowIdOnLastAttempt If we had queried this DDB before, we could query for mitigations greaterThanOrEqual to this maxWorkflowId
+     *                                   seen from the last attempt, else this value is null and we simply query all active mitigations for this device.
+     * @param metrics
+     * @return Max WorkflowId for existing mitigations. Null if no mitigations exist for this deviceName and deviceScope.
+     */
     protected void queryAndCheckDuplicateMitigations(String deviceName, String deviceScope, MitigationDefinition mitigationDefinition, int mitigationDefinitionHash, 
-                                           			 String mitigationName, String mitigationTemplate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
-        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHandler.checkDuplicateMitigations");
+                                                     String mitigationName, String mitigationTemplate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
+        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHandler.queryAndCheckDuplicateMitigations");
         try {
             Map<String, AttributeValue> lastEvaluatedKey = null;
             
             Set<String> attributesToGet = generateAttributesToGet();
             
-            Map<String, Condition> queryFiltersToCheckForDuplicates = getQueryFiltersToCheckForDuplicates();
+            Map<String, Condition> queryFiltersToCheckForDuplicates = createQueryFiltersToCheckForDuplicates();
             
             // Index to use is null if we query by DeviceName + WorkflowId - since we then use the primary key of the table.
             // If we query using DeviceName + UpdateWorkfowId - we set indexToUse to the name of LSI corresponding to these keys.
@@ -254,7 +267,11 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
         return attributesToGet;
     }
     
-    private Map<String, Condition> getQueryFiltersToCheckForDuplicates() {
+    /**
+     * Creates the queryFilters to use when querying DDB to check for duplicate mitigation definitions.
+     * @return Map<String, Condition> representing the queryFilter to use for the DDB query.
+     */
+    private Map<String, Condition> createQueryFiltersToCheckForDuplicates() {
         Map<String, Condition> queryFilters = new HashMap<>();
         
         AttributeValue attrVal = new AttributeValue(WorkflowStatus.FAILED);
@@ -270,13 +287,9 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
         return queryFilters;
     }
 
-
     /**
-     * From the QueryResult iterate through the mitigations for this device, skip the inactive one and ones that don't match the 
-     * deviceScope. For the active ones, check if it is a duplicate of the mitigation requested to be created. If we find a duplicate,
-     * we throw back an exception, else we track the workflowId of the existing mitigation - so at the end of the iteration, if we haven't
-     * found any duplicate mitigations, we return back the max of the workflowIds for the currently deployed mitigations.
-     * Protected for unit-testing.
+     * From the QueryResult iterate through the mitigations for this device, check if it is a duplicate of the mitigation requested to be created. If we find a duplicate,
+     * we throw back an exception. Protected for unit-testing.
      * @param deviceName DeviceName for which the new mitigation needs to be created.
      * @param deviceScope Scope for the device on which the new mitigation is to be created. 
      * @param result QueryResult from the DDB query issued previously to find the existing mitigations for the device where the new mitigation is to be deployed.

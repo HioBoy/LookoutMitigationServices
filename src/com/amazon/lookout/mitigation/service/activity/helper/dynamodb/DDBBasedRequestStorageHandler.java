@@ -309,7 +309,7 @@ public abstract class DDBBasedRequestStorageHandler {
      * @param keyConditions Map of String (attributeName) and Condition - Condition represents constraint on the attribute. Eg: >= 5.
      * @param lastEvaluatedKey Last evaluated key, to handle paginated response.
      * @param metrics
-     * @return QueryResult representing the result from issuing this query to DDB.
+     * @return Long representing the max of the workflowId from the workflows that currently exist in the DDB tables.
      */
     protected Long getMaxWorkflowIdForDevice(String deviceName, String deviceScope, Set<String> attributesToGet, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getMaxWorkflowIdForDevice");
@@ -327,7 +327,8 @@ public abstract class DDBBasedRequestStorageHandler {
                     request.setExclusiveStartKey(lastEvaluatedKey);
                 }
                 
-                // 
+                // Set the scan index forward to false - to allow querying the index backwards. When getting the maxWorkflowId we always query by the primary key (DeviceName+WorkflowId)
+                // thus having the results sent to us in the reverse order will ensure that the first record we get is the max of the current set of workflowIds.
                 request.setScanIndexForward(false);
                 request.setLimit(NUM_RECORDS_TO_FETCH_FOR_MAX_WORKFLOW_ID);
                 
@@ -388,6 +389,7 @@ public abstract class DDBBasedRequestStorageHandler {
      * @param keyConditions Map of String (attributeName) and Condition - Condition represents constraint on the attribute. Eg: >= 5.
      * @param lastEvaluatedKey Last evaluated key, to handle paginated response.
      * @param indexToUse Specifies the index to use for issuing the query against DDB. Null implies we will query the primary key.
+     * @param queryFilters Map of String (attributeName) and Condition - Condition represents a constraint on the attribute to filter the results by.
      * @param metrics
      * @return QueryResult representing the result from issuing this query to DDB.
      */
@@ -632,7 +634,12 @@ public abstract class DDBBasedRequestStorageHandler {
         return keyConditions;
     }
     
-    protected Map<String, Condition> getQueryFiltersForMaxWorkflowId(String deviceScope) {
+    /**
+     * Helper to create the QueryFilter to use when querying for MaxWorkflowId.
+     * @param deviceScope Device scope of the device for which we need to determine the max workflowId.
+     * @return Map <String, Condition> representing the queryFilter to use when querying DDB.
+     */
+    protected Map<String, Condition> createQueryFiltersForMaxWorkflowId(String deviceScope) {
         Map<String, Condition> queryFilters = new HashMap<>();
         
         AttributeValue attrVal = new AttributeValue(deviceScope);

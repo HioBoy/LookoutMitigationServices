@@ -512,8 +512,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     }
     
     /**
-     * Test the case when we check and find duplicate definitions for the device.
-     * We expect an exception to be thrown back in this case.
+     * Test the case when we check and find no duplicate definitions for the device and use the maxWorkflowId from the previous query result.
+     * We don't expect an exception to be thrown back in this case.
      */
     @Test
     public void testNonDuplicateDefinitionsWithWorkflowIdFromPreviousAttempt() {
@@ -575,7 +575,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     }
     
     /**
-     * 
+     * Test the case where we query DDB for checking for duplicate definitions, but receive a few transient failures.
+     * We don't expect any exception to be thrown back and expect getting back the results after retrying.
      */
     @Test
     public void testCheckDuplicateDefinitionsWithTransientQueryFailures() {
@@ -638,7 +639,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     }
     
     /**
-     * 
+     * Test the case where we query DDB for checking for duplicate definitions, but receive chronic failures.
+     * We expect an exception to be thrown back.
      */
     @Test
     public void testCheckDuplicateDefinitionsWithChronicQueryFailures() {

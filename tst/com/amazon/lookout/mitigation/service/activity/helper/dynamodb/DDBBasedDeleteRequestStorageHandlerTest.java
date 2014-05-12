@@ -488,7 +488,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         assertNotNull(caughtException);
         assertTrue(caughtException.getMessage().startsWith(DDBBasedDeleteRequestStorageHandler.DELETE_REQUEST_STORAGE_FAILED_LOG_PREFIX));
         
-        verify(spiedStorageHandler, times(DDBBasedDeleteRequestStorageHandler.NEW_WORKFLOW_ID_MAX_ATTEMPTS)).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class),
+        verify(spiedStorageHandler, times(DDBBasedDeleteRequestStorageHandler.DDB_ACTIVITY_MAX_ATTEMPTS)).storeRequestInDDB(any(MitigationModificationRequest.class), any(DeviceNameAndScope.class),
                                                                                                                                anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
     }
     
