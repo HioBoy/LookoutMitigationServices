@@ -1,5 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -14,6 +16,7 @@ import org.apache.commons.logging.LogFactory;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
+import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
@@ -24,6 +27,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.simpleworkflow.flow.DataConverter;
@@ -40,8 +44,8 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
     private static final Log LOG = LogFactory.getLog(DDBBasedCreateRequestStorageHandler.class);
 
     // Num Attempts + Retry Sleep Configs.
-    private static final int NEW_WORKFLOW_ID_MAX_ATTEMPTS = 10;
-    private static final int NEW_WORKFLOW_ID_RETRY_SLEEP_MILLIS_MULTIPLIER = 100;
+    public static final int DDB_ACTIVITY_MAX_ATTEMPTS = 10;
+    private static final int DDB_ACTIVITY_RETRY_SLEEP_MILLIS_MULTIPLIER = 100;
 
     // Prefix tags for logging warnings to be monitored.
     private static final String CREATE_REQUEST_STORAGE_FAILED_LOG_PREFIX = "[CREATE_REQUEST_STORAGE_FAILED]";
@@ -104,12 +108,14 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
             
             // Get the max workflowId for existing mitigations, increment it by 1 and store it in the DDB. Return back the new workflowId
             // if successful, else end the loop and throw back an exception.
-            while (numAttempts++ < NEW_WORKFLOW_ID_MAX_ATTEMPTS) {
-                // On the first attempt, the maxWorkflowId is null, so we would simply query for all active mitigations for the device.
-                // On subsequent attempts, we would constraint our query only to the workflowIds >= maxWorkflowId.
-                maxWorkflowId = getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, mitigationDefinition, mitigationDefinitionHash, 
-                                                             mitigationName, mitigationTemplate, maxWorkflowId, subMetrics);
-
+            while (numAttempts++ < DDB_ACTIVITY_MAX_ATTEMPTS) {
+            	// First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
+                maxWorkflowId = getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, mitigationName, mitigationTemplate, maxWorkflowId, subMetrics);
+                
+                // Next, check if we have any duplicate mitigations already in place.
+                queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, mitigationDefinitionHash, 
+                                          		  mitigationName, mitigationTemplate, maxWorkflowId, subMetrics);
+                
                 long newWorkflowId = 0;
                 // If we didn't get any workflows for the same deviceName and deviceScope, we simply assign the newWorkflowId to be the min for this deviceScope.
                 if (maxWorkflowId == null) {
@@ -128,9 +134,9 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                                  " and deviceScope: " + deviceScope + " AttemptNum: " + numAttempts + ". For request: " + ReflectionToStringBuilder.toString(createMitigationRequest);
                     LOG.warn(msg);
 
-                    if (numAttempts < NEW_WORKFLOW_ID_MAX_ATTEMPTS) {
+                    if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
                         try {
-                            Thread.sleep(NEW_WORKFLOW_ID_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
+                            Thread.sleep(DDB_ACTIVITY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
                         } catch (InterruptedException ignored) {}
                     }
                 }
@@ -148,26 +154,16 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
             subMetrics.end();
         }
     }
-
-    /**
-     * Get the max workflowId for all the active mitigations currently in place for this device.
-     * Protected for unit-testing.
-     * @param deviceName DeviceName for which the new mitigation needs to be created.
-     * @param deviceScope DeviceScope for the device where the new mitigation needs to be created.
-     * @param mitigationDefinition Definition of the new mitigation being created.
-     * @param mitigationDefinitionHash Hashcode of the new mitigation definition being created.
-     * @param mitigationName Name of the new mitigation being created.
-     * @param mitigationTemplate Template being used for the new mitigation being created.
-     * @param maxWorkflowIdOnLastAttempt If we had queried this DDB before, we could query for mitigations greaterThanOrEqual to this maxWorkflowId
-     *                                   seen from the last attempt, else this value is null and we simply query all active mitigations for this device.
-     * @param metrics
-     * @return Max WorkflowId for existing mitigations. Null if no mitigations exist for this deviceName and deviceScope.
-     */
-    protected Long getMaxWorkflowIdFromDDBTable(String deviceName, String deviceScope, MitigationDefinition mitigationDefinition, int mitigationDefinitionHash, 
-                                                String mitigationName, String mitigationTemplate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
-        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHandler.getMaxWorkflowIdFromDDBTable");
+    
+    protected void queryAndCheckDuplicateMitigations(String deviceName, String deviceScope, MitigationDefinition mitigationDefinition, int mitigationDefinitionHash, 
+                                           			 String mitigationName, String mitigationTemplate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
+        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHandler.checkDuplicateMitigations");
         try {
+            Map<String, AttributeValue> lastEvaluatedKey = null;
+            
             Set<String> attributesToGet = generateAttributesToGet();
+            
+            Map<String, Condition> queryFiltersToCheckForDuplicates = getQueryFiltersToCheckForDuplicates();
             
             // Index to use is null if we query by DeviceName + WorkflowId - since we then use the primary key of the table.
             // If we query using DeviceName + UpdateWorkfowId - we set indexToUse to the name of LSI corresponding to these keys.
@@ -178,28 +174,68 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 indexToUse = DDBBasedRequestStorageHandler.UNEDITED_MITIGATIONS_LSI_NAME;
             } else {
                 keyConditions = getKeysForDeviceAndWorkflowId(deviceName, maxWorkflowIdOnLastAttempt);
+                
+                // If we are querying by the primary key (hash+range) we also add a filter to skip the updated workflows.
+                AttributeValue attrVal = new AttributeValue().withN("0");
+                Condition condition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(Arrays.asList(attrVal));
+                queryFiltersToCheckForDuplicates.put(UPDATE_WORKFLOW_ID_KEY, condition);
             }
-
-            Map<String, AttributeValue> lastEvaluatedKey = null;
-            Long maxWorkflowId = null;
+            
             do {
-                QueryResult result = getActiveMitigationsForDevice(deviceName, deviceScope, attributesToGet, keyConditions, lastEvaluatedKey, indexToUse, subMetrics);
-                subMetrics.addCount(NUM_ACTIVE_MITIGATIONS_FOR_DEVICE, result.getCount());
-    
-                if (result.getCount() > 0) {
-                    Long maxWorkflowIdFromNewResults = checkDuplicatesAndGetMaxWorkflowId(deviceName, deviceScope, result, mitigationDefinition, mitigationDefinitionHash, 
-                                                                                          mitigationName, mitigationTemplate, subMetrics);
+                int numAttempts = 0;
+                QueryResult result = null;
+                Throwable lastCaughtException = null;
+                while (numAttempts++ < DDB_ACTIVITY_MAX_ATTEMPTS) {
+                    try {
+                        result = getActiveMitigationsForDevice(deviceName, deviceScope, attributesToGet, keyConditions, 
+                                                               lastEvaluatedKey, indexToUse, queryFiltersToCheckForDuplicates, subMetrics);
+                        lastEvaluatedKey = result.getLastEvaluatedKey();
+                        subMetrics.addCount(NUM_ACTIVE_MITIGATIONS_FOR_DEVICE, result.getCount());
+                        break;
+                    } catch (Exception ex) {
+                        lastCaughtException = ex;
+                        String msg = "Caught exception when querying active mitigations from DDB for device: " + deviceName + " and deviceScope: " + deviceScope + 
+                                     ", keyConditions: " + keyConditions + ", indexToUse: " + indexToUse;
+                        LOG.warn(msg, ex);
+                    }
                     
-                    // If the maxWorkflowId found in the current set of DDB results is greater than the one cached in the maxWorkflowId variable, update it.
-                    if ((maxWorkflowId == null) || ((maxWorkflowIdFromNewResults != null) && (maxWorkflowIdFromNewResults > maxWorkflowId))) {
-                        maxWorkflowId = maxWorkflowIdFromNewResults;
+                    if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
+                        try {
+                            Thread.sleep(DDB_ACTIVITY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
+                        } catch (InterruptedException ignored) {}
                     }
                 }
-    
-                lastEvaluatedKey = result.getLastEvaluatedKey();
-            } while (lastEvaluatedKey != null);
                 
-            return maxWorkflowId;
+                if (numAttempts >= DDB_ACTIVITY_MAX_ATTEMPTS) {
+                    String msg = CREATE_REQUEST_STORAGE_FAILED_LOG_PREFIX + " - Unable to query active mitigations for device: " + deviceName + " and deviceScope: " + 
+                                 deviceScope + ", keyConditions: " + keyConditions + ", indexToUse: " + indexToUse + " after " + numAttempts + " attempts";
+                    LOG.warn(msg, lastCaughtException);
+                    throw new RuntimeException(msg, lastCaughtException);
+                }
+                checkForDuplicatesFromDDBResult(deviceName, deviceScope, result, mitigationDefinition, mitigationDefinitionHash, mitigationName, mitigationTemplate, subMetrics);
+            } while (lastEvaluatedKey != null);
+        } finally {
+            subMetrics.end();
+        }
+    }
+
+    /**
+     * Get the max workflowId for all the active mitigations currently in place for this device.
+     * Protected for unit-testing.
+     * @param deviceName DeviceName for which the new mitigation needs to be created.
+     * @param deviceScope DeviceScope for the device where the new mitigation needs to be created.
+     * @param mitigationName Name of the new mitigation being created.
+     * @param mitigationTemplate Template being used for the new mitigation being created.
+     * @param maxWorkflowIdOnLastAttempt If we had queried this DDB before, we could query for mitigations greaterThanOrEqual to this maxWorkflowId
+     *                                   seen from the last attempt, else this value is null and we simply query all active mitigations for this device.
+     * @param metrics
+     * @return Max WorkflowId for existing mitigations. Null if no mitigations exist for this deviceName and deviceScope.
+     */
+    protected Long getMaxWorkflowIdFromDDBTable(String deviceName, String deviceScope, String mitigationName, String mitigationTemplate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
+        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHandler.getMaxWorkflowIdFromDDBTable");
+        try {
+            Set<String> attributesToGet = generateAttributesToGet();
+            return getMaxWorkflowIdForDevice(deviceName, deviceScope, attributesToGet, maxWorkflowIdOnLastAttempt, subMetrics);
         } finally {
             subMetrics.end();
         }
@@ -216,6 +252,22 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                                                       DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY,
                                                       DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY);
         return attributesToGet;
+    }
+    
+    private Map<String, Condition> getQueryFiltersToCheckForDuplicates() {
+        Map<String, Condition> queryFilters = new HashMap<>();
+        
+        AttributeValue attrVal = new AttributeValue(WorkflowStatus.FAILED);
+        Condition condition = new Condition().withComparisonOperator(ComparisonOperator.NE);
+        condition.setAttributeValueList(Arrays.asList(attrVal));
+        queryFilters.put(WORKFLOW_STATUS_KEY, condition);
+        
+        attrVal = new AttributeValue(RequestType.DeleteRequest.name());
+        condition = new Condition().withComparisonOperator(ComparisonOperator.NE);
+        condition.setAttributeValueList(Arrays.asList(attrVal));
+        queryFilters.put(REQUEST_TYPE_KEY, condition);
+        
+        return queryFilters;
     }
 
 
@@ -235,40 +287,11 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
      * @param metrics
      * @return Max workflowId for existing mitigations for the same deviceName and deviceScope. Null if there are no such active mitigations.
      */
-    protected Long checkDuplicatesAndGetMaxWorkflowId(String deviceName, String deviceScope, QueryResult result, MitigationDefinition newDefinition, 
-                                                      int newDefinitionHashCode, String newDefinitionName, String newDefinitionTemplate, TSDMetrics metrics) {
-        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHelper.checkDuplicatesAndGetMaxWorkflowId");
+    protected void checkForDuplicatesFromDDBResult(String deviceName, String deviceScope, QueryResult result, MitigationDefinition newDefinition, 
+                                                   int newDefinitionHashCode, String newDefinitionName, String newDefinitionTemplate, TSDMetrics metrics) {
+        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHelper.checkForDuplicatesFromDDBResult");
         try {
-            Long maxWorkflowId = null;
             for (Map<String, AttributeValue> item : result.getItems()) {
-                long existingMitigationWorkflowId = Long.parseLong(item.get(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY).getN());
-                if (maxWorkflowId == null) {
-                    maxWorkflowId = existingMitigationWorkflowId;
-                } else {
-                    maxWorkflowId = Math.max(maxWorkflowId, existingMitigationWorkflowId);
-                }
-                
-                // Check if the existing mitigation workflow was later updated by another request. If so, we don't check this mitigation workflow,
-                // since the workflow which updated it would also be part of our query result.
-                if (item.containsKey(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY)) {
-                    Long updateWorkflowId = Long.parseLong(item.get(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY).getN());
-                    if ((updateWorkflowId != null) && (updateWorkflowId > UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS)) {
-                        continue;
-                    }
-                }
-                
-                // If this existing mitigation workflow failed to complete, then we don't bother checking it for being duplicate with the new request.
-                String existingWorkflowStatus = item.get(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY).getS();
-                if (existingWorkflowStatus.equals(WorkflowStatus.FAILED)) {
-                    continue;
-                }
-                
-                // If this workflow was a delete, then skip checking any further for it.
-                String requestType = item.get(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY).getS();
-                if (requestType.equals(RequestType.DeleteRequest.name())) {
-                    continue;
-                }
-
                 String existingDefinitionAsJSONString = item.get(DDBBasedRequestStorageHandler.MITIGATION_DEFINITION_KEY).getS();
                 String existingMitigationName = item.get(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY).getS();
                 String existingMitigationTemplate = item.get(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY).getS();
@@ -278,13 +301,12 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                     String msg = "MitigationName: " + existingMitigationName + " already exists for device: " + deviceName + ". Existing mitigation template: " + 
                                  existingMitigationTemplate + ". New mitigation template: " + newDefinitionTemplate;
                     LOG.warn(msg);
-                    throw new IllegalArgumentException(msg);
+                    throw new DuplicateRequestException400(msg);
                 }
 
                 checkDuplicateDefinition(existingDefinitionAsJSONString, existingMitigationName, existingMitigationTemplate, 
                                          newDefinitionName, newDefinitionTemplate, newDefinition, newDefinitionHashCode, subMetrics);
             }
-            return maxWorkflowId;
         } finally {
             subMetrics.end();
         }

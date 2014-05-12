@@ -34,6 +34,7 @@ import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.lookout.mitigation.service.BlastRadiusCheck;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
+import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
@@ -53,6 +54,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.google.common.collect.Lists;
@@ -186,13 +188,13 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         Throwable caughtException = null;
         try {
-            storageHandler.checkDuplicatesAndGetMaxWorkflowId(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
-                                                              newDefinition, newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
+            storageHandler.checkForDuplicatesFromDDBResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
+                                                           newDefinition, newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
         assertNotNull(caughtException);
-        assertTrue(caughtException instanceof IllegalArgumentException);
+        assertTrue(caughtException instanceof DuplicateRequestException400);
     }
     
     /**
@@ -322,29 +324,22 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         CreateMitigationRequest request = generateCreateMitigationRequest();
         
-        MitigationDefinition definition = request.getMitigationDefinition();
-        JsonDataConverter jsonDataConverter = new JsonDataConverter();
-        String definitionAsJsonString = jsonDataConverter.toData(definition);
-        int definitionHashcode = definitionAsJsonString.hashCode();
-        
         String mitigationName = request.getMitigationName();
         String mitigationTemplate = request.getMitigationTemplate();
         
-        Long workflowIdToReturn = (long) 3;
-        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class))).thenReturn(new QueryResult().withCount(1));
-        when(storageHandler.checkDuplicatesAndGetMaxWorkflowId(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), 
-                                                               anyString(), anyString(), any(TSDMetrics.class))).thenReturn(workflowIdToReturn);
+        long workflowIdToReturn = (long) 3;
         
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), 
-                                                         anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
-        Long workflowId = storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, request.getMitigationDefinition(), definitionHashcode, 
-                                                                      mitigationName, mitigationTemplate, null, tsdMetrics);
+        DDBItemBuilder itemBuilder = new DDBItemBuilder().withNumericAttribute("WorkflowId", workflowIdToReturn);
+        QueryResult result = new QueryResult().withCount(1).withItems(itemBuilder.build()).withItems(itemBuilder.build()).withCount(1);
         
-        assertEquals(workflowId, workflowIdToReturn);
-        verify(storageHandler, times(1)).checkDuplicatesAndGetMaxWorkflowId(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
-                                                                            anyInt(), anyString(), anyString(), any(TSDMetrics.class));
-        verify(storageHandler, times(1)).getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
-                                                                      anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        when(storageHandler.queryDynamoDB(any(QueryRequest.class), any(TSDMetrics.class))).thenReturn(result);
+        
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        Long workflowId = storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, mitigationName, mitigationTemplate, null, tsdMetrics);
+        
+        assertEquals((long) workflowId, workflowIdToReturn);
+        verify(storageHandler, times(1)).getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class));
     }
     
     /**
@@ -359,32 +354,23 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         CreateMitigationRequest request = generateCreateMitigationRequest();
         
-        MitigationDefinition definition = request.getMitigationDefinition();
-        JsonDataConverter jsonDataConverter = new JsonDataConverter();
-        String definitionAsJsonString = jsonDataConverter.toData(definition);
-        int definitionHashcode = definitionAsJsonString.hashCode();
-        
         String mitigationName = request.getMitigationName();
         String mitigationTemplate = request.getMitigationTemplate();
         
         Long workflowIdToReturn = (long) 3;
-        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class))).thenReturn(new QueryResult().withCount(1));
-        when(storageHandler.checkDuplicatesAndGetMaxWorkflowId(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), 
-                                                               anyString(), anyString(), any(TSDMetrics.class))).thenReturn(workflowIdToReturn);
+        DDBItemBuilder itemBuilder = new DDBItemBuilder().withNumericAttribute("WorkflowId", workflowIdToReturn);
+        QueryResult result = new QueryResult().withCount(1).withItems(itemBuilder.build()).withItems(itemBuilder.build()).withCount(1);
+        when(storageHandler.queryDynamoDB(any(QueryRequest.class), any(TSDMetrics.class))).thenReturn(result);
         
         when(storageHandler.getKeysForActiveMitigationsForDevice(anyString())).thenCallRealMethod();
         when(storageHandler.getKeysForDeviceAndWorkflowId(anyString(), anyLong())).thenCallRealMethod();
         
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), 
-                                                         anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
-        Long workflowId = storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, request.getMitigationDefinition(), definitionHashcode, 
-                                                                      mitigationName, mitigationTemplate, workflowIdToReturn, tsdMetrics);
+        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        Long workflowId = storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, mitigationName, mitigationTemplate, workflowIdToReturn, tsdMetrics);
         
         assertEquals(workflowId, workflowIdToReturn);
-        verify(storageHandler, times(1)).checkDuplicatesAndGetMaxWorkflowId(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
-                                                                            anyInt(), anyString(), anyString(), any(TSDMetrics.class));
-        verify(storageHandler, times(1)).getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
-                                                                      anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         verify(storageHandler, times(1)).getKeysForDeviceAndWorkflowId(deviceName, workflowIdToReturn);
         verify(storageHandler, times(0)).getKeysForActiveMitigationsForDevice(anyString());
     }
@@ -397,7 +383,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public void testGetMaxWorkflowIdOnActiveMitigationsRetrievalFailure() {
         DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
         
-        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class))).thenThrow(new RuntimeException());
+        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class))).thenThrow(new RuntimeException());
         
         when(storageHandler.getKeysForActiveMitigationsForDevice(anyString())).thenCallRealMethod();
         when(storageHandler.getKeysForDeviceAndWorkflowId(anyString(), anyLong())).thenCallRealMethod();
@@ -407,25 +393,19 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         CreateMitigationRequest request = generateCreateMitigationRequest();
         
-        MitigationDefinition definition = request.getMitigationDefinition();
-        JsonDataConverter jsonDataConverter = new JsonDataConverter();
-        String definitionAsJsonString = jsonDataConverter.toData(definition);
-        int definitionHashcode = definitionAsJsonString.hashCode();
-        
         String mitigationName = request.getMitigationName();
         String mitigationTemplate = request.getMitigationTemplate();
         
         Throwable caughtException = null;
         try {
-            when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), 
-                                                              anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
-            storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, definition, definitionHashcode, mitigationName, mitigationTemplate, null, tsdMetrics);
+            when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+            when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+            storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, mitigationName, mitigationTemplate, null, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
         assertNotNull(caughtException);
-        verify(storageHandler, times(0)).getKeysForDeviceAndWorkflowId(anyString(), anyLong());
-        verify(storageHandler, times(1)).getKeysForActiveMitigationsForDevice(anyString());
+        verify(storageHandler, times(1)).getKeysForDeviceAndWorkflowId(anyString(), anyLong());
     }
     
     /**
@@ -436,7 +416,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public void testGetMaxWorkflowIdWhenNoActiveMitigationsForDevice() {
         DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
         
-        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class))).thenReturn(new QueryResult().withCount(0));
+        when(storageHandler.queryDynamoDB(any(QueryRequest.class), any(TSDMetrics.class))).thenReturn(new QueryResult().withCount(0));
         
         when(storageHandler.getKeysForActiveMitigationsForDevice(anyString())).thenCallRealMethod();
         when(storageHandler.getKeysForDeviceAndWorkflowId(anyString(), anyLong())).thenCallRealMethod();
@@ -446,29 +426,21 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         CreateMitigationRequest request = generateCreateMitigationRequest();
         
-        MitigationDefinition definition = request.getMitigationDefinition();
-        JsonDataConverter jsonDataConverter = new JsonDataConverter();
-        String definitionAsJsonString = jsonDataConverter.toData(definition);
-        int definitionHashcode = definitionAsJsonString.hashCode();
-        
         String mitigationName = request.getMitigationName();
         String mitigationTemplate = request.getMitigationTemplate();
         
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), 
-                                                         anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
-        Long workflowId = storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, definition, definitionHashcode, mitigationName, mitigationTemplate, null, tsdMetrics);
-        
-        verify(storageHandler, times(0)).getKeysForDeviceAndWorkflowId(anyString(), anyLong());
-        verify(storageHandler, times(1)).getKeysForActiveMitigationsForDevice(anyString());
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anySet(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        Long workflowId = storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, mitigationName, mitigationTemplate, null, tsdMetrics);
         assertNull(workflowId);
     }
     
     /**
-     * Test the case when we try to get max workflowId for the device and we find duplicate definitions.
+     * Test the case when we check and find duplicate definitions for the device.
      * We expect an exception to be thrown back in this case.
      */
     @Test
-    public void testGetMaxWorkflowIdWithDuplicateDefinitions() {
+    public void testDuplicateDefinitions() {
         DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
         
         String deviceName = DeviceName.POP_ROUTER.name();
@@ -482,14 +454,13 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         int definitionHashcode = definitionAsJsonString.hashCode();
         
         String mitigationName = request.getMitigationName();
-        String mitigationTemplate = request.getMitigationTemplate();
         
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         String existingMitigationTemplate1 = "RandomTemplate1";
         MitigationDefinition existingDefinition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_IP.name(), Lists.newArrayList("1.2.3.4"));
         String existingDefinitionJsonString = jsonDataConverter.toData(existingDefinition);
-        DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withNumericAttribute("WorkflowId", 3)
+        DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withNumericAttribute("WorkflowId", 2)
                                                          .withStringAttribute("WorkflowStatus", "SCHEDULED").withStringAttribute("MitigationName", "RandomName1")
                                                          .withStringAttribute("MitigationTemplate", existingMitigationTemplate1).withStringAttribute("MitigationDefinition", existingDefinitionJsonString)
                                                          .withStringAttribute("RequestType", "CreateRequest");
@@ -504,14 +475,13 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                                           .withStringAttribute("RequestType", "CreateRequest");
         QueryResult result2 = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(null);
                 
-        Long workflowIdToReturn = (long) 3;
-        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class))).thenReturn(result1).thenReturn(result2);
-        when(storageHandler.checkDuplicatesAndGetMaxWorkflowId(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), 
-                                                               anyString(), anyString(), any(TSDMetrics.class))).thenCallRealMethod();
+        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class))).thenReturn(result1).thenReturn(result2);
+        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
+                                                                                  anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), any(TSDMetrics.class));
         
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        
         
         Map<String, ServiceTemplateValidator> serviceTemplateValidators = new HashMap<>();
         Route53SingleCustomerMitigationValidator route53Validator = new Route53SingleCustomerMitigationValidator(serviceSubnetsMatcher);
@@ -522,30 +492,203 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         TemplateBasedRequestValidator templateBasedValidator = new MockTemplateBasedRequestValidator(serviceSubnetsMatcher, route53Validator);
 
         when(storageHandler.getTemplateBasedValidator()).thenReturn(templateBasedValidator);
-        
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
-        when(storageHandler.getKeysForActiveMitigationsForDevice(anyString())).thenCallRealMethod();
-        when(storageHandler.getKeysForDeviceAndWorkflowId(anyString(), anyLong())).thenCallRealMethod();
-        
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), 
-                                                         anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
         
         Throwable caughtException = null;
         try {
-            storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, request.getMitigationDefinition(), definitionHashcode, 
-                                                        mitigationName, mitigationTemplate, workflowIdToReturn, tsdMetrics);
+            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, definition, definitionHashcode, mitigationName, 
+                                                             existingMitigationTemplate2, null, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
         
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof DuplicateDefinitionException400);
-        verify(storageHandler, times(2)).checkDuplicatesAndGetMaxWorkflowId(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
-                                                                            anyInt(), anyString(), anyString(), any(TSDMetrics.class));
+        verify(storageHandler, times(2)).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
+                                                                         anyInt(), anyString(), anyString(), any(TSDMetrics.class));
         verify(storageHandler, times(2)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
-        verify(storageHandler, times(2)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
-        verify(storageHandler, times(1)).getKeysForDeviceAndWorkflowId(deviceName, workflowIdToReturn);
+        verify(storageHandler, times(2)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class));
+    }
+    
+    /**
+     * Test the case when we check and find duplicate definitions for the device.
+     * We expect an exception to be thrown back in this case.
+     */
+    @Test
+    public void testNonDuplicateDefinitionsWithWorkflowIdFromPreviousAttempt() {
+        DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
+        
+        String deviceName = DeviceName.POP_ROUTER.name();
+        String deviceScope = DeviceScope.GLOBAL.name();
+        
+        JsonDataConverter jsonDataConverter = new JsonDataConverter();
+        
+        CreateMitigationRequest request = generateCreateMitigationRequest();
+        int newDefinitionHashcode = jsonDataConverter.toData(request.getMitigationDefinition()).hashCode();
+        
+        MitigationDefinition definition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_IP.name(), Lists.newArrayList("1.2.3.4"));
+        String definitionAsJsonString = jsonDataConverter.toData(definition);
+        
+        String mitigationName = request.getMitigationName();
+        
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        String existingMitigationTemplate = "RandomTemplate";
+        DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withNumericAttribute("WorkflowId", 3)
+                                                           .withStringAttribute("WorkflowStatus", "SCHEDULED").withStringAttribute("MitigationName", "RandomName2")
+                                                           .withStringAttribute("MitigationTemplate", existingMitigationTemplate).withStringAttribute("MitigationDefinition", definitionAsJsonString)
+                                                           .withStringAttribute("RequestType", "CreateRequest");
+        QueryResult result = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(null);
+                
+        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class))).thenReturn(result);
+        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
+                                                                                  anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), any(TSDMetrics.class));
+        
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        
+        Map<String, ServiceTemplateValidator> serviceTemplateValidators = new HashMap<>();
+        Route53SingleCustomerMitigationValidator route53Validator = new Route53SingleCustomerMitigationValidator(serviceSubnetsMatcher);
+        serviceTemplateValidators.put(MitigationTemplate.Router_RateLimit_Route53Customer, route53Validator);
+        serviceTemplateValidators.put(existingMitigationTemplate, route53Validator);
+        
+        TemplateBasedRequestValidator templateBasedValidator = new MockTemplateBasedRequestValidator(serviceSubnetsMatcher, route53Validator);
+
+        when(storageHandler.getTemplateBasedValidator()).thenReturn(templateBasedValidator);
+        when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        
+        Throwable caughtException = null;
+        try {
+            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, request.getMitigationDefinition(), newDefinitionHashcode, mitigationName, existingMitigationTemplate, (long) 2, tsdMetrics);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNull(caughtException);
+        verify(storageHandler, times(1)).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
+                                                                         anyInt(), anyString(), anyString(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).getKeysForDeviceAndWorkflowId(anyString(), anyLong());
         verify(storageHandler, times(0)).getKeysForActiveMitigationsForDevice(anyString());
+    }
+    
+    /**
+     * 
+     */
+    @Test
+    public void testCheckDuplicateDefinitionsWithTransientQueryFailures() {
+        DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
+        
+        String deviceName = DeviceName.POP_ROUTER.name();
+        String deviceScope = DeviceScope.GLOBAL.name();
+        
+        JsonDataConverter jsonDataConverter = new JsonDataConverter();
+        
+        CreateMitigationRequest request = generateCreateMitigationRequest();
+        int newDefinitionHashcode = jsonDataConverter.toData(request.getMitigationDefinition()).hashCode();
+        
+        MitigationDefinition definition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_IP.name(), Lists.newArrayList("1.2.3.4"));
+        String definitionAsJsonString = jsonDataConverter.toData(definition);
+        
+        String mitigationName = request.getMitigationName();
+        
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        String existingMitigationTemplate = "RandomTemplate";
+        DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withNumericAttribute("WorkflowId", 3)
+                                                           .withStringAttribute("WorkflowStatus", "SCHEDULED").withStringAttribute("MitigationName", "RandomName2")
+                                                           .withStringAttribute("MitigationTemplate", existingMitigationTemplate).withStringAttribute("MitigationDefinition", definitionAsJsonString)
+                                                           .withStringAttribute("RequestType", "CreateRequest");
+        QueryResult result = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(null);
+                
+        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class))).thenThrow(new RuntimeException()).thenThrow(new RuntimeException()).thenReturn(result);
+        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
+                                                                                  anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), any(TSDMetrics.class));
+        
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        
+        Map<String, ServiceTemplateValidator> serviceTemplateValidators = new HashMap<>();
+        Route53SingleCustomerMitigationValidator route53Validator = new Route53SingleCustomerMitigationValidator(serviceSubnetsMatcher);
+        serviceTemplateValidators.put(MitigationTemplate.Router_RateLimit_Route53Customer, route53Validator);
+        serviceTemplateValidators.put(existingMitigationTemplate, route53Validator);
+        
+        TemplateBasedRequestValidator templateBasedValidator = new MockTemplateBasedRequestValidator(serviceSubnetsMatcher, route53Validator);
+
+        when(storageHandler.getTemplateBasedValidator()).thenReturn(templateBasedValidator);
+        when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        
+        Throwable caughtException = null;
+        try {
+            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, request.getMitigationDefinition(), newDefinitionHashcode, mitigationName, existingMitigationTemplate, (long) 2, tsdMetrics);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNull(caughtException);
+        verify(storageHandler, times(1)).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
+                                                                         anyInt(), anyString(), anyString(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).getKeysForDeviceAndWorkflowId(anyString(), anyLong());
+        verify(storageHandler, times(0)).getKeysForActiveMitigationsForDevice(anyString());
+        verify(storageHandler, times(3)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class));
+    }
+    
+    /**
+     * 
+     */
+    @Test
+    public void testCheckDuplicateDefinitionsWithChronicQueryFailures() {
+        DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
+        
+        String deviceName = DeviceName.POP_ROUTER.name();
+        String deviceScope = DeviceScope.GLOBAL.name();
+        
+        JsonDataConverter jsonDataConverter = new JsonDataConverter();
+        
+        CreateMitigationRequest request = generateCreateMitigationRequest();
+        int newDefinitionHashcode = jsonDataConverter.toData(request.getMitigationDefinition()).hashCode();
+        
+        String mitigationName = request.getMitigationName();
+        
+        String existingMitigationTemplate = "RandomTemplate";
+                
+        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class))).thenThrow(new RuntimeException());
+        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
+                                                                                  anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), any(TSDMetrics.class));
+        
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        
+        Map<String, ServiceTemplateValidator> serviceTemplateValidators = new HashMap<>();
+        Route53SingleCustomerMitigationValidator route53Validator = new Route53SingleCustomerMitigationValidator(serviceSubnetsMatcher);
+        serviceTemplateValidators.put(MitigationTemplate.Router_RateLimit_Route53Customer, route53Validator);
+        serviceTemplateValidators.put(existingMitigationTemplate, route53Validator);
+        
+        TemplateBasedRequestValidator templateBasedValidator = new MockTemplateBasedRequestValidator(serviceSubnetsMatcher, route53Validator);
+
+        when(storageHandler.getTemplateBasedValidator()).thenReturn(templateBasedValidator);
+        when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        
+        Throwable caughtException = null;
+        try {
+            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, request.getMitigationDefinition(), newDefinitionHashcode, mitigationName, existingMitigationTemplate, (long) 2, tsdMetrics);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof RuntimeException);
+        verify(storageHandler, times(0)).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
+                                                                         anyInt(), anyString(), anyString(), any(TSDMetrics.class));
+        verify(storageHandler, times(0)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).getKeysForDeviceAndWorkflowId(anyString(), anyLong());
+        verify(storageHandler, times(0)).getKeysForActiveMitigationsForDevice(anyString());
+        verify(storageHandler, times(DDBBasedCreateRequestStorageHandler.DDB_ACTIVITY_MAX_ATTEMPTS)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class));
     }
     
     /**
@@ -554,7 +697,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
      * We expect an exception to be thrown back in this case.
      */
     @Test
-    public void testGetMaxWorkflowIdWithNonCompatibleDefinitionsForTemplate() {
+    public void testNonCompatibleDefinitionsForTemplate() {
         DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
         
         String deviceName = DeviceName.POP_ROUTER.name();
@@ -589,10 +732,11 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         QueryResult result2 = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(null);
                 
         Long workflowIdToReturn = (long) 3;
-        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class))).thenReturn(result1).thenReturn(result2);
-        when(storageHandler.checkDuplicatesAndGetMaxWorkflowId(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), 
-                                                               anyString(), anyString(), any(TSDMetrics.class))).thenCallRealMethod();
+        when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class))).thenReturn(result1).thenReturn(result2);
+        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), any(TSDMetrics.class));
         doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
+                                                                                  anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
@@ -602,98 +746,23 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         when(storageHandler.getTemplateBasedValidator()).thenReturn(templateBasedValidator);
         when(storageHandler.getKeysForActiveMitigationsForDevice(anyString())).thenCallRealMethod();
         when(storageHandler.getKeysForDeviceAndWorkflowId(anyString(), anyLong())).thenCallRealMethod();
-        
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), 
-                                                         anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
         
         Throwable caughtException = null;
         try {
-            storageHandler.getMaxWorkflowIdFromDDBTable(deviceName, deviceScope, request.getMitigationDefinition(), definitionHashcode, 
-                                                        mitigationName, mitigationTemplate, workflowIdToReturn, tsdMetrics);
+            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, definition, definitionHashcode, mitigationName, mitigationTemplate, null, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
         
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof DuplicateDefinitionException400);
-        Mockito.verify(storageHandler, times(1)).checkDuplicatesAndGetMaxWorkflowId(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
+        Mockito.verify(storageHandler, times(1)).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
                                                                             anyInt(), anyString(), anyString(), any(TSDMetrics.class));
         verify(storageHandler, times(1)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
-        verify(storageHandler, times(1)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), any(TSDMetrics.class));
-        verify(storageHandler, times(1)).getKeysForDeviceAndWorkflowId(deviceName, workflowIdToReturn);
-        verify(storageHandler, times(0)).getKeysForActiveMitigationsForDevice(anyString());
-    }
-    
-    /**
-     * Test the checkDuplicatesAndGetMaxWorkflowId method for duplicate definitions for the same device and scope, but with the existing definition having been marked as updated.
-     * We expect the check to succeed and don't expect any exceptions to be thrown in this case.
-     */
-    @Test
-    public void testCheckDuplicatesAndGetMaxWorkflowIdForAnUpdatedMitigation() {
-        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
-        DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
-        
-        CreateMitigationRequest request = generateCreateMitigationRequest();
-        MitigationDefinition definition = request.getMitigationDefinition();
-        String mitigationDefinitionAsJsonString = new JsonDataConverter().toData(definition);
-        int newDefinitionHashcode = mitigationDefinitionAsJsonString.hashCode();
-        
-        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
-        
-        long existingWorkflowId = 1;
-        DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withStringAttribute("WorkflowStatus", "SUCCESSFUL")
-                                                         .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString).withNumericAttribute("WorkflowId", existingWorkflowId)
-                                                         .withNumericAttribute("UpdateWorkflowId", 2).withStringAttribute("RequestType", "CreateRequest");
-                                                         
-        QueryResult queryResult = new QueryResult().withCount(1).withItems(itemBuilder.build());
-        
-        Throwable caughtException = null;
-        long workflowId = 0; 
-        try {
-            workflowId = storageHandler.checkDuplicatesAndGetMaxWorkflowId(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, request.getMitigationDefinition(), 
-                                                                               newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNull(caughtException);
-        assertEquals(workflowId, existingWorkflowId);
-    }
-    
-    /**
-     * Test the checkDuplicatesAndGetMaxWorkflowId method for duplicate definitions for the same device and scope, but with the existing workflow having been marked as failed.
-     * We expect the check to succeed and don't expect any exceptions to be thrown in this case.
-     */
-    @Test
-    public void testCheckDuplicatesAndGetMaxWorkflowIdForAFailedWorkflow() {
-        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
-        DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
-        
-        CreateMitigationRequest request = generateCreateMitigationRequest();
-        MitigationDefinition definition = request.getMitigationDefinition();
-        String mitigationDefinitionAsJsonString = new JsonDataConverter().toData(definition);
-        int newDefinitionHashcode = mitigationDefinitionAsJsonString.hashCode();
-        
-        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
-        
-        long existingWorkflowId = 1;
-        DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withStringAttribute("WorkflowStatus", "FAILED")
-                                                         .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString).withNumericAttribute("WorkflowId", existingWorkflowId)
-                                                         .withStringAttribute("RequestType", "CreateRequest");
-                                                         
-        QueryResult queryResult = new QueryResult().withCount(1).withItems(itemBuilder.build());
-        
-        Throwable caughtException = null;
-        long workflowId = 0; 
-        try {
-            workflowId = storageHandler.checkDuplicatesAndGetMaxWorkflowId(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, request.getMitigationDefinition(), 
-                                                                               newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNull(caughtException);
-        assertEquals(workflowId, existingWorkflowId);
+        verify(storageHandler, times(1)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class));
+        verify(storageHandler, times(0)).getKeysForDeviceAndWorkflowId(deviceName, workflowIdToReturn);
+        verify(storageHandler, times(1)).getKeysForActiveMitigationsForDevice(anyString());
     }
     
     /**
@@ -701,7 +770,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
      * We expect the check to succeed and don't expect any exceptions to be thrown in this case.
      */
     @Test
-    public void testCheckDuplicatesAndGetMaxWorkflowIdForNonDuplicateDefinitions() {
+    public void testCheckDuplicatesForNonDuplicateDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
@@ -730,24 +799,16 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                                                           .withStringAttribute("MitigationDefinition", existingDefinitionJsonString2).withNumericAttribute("WorkflowId", existingWorkflowId2)
                                                           .withStringAttribute("RequestType", "CreateRequest");
         
-        long existingWorkflowId3 = 3;
-        DDBItemBuilder itemBuilder3 = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withStringAttribute("WorkflowStatus", "FAILED")
-                                                          .withStringAttribute("MitigationName", "Mitigation3").withStringAttribute("MitigationTemplate", request.getMitigationTemplate())
-                                                          .withStringAttribute("MitigationDefinition", mitigationDefinitionAsJsonString).withNumericAttribute("WorkflowId", existingWorkflowId3)
-                                                          .withStringAttribute("RequestType", "CreateRequest");
-                                                         
-        QueryResult queryResult = new QueryResult().withCount(1).withItems(itemBuilder1.build()).withItems(itemBuilder2.build()).withItems(itemBuilder3.build());
+        QueryResult queryResult = new QueryResult().withCount(1).withItems(itemBuilder1.build()).withItems(itemBuilder2.build());
         
         Throwable caughtException = null;
-        long workflowId = 0; 
         try {
-            workflowId = storageHandler.checkDuplicatesAndGetMaxWorkflowId(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, request.getMitigationDefinition(), 
-                                                                               newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
+            storageHandler.checkForDuplicatesFromDDBResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, request.getMitigationDefinition(), 
+                                                           newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
         assertNull(caughtException);
-        assertEquals(workflowId, existingWorkflowId3);
     }
     
     /**
@@ -755,7 +816,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
      * We expect the check to fail and an exceptions to be thrown.
      */
     @Test
-    public void testCheckDuplicatesAndGetMaxWorkflowIdForDuplicateDefinitions() {
+    public void testCheckDuplicatesForDuplicateDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
@@ -786,7 +847,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         Throwable caughtException = null;
         try {
-            storageHandler.checkDuplicatesAndGetMaxWorkflowId(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, request.getMitigationDefinition(), 
+            storageHandler.checkForDuplicatesFromDDBResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, request.getMitigationDefinition(), 
                                                               newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
@@ -805,7 +866,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = generateCreateMitigationRequest();
         
         long maxWorkflowId = 3;
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
@@ -825,7 +886,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = generateCreateMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(null);
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(null);
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
@@ -846,7 +907,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         long maxWorkflowId = deviceNameAndScope.getDeviceScope().getMaxWorkflowId();
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
@@ -871,7 +932,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         CreateMitigationRequest request = generateCreateMitigationRequest();
         
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenThrow(new RuntimeException());
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenThrow(new RuntimeException());
         
         Throwable caughtException = null;
         try {
@@ -894,7 +955,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = generateCreateMitigationRequest();
         
         long maxWorkflowId = 3;
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
         
         doThrow(new RuntimeException()).when(storageHandler).storeRequestInDDB(any(CreateMitigationRequest.class), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
@@ -920,7 +981,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = generateCreateMitigationRequest();
         
         long maxWorkflowId = 3;
-        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
+        when(storageHandler.getMaxWorkflowIdFromDDBTable(anyString(), anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
         
         doThrow(new RuntimeException()).doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(storageHandler).storeRequestInDDB(any(CreateMitigationRequest.class), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
         

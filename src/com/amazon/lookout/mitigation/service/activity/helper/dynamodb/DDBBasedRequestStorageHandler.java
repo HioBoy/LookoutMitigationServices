@@ -56,6 +56,8 @@ public abstract class DDBBasedRequestStorageHandler {
     
     public static final String MITIGATION_REQUEST_TABLE_NAME_PREFIX = "MITIGATION_REQUESTS_";
     
+    private static final int NUM_RECORDS_TO_FETCH_FOR_MAX_WORKFLOW_ID = 5;
+    
     // Below is a list of all the attributes we store in the MitigationRequests table.
     public static final String DEVICE_NAME_KEY = "DeviceName";
     public static final String WORKFLOW_ID_KEY = "WorkflowId";
@@ -306,12 +308,91 @@ public abstract class DDBBasedRequestStorageHandler {
      * @param attributesToGet Set of attributes to retrieve for each active mitigation.
      * @param keyConditions Map of String (attributeName) and Condition - Condition represents constraint on the attribute. Eg: >= 5.
      * @param lastEvaluatedKey Last evaluated key, to handle paginated response.
+     * @param metrics
+     * @return QueryResult representing the result from issuing this query to DDB.
+     */
+    protected Long getMaxWorkflowIdForDevice(String deviceName, String deviceScope, Set<String> attributesToGet, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
+        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getMaxWorkflowIdForDevice");
+        try {
+            Map<String, Condition> keyConditions = getKeysForDeviceAndWorkflowId(deviceName, maxWorkflowIdOnLastAttempt);
+            
+            Map<String, AttributeValue> lastEvaluatedKey = null;
+            do {
+                QueryRequest request = new QueryRequest();
+                request.setAttributesToGet(attributesToGet);
+                request.setTableName(mitigationRequestsTableName);
+                request.setConsistentRead(true);
+                request.setKeyConditions(keyConditions);
+                if (lastEvaluatedKey != null) {
+                    request.setExclusiveStartKey(lastEvaluatedKey);
+                }
+                
+                // 
+                request.setScanIndexForward(false);
+                request.setLimit(NUM_RECORDS_TO_FETCH_FOR_MAX_WORKFLOW_ID);
+                
+                // Filter out any records whose DeviceScope isn't the same.
+                AttributeValue deviceScopeAttrVal = new AttributeValue(deviceScope);
+                Condition condition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(Arrays.asList(deviceScopeAttrVal));
+                request.addQueryFilterEntry(DEVICE_SCOPE_KEY, condition);
+                
+                QueryResult queryResult = null;
+                int numAttempts = 0;
+                // Attempt to query DDB for a fixed number of times. If query was successful, return the QueryResult, else when the loop endsthrow back an exception.
+                while (numAttempts++ < DDB_QUERY_MAX_ATTEMPTS) {
+                    try {
+                        subMetrics.addOne(NUM_DDB_QUERY_ATTEMPTS_KEY);
+                        queryResult = queryDynamoDB(request, subMetrics);
+                        break;
+                    } catch (Exception ex) {
+                        String msg = "Caught Exception when trying to query for active mitigations for device: " + deviceName + 
+                                     " attributesToGet " + attributesToGet + " with consistentRead and keyConditions: " + keyConditions +
+                                     ". Attempt so far: " + numAttempts;
+                        LOG.warn(msg, ex);
+                    }
+                    
+                    if (numAttempts < DDB_QUERY_MAX_ATTEMPTS) {
+                        try {
+                            Thread.sleep(DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
+                        } catch (InterruptedException ignored) {}
+                    }
+                }
+                
+                if (queryResult == null) {
+                    // Actual number of attempts is 1 greater than the current value since we increment numAttempts after the check for the loop above.
+                    numAttempts = numAttempts - 1;
+    
+                    String msg = "Unable to query DDB for active mitigations for device: " + deviceName + " attributesToGet " + attributesToGet + 
+                                 " with consistentRead: " + "and keyConditions: " + keyConditions + ". Total NumAttempts: " + numAttempts;
+                    LOG.warn(msg);
+                    throw new RuntimeException(msg);
+                }
+                
+                lastEvaluatedKey = queryResult.getLastEvaluatedKey();
+                if (queryResult.getCount() > 0) {
+                    return Long.parseLong(queryResult.getItems().get(0).get(WORKFLOW_ID_KEY).getN());
+                }
+            } while (lastEvaluatedKey != null);
+            
+            return null;
+        } finally {
+            subMetrics.end();
+        }
+    }
+    
+    /**
+     * Called by the concrete implementations of this StorageHandler to find all the currently active mitigations for a device.
+     * @param deviceName Device corresponding to whom all active mitigations need to be determined.
+     * @param deviceScope Device scope for the device where all the active mitigations need to be determined.
+     * @param attributesToGet Set of attributes to retrieve for each active mitigation.
+     * @param keyConditions Map of String (attributeName) and Condition - Condition represents constraint on the attribute. Eg: >= 5.
+     * @param lastEvaluatedKey Last evaluated key, to handle paginated response.
      * @param indexToUse Specifies the index to use for issuing the query against DDB. Null implies we will query the primary key.
      * @param metrics
      * @return QueryResult representing the result from issuing this query to DDB.
      */
     protected QueryResult getActiveMitigationsForDevice(String deviceName, String deviceScope, Set<String> attributesToGet, Map<String, Condition> keyConditions, 
-                                                        Map<String, AttributeValue> lastEvaluatedKey, String indexToUse, TSDMetrics metrics) {
+                                                        Map<String, AttributeValue> lastEvaluatedKey, String indexToUse, Map<String, Condition> queryFilters, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getActiveMitigationsForDevice");
         int numAttempts = 0;
         try {
@@ -323,6 +404,11 @@ public abstract class DDBBasedRequestStorageHandler {
                     request.setTableName(mitigationRequestsTableName);
                     request.setConsistentRead(true);
                     request.setKeyConditions(keyConditions);
+                    
+                    if ((queryFilters != null) && !queryFilters.isEmpty()) {
+                        request.withQueryFilter(queryFilters);
+                    }
+                    
                     if (lastEvaluatedKey != null) {
                         request.setExclusiveStartKey(lastEvaluatedKey);
                     }
@@ -341,12 +427,12 @@ public abstract class DDBBasedRequestStorageHandler {
                                  " attributesToGet " + attributesToGet + " with consistentRead and keyConditions: " + keyConditions +
                                  ". Attempt so far: " + numAttempts;
                     LOG.warn(msg, ex);
+                }
 
-                    if (numAttempts < DDB_QUERY_MAX_ATTEMPTS) {
-                        try {
-                            Thread.sleep(DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
-                        } catch (InterruptedException ignored) {}
-                    }
+                if (numAttempts < DDB_QUERY_MAX_ATTEMPTS) {
+                    try {
+                        Thread.sleep(DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
+                    } catch (InterruptedException ignored) {}
                 }
             }
             
@@ -535,14 +621,26 @@ public abstract class DDBBasedRequestStorageHandler {
         condition.setAttributeValueList(keyValues);
         keyConditions.put(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY, condition);
 
-        keyValues = Collections.singleton(new AttributeValue().withN(String.valueOf(workflowId)));
-        
-        condition = new Condition();
-        condition.setComparisonOperator(ComparisonOperator.GE);
-        condition.setAttributeValueList(keyValues);
-        keyConditions.put(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, condition);
+        if (workflowId != null) {
+            keyValues = Collections.singleton(new AttributeValue().withN(String.valueOf(workflowId)));
+            condition = new Condition();
+            condition.setComparisonOperator(ComparisonOperator.GE);
+            condition.setAttributeValueList(keyValues);
+            keyConditions.put(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, condition);
+        }
 
         return keyConditions;
+    }
+    
+    protected Map<String, Condition> getQueryFiltersForMaxWorkflowId(String deviceScope) {
+        Map<String, Condition> queryFilters = new HashMap<>();
+        
+        AttributeValue attrVal = new AttributeValue(deviceScope);
+        Condition condition = new Condition().withComparisonOperator(ComparisonOperator.EQ);
+        condition.setAttributeValueList(Arrays.asList(attrVal));
+        queryFilters.put(DEVICE_SCOPE_KEY, condition);
+        
+        return queryFilters;
     }
 
 }
