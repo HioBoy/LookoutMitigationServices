@@ -35,7 +35,7 @@
         <entry key="AGPAJPLJZIODAWQITKDGE" value-ref="Route53AnyDeviceReadOnlyClient"/>
     </util:map>
     
-    <util:set id="prod.popsWithCiscoRouters">
+    <util:set id="prod.popsWithCiscoRouter">
         <value>ARN1</value>
         <value>DUB2</value>
         <value>EWR2</value>

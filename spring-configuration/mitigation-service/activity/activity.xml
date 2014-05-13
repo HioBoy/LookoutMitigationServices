@@ -58,7 +58,7 @@
     
     <bean id="route53SingleCustomerTemplateLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper">
         <constructor-arg name="edgeLocationsHelper" ref="edgeLocationsHelper"/>
-        <constructor-arg name="popsWithJuniperRouter" ref="${domain}.popsWithJuniperRouters"/>
+        <constructor-arg name="popsWithCiscoRouter" ref="${domain}.popsWithCiscoRouter"/>
     </bean>
     
     <bean id="edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">

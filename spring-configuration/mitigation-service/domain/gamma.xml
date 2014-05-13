@@ -35,7 +35,7 @@
         <entry key="AGPAIJY24ST6EHLK563H4" value-ref="Route53AnyDeviceReadOnlyClient"/>
     </util:map>
     
-    <util:set id="gamma.popsWithCiscoRouters">
+    <util:set id="gamma.popsWithCiscoRouter">
         <value>G-SEA19</value>
     </util:set>
     
