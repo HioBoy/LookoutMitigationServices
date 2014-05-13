@@ -113,7 +113,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
             	prevMaxWorkflowId = currMaxWorkflowId;
             	
                 // First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
-                currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName, deviceScope, currMaxWorkflowId, subMetrics);
+                currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName, deviceScope, prevMaxWorkflowId, subMetrics);
                 
                 // Next, check if we have any duplicate mitigations already in place.
                 queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, mitigationDefinitionHash, 
