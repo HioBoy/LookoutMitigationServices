@@ -67,11 +67,11 @@ public class EdgeLocationsHelper implements Runnable {
         Validate.notNull(bwLocationsHelper);
         this.bwLocationsHelper = bwLocationsHelper;
         
-        Validate.notNull(metricsFactory);
-        this.metricsFactory = metricsFactory;
-        
         Validate.isTrue(sleepBetweenRetriesInMillis > 0);
         this.sleepBetweenRetriesInMillis = sleepBetweenRetriesInMillis;
+        
+        Validate.notNull(metricsFactory);
+        this.metricsFactory = metricsFactory;
         
         refreshPOPLocations();
     }

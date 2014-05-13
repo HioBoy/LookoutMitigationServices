@@ -60,6 +60,10 @@
         <constructor-arg ref="edgeLocationsHelper"/>
     </bean>
     
+    <bean id="popsWithJuniperRouters" class="java.util.ArrayList">
+        <constructor-arg ref ="${domain}.popsWithJuniperRouters"/>
+    </bean>
+    
     <bean id="edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
         <constructor-arg name="cloudfrontClient" ref="edgeOperatorServiceClient"/>
         <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>

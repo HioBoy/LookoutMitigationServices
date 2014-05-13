@@ -35,4 +35,49 @@
         <entry key="AGPAJPLJZIODAWQITKDGE" value-ref="Route53AnyDeviceReadOnlyClient"/>
     </util:map>
     
+    <util:set id="prod.popsWithJuniperRouters">
+        <value>ams1</value>
+        <value>ams50</value>
+        <value>atl50</value>
+        <value>bom2</value>
+        <value>cdg50</value>
+        <value>cdg51</value>
+        <value>dfw3</value>
+        <value>dfw50</value>
+        <value>fra2</value>
+        <value>fra6</value>
+        <value>fra50</value>
+        <value>gig50</value>
+        <value>hkg50</value>
+        <value>iad12</value>
+        <value>iad2</value>
+        <value>iad53</value>
+        <value>icn50</value>
+        <value>ind6</value>
+        <value>jax1</value>
+        <value>jfk5</value>
+        <value>jfk6</value>
+        <value>lax1</value>
+        <value>lax3</value>
+        <value>lhr3</value>
+        <value>lhr5</value>
+        <value>lhr50</value>
+        <value>maa3</value>
+        <value>mad50</value>
+        <value>mia50</value>
+        <value>mnl50</value>
+        <value>mrs50</value>
+        <value>mxp4</value>
+        <value>nrt12</value>
+        <value>nrt52</value>
+        <value>nrt54</value>
+        <value>sea50</value>
+        <value>sfo5</value>
+        <value>sfo9</value>
+        <value>sin3</value>
+        <value>syd1</value>
+        <value>tpe50</value>
+        <value>waw50</value>
+    </util:set>
+    
 </beans>
