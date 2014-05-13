@@ -13,7 +13,6 @@ import org.junit.Test;
 
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
-import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -28,10 +27,10 @@ public class TestTemplateBasedLocationsHelperManager {
     @Test
     public void testGetLocationsForDeploymentBasedOnTemplate() {
         EdgeLocationsHelper locationsHelper = mock(EdgeLocationsHelper.class);
-        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper);
+        Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
+        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, nonBWLocations);
         TemplateBasedLocationsManager manager = new TemplateBasedLocationsManager(helper);
         
-        Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
         
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
@@ -46,10 +45,10 @@ public class TestTemplateBasedLocationsHelperManager {
     @Test
     public void testGetLocationsForDeploymentBasedOnRequest() {
         EdgeLocationsHelper locationsHelper = mock(EdgeLocationsHelper.class);
-        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper);
+        Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
+        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, nonBWLocations);
         TemplateBasedLocationsManager manager = new TemplateBasedLocationsManager(helper);
         
-        Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
         
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();

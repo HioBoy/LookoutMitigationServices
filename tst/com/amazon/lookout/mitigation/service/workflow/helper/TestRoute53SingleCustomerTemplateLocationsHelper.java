@@ -27,8 +27,8 @@ public class TestRoute53SingleCustomerTemplateLocationsHelper {
     @Test
     public void testLocationsFromLocationsHelper() {
         EdgeLocationsHelper locationsHelper = mock(EdgeLocationsHelper.class);
-        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper);
         Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
+        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, nonBWLocations);
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
         
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
