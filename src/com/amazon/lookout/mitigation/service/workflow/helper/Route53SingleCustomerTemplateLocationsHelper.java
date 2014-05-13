@@ -21,7 +21,7 @@ public class Route53SingleCustomerTemplateLocationsHelper implements TemplateBas
         Validate.notNull(locationsHelper);
         this.locationsHelper = locationsHelper;
         
-        Validate.notNull(this.popsWithJuniperRouters); // Could be empty for beta.
+        Validate.notNull(popsWithJuniperRouters); // Could be empty for beta.
         this.popsWithJuniperRouters = popsWithJuniperRouters;
     }
     
