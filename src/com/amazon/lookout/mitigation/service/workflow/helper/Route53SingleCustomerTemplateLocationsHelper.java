@@ -36,7 +36,7 @@ public class Route53SingleCustomerTemplateLocationsHelper implements TemplateBas
     public Set<String> getLocationsForDeployment(MitigationModificationRequest request) {
         Set<String> locationsToDeploy = new HashSet<String>();
         for (String location : locationsHelper.getAllNonBlackwatchPOPs() ) {
-            if (popsWithJuniperRouter.contains(location.toLowerCase())) {
+            if (popsWithJuniperRouter.contains(location.toUpperCase())) {
                 locationsToDeploy.add(location);
             }
         }
