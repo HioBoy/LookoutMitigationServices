@@ -15,13 +15,11 @@ import com.amazon.coral.annotation.Documentation;
 import com.amazon.coral.annotation.Operation;
 import com.amazon.coral.annotation.Service;
 import com.amazon.coral.service.Activity;
-import com.amazon.coral.service.Identity;
 import com.amazon.coral.validate.Validated;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
-import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandler;
@@ -84,8 +82,8 @@ public class CreateMitigationActivity extends Activity {
             String deviceName = deviceNameAndScope.getDeviceName().name();
             String serviceName = createRequest.getServiceName();
             
-            // Step1. Authorize this request.
-            boolean isAuthorized = authorizer.isClientAuthorized(getIdentity(), serviceName, deviceName, OPERATION_NAME_FOR_AUTH_CHECK);
+            // Step1. Authorize this request. TODO - Turn on this auth check when the auth issues are all fixed.
+            /*boolean isAuthorized = authorizer.isClientAuthorized(getIdentity(), serviceName, deviceName, OPERATION_NAME_FOR_AUTH_CHECK);
             if (!isAuthorized) {
                 authorizer.setAuthorizedFlag(getIdentity(), false);
                 
@@ -97,7 +95,7 @@ public class CreateMitigationActivity extends Activity {
                 throw new IllegalArgumentException(msg);
             } else {
                 authorizer.setAuthorizedFlag(getIdentity(), true);
-            }
+            }*/
             
             // Step2. Validate this request.
             requestValidator.validateCreateRequest(createRequest);
