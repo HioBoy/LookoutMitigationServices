@@ -106,6 +106,13 @@ package.LookoutMitigationService = {
             Mockito = 1.9.5;
         };
     };
+    
+    # Removing j2ee dependency based on the known issue documented here: https://w.amazon.com/index.php/Coral/Manual/Bobcat2Migration#Known_Behavior_Changes
+    remove-dependencies = {
+  		1.0 = {
+    		j2ee = 1.0; 
+  		};
+	};
 
     # For more information on how to declare targets for HappyTrails packages
     # see: https://w.amazon.com/?BrazilBuildSystem/HappyTrails/GettingStarted
