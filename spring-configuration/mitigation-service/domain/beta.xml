@@ -34,6 +34,7 @@
     <!-- Use the same config as gamma -->
     <util:set id="beta.popsWithJuniperRouters">
         <value>g-iad5</value>
+        <value>g-sea</value>
     </util:set>
     
 </beans>
