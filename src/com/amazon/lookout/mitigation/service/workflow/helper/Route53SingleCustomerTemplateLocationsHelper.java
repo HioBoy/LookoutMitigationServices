@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
+import java.beans.ConstructorProperties;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,14 +16,15 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 public class Route53SingleCustomerTemplateLocationsHelper implements TemplateBasedLocationsHelper {
     
     private final EdgeLocationsHelper locationsHelper;
-    private final Set<String> popsWithJuniperRouters;
+    private final Set<String> popsWithJuniperRouter;
     
-    public Route53SingleCustomerTemplateLocationsHelper(@Nonnull EdgeLocationsHelper locationsHelper, @Nonnull Set<String> popsWithJuniperRouters) {
+    @ConstructorProperties({"edgeLocationsHelper", "popsWithJuniperRouter"})
+    public Route53SingleCustomerTemplateLocationsHelper(@Nonnull EdgeLocationsHelper locationsHelper, @Nonnull Set<String> popsWithJuniperRouter) {
         Validate.notNull(locationsHelper);
         this.locationsHelper = locationsHelper;
         
-        Validate.notNull(popsWithJuniperRouters); // Could be empty for beta.
-        this.popsWithJuniperRouters = popsWithJuniperRouters;
+        Validate.notNull(popsWithJuniperRouter); // Could be empty for beta.
+        this.popsWithJuniperRouter = popsWithJuniperRouter;
     }
     
     /**
@@ -34,7 +36,7 @@ public class Route53SingleCustomerTemplateLocationsHelper implements TemplateBas
     public Set<String> getLocationsForDeployment(MitigationModificationRequest request) {
         Set<String> locationsToDeploy = new HashSet<String>();
         for (String location : locationsHelper.getAllNonBlackwatchPOPs() ) {
-            if (popsWithJuniperRouters.contains(location.toLowerCase())) {
+            if (popsWithJuniperRouter.contains(location.toLowerCase())) {
                 locationsToDeploy.add(location);
             }
         }

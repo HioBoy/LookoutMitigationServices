@@ -71,7 +71,7 @@ public class CreateMitigationActivity extends Activity {
     @Documentation("CreateMitigation")
     public @Nonnull MitigationModificationResponse enact(@Nonnull CreateMitigationRequest createRequest) {
         // Wrap the CoralMetrics for this activity in a TSDMetrics instance.
-        TSDMetrics tsdMetrics = new TSDMetrics(getMetrics());
+        TSDMetrics tsdMetrics = new TSDMetrics(getMetrics().newMetrics());
         
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;

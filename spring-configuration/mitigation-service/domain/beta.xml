@@ -31,10 +31,8 @@
         <entry key="AGPAIJY24ST6EHLK563H4" value-ref="Route53AnyDeviceReadOnlyClient"/>
     </util:map>
     
-    <!-- Use the same config as gamma -->
     <util:set id="beta.popsWithJuniperRouters">
-        <value>g-iad5</value>
-        <value>g-sea</value>
+        <value>G-SEA</value>
     </util:set>
     
 </beans>

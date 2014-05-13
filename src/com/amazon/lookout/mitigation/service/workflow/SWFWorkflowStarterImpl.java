@@ -102,12 +102,6 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
         TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.startWorkflow");
         try {
             // Add workflow properties to request metrics.
-            WorkflowExecution workflowExecution = workflowExternalClient.getWorkflowExecution();
-            String swfWorkflowId = workflowExecution.getWorkflowId();
-            String swfRunId = workflowExecution.getRunId();
-            subMetrics.addProperty(WORKFLOW_ID_METRIC_PROPERTY_KEY, swfWorkflowId);
-            subMetrics.addProperty(WORKFLOW_SWF_RUN_ID_METRIC_PROPERTY_KEY, swfRunId);
-            
             WorkflowType workflowType = workflowExternalClient.getWorkflowType();
             String workflowTypeName = workflowType.getName();
             String workflowTypeVersion = workflowType.getVersion();
@@ -130,6 +124,13 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
                 LOG.error(msg);
                 throw new IllegalStateException(msg);
             }
+            
+            // We have access to the swfRunId only after starting the workflow.
+            WorkflowExecution workflowExecution = workflowExternalClient.getWorkflowExecution();
+            String swfWorkflowId = workflowExecution.getWorkflowId();
+            String swfRunId = workflowExecution.getRunId();
+            subMetrics.addProperty(WORKFLOW_ID_METRIC_PROPERTY_KEY, swfWorkflowId);
+            subMetrics.addProperty(WORKFLOW_SWF_RUN_ID_METRIC_PROPERTY_KEY, swfRunId);
             
             LOG.debug("Started workflow for workflowId: " + workflowId + " in SWF, with SWFWorkflowId: " + swfWorkflowId + " SWFRunId: " + swfRunId + 
                       " WorkflowType: " + workflowTypeName + " WorkflowTypeVersion: " + workflowTypeVersion + " for request: " + ReflectionToStringBuilder.toString(request) + 
