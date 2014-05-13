@@ -110,13 +110,13 @@ public class CreateMitigationActivity extends Activity {
             
             WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, createRequest, deviceName, tsdMetrics);
             
-            // Step6. Update the record for this workflow request and store the runId that SWF associates with this workflow.
-            String swfRunId = workflowClient.getWorkflowExecution().getRunId();
-            requestStorageManager.updateRunIdForWorkflowRequest(deviceName, workflowId, swfRunId, RequestType.CreateRequest, tsdMetrics);
-            
-            // Step7. Now that the request has been updated with the swfRunId associated with this SWF workflow run, start running the workflow.
+            // Step6. Start running the workflow.
             workflowStarter.startWorkflow(workflowId, createRequest, RequestType.CreateRequest, 
                                           DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, deviceName, workflowClient, tsdMetrics);
+            
+            // Step7. Update the record for this workflow request and store the runId that SWF associates with this workflow.
+            String swfRunId = workflowClient.getWorkflowExecution().getRunId();
+            requestStorageManager.updateRunIdForWorkflowRequest(deviceName, workflowId, swfRunId, RequestType.CreateRequest, tsdMetrics);
             
             // Step8. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();

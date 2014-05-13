@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.validator;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
@@ -141,6 +142,15 @@ public class RequestValidator {
             String msg = "No description specified in the mitigation action metadata in request: " + ReflectionToStringBuilder.toString(request);
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
+        }
+        
+        if (actionMetadata.getRelatedTickets() != null) {
+            Set<String> setOfRelatedTickets = new HashSet<String>(actionMetadata.getRelatedTickets());
+            if (setOfRelatedTickets.size() != actionMetadata.getRelatedTickets().size()) {
+                String msg = "Duplicate related tickets found in actionMetadata in the request: " + ReflectionToStringBuilder.toString(request);
+                LOG.info(msg);
+                throw new IllegalArgumentException(msg);
+            }
         }
     }
     

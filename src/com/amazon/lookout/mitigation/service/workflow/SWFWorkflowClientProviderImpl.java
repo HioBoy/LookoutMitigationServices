@@ -26,12 +26,12 @@ public class SWFWorkflowClientProviderImpl implements SWFWorkflowClientProvider 
     // As of now (2014-04-17) we only have a single workflow, keeping a cached copy of that client factory here.
     private final LookoutMitigationWorkflowClientExternalFactory workflowFactory;
     
-    @ConstructorProperties({"swfClient", "domain"})
-    public SWFWorkflowClientProviderImpl(@Nonnull AmazonSimpleWorkflowClient simpleWorkflowClient, @Nonnull String domain) {
+    @ConstructorProperties({"swfClient", "swfDomain"})
+    public SWFWorkflowClientProviderImpl(@Nonnull AmazonSimpleWorkflowClient simpleWorkflowClient, @Nonnull String swfDomain) {
         Validate.notNull(simpleWorkflowClient);
-        Validate.notEmpty(domain);
+        Validate.notEmpty(swfDomain);
         
-        this.workflowFactory = new LookoutMitigationWorkflowClientExternalFactoryImpl(simpleWorkflowClient, domain);
+        this.workflowFactory = new LookoutMitigationWorkflowClientExternalFactoryImpl(simpleWorkflowClient, swfDomain);
     }
 
     /**

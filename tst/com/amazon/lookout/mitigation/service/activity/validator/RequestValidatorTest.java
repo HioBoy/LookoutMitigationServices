@@ -19,6 +19,7 @@ import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsReq
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
+import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.google.common.collect.Lists;
@@ -402,5 +403,36 @@ public class RequestValidatorTest {
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
         assertTrue(caughtException.getMessage().startsWith("Version of the mitigation to be deleted should be set to >=1"));
+    }
+    
+    /**
+     * Test the case for a create request with duplicates in the related tickets. 
+     * We expect an exception to be thrown in this case.
+     */
+    @Test
+    public void testCreateRequestWithDuplicateRelatedTickets() {
+        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
+        request.setMitigationName(mitigationName);
+        request.setMitigationTemplate(mitigationTemplate);
+        request.setServiceName(serviceName);
+        
+        MitigationActionMetadata metadata = new MitigationActionMetadata();
+        metadata.setUser(userName);
+        metadata.setToolName(toolName);
+        metadata.setDescription("Test description");
+        metadata.setRelatedTickets(Lists.newArrayList("Tkt1", "Tkt2", "Tkt2"));
+        request.setMitigationActionMetadata(metadata);
+        
+        RequestValidator validator = new RequestValidator();
+        
+        Throwable caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        assertTrue(caughtException.getMessage().startsWith("Duplicate related tickets found in actionMetadata"));
     }
 }

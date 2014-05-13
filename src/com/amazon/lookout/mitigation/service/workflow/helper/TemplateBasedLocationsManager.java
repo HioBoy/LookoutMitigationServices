@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
@@ -11,7 +12,6 @@ import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 
 /**
  * LocationsHelper to determine locations for deployment based on the request made by the client and the template used for the request.
@@ -41,16 +41,16 @@ public class TemplateBasedLocationsManager {
         String templateName = request.getMitigationTemplate();
         if (templateBasedLocationsHelpers.containsKey(templateName)) {
             TemplateBasedLocationsHelper templateBasedLocationsHelper = templateBasedLocationsHelpers.get(templateName);
-            return templateBasedLocationsHelper.getLocationsForDeployment(request);
+            return new HashSet<String>(templateBasedLocationsHelper.getLocationsForDeployment(request));
         }
         
         if (request instanceof CreateMitigationRequest) {
-            return Sets.newHashSet(((CreateMitigationRequest) request).getLocation());
+            return new HashSet<String>(((CreateMitigationRequest) request).getLocation());
         }
         
         if (request instanceof EditMitigationRequest) {
-            return Sets.newHashSet(((EditMitigationRequest) request).getLocation());
+            return new HashSet<String>(((EditMitigationRequest) request).getLocation());
         }
-        return Sets.newHashSet();
+        return new HashSet<String>();
     }
 }

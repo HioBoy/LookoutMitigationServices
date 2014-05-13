@@ -49,7 +49,7 @@
     
     <bean id="swfWorkflowClientProvider" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowClientProviderImpl">
         <constructor-arg name="swfClient" ref="swfClient"/>
-        <constructor-arg name="domain" value="${domain}"/>
+        <constructor-arg name="swfDomain" ref="${domain}.swfDomainName"/>
     </bean>
     
     <bean id="templateBasedLocationsManager" class="com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager">
