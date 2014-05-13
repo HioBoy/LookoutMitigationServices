@@ -31,8 +31,9 @@
         <entry key="AGPAIJY24ST6EHLK563H4" value-ref="Route53AnyDeviceReadOnlyClient"/>
     </util:map>
     
-    <util:set id="beta.popsWithJuniperRouters">
-        <value>G-SEA</value>
+    <util:set id="beta.popsWithCiscoRouters">
+        <value>G-JFK</value>
+        <value>G-SEA19</value>
     </util:set>
     
 </beans>

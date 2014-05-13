@@ -35,49 +35,17 @@
         <entry key="AGPAJPLJZIODAWQITKDGE" value-ref="Route53AnyDeviceReadOnlyClient"/>
     </util:map>
     
-    <util:set id="prod.popsWithJuniperRouters">
-        <value>AMS1</value>
-        <value>AMS50</value>
-        <value>ATL50</value>
-        <value>BOM2</value>
-        <value>CDG50</value>
-        <value>CDG51</value>
-        <value>DFW3</value>
-        <value>DFW50</value>
-        <value>FRA2</value>
-        <value>FRA6</value>
-        <value>FRA50</value>
-        <value>GIG50</value>
-        <value>HKG50</value>
-        <value>IAD12</value>
-        <value>IAD2</value>
-        <value>IAD53</value>
-        <value>ICN50</value>
-        <value>IND6</value>
-        <value>JAX1</value>
-        <value>JFK5</value>
-        <value>JFK6</value>
-        <value>LAX1</value>
-        <value>LAX3</value>
-        <value>LHR3</value>
-        <value>LHR5</value>
-        <value>LHR50</value>
-        <value>MAA3</value>
-        <value>MAD50</value>
-        <value>MIA50</value>
-        <value>MNL50</value>
-        <value>MRS50</value>
-        <value>MXP4</value>
-        <value>NRT12</value>
-        <value>NRT52</value>
-        <value>NRT54</value>
-        <value>SEA50</value>
-        <value>SFO5</value>
-        <value>SFO9</value>
-        <value>SIN3</value>
-        <value>SYD1</value>
-        <value>TPE50</value>
-        <value>WAW50</value>
+    <util:set id="prod.popsWithCiscoRouters">
+        <value>ARN1</value>
+        <value>DUB2</value>
+        <value>EWR2</value>
+        <value>GRU1</value>
+        <value>HKG1</value>
+        <value>JFK1</value>
+        <value>NRT53</value>
+        <value>SFO4</value>
+        <value>SIN2</value>
+        <value>STL2</value>
     </util:set>
     
 </beans>
