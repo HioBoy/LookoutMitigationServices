@@ -224,6 +224,8 @@ public class EdgeLocationsHelper implements Runnable {
         while (numAttempts++ < MAX_POP_NAMES_REFRESH_ATTEMPTS) {
             try {
                 GetPOPsResult cfGetPOPsResult = getPOPsCall.call();
+                LOG.debug("List of CloudFront POPs received: " + cfGetPOPsResult.getPOPList() + " after refreshing with EdgeOperatorService.");
+                
                 for (String popName : cfGetPOPsResult.getPOPList()) {
                     cloudfrontPOPs.add(popName.toUpperCase());
                 }
@@ -262,6 +264,7 @@ public class EdgeLocationsHelper implements Runnable {
                 ListDNSServersResponse listDNSServersResponse = listDNSServersCall.call(listDNSServersRequest);
                 for (DNSServer dnsServer : listDNSServersResponse.getResults()) {
                     route53POPs.add(dnsServer.getPOP().toUpperCase());
+                    LOG.debug("Received of Route53 POP: " + dnsServer.getPOP() + " after refreshing the listDNSServers with DaasControlAPIService.");
                 }
                 break;
             } catch (Exception ex) {

@@ -83,9 +83,9 @@ public class BlackwatchLocationsHelper {
             }
         }
         
-        // Check if we need to force the gamma IAD POP to return as a BW POP.
+        // Check if we need to force the gamma IAD POP to return as a non-BW POP.
         if (popName.toUpperCase().equals(GAMMA_IAD_POP_NAME) && overrideGammaBWPOPAsNonBW) {
-            return true;
+            return false;
         }
         
         return !serversList.isEmpty();
