@@ -15,6 +15,7 @@ import org.apache.commons.logging.LogFactory;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
+import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
@@ -110,7 +111,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                     String msg = "No active mitigation to delete found when querying for deviceName: " + deviceName + " deviceScope: " + deviceScope + 
                                  ", for request: " + ReflectionToStringBuilder.toString(deleteRequest);
                     LOG.warn(msg);
-                    throw new RuntimeException(msg);
+                    throw new MissingMitigationException400(msg);
                 } else {
                     // Increment the maxWorkflowId to use as the newWorkflowId and sanity check to ensure the new workflowId is still within the expected range.
                     newWorkflowId = currMaxWorkflowId + 1;

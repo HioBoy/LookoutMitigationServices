@@ -18,8 +18,9 @@ import com.amazon.coral.service.Activity;
 import com.amazon.coral.validate.Validated;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
-import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
+import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
+import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -125,8 +126,12 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             String msg = String.format("Caught IllegalArgumentException in DeleteMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(deleteRequest));
             LOG.warn(msg, ex);
             throw new BadRequest400(msg, ex);
-        } catch (DuplicateDefinitionException400 ex) {
+        } catch (DuplicateRequestException400 ex) {
             String msg = String.format("Caught DuplicateDefinitionException in DeleteMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(deleteRequest));
+            LOG.warn(msg, ex);
+            throw ex;
+        } catch (MissingMitigationException400 ex) {
+            String msg = String.format("Caught MissingMitigationException in DeleteMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(deleteRequest));
             LOG.warn(msg, ex);
             throw ex;
         } catch (Exception internalError) {
