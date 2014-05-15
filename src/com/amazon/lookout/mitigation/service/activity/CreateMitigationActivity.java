@@ -19,6 +19,7 @@ import com.amazon.coral.validate.Validated;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
+import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
@@ -110,6 +111,10 @@ public class CreateMitigationActivity extends Activity {
             String msg = String.format("Caught IllegalArgumentException in CreateMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
             throw new BadRequest400(msg, ex);
+        } catch (DuplicateRequestException400 ex) {
+            String msg = String.format("Caught DuplicateRequestException in CreateMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createRequest));
+            LOG.warn(msg, ex);
+            throw ex;
         } catch (DuplicateDefinitionException400 ex) {
             String msg = String.format("Caught DuplicateDefinitionException in CreateMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
