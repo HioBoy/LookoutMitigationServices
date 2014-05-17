@@ -12,14 +12,12 @@
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
         <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
         <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
-        <constructor-arg name="authorizer" ref="clientAuthorizer"/>
     </bean>
     
     <bean class="com.amazon.lookout.mitigation.service.activity.DeleteMitigationFromAllLocationsActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
         <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
-        <constructor-arg name="authorizer" ref="clientAuthorizer"/>
     </bean>
     
     <!-- Commenting out the beans required for GetRequestActivity until it is merged to development.

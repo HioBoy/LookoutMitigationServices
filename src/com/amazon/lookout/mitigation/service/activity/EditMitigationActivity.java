@@ -26,7 +26,6 @@ import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
-import com.amazon.lookout.mitigation.service.helpers.AWSUserGroupBasedAuthorizer;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
@@ -35,14 +34,6 @@ public class EditMitigationActivity extends Activity {
     
     private static final String OPERATION_NAME_FOR_AUTH_CHECK = "editMitigation";
     
-    private final AWSUserGroupBasedAuthorizer authorizer;
-    
-    @ConstructorProperties({"authorizer"})
-    public EditMitigationActivity(@Nonnull AWSUserGroupBasedAuthorizer authorizer) {
-        Validate.notNull(authorizer);
-        this.authorizer = authorizer;
-    }
-
     @Validated
     @Operation("EditMitigation")
     @Documentation("EditMitigation")
@@ -59,21 +50,6 @@ public class EditMitigationActivity extends Activity {
             DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
             String deviceName = deviceNameAndScope.getDeviceName().name();
             String serviceName = editRequest.getServiceName();
-            
-            // Step1. Authorize this request.
-            boolean isAuthorized = authorizer.isClientAuthorized(getIdentity(), serviceName, deviceName, OPERATION_NAME_FOR_AUTH_CHECK);
-            if (!isAuthorized) {
-                authorizer.setAuthorizedFlag(getIdentity(), false);
-                
-                MitigationActionMetadata metadata = editRequest.getMitigationActionMetadata();
-                String msg = metadata.getUser() + " not authorized to call EditMitigation for service: " + serviceName + 
-                             " for device: " + deviceName + " using mitigation template: " + mitigationTemplate + ". Request signed with AccessKeyId: " + 
-                             getIdentity().getAttribute(Identity.AWS_ACCESS_KEY) + " and belonging to groups: " + getIdentity().getAttribute(Identity.AWS_USER_GROUPS);
-                LOG.info(msg);
-                throw new IllegalArgumentException(msg);
-            } else {
-                authorizer.setAuthorizedFlag(getIdentity(), true);
-            }
             
             mitigationModificationResponse = new MitigationModificationResponse();            
             mitigationModificationResponse.setMitigationName(editRequest.getMitigationName());            
