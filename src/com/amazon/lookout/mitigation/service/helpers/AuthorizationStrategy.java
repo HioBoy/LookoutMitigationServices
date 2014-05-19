@@ -37,7 +37,7 @@ import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDevic
  *   {
  *     "Effect": "Allow",
  *     "Action": "lookout:write-DeleteMitigationFromAllLocations",
- *     "Resource": "arn:aws:lookout:us-east-1:modifymitigation:Route53-POP_ROUTER"
+ *     "Resource": "arn:aws:lookout:us-east-1:namespace:Router_RateLimit_Route53Customer/Route53-POP_ROUTER"
  *   }
  * ]
  * }
@@ -80,17 +80,17 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      * LookoutMitigationService authorization scheme authorizes clients by ServiceName+DeviceName combinations 
      * for each operation/API. Lookout creates IAM users for each ServiceName+DeviceName+[Read|Write] combination, 
      * and grants those users permissions to the respective ServiceName+DeviceName+[Read|Write] combination 
-     * through IAM policies. [Read|Write] distinguishes read and write credentials respectively. The requests 
-     * to LookoutMitigationService are supposed to be then signed by credentials of appropriate IAM user 
-     * depending of course on the requested API and parameters. The credentials of the above IAM users are 
-     * maintained and distributed through ODIN.
+     * through IAM policies. Optionally, permissions may be MitigationTemplate specific too. [Read|Write] 
+     * distinguishes read and write credentials respectively. The requests to LookoutMitigationService are 
+     * supposed to be then signed by credentials of appropriate IAM user depending of course on the requested 
+     * API and parameters. The credentials of the above IAM users are maintained and distributed through ODIN.
      * 
-     * The serviceName+deviceName information is encoded in the resourceName. Whereas [Read|Write] information
-     * is included in the actionName along with the operationName. Typically, IAM users with write permissions
-     * also have read permissions.
+     * The serviceName+deviceName information, and optionally serviceName+deviceName+mitigationTemplate, is 
+     * encoded in the resourceName. Whereas [Read|Write] information is included in the actionName along with the 
+     * operationName. Typically, IAM users with write permissions also have read permissions.
      * 
-     * Here we look into the incoming request and operation and return resourceName and actionName in a
-     * authorizationInfo.
+     * getAuthorizationInfoList looks into the incoming request and operation and returns resourceName and actionName 
+     * in an authorizationInfo.
      */
     @Override
     public List<AuthorizationInfo> getAuthorizationInfoList(final Context context, final Object request)
@@ -158,6 +158,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         boolean recognizedRequest = true;
         String deviceName = null;
         String serviceName = null;
+        String mitigationTemplate = null;
         
         // TODO: Add a helper class to retrieve deviceName and serviceName for all request types,
         // and use that here.
@@ -166,8 +167,8 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         if (isMitigationModificationRequest(request)) {
             // create relative-id
             MitigationModificationRequest mitigationModificationRequest = (MitigationModificationRequest) request;
+            mitigationTemplate = mitigationModificationRequest.getMitigationTemplate();
             serviceName = mitigationModificationRequest.getServiceName();
-            String mitigationTemplate = mitigationModificationRequest.getMitigationTemplate();            
             DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
             if (deviceNameAndScope == null) {
                 return null;
@@ -175,19 +176,21 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
             deviceName = deviceNameAndScope.getDeviceName().name();
         } /*else if (isGetRequestStatusRequest(request)) {
             GetRequestStatusRequest getRequestStatusRequest = (GetRequestStatusRequest) request;
-            serviceName = getRequestStatusRequest.serviceName;
-            deviceName = getRequestStatusRequest.deviceName;
+            mitigationTemplate = null;
+            serviceName = getRequestStatusRequest.getServiceName();
+            deviceName = getRequestStatusRequest.getDeviceName();
         } else if (isListMitigationsRequest(request)) {
             ListMitigationsRequest listMitigationsRequest = (ListMitigationsRequest) request;                       
-            serviceName = listMitigationsRequest.serviceName;
+            mitigationTemplate = null;
+            serviceName = listMitigationsRequest.getServiceName();
             // deviceName is not required and may be null
-            deviceName = listMitigationsRequest.deviceName;
+            deviceName = listMitigationsRequest.getDeviceName();
         }*/ else {
             recognizedRequest = false;
         }
         
         if (recognizedRequest) {            
-            String relativeId = getRelativeId(serviceName, deviceName);            
+            String relativeId = getRelativeId(mitigationTemplate, serviceName, deviceName);            
             arnBuilder.append(relativeId);
             return arnBuilder.toString();
         }
@@ -196,9 +199,14 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     }
     
     /**
-     * serviceName+deviceName combination is include in the relative identifier 
+     * serviceName+deviceName+mitigationTemplate combination is included in the relative identifier as: 
+     * mitigationTemplate/serviceName-deviceName if mitigationTemplate is not null, else as: serviceName-deviceName.
+     *
+     * mitigationTemplate may be non-null to selectively authorize MitigationModificationRequests for some 
+     * serviceName+deviceName combinations. E.g., different sets of users may be authorized for applying
+     * ratelimit and count filters on routers.
      */
-    protected String getRelativeId(final String serviceName, String deviceName) {
+    protected String getRelativeId(final String mitigationTemplate, final String serviceName, String deviceName) {
         if (deviceName == null) {
             /**
              * for some request types deviceName is not a required field. In those cases deviceName is 
@@ -206,7 +214,16 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
              */
             deviceName = DeviceName.ANY_DEVICE.name();
         }
-        return (serviceName + SEPARATOR + deviceName);
+        StringBuilder relativeidBuilder = new StringBuilder();
+        if (mitigationTemplate != null) {
+            relativeidBuilder.append(mitigationTemplate)
+                             .append("/");
+        }
+        relativeidBuilder.append(serviceName)
+                         .append(SEPARATOR)
+                         .append(deviceName);
+
+        return relativeidBuilder.toString();
     }
     
     /**
