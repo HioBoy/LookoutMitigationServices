@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+    
+    <!-- All the activities go here -->
+    <bean class="com.amazon.lookout.mitigation.service.activity.CreateMitigationActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
+        <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
+        <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
+    </bean>
+    
+    <bean class="com.amazon.lookout.mitigation.service.activity.DeleteMitigationFromAllLocationsActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
+        <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
+    </bean>
+    
+    <!-- Commenting out the beans required for GetRequestActivity until it is merged to development.
+    <bean class="com.amazon.lookout.mitigation.service.activity.GetRequestStatusActivity">
+        <constructor-arg index="0" ref="requestInfoHandler"/>
+        <constructor-arg index="1" ref="mitigationInfoHandler"/>
+    </bean>
+    -->
+    
+    <!-- All the beans required by the activities go here -->
+    <bean id="requestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.RequestValidator"/>
+    
+    <bean id="templateBasedRequestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator">
+        <constructor-arg ref="serviceSubnetsMatcher"/>
+    </bean>
+    
+    <bean id="ddbBasedRequestStorageManager" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedRequestStorageManager">
+        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
+        <constructor-arg name="domain" value="${domain}"/>
+        <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
+    </bean>
+    
+    <bean id="swfWorkflowStarter" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl">
+        <constructor-arg name="swfWorkflowProvider" ref="swfWorkflowClientProvider"/>
+        <constructor-arg name="templateBasedLocationsManager" ref="templateBasedLocationsManager"/>
+    </bean>
+    
+    <bean id="swfWorkflowClientProvider" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowClientProviderImpl">
+        <constructor-arg name="swfClient" ref="swfClient"/>
+        <constructor-arg name="swfDomain" ref="${domain}.swfDomainName"/>
+    </bean>
+    
+    <bean id="templateBasedLocationsManager" class="com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager">
+        <constructor-arg ref="route53SingleCustomerTemplateLocationsHelper"/>
+    </bean>
+    
+    <bean id="route53SingleCustomerTemplateLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper">
+        <constructor-arg name="edgeLocationsHelper" ref="edgeLocationsHelper"/>
+        <constructor-arg name="popsWithCiscoRouter" ref="${domain}.popsWithCiscoRouter"/>
+    </bean>
+    
+    <bean id="edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
+        <constructor-arg name="cloudfrontClient" ref="edgeOperatorServiceClient"/>
+        <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>
+        <constructor-arg name="bwLocationsHelper" ref="bwLocationsHelper"/>
+        <constructor-arg name="millisToSleepBetweenRetries" value="500"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+    </bean>
+    
+    <bean id="bwLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.BlackwatchLocationsHelper">
+        <constructor-arg name="ldapProvider" ref="ldapProvider"/>
+        <constructor-arg name="overrideGammaBWPOPAsNonBW" value="true"/> <!-- Toggle this value accordingly if we want the Gamma BW POP to be considered as a non-BW POP instead -->
+    </bean>
+    
+    <bean id="ldapProvider" class="com.amazon.ldaputils.DefaultLdapProvider"/>
+    
+    <bean id="serviceSubnetsMatcher" class="com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher">
+        <constructor-arg>
+            <list>
+                <ref local="route53SubnetFetcher"/>
+                <ref local="cloudFrontFMSSubnetsFetcher"/>
+                <ref local="cloudFrontExternalVipsSubnetsFetcher"/>
+            </list>
+        </constructor-arg>
+    </bean>
+    
+    <bean id="route53SubnetFetcher" class="com.amazon.aws158.commons.customer.Route53SubnetsFetcher">
+        <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
+       </bean>
+   
+       <bean id="cloudFrontExternalVipsSubnetsFetcher" class="com.amazon.aws158.commons.customer.CloudFrontExternalVipsSubnetsFetcher">
+       <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
+       </bean>
+   
+       <bean id="cloudFrontFMSSubnetsFetcher" class="com.amazon.aws158.commons.customer.CloudFrontFMSSubnetsFetcher">
+       <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
+       </bean>
+    
+    <!-- Commenting out the beans required for GetRequestActivity until it is merged to development.
+    <bean id="requestInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedGetRequestStatusHandler">
+        <constructor-arg index="0" ref="dynamoDBClient"/>
+        <constructor-arg index="1" value="${domain}"/>
+        <constructor-arg index="2" ref="${realm}.dynamoEndpoint"/>
+        <constructor-arg index="3" ref="${realm}"/>
+    </bean>
+    
+    <bean id="mitigationInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedGetMitigationInfoHandler">
+        <constructor-arg index="0" ref="dynamoDBClient"/>
+        <constructor-arg index="1" value="${domain}"/>
+        <constructor-arg index="2" ref="${realm}.dynamoEndpoint"/>
+        <constructor-arg index="3" ref="${realm}"/>
+    </bean>
+    -->
+    
+</beans>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+    
+    <bean id="gamma.daasControlAPIServiceURL" class="java.lang.String">
+        <constructor-arg value="http://daas-control-api-gamma.amazon.com:80"/>
+    </bean>
+    
+    <bean id="gamma.edgeOperatorServiceURL" class="java.lang.String">
+        <constructor-arg value="http://edge-operator-service-gamma.amazon.com:80"/>
+    </bean>
+    
+    <bean id="gamma.swfDomainName" class="java.lang.String">
+        <constructor-arg value="Lookout-Gamma-Domain"/>
+    </bean>
+    
+    <util:set id="gamma.popsWithCiscoRouter">
+        <value>G-SEA19</value>
+    </util:set>
+    
+</beans>

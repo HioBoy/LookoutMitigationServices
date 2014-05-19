@@ -26,8 +26,6 @@ package.LookoutMitigationService = {
 
     dependencies = {
         1.0 = {
-            LookoutMitigationServiceJavaClient = 1.0;
-            AWS158Commons = 1.1;
             CoralActivity = 1.0;
             CoralSpring = 3.1;
             JakartaCommons-logging-api = 1.1;
@@ -39,6 +37,20 @@ package.LookoutMitigationService = {
 
             CoralAwsAuthentication = 1.1; # To support authenticating/authorizing calls to LookoutMitigationService.
             OdinAWSCredentials = 1.2;
+            
+            AWS158Commons = 1.1;
+            DaasControlAPIServiceJavaClient = 1.0;
+            EdgeOperatorServiceJavaClient = 1.0;
+            
+            OWASPOutputEncoder = 1.0; # Dependency on the binaryTrie implementation in this package, used for subnet matching.
+            LookoutMitigationServiceCommons = 1.0;
+            LookoutMitigationServiceModel = 1.0;
+            
+            JavaAmazonLdapUtils = 1.2;
+            CoralSpringLauncher = 3.1;
+            CoralClientHttp = 1.0;
+
+            LookoutMitigationServiceExplorer = 1.0;
         };
     };
     
@@ -48,6 +60,8 @@ package.LookoutMitigationService = {
             # Runtime dependencies for coral
             JakartaCommons-logging-adapters = 1.1;
             Bobcat = 2.0;
+            CoralSpringDirector = 1.0;
+            
             CoralService = 1.0;
             CoralMetricsQuerylogReporter = 1.0;            
             # Coral protocol handlers
@@ -64,7 +78,9 @@ package.LookoutMitigationService = {
             MonitoringCore = 1.0;
             ServiceMonitoring = 2.0;
             
-            WebsiteLogPusher = 3.2;                                              
+            WebsiteLogPusher = 3.2;        
+            
+            EdgeSetupVLANIptables = 1.0;                                      
         };
     };
 
@@ -82,9 +98,20 @@ package.LookoutMitigationService = {
             AWSJavaClientRuntime = external_release;
             JakartaCommons-lang = 2.6;
             JakartaCommons-codec = 1;
+            
+            OdinAWSCredentials = 1.2;
+            SpringBeans = 3.1;
+            SpringCore = 3.1;
             log4j = 1.2;
             Mockito = 1.9.5;
         };
+    };
+    
+    # Removing j2ee dependency based on the known issue documented here: https://w.amazon.com/index.php/Coral/Manual/Bobcat2Migration#Known_Behavior_Changes
+    remove-dependencies = {
+          1.0 = {
+            j2ee = 1.0; 
+          };
     };
 
     # For more information on how to declare targets for HappyTrails packages

@@ -17,5 +17,8 @@
     The following statements import the spring-configuration files in the listed
     order.
     -->
-    <import resource="file:${spring.config.root}/*.xml" />
+    <import resource="file:${spring.config.root}/*.xml"/>
+    <import resource="file:${spring.config.root}/activity/*.xml"/>
+    <import resource="file:${spring.config.root}/region/${realm}.xml"/>
+    <import resource="file:${spring.config.root}/domain/${domain}.xml"/>
 </beans>

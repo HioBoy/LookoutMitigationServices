@@ -14,8 +14,9 @@
         <constructor-arg>
             <ref bean="chain"/>
         </constructor-arg>
-        <!-- waiting for 5 minutes for coral framework to clean up its thread. 
-             More detail can be found here: https://issues.amazon.com/SF-1578 
+        <!-- 
+        waiting for 5 minutes for coral framework to clean up its thread. 
+        More detail can be found here: https://issues.amazon.com/SF-1578 
         -->
         <constructor-arg value="300000"/> 
     </bean>
@@ -32,9 +33,14 @@
                 <!-- Here are protocol handlers. You need at least one.-->
                 <bean class="com.amazon.coral.service.http.HttpBindingHandler"/>
                 <bean class="com.amazon.coral.service.HttpRpcHandler"/>
-                <ref bean="AuthenticationHandler"/>
-                <bean class="com.amazon.coral.service.ModelHandler"/>
+                
+                <!-- ContentHandler has to be before the AuthenticationHandler to be able to use the Explorer. -->
                 <bean class="com.amazon.coral.service.http.ContentHandler"/>
+                
+                <ref bean="AuthenticationHandler"/>
+                <ref bean="AuthorizationHandler"/>
+                
+                <bean class="com.amazon.coral.service.ModelHandler"/>
                 <bean class="com.amazon.coral.validate.ValidationHandler"/>
                 
                 <!-- This always comes last.-->
@@ -64,4 +70,76 @@
     --> 
     <bean id="AuthNCache" class="amazon.cache.impl.HashMapCache" />
     <bean id="PolicyCache" class="amazon.cache.impl.HashMapCache" />
+        <constructor-arg ref="AuthNConfig"/>
+        <constructor-arg ref="AuthRuntimeClient"/>
+    </bean>
+
+    <bean id="AuthNConfig" class="com.amazon.coral.service.AwsAuthNConfig">
+        <property name="signingSchemes" value="V4"/>
+        <property name="region" value="${realm}"/> <!-- Auth in the same region as the region where the service runs -->
+        <property name="service" value="lookout"/>
+        <property name="vendorCode" value="lookout"/>
+        <property name="headersToSecure" value=""/>
+    </bean>
+
+    <!-- 
+    Creating beans for authorization based on 
+    https://w.amazon.com/index.php/Coral/Manual/AWSAuth/Authorization1.1,
+    https://w.amazon.com/index.php/AWSAuth/AuthRuntimeClient/UpgradingTo1.1, and
+    https://code.amazon.com/packages/CoralAwsAuthRuntimeDemo/blobs/mainline/\-\-/spring-configuration/coral-service.xml 
+    -->
+    
+    <!-- 
+    LookoutMitigationService is an internal service, and is not designed for subscriptions. 
+    So just using ARSAuthorizationHandler instead of ARSAuthorizationHelper that combines ARSAuthroizationHandler and ARSSubscriptionCheckHandler 
+    -->
+    <bean id="AuthorizationHandler" class="com.amazon.coral.service.ARSAuthorizationHandler">
+        <constructor-arg ref="AuthRuntimeClient"/>
+        <constructor-arg>
+            <map>
+                <!-- Authorization strategy for individual operations -->
+                <!-- All operations must be authorized, and we have a single strategy for all operations-->
+                <entry key="LookoutMitigationService/*" value-ref="AuthorizationStrategy"/>
+            </map>
+        </constructor-arg>
+    </bean>
+
+    <!-- Strategy to employ for authorizing calls to LookoutMitigationService -->
+    <bean id="AuthorizationStrategy" class="com.amazon.lookout.mitigation.service.helpers.AuthorizationStrategy">
+        <constructor-arg ref="ArcConfig"/>
+        <constructor-arg value="${realm}"/>
+    </bean>
+
+    <bean id="AuthRuntimeFactory" class="aws.auth.client.impl.AuthRuntimeClientFactory">
+        <property name="authenticateResultCache" ref="AuthNCache"/>
+        <property name="policyCache" ref="PolicyCache"/>
+        <property name="configuration" ref="ArcConfig"/>
+    </bean>
+
+    <bean id="AuthRuntimeClient" factory-bean="AuthRuntimeFactory" factory-method="newAuthRuntimeClient"/>
+
+    <!--
+    HashMapCache are generally disapproved in Prod because real customer traffic could
+    overwhelm the cache. We do not expect that many number of diverse clients or very
+    high volumes of requests to overwhelm the HashMapCache for LookoutMitigationService.
+    -->
+    <bean id="AuthNCache" class="amazon.cache.Cache">
+        <constructor-arg>
+            <bean class="amazon.cache.impl.HashMapCache"/>
+        </constructor-arg>
+    </bean>
+
+    <bean id="PolicyCache" class="amazon.cache.Cache">
+        <constructor-arg>
+            <bean class="amazon.cache.impl.HashMapCache"/>
+        </constructor-arg>
+    </bean>
+
+    <bean id="ArcConfig" class="aws.auth.client.config.Configuration">
+        <!-- Set the qualifier for selecting the coral client config and ARS endpoint (S3 has a dedicated one, -->
+        <!-- if your service does not have, simply put "${domain}.${realm}" -->
+        <property name="Qualifier" value="${domain}.${realm}"/>
+        <!-- Set vendor name to scope the policies that ARS returns -->
+        <property name="Vendor" value="lookout"/>
+    </bean>
 </beans>

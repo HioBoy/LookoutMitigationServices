@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+    
+    <bean id="prod.daasControlAPIServiceURL" class="java.lang.String">
+        <constructor-arg value="http://daas-control-api.amazon.com:80"/>
+    </bean>
+    
+    <bean id="prod.edgeOperatorServiceURL" class="java.lang.String">
+        <constructor-arg value="http://edge-operator-service.amazon.com:8080"/>
+    </bean>
+    
+    <bean id="prod.swfDomainName" class="java.lang.String">
+        <constructor-arg value="Lookout-Prod-Domain"/>
+    </bean>
+    
+    <util:set id="prod.popsWithCiscoRouter">
+        <value>ARN1</value>
+        <value>DUB2</value>
+        <value>EWR2</value>
+        <value>GRU1</value>
+        <value>HKG1</value>
+        <value>JFK1</value>
+        <value>NRT53</value>
+        <value>SFO4</value>
+        <value>SIN2</value>
+        <value>STL2</value>
+    </util:set>
+</beans>

@@ -6,11 +6,9 @@ package com.amazon.lookout.mitigation.service.constants;
  * possibly be a case where a new device is defined which might be a combination
  * of 2 or more other physical devices.
  * 
- * ANY_DEVICE is a special device which in combination with a ServiceName refers
- * to any device associated with that serviceName. This device is currently only
- * used to authorize read only requests for all mitigations (using any device)
- * for a service.
+ * ANY_DEVICE is a special device used to authorize requests which only specify
+ * serviceName, and are authorized for all devices or not.
  */
 public enum DeviceName {
-    POP_ROUTER, ANY_DEVICE
+    POP_ROUTER, ANY_DEVICE;
 }

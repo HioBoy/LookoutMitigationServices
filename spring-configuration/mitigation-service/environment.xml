@@ -69,9 +69,18 @@
 
     <!--  Initialize AppConfig -->
     <bean name="appConfigHelper" class="amazon.platform.config.AppConfigHelper">
-        <property name="appName" value="LookoutMitigationService" />
-        <property name="domain" value="${domain}" />
-        <property name="realm" value="${realm}" />
-        <property name="root" value="${root}" />
+        <property name="appName" value="LookoutMitigationService"/>
+        <property name="domain" value="${domain}"/>
+        <property name="realm" value="${realm}"/>
+        <property name="root" value="${root}"/>
     </bean>
+    
+    <!--  Initialize AppConfig -->
+    <bean name="appConfigHelper" class="amazon.platform.config.AppConfigHelper">
+        <property name="appName" value="LookoutMitigationService"/>
+        <property name="domain" value="${domain}"/>
+        <property name="realm" value="${realm}"/>
+        <property name="root" value="${root}"/>
+    </bean>
+    
 </beans>
