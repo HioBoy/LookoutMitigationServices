@@ -39,8 +39,6 @@ import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 public class CreateMitigationActivity extends Activity {
     private static final Log LOG = LogFactory.getLog(CreateMitigationActivity.class);
     
-    private static final String OPERATION_NAME_FOR_AUTH_CHECK = "createMitigation";
-    
     private final RequestValidator requestValidator;
     private final TemplateBasedRequestValidator templateBasedValidator;
     private final RequestStorageManager requestStorageManager;
@@ -120,7 +118,8 @@ public class CreateMitigationActivity extends Activity {
             LOG.warn(msg, ex);
             throw ex;
         } catch (Exception internalError) {
-            String msg = String.format("Internal error while fulfilling request for CreateMitigationActivity: for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createRequest));
+            String msg = String.format("Internal error while fulfilling request for CreateMitigationActivity: for requestId: " + requestId + " with request: " + 
+                                       ReflectionToStringBuilder.toString(createRequest) + internalError.getMessage());
             LOG.error(msg, internalError);
             requestSuccessfullyProcessed = false;
             throw new InternalServerError500(msg);

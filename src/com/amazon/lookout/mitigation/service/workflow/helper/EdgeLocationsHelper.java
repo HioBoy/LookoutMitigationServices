@@ -80,28 +80,20 @@ public class EdgeLocationsHelper implements Runnable {
         if (!locationsRefreshAtleastOnce.get()) {
             refreshPOPLocations();
         }
-        
-        if (locationsRefreshAtleastOnce.get()) {
-            return allPOPs;
-        } else {
-            String msg = "Unable to refresh the list of POPs for this getAllPOPs call";
-            LOG.error(msg);
-            throw new RuntimeException(msg);
-        }
+
+        // Return allPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
+        // (from either of the edge service calls succeeding) hence, there is no need to fail the create request. Users will have visibility into the instances being worked upon.
+        return allPOPs;
     }
     
     public Set<String> getBlackwatchPOPs() {
         if (!locationsRefreshAtleastOnce.get()) {
             refreshPOPLocations();
         }
-        
-        if (locationsRefreshAtleastOnce.get()) {
-            return blackwatchPOPs;
-        } else {
-            String msg = "Unable to refresh the list of POPs for this getBlackwatchPOPs call";
-            LOG.error(msg);
-            throw new RuntimeException(msg);
-        }
+
+        // Return allPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
+        // (from either of the edge service calls succeeding) hence, there is no need to fail the create request. Users will have visibility into the instances being worked upon.
+        return blackwatchPOPs;
     }
     
     public Set<String> getAllNonBlackwatchPOPs() {
@@ -109,13 +101,9 @@ public class EdgeLocationsHelper implements Runnable {
             refreshPOPLocations();
         }
         
-        if (locationsRefreshAtleastOnce.get()) {
-            return (Sets.difference(allPOPs, blackwatchPOPs));
-        } else {
-            String msg = "Unable to refresh the list of POPs for this getAllNonBlackwatchPOPs call";
-            LOG.error(msg);
-            throw new RuntimeException(msg);
-        }
+        // Return allPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
+        // (from either of the edge service calls succeeding) hence, there is no need to fail the create request. Users will have visibility into the instances being worked upon.
+        return (Sets.difference(allPOPs, blackwatchPOPs));
     }
     
     public void run() {

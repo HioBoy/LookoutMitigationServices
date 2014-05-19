@@ -37,8 +37,6 @@ import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 public class DeleteMitigationFromAllLocationsActivity extends Activity {
     private static final Log LOG = LogFactory.getLog(DeleteMitigationFromAllLocationsActivity.class);
     
-    private static final String OPERATION_NAME_FOR_AUTH_CHECK = "deleteMitigationFromAllLocations";
-    
     private final RequestValidator requestValidator;
     private final RequestStorageManager requestStorageManager;
     private final SWFWorkflowStarter workflowStarter;
@@ -71,8 +69,7 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             String mitigationTemplate = deleteRequest.getMitigationTemplate();
             DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
             String deviceName = deviceNameAndScope.getDeviceName().name();
-            String serviceName = deleteRequest.getServiceName();
-            
+
             // Step1. Validate this request.
             requestValidator.validateDeleteRequest(deleteRequest);
             
@@ -115,7 +112,8 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             LOG.warn(msg, ex);
             throw ex;
         } catch (Exception internalError) {
-            String msg = String.format("Internal error while fulfilling request for DeleteMitigationActivity: for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(deleteRequest));
+            String msg = String.format("Internal error while fulfilling request for DeleteMitigationActivity: for requestId: " + requestId + " with request: " + 
+                                       ReflectionToStringBuilder.toString(deleteRequest) + internalError.getMessage());
             LOG.error(msg, internalError);
             requestSuccessfullyProcessed = false;
             throw new InternalServerError500(msg);
