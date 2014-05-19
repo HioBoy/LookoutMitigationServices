@@ -36,7 +36,6 @@ import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate
 
 @ThreadSafe
 public class AuthorizationStrategyTest {
-    
     @BeforeClass
     public static void setupOnce() {
         TestUtils.configure();
@@ -66,6 +65,7 @@ public class AuthorizationStrategyTest {
     
     private final String deviceName = "SomeDevice";
     private final String serviceName = "SomeService";
+    private final String mitigationTemplate = "SomeMitigationTemplate";
         
     private final String resourceOwner = "owner";
     private Identity identity;
@@ -137,7 +137,7 @@ public class AuthorizationStrategyTest {
     
     /**
      * action: <vendor>:read-<operationname> or <vendor>:write-<operationname>
-     * resource: arn:<partition>:<vendor>:<region>:<namespace>:<servicename>-<devicename>
+     * resource: arn:<partition>:<vendor>:<region>:<namespace>:<mitigationtemplate>/<servicename>-<devicename>
      */
      
     @Test
@@ -148,7 +148,7 @@ public class AuthorizationStrategyTest {
         assertTrue(authInfoList.size() == 1);
          
         BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
-        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:write-CreateMitigation", "arn:aws:lookout:region::Route53-POP_ROUTER");
+        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:write-CreateMitigation", "arn:aws:lookout:region::Router_RateLimit_Route53Customer/Route53-POP_ROUTER");
         assertEqualAuthorizationInfos(authInfo, expectedAuthInfo);
          
         setArbitraryMitigationTemplate(createRequest);
@@ -169,7 +169,7 @@ public class AuthorizationStrategyTest {
         assertTrue(authInfoList.size() == 1);
         
         BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
-        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:write-DeleteMitigationFromAllLocations", "arn:aws:lookout:region::Route53-POP_ROUTER");
+        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:write-DeleteMitigationFromAllLocations", "arn:aws:lookout:region::Router_RateLimit_Route53Customer/Route53-POP_ROUTER");
         assertEqualAuthorizationInfos(authInfo, expectedAuthInfo);
     }
      
@@ -180,7 +180,7 @@ public class AuthorizationStrategyTest {
         assertTrue(authInfoList.size() == 1);
         
         BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
-        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:write-EditMitigation", "arn:aws:lookout:region::Route53-POP_ROUTER");
+        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:write-EditMitigation", "arn:aws:lookout:region::Router_RateLimit_Route53Customer/Route53-POP_ROUTER");
         assertEqualAuthorizationInfos(authInfo, expectedAuthInfo);
     }
     
@@ -226,12 +226,20 @@ public class AuthorizationStrategyTest {
 
     @Test
     public void testGetRelativeId() {
-        // deviceName is null
-        String relativeId = authStrategy.getRelativeId(serviceName, null);
+        // deviceName and mitigationTemplate is null
+        String relativeId = authStrategy.getRelativeId(null, serviceName, null);
         assertEquals(relativeId, serviceName + "-" + DeviceName.ANY_DEVICE);
 
-        relativeId = authStrategy.getRelativeId(serviceName, deviceName);
-        assertEquals(relativeId, serviceName + "-" + deviceName);
+        // deviceName is null
+        relativeId = authStrategy.getRelativeId(mitigationTemplate, serviceName, null);
+        assertEquals(relativeId, mitigationTemplate + "/" + serviceName + "-" + DeviceName.ANY_DEVICE);
+
+        // mitigationTemplate is null
+        relativeId = authStrategy.getRelativeId(mitigationTemplate, serviceName, null);
+        assertEquals(relativeId, mitigationTemplate + "/" + serviceName + "-" + DeviceName.ANY_DEVICE);
+        
+        relativeId = authStrategy.getRelativeId(mitigationTemplate, serviceName, deviceName);
+        assertEquals(relativeId, mitigationTemplate + "/" + serviceName + "-" + deviceName);
     }
 
     @Test
