@@ -15,5 +15,5 @@ public interface SWFWorkflowStarter {
     
     // Start a new workflow based on the input parameters.
     public void startWorkflow(long workflowId, MitigationModificationRequest request, RequestType requestType, int mitigationVersion, String deviceName, 
-                              WorkflowClientExternal workflowExternalClient, TSDMetrics metrics);
+                              String deviceScope, WorkflowClientExternal workflowExternalClient, TSDMetrics metrics);
 }

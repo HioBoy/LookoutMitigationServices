@@ -69,6 +69,7 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             String mitigationTemplate = deleteRequest.getMitigationTemplate();
             DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
             String deviceName = deviceNameAndScope.getDeviceName().name();
+            String deviceScope = deviceNameAndScope.getDeviceScope().name();
 
             // Step1. Validate this request.
             requestValidator.validateDeleteRequest(deleteRequest);
@@ -84,7 +85,7 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, deleteRequest, deviceName, tsdMetrics);
             
             // Step5. Start running the workflow.
-            workflowStarter.startWorkflow(workflowId, deleteRequest, RequestType.DeleteRequest, deleteRequest.getMitigationVersion(), deviceName, workflowClient, tsdMetrics);
+            workflowStarter.startWorkflow(workflowId, deleteRequest, RequestType.DeleteRequest, deleteRequest.getMitigationVersion(), deviceName, deviceScope, workflowClient, tsdMetrics);
             
             // Step6. Once the workflow is running, it should have an associated swfRunId, update the request record for this workflow request and store the associated runId.
             String swfRunId = workflowClient.getWorkflowExecution().getRunId();

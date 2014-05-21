@@ -74,6 +74,7 @@ public class CreateMitigationActivity extends Activity {
             
             DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(createRequest.getMitigationTemplate());
             String deviceName = deviceNameAndScope.getDeviceName().name();
+            String deviceScope = deviceNameAndScope.getDeviceScope().name();
             String serviceName = createRequest.getServiceName();
             
             // Step1. Validate this request.
@@ -90,7 +91,7 @@ public class CreateMitigationActivity extends Activity {
             
             // Step5. Start running the workflow.
             workflowStarter.startWorkflow(workflowId, createRequest, RequestType.CreateRequest, 
-                                          DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, deviceName, workflowClient, tsdMetrics);
+                                          DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, deviceName, deviceScope, workflowClient, tsdMetrics);
             
             // Step6. Update the record for this workflow request and store the runId that SWF associates with this workflow.
             String swfRunId = workflowClient.getWorkflowExecution().getRunId();

@@ -85,17 +85,19 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * @param requestType Type of the request for which we need to start the workflow.
      * @param mitigationVersion Version to use for this mitigation.
      * @param deviceName device on which the workflow steps are to be run.
+     * @param deviceScope String representing the deviceScope for the device on which this mitigation needs to be applied.
      * @param workflowExternalClient Pass the WorkflowClient to start the workflow.
      * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to check for workflowId's uniqueness.
      * @return String representing the runId that SWF assigns to our workflow.
      */
     @Override
     public void startWorkflow(long workflowId, @Nonnull MitigationModificationRequest request, @Nonnull RequestType requestType, int mitigationVersion, 
-                              @Nonnull String deviceName, @Nonnull WorkflowClientExternal workflowExternalClient, @Nonnull TSDMetrics metrics) {
+                              @Nonnull String deviceName, @Nonnull String deviceScope, @Nonnull WorkflowClientExternal workflowExternalClient, @Nonnull TSDMetrics metrics) {
         Validate.isTrue(workflowId > 0);
         Validate.notNull(request);
         Validate.isTrue(mitigationVersion > 0);
         Validate.notEmpty(deviceName);
+        Validate.notEmpty(deviceScope);
         Validate.notNull(workflowExternalClient);
         Validate.notNull(metrics);
         
@@ -117,7 +119,8 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             
             if (workflowExternalClient instanceof LookoutMitigationWorkflowClientExternal) {
                 // Start running the workflow.
-                ((LookoutMitigationWorkflowClientExternal) workflowExternalClient).startMitigationWorkflow(workflowId, locationsToDeploy, request, requestType, mitigationVersion, deviceName, workflowOptions);
+                ((LookoutMitigationWorkflowClientExternal) workflowExternalClient).startMitigationWorkflow(workflowId, locationsToDeploy, request, requestType, 
+                                                                                                           mitigationVersion, deviceName, deviceScope, workflowOptions);
             } else {
                 String msg = "WorkflowExternalClient is of type: " + workflowExternalClient.getClass().getName() + ". Currently there exists no setup to run workflow of this type. For workflowId: " + 
                              workflowId + " on device: " + deviceName + " with mitigationVersion: " + mitigationVersion + " for request: " + ReflectionToStringBuilder.toString(request);
