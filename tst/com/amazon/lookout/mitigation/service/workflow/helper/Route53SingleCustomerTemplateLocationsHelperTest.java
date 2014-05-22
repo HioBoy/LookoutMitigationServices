@@ -17,7 +17,7 @@ import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCr
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-public class TestRoute53SingleCustomerTemplateLocationsHelper {
+public class Route53SingleCustomerTemplateLocationsHelperTest {
     
     @BeforeClass
     public static void setup() {

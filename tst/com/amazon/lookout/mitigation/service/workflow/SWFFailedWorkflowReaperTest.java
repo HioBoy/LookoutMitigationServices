@@ -41,7 +41,7 @@ import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfo;
 import com.google.common.collect.Lists;
 
 @SuppressWarnings("unchecked")
-public class TestSWFFailedWorkflowReaper {
+public class SWFFailedWorkflowReaperTest {
     
     @BeforeClass
     public static void setup() {

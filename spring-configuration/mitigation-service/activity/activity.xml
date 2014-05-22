@@ -12,12 +12,14 @@
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
         <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
         <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
+        <constructor-arg name="templateBasedLocationsManager" ref="templateBasedLocationsManager"/>
     </bean>
     
     <bean class="com.amazon.lookout.mitigation.service.activity.DeleteMitigationFromAllLocationsActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
         <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
+        <constructor-arg name="templateBasedLocationsManager" ref="templateBasedLocationsManager"/>
     </bean>
     
     <!-- Commenting out the beans required for GetRequestActivity until it is merged to development.
@@ -42,7 +44,6 @@
     
     <bean id="swfWorkflowStarter" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl">
         <constructor-arg name="swfWorkflowProvider" ref="swfWorkflowClientProvider"/>
-        <constructor-arg name="templateBasedLocationsManager" ref="templateBasedLocationsManager"/>
     </bean>
     
     <bean id="swfWorkflowClientProvider" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowClientProviderImpl">

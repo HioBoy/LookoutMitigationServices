@@ -1,6 +1,9 @@
 package com.amazon.lookout.mitigation.service.activity;
 
 import java.beans.ConstructorProperties;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 
@@ -21,6 +24,7 @@ import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
+import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandler;
@@ -29,8 +33,10 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.Templat
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
+import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
+import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 
@@ -43,10 +49,12 @@ public class CreateMitigationActivity extends Activity {
     private final TemplateBasedRequestValidator templateBasedValidator;
     private final RequestStorageManager requestStorageManager;
     private final SWFWorkflowStarter workflowStarter;
+    private final TemplateBasedLocationsManager templateBasedLocationsManager;
     
-    @ConstructorProperties({"requestValidator", "templateBasedValidator", "requestStorageManager", "swfWorkflowStarter"})
+    @ConstructorProperties({"requestValidator", "templateBasedValidator", "requestStorageManager", "swfWorkflowStarter", "templateBasedLocationsManager"})
     public CreateMitigationActivity(@Nonnull RequestValidator requestValidator, @Nonnull TemplateBasedRequestValidator templateBasedValidator, 
-                                    @Nonnull RequestStorageManager requestStorageManager, @Nonnull SWFWorkflowStarter workflowStarter) {
+                                    @Nonnull RequestStorageManager requestStorageManager, @Nonnull SWFWorkflowStarter workflowStarter,
+                                    @Nonnull TemplateBasedLocationsManager templateBasedLocationsManager) {
         Validate.notNull(requestValidator);
         this.requestValidator = requestValidator;
         
@@ -58,6 +66,9 @@ public class CreateMitigationActivity extends Activity {
         
         Validate.notNull(workflowStarter);
         this.workflowStarter = workflowStarter;
+        
+        Validate.notNull(templateBasedLocationsManager);
+        this.templateBasedLocationsManager = templateBasedLocationsManager;
     }
 
     @Validated
@@ -89,15 +100,20 @@ public class CreateMitigationActivity extends Activity {
             // Step4. Create new workflow client to be used for running the workflow.
             WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, createRequest, deviceName, tsdMetrics);
             
-            // Step5. Start running the workflow.
-            workflowStarter.startWorkflow(workflowId, createRequest, RequestType.CreateRequest, 
+            // Step5. Get the locations where we need to start running the workflow.
+            // In most cases it is provided by the client, but for some templates we might have locations based on the templateName, 
+            // hence checking with the templateBasedLocationsHelper and also passing it the original request to have the entire context.
+            Set<String> locationsToDeploy = templateBasedLocationsManager.getLocationsForDeployment(createRequest);
+            
+            // Step6. Start running the workflow.
+            workflowStarter.startWorkflow(workflowId, createRequest, locationsToDeploy, RequestType.CreateRequest,
                                           DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, deviceName, deviceScope, workflowClient, tsdMetrics);
             
-            // Step6. Update the record for this workflow request and store the runId that SWF associates with this workflow.
+            // Step7. Update the record for this workflow request and store the runId that SWF associates with this workflow.
             String swfRunId = workflowClient.getWorkflowExecution().getRunId();
             requestStorageManager.updateRunIdForWorkflowRequest(deviceName, workflowId, swfRunId, RequestType.CreateRequest, tsdMetrics);
             
-            // Step7. Return back the workflowId to the client.
+            // Step8. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
             mitigationModificationResponse.setMitigationName(createRequest.getMitigationName());
             mitigationModificationResponse.setDeviceName(deviceName);
@@ -105,22 +121,34 @@ public class CreateMitigationActivity extends Activity {
             mitigationModificationResponse.setJobId(workflowId);
             mitigationModificationResponse.setRequestStatus(WorkflowStatus.RUNNING);
             
+            List<MitigationInstanceStatus> instanceStatuses = new ArrayList<>();
+            for (String location : locationsToDeploy) {
+                MitigationInstanceStatus instanceStatus = new MitigationInstanceStatus();
+                instanceStatus.setLocation(location);
+                instanceStatus.setMitigationStatus(MitigationStatus.CREATED);
+                instanceStatuses.add(instanceStatus);
+            }
+            mitigationModificationResponse.setMitigationInstancesStatus(instanceStatuses);
+            
             return mitigationModificationResponse;
         } catch (IllegalArgumentException ex) {
-            String msg = String.format("Caught IllegalArgumentException in CreateMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createRequest));
+            String msg = String.format("Caught IllegalArgumentException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
+                                       " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
             throw new BadRequest400(msg, ex);
         } catch (DuplicateRequestException400 ex) {
-            String msg = String.format("Caught DuplicateRequestException in CreateMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createRequest));
+            String msg = String.format("Caught DuplicateRequestException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
+                                       " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
             throw ex;
         } catch (DuplicateDefinitionException400 ex) {
-            String msg = String.format("Caught DuplicateDefinitionException in CreateMitigationActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(createRequest));
+            String msg = String.format("Caught DuplicateDefinitionException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
+                                       " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
             throw ex;
         } catch (Exception internalError) {
-            String msg = String.format("Internal error while fulfilling request for CreateMitigationActivity: for requestId: " + requestId + " with request: " + 
-                                       ReflectionToStringBuilder.toString(createRequest) + internalError.getMessage());
+            String msg = String.format("Internal error while fulfilling request for CreateMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage() + 
+                                       " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.error(msg, internalError);
             requestSuccessfullyProcessed = false;
             throw new InternalServerError500(msg);

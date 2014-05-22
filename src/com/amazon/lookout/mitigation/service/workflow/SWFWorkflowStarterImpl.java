@@ -12,7 +12,6 @@ import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
-import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.workflow.LookoutMitigationWorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.flow.StartWorkflowOptions;
@@ -41,15 +40,11 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
     private static final long DEFAULT_WORKFLOW_DECISION_TASK_TIMEOUT_SECONDS = 60;
     
     private final SWFWorkflowClientProvider workflowClientProvider;
-    private final TemplateBasedLocationsManager templateBasedLocationsManager;
     
-    @ConstructorProperties({"swfWorkflowProvider", "templateBasedLocationsManager"})
-    public SWFWorkflowStarterImpl(@Nonnull SWFWorkflowClientProvider workflowClientProvider, @Nonnull TemplateBasedLocationsManager templateBasedLocationsManager) {
+    @ConstructorProperties({"swfWorkflowProvider"})
+    public SWFWorkflowStarterImpl(@Nonnull SWFWorkflowClientProvider workflowClientProvider) {
         Validate.notNull(workflowClientProvider);
         this.workflowClientProvider = workflowClientProvider;
-        
-        Validate.notNull(templateBasedLocationsManager);
-        this.templateBasedLocationsManager = templateBasedLocationsManager;
     }
     
     /**
@@ -82,6 +77,7 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * Start the workflow using the WorkflowExternalClient and request instance passed as input.
      * @param workflowId WorkflowId to use for the new workflow to be run.
      * @param request MitigationModificationRequest request passed by the client.
+     * @param locationsToDeploy Locations where this workflow needs to be run.
      * @param requestType Type of the request for which we need to start the workflow.
      * @param mitigationVersion Version to use for this mitigation.
      * @param deviceName device on which the workflow steps are to be run.
@@ -91,10 +87,11 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * @return String representing the runId that SWF assigns to our workflow.
      */
     @Override
-    public void startWorkflow(long workflowId, @Nonnull MitigationModificationRequest request, @Nonnull RequestType requestType, int mitigationVersion, 
+    public void startWorkflow(long workflowId, @Nonnull MitigationModificationRequest request, @Nonnull Set<String> locationsToDeploy, @Nonnull RequestType requestType, int mitigationVersion, 
                               @Nonnull String deviceName, @Nonnull String deviceScope, @Nonnull WorkflowClientExternal workflowExternalClient, @Nonnull TSDMetrics metrics) {
         Validate.isTrue(workflowId > 0);
         Validate.notNull(request);
+        Validate.notEmpty(locationsToDeploy);
         Validate.isTrue(mitigationVersion > 0);
         Validate.notEmpty(deviceName);
         Validate.notEmpty(deviceScope);
@@ -112,10 +109,6 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             
             // Get the default configurations for the workflow.
             StartWorkflowOptions workflowOptions = getDefaultStartWorkflowOptions();
-            
-            // Get locations where we need to run this workflow. In most cases it is provided by the client, but for some templates
-            // we might have locations based on the templateName, hence checking with the templateBasedLocationsHelper and also passing it the original request to have the entire context.
-            Set<String> locationsToDeploy = templateBasedLocationsManager.getLocationsForDeployment(request);
             
             if (workflowExternalClient instanceof LookoutMitigationWorkflowClientExternal) {
                 // Start running the workflow.
@@ -137,7 +130,7 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             
             LOG.debug("Started workflow for workflowId: " + workflowId + " in SWF, with SWFWorkflowId: " + swfWorkflowId + " SWFRunId: " + swfRunId + 
                       " WorkflowType: " + workflowTypeName + " WorkflowTypeVersion: " + workflowTypeVersion + " for request: " + ReflectionToStringBuilder.toString(request) + 
-                      " with mitigationVersion: " + mitigationVersion);
+                      " with mitigationVersion: " + mitigationVersion + " in locations: " + locationsToDeploy);
         } finally {
             subMetrics.end();
         }

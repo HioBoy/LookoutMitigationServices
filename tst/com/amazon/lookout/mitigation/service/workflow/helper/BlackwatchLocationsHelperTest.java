@@ -23,7 +23,7 @@ import org.junit.Test;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.ldaputils.LdapProvider;
 
-public class TestBlackwatchLocationsHelper {
+public class BlackwatchLocationsHelperTest {
     private static final String BLACKWATCH_POP = "BlackwatchPOP";
     private static final String NON_BLACKWATCH_POP = "NonBlackwatchPOP";
 

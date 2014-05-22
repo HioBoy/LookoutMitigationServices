@@ -36,7 +36,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-public class TestEdgeLocationsHelper {
+public class EdgeLocationsHelperTest {
     
     @BeforeClass
     public static void setup() {
