@@ -27,8 +27,9 @@ public class Route53SingleCustomerTemplateLocationsHelperTest {
     @Test
     public void testLocationsFromLocationsHelper() {
         EdgeLocationsHelper locationsHelper = mock(EdgeLocationsHelper.class);
+        Set<String> ciscoLocations = Sets.newHashSet("POP1");
         Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
-        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, nonBWLocations);
+        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, ciscoLocations);
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
         
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
@@ -36,7 +37,7 @@ public class Route53SingleCustomerTemplateLocationsHelperTest {
         
         Set<String> locations = helper.getLocationsForDeployment(request);
         assertNotNull(locations);
-        assertTrue(locations.size() == nonBWLocations.size());
-        assertEquals(locations, nonBWLocations);
+        assertTrue(locations.size() == (nonBWLocations.size() - ciscoLocations.size()));
+        assertEquals(locations, Sets.difference(nonBWLocations, ciscoLocations));
     }
 }

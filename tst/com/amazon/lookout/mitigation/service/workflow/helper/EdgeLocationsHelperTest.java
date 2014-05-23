@@ -1,7 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyList;
@@ -119,29 +118,14 @@ public class EdgeLocationsHelperTest {
         
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
         
-        Throwable caughtException = null;
-        try {
-            locationsHelper.getAllPOPs();
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
+        Set<String> pops = locationsHelper.getAllPOPs();
+        assertEquals(pops.size(), 0);
         
-        caughtException = null;
-        try {
-            locationsHelper.getBlackwatchPOPs();
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
+        pops = locationsHelper.getBlackwatchPOPs();
+        assertEquals(pops.size(), 0);
         
-        caughtException = null;
-        try {
-            locationsHelper.getAllNonBlackwatchPOPs();
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
+        pops = locationsHelper.getAllNonBlackwatchPOPs();
+        assertEquals(pops.size(), 0);
     }
     
     @Test
@@ -172,29 +156,15 @@ public class EdgeLocationsHelperTest {
         
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
         
-        Throwable caughtException = null;
-        try {
-            locationsHelper.getAllPOPs();
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
+        Set<String> pops = locationsHelper.getAllPOPs();
+        assertEquals(pops.size(), 3);
+        assertEquals(pops, Sets.newHashSet(edgeServicesPOPs));
         
-        caughtException = null;
-        try {
-            locationsHelper.getBlackwatchPOPs();
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
+        pops = locationsHelper.getBlackwatchPOPs();
+        assertEquals(pops.size(), 1);
         
-        caughtException = null;
-        try {
-            locationsHelper.getAllNonBlackwatchPOPs();
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
+        pops = locationsHelper.getAllNonBlackwatchPOPs();
+        assertEquals(pops.size(), 2);
     }
     
     @Test
@@ -218,29 +188,14 @@ public class EdgeLocationsHelperTest {
         
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
         
-        Throwable caughtException = null;
-        try {
-            locationsHelper.getAllPOPs();
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
+        Set<String> pops = locationsHelper.getAllPOPs();
+        assertEquals(pops.size(), 3);
         
-        caughtException = null;
-        try {
-            locationsHelper.getBlackwatchPOPs();
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
+        pops = locationsHelper.getBlackwatchPOPs();
+        assertEquals(pops.size(), 0);
         
-        caughtException = null;
-        try {
-            locationsHelper.getAllNonBlackwatchPOPs();
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
+        pops = locationsHelper.getAllNonBlackwatchPOPs();
+        assertEquals(pops.size(), 3);
     }
     
     @Test

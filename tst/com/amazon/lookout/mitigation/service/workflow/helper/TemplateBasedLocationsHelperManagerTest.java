@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -28,7 +29,7 @@ public class TemplateBasedLocationsHelperManagerTest {
     public void testGetLocationsForDeploymentBasedOnTemplate() {
         EdgeLocationsHelper locationsHelper = mock(EdgeLocationsHelper.class);
         Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
-        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, nonBWLocations);
+        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, new HashSet<String>());
         TemplateBasedLocationsManager manager = new TemplateBasedLocationsManager(helper);
         
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
