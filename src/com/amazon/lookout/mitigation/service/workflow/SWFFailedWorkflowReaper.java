@@ -80,7 +80,7 @@ public class SWFFailedWorkflowReaper implements Runnable {
     private static final int MAX_SWF_QUERY_ATTEMPTS = 3;
     private static final int SWF_RETRY_SLEEP_MILLIS_MULTIPLER = 100;
     
-    private static final String DEVICE_WORKFLOW_ID_KEY_SEPARATOR = "-";
+    private static final String DEVICE_WORKFLOW_ID_KEY_SEPARATOR = "#";
     private static final String SWF_WORKFLOW_ID_KEY_SEPARATOR = "_";
     
     private final AmazonDynamoDBClient dynamoDBClient;
