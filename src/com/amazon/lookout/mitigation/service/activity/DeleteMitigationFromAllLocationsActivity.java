@@ -69,7 +69,7 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
     @Documentation("DeleteMitigationFromAllLocations")
     public @Nonnull MitigationModificationResponse enact(@Nonnull DeleteMitigationFromAllLocationsRequest deleteRequest) {
         // Wrap the CoralMetrics for this activity in a TSDMetrics instance.
-        TSDMetrics tsdMetrics = new TSDMetrics(getMetrics().newMetrics());
+        TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "DeleteMitigationFromAllLocations.enact");
         
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;
