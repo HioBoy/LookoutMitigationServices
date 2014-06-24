@@ -70,8 +70,18 @@
           </fileset>
       </copy>
   </target>
+  
+  <!-- Copy Apollo Commands -->
+  <target name="copy-apollo-cmd">
+      <copy todir="${output.dir}">
+          <fileset dir="${basedir}">
+              <include name="ApolloCmd/**/*" />
+          </fileset>
+      </copy>
+      <chmod dir="${output.dir}/ApolloCmd/" perm="a+x" includes="**/*"/>
+  </target>
 
-  <target name="build" depends="standard-build,copy-configs,copy-monitoring,start-mitigation-service-script"/>
+  <target name="build" depends="standard-build,copy-apollo-cmd,copy-configs,copy-monitoring,start-mitigation-service-script"/>
 	  
   <target name="server" depends="build">
     <coral:launch>

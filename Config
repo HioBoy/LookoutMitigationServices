@@ -80,7 +80,10 @@ package.LookoutMitigationService = {
             
             WebsiteLogPusher = 3.2;        
             
-            EdgeSetupVLANIptables = 1.0;                                      
+            EdgeSetupVLANIptables = 1.0;      
+            
+            # rotate PMAdmin and GC logs
+            CronologRotateLogHourlyScripts = 1.0;                                
         };
     };
 

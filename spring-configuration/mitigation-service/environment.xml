@@ -30,7 +30,7 @@
                 <prop key="log4j.appender.WIRE.Append">true</prop>
                 <prop key="log4j.appender.WIRE.DatePattern">&apos;.&apos;yyyy-MM-dd-HH</prop>
                 <prop key="log4j.appender.WIRE.Encoding">UTF8</prop>
-                <prop key="log4j.appender.WIRE.File">${root}/var/output/logs/wire.log</prop>
+                <prop key="log4j.appender.WIRE.File">${root}/var/output/logs/wire_service.log</prop>
                 <prop key="log4j.appender.WIRE.Threshold">ALL</prop>
 
                 <!-- Swap the rootLogger in -->
