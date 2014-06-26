@@ -2,6 +2,7 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -26,6 +27,7 @@ import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
+import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -39,11 +41,26 @@ import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
+import com.google.common.collect.Sets;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
 public class CreateMitigationActivity extends Activity {
     private static final Log LOG = LogFactory.getLog(CreateMitigationActivity.class);
+    
+    private enum CreateExceptions {
+        BadRequest,
+        DuplicateRequest,
+        DuplicateDefinition,
+        InternalError
+    };
+    
+    // Maintain a Set<String> for all the exceptions to allow passing it to the CommonActivityMetricsHelper which is called from
+    // different activities. Hence not using an EnumSet in this case.
+    private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(Sets.newHashSet(CreateExceptions.BadRequest.name(),
+                                                                                                      CreateExceptions.DuplicateRequest.name(),
+                                                                                                      CreateExceptions.DuplicateDefinition.name(),
+                                                                                                      CreateExceptions.InternalError.name())); 
     
     private final RequestValidator requestValidator;
     private final TemplateBasedRequestValidator templateBasedValidator;
@@ -82,11 +99,20 @@ public class CreateMitigationActivity extends Activity {
         boolean requestSuccessfullyProcessed = true;
         try {
             LOG.debug(String.format("CreateMitigationActivity called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(createRequest)));
+            CommonActivityMetricsHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
             
-            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(createRequest.getMitigationTemplate());
+            String mitigationTemplate = createRequest.getMitigationTemplate();
+            CommonActivityMetricsHelper.addTemplateNameCountMetrics(mitigationTemplate, tsdMetrics);
+            
+            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
             String deviceName = deviceNameAndScope.getDeviceName().name();
+            CommonActivityMetricsHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
+            
             String deviceScope = deviceNameAndScope.getDeviceScope().name();
+            CommonActivityMetricsHelper.addDeviceScopeCountMetrics(deviceScope, tsdMetrics);
+            
             String serviceName = createRequest.getServiceName();
+            CommonActivityMetricsHelper.addServiceNameCountMetrics(serviceName, tsdMetrics);
             
             // Step1. Validate this request.
             requestValidator.validateCreateRequest(createRequest);
@@ -135,22 +161,26 @@ public class CreateMitigationActivity extends Activity {
             String msg = String.format("Caught IllegalArgumentException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
+            tsdMetrics.addCount(CreateExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
         } catch (DuplicateRequestException400 ex) {
             String msg = String.format("Caught DuplicateRequestException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
+            tsdMetrics.addCount(CreateExceptions.DuplicateRequest.name(), 1);
             throw ex;
         } catch (DuplicateDefinitionException400 ex) {
             String msg = String.format("Caught DuplicateDefinitionException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
+            tsdMetrics.addCount(CreateExceptions.DuplicateDefinition.name(), 1);
             throw ex;
         } catch (Exception internalError) {
             String msg = String.format("Internal error while fulfilling request for CreateMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.error(msg, internalError);
             requestSuccessfullyProcessed = false;
+            tsdMetrics.addCount(CreateExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
         } finally {
             if (requestSuccessfullyProcessed) {

@@ -2,6 +2,7 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -26,6 +27,7 @@ import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
+import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
@@ -37,11 +39,26 @@ import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
+import com.google.common.collect.Sets;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
 public class DeleteMitigationFromAllLocationsActivity extends Activity {
     private static final Log LOG = LogFactory.getLog(DeleteMitigationFromAllLocationsActivity.class);
+    
+    private enum DeleteExceptions {
+        BadRequest,
+        DuplicateRequest,
+        MissingMitigation,
+        InternalError
+    };
+    
+    // Maintain a Set<String> for all the exceptions to allow passing it to the CommonActivityMetricsHelper which is called from
+    // different activities. Hence not using an EnumSet in this case.
+    private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(Sets.newHashSet(DeleteExceptions.BadRequest.name(),
+                                                                                                      DeleteExceptions.DuplicateRequest.name(),
+                                                                                                      DeleteExceptions.MissingMitigation.name(),
+                                                                                                      DeleteExceptions.InternalError.name())); 
     
     private final RequestValidator requestValidator;
     private final RequestStorageManager requestStorageManager;
@@ -75,11 +92,20 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
         boolean requestSuccessfullyProcessed = true;
         try {
             LOG.debug(String.format("DeleteMitigationFromAllLocations called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(deleteRequest)));
+            CommonActivityMetricsHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
             
             String mitigationTemplate = deleteRequest.getMitigationTemplate();
+            CommonActivityMetricsHelper.addTemplateNameCountMetrics(mitigationTemplate, tsdMetrics);
+            
             DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
             String deviceName = deviceNameAndScope.getDeviceName().name();
+            CommonActivityMetricsHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
+            
             String deviceScope = deviceNameAndScope.getDeviceScope().name();
+            CommonActivityMetricsHelper.addDeviceScopeCountMetrics(deviceScope, tsdMetrics);
+            
+            String serviceName = deleteRequest.getServiceName();
+            CommonActivityMetricsHelper.addServiceNameCountMetrics(serviceName, tsdMetrics);
 
             // Step1. Validate this request.
             requestValidator.validateDeleteRequest(deleteRequest);
@@ -129,22 +155,26 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             String msg = String.format("Caught IllegalArgumentException in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(deleteRequest));
             LOG.warn(msg, ex);
+            tsdMetrics.addCount(DeleteExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
         } catch (DuplicateRequestException400 ex) {
             String msg = String.format("Caught DuplicateDefinitionException in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(deleteRequest));
             LOG.warn(msg, ex);
+            tsdMetrics.addCount(DeleteExceptions.DuplicateRequest.name(), 1);
             throw ex;
         } catch (MissingMitigationException400 ex) {
             String msg = String.format("Caught MissingMitigationException in DeleteMitigationActivity for requestId: " + requestId + " with request: " + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(deleteRequest));
             LOG.warn(msg, ex);
+            tsdMetrics.addCount(DeleteExceptions.MissingMitigation.name(), 1);
             throw ex;
         } catch (Exception internalError) {
             String msg = String.format("Internal error while fulfilling request for DeleteMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(deleteRequest));
             LOG.error(msg, internalError);
             requestSuccessfullyProcessed = false;
+            tsdMetrics.addCount(DeleteExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
         } finally {
             if (requestSuccessfullyProcessed) {
