@@ -21,5 +21,4 @@
     <import resource="file:${spring.config.root}/activity/*.xml"/>
     <import resource="file:${spring.config.root}/region/${realm}.xml"/>
     <import resource="file:${spring.config.root}/domain/${domain}.xml"/>
-    
 </beans>

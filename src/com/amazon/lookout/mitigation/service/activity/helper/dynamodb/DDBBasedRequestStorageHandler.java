@@ -37,6 +37,7 @@ import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
+import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.simpleworkflow.flow.DataConverter;
@@ -44,7 +45,7 @@ import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 
 /**
  * DDBBasedRequestStorageHandler is an abstract class meant to be a helper for concrete request storage handler implementations.
- * The requests are stores in the MITIGATION_REQUESTS table, where we have a separate table per domain (eg: MITIGATION_REQUESTS_{BETA/GAMMA/PROD}).
+ * The requests are stored in the MITIGATION_REQUESTS table, where we have a separate table per domain (eg: MITIGATION_REQUESTS_{BETA/GAMMA/PROD}).
  * Details of this table can be found here: https://w.amazon.com/index.php/Lookout/Design/LookoutMitigationService/Details#MITIGATION_REQUESTS
  * 
  */
@@ -55,6 +56,7 @@ public abstract class DDBBasedRequestStorageHandler {
     private static final String WORKFLOW_ID_SANITY_CHECK_FAILURE_LOG_PREFIX = "[SANITY_CHECK_FAILURE] ";
     
     public static final String MITIGATION_REQUEST_TABLE_NAME_PREFIX = "MITIGATION_REQUESTS_";
+    public static final String ACTIVE_MITIGATIONS_TABLE_NAME_PREFIX = "ACTIVE_MITIGATIONS_";
     
     private static final int NUM_RECORDS_TO_FETCH_FOR_MAX_WORKFLOW_ID = 5;
     
@@ -87,6 +89,7 @@ public abstract class DDBBasedRequestStorageHandler {
     private static final String NUM_DDB_PUT_ITEM_ATTEMPTS_KEY = "NumPutAttempts";
     private static final String NUM_DDB_QUERY_ATTEMPTS_KEY = "NumDDBQueryAttempts";
     private static final String NUM_DDB_UPDATE_ITEM_ATTEMPTS_KEY = "NumDDBUpdateAttempts";
+    private static final String NUM_DDB_GET_ITEM_ATTEMPTS_KEY = "NumDDBGetAttempts";
     
     // Retry and sleep configs.
     private static final int DDB_QUERY_MAX_ATTEMPTS = 3;
@@ -106,7 +109,8 @@ public abstract class DDBBasedRequestStorageHandler {
     private final DataConverter jsonDataConverter = new JsonDataConverter();
     
     private final AmazonDynamoDBClient dynamoDBClient;
-    private final String mitigationRequestsTableName;
+    protected final String mitigationRequestsTableName;
+    protected final String activeMitigationsTableName;
     
     public DDBBasedRequestStorageHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain) {
         Validate.notNull(dynamoDBClient);
@@ -114,6 +118,7 @@ public abstract class DDBBasedRequestStorageHandler {
         
         Validate.notEmpty(domain);
         this.mitigationRequestsTableName = MITIGATION_REQUEST_TABLE_NAME_PREFIX + domain.toUpperCase();
+        this.activeMitigationsTableName = ACTIVE_MITIGATIONS_TABLE_NAME_PREFIX + domain.toUpperCase();
     }
 
     /**
@@ -416,6 +421,7 @@ public abstract class DDBBasedRequestStorageHandler {
                     request.addQueryFilterEntry(DEVICE_SCOPE_KEY, condition);
                     
                     return queryDynamoDB(request, subMetrics);
+                    
                 } catch (Exception ex) {
                     String msg = "Caught Exception when trying to query for active mitigations for device: " + deviceName + 
                                  " attributesToGet " + attributesToGet + " with consistentRead and keyConditions: " + keyConditions +
@@ -499,9 +505,84 @@ public abstract class DDBBasedRequestStorageHandler {
             throw new RuntimeException(msg);
         } finally {
             subMetrics.addCount(NUM_DDB_UPDATE_ITEM_ATTEMPTS_KEY, numAttempts);
+	    subMetrics.end();
+         }
+    }
+   
+    /* Called by the concrete implementations of this StorageHandler to query DDB.
+     * @param request QueryRequest keys containing the information to use for querying.
+     * @param metrics
+     * @return GetItemResult representing the result from issuing this query to DDB.
+     */
+    protected GetItemResult getRequestInDDB(Map<String, AttributeValue> keys, TSDMetrics metrics) {
+        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getRequestInDDB");
+        int numAttempts = 0;
+        try {
+            // Attempt to query DDB for a fixed number of times. If query was successful, return the QueryResult, else when the loop endsthrow back an exception.
+            while (numAttempts++ < DDB_QUERY_MAX_ATTEMPTS) {
+                try {
+                    return getItemInDynamoDB(keys, subMetrics);
+                } catch (Exception ex) {
+                    String msg = "Caught Exception when trying to query DynamoDB. Attempts so far: " + numAttempts;
+                    LOG.warn(msg, ex);
+                    if (numAttempts < DDB_QUERY_MAX_ATTEMPTS) {
+                        try {
+                            Thread.sleep(DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
+                        } catch (InterruptedException ignored) {}
+                    }
+                }
+            }
+            
+            // Actual number of attempts is 1 greater than the current value since we increment numAttempts after the check for the loop above.
+            numAttempts = numAttempts - 1;
+
+            String msg = "Unable to get the item from DDB. Total NumAttempts: " + numAttempts;
+            LOG.warn(msg);
+            throw new RuntimeException(msg);
+        } finally {
+            subMetrics.addCount(NUM_DDB_GET_ITEM_ATTEMPTS_KEY, numAttempts);
             subMetrics.end();
         }
     }
+    
+    
+    /**
+     * Called by the concrete implementations of this StorageHandler to query DDB.
+     * @param request QueryRequest object containing the information to use for querying.
+     * @param metrics
+     * @return QueryResult representing the result from issuing this query to DDB.
+     */
+    protected QueryResult queryRequestsInDDB(QueryRequest request, TSDMetrics metrics) {
+        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHandler.queryRequestsInDDB");
+        int numAttempts = 0;
+        try {
+            // Attempt to query DDB for a fixed number of times. If query was successful, return the QueryResult, else when the loop endsthrow back an exception.
+            while (numAttempts++ < DDB_QUERY_MAX_ATTEMPTS) {
+                try {
+                    return queryDynamoDB(request, subMetrics);
+                } catch (Exception ex) {
+                    String msg = "Caught Exception when trying to query DynamoDB. Attempts so far: " + numAttempts;
+                    LOG.warn(msg, ex);
+                    if (numAttempts < DDB_QUERY_MAX_ATTEMPTS) {
+                        try {
+                            Thread.sleep(DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
+                        } catch (InterruptedException ignored) {}
+                    }
+                }
+            }
+            
+            // Actual number of attempts is 1 greater than the current value since we increment numAttempts after the check for the loop above.
+            numAttempts = numAttempts - 1;
+
+            String msg = "Unable to query DDB. Total NumAttempts: " + numAttempts;
+            LOG.warn(msg);
+            throw new RuntimeException(msg);
+        } finally {
+            subMetrics.addCount(NUM_DDB_QUERY_ATTEMPTS_KEY, numAttempts);
+            subMetrics.end();
+        }
+    }
+    
     
     /**
      * Issues a query against the DDBTable. Delegates the call to DynamoDBHelper for calling the query DDB API.
@@ -512,10 +593,44 @@ public abstract class DDBBasedRequestStorageHandler {
      */
     protected QueryResult queryDynamoDB(QueryRequest request, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.queryDynamoDB");
+        boolean handleRetries = false;
         try {
-            return DynamoDBHelper.queryItemAttributesFromTable(dynamoDBClient, request, false);
+            return DynamoDBHelper.queryItemAttributesFromTable(dynamoDBClient, request, handleRetries);
         } finally {
             subMetrics.end();
+        }
+    }
+    
+    /**
+     * Issues a get operation against the DDBTable. Delegates the call to DynamoDBHelper for calling the query DDB API.
+     * Protected for unit tests.
+     * @param keys Primary key attribute values to search for.
+     * @param metrics
+     * @return GetItemResult corresponding to the result of the get request.
+     */
+    protected GetItemResult getItemInDynamoDB(Map<String, AttributeValue> keys, TSDMetrics metrics) {
+        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHelper.queryDynamoDB");
+        boolean handleRetries = false;
+        try {
+            return DynamoDBHelper.getItemAttributesFromTable(dynamoDBClient, mitigationRequestsTableName, keys, handleRetries);
+        } finally {
+            subMetrics.end();
+        }
+    }
+    
+    /**
+     * Issues a get operation against the DDBTable. Delegates the call to DynamoDBHelper for calling the query DDB API.
+     * Protected for unit tests.
+     * @param keys Primary key attribute values to search for.
+     * @param metrics
+     * @return GetItemResult corresponding to the result of the get request.
+     */
+    protected GetItemResult getItemInDynamoDB(Map<String, AttributeValue> keys/*, TSDMetrics metrics*/) {
+        //TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHelper.queryDynamoDB");
+        try {
+            return DynamoDBHelper.getItemAttributesFromTable(dynamoDBClient, mitigationRequestsTableName, keys, false);
+        } finally {
+            //subMetrics.end();
         }
     }
     

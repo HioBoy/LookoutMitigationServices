@@ -37,8 +37,8 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
 
     private final ImmutableMap<RequestType, RequestStorageHandler> requestTypeToStorageHandler;
     
-    @ConstructorProperties({"dynamoDBClient", "domain", "templateBasedValidator"})
-    public DDBBasedRequestStorageManager(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain, 
+    @ConstructorProperties({"dynamoDBClient", "domain","templateBasedValidator"})
+    public DDBBasedRequestStorageManager(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain,
                                          @Nonnull TemplateBasedRequestValidator templateBasedValidator) {
         Validate.notNull(dynamoDBClient);
         Validate.notEmpty(domain);
@@ -54,10 +54,11 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @param templateBasedValidator TemplateBasedValidator which might be required by some RequestStorageHandlers to perform checks before storage.
      * @return EnumMap with RequestType as the key and the corresponding RequestStorageHandler responsible for storing this request.
      */
-    private EnumMap<RequestType, RequestStorageHandler> getRequestTypeToStorageHandlerMap(AmazonDynamoDBClient dynamoDBClient, String domain, 
+    private EnumMap<RequestType, RequestStorageHandler> getRequestTypeToStorageHandlerMap(AmazonDynamoDBClient dynamoDBClient, String domain,
                                                                                           TemplateBasedRequestValidator templateBasedValidator) {
         EnumMap<RequestType, RequestStorageHandler> requestStorageHandlerMap = new EnumMap<RequestType, RequestStorageHandler>(RequestType.class);
-        DDBBasedCreateRequestStorageHandler createStorageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
+
+        DDBBasedCreateRequestStorageHandler createStorageHandler = getCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         requestStorageHandlerMap.put(RequestType.CreateRequest, createStorageHandler);
         
         DDBBasedDeleteRequestStorageHandler deleteStorageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
@@ -89,6 +90,18 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
         } finally {
             subMetrics.end();
         }
+    }
+    
+    /**
+     * Helper method to create an instance of DDBBasedCreateRequestStorageHandler.
+     * @param dynamoDBClient
+     * @param domain
+     * @param templateBasedValidator
+     * @return New instance of DDBBasedCreateRequestStorageHandler
+     */
+    private DDBBasedCreateRequestStorageHandler getCreateRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain,
+                                                                               TemplateBasedRequestValidator templateBasedValidator) {
+        return new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
     }
     
     /**

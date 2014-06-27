@@ -126,4 +126,5 @@
         <!-- Set the initial retry backoff milliseconds, defaults to 0 -->
         <property name="RetryInitialBackoffMS" value="500"/>
     </bean>
+
 </beans>

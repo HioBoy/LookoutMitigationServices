@@ -97,17 +97,6 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         validateLocationsToApply(locationsToApplyMitigation, mitigationTemplate);
         validateActionType(mitigationAction, mitigationTemplate);
         validateMitigationConstraint(mitigationConstraint, mitigationTemplate);
-        if (request.getPreDeploymentChecks() != null && !request.getPreDeploymentChecks().isEmpty()) {
-            String msg = "For the template: " + mitigationTemplate + " no pre-deployment checks are expected to be provided in the request.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        } 
-        
-        if (request.getPostDeploymentChecks() != null && !request.getPostDeploymentChecks().isEmpty()) {
-            String msg = "For the template: " + mitigationTemplate + " no post-deployment checks are expected to be provided in the request.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        } 
     }
     
     private void validateMitigationName(String mitigationName, String mitigationTemplate) {

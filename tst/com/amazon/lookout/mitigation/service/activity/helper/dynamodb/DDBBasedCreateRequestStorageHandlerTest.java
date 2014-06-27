@@ -54,6 +54,8 @@ import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
+import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
@@ -118,7 +120,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         List<MitigationDeploymentCheck> checks = new ArrayList<>();
         checks.add(check1);
         checks.add(check2);
-//        request.setPreDeploymentChecks(checks);
+        request.setPreDeploymentChecks(checks);
         
         return request;
     }

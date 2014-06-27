@@ -154,7 +154,7 @@ public class CreateMitigationActivity extends Activity {
                 instanceStatus.setMitigationStatus(MitigationStatus.CREATED);
                 instanceStatuses.add(instanceStatus);
             }
-            mitigationModificationResponse.setMitigationInstancesStatus(instanceStatuses);
+            mitigationModificationResponse.setMitigationInstanceStatuses(instanceStatuses);
             
             return mitigationModificationResponse;
         } catch (IllegalArgumentException ex) {

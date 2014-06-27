@@ -22,12 +22,17 @@
         <constructor-arg name="templateBasedLocationsManager" ref="templateBasedLocationsManager"/>
     </bean>
     
-    <!-- Commenting out the beans required for GetRequestActivity until it is merged to development.
     <bean class="com.amazon.lookout.mitigation.service.activity.GetRequestStatusActivity">
-        <constructor-arg index="0" ref="requestInfoHandler"/>
-        <constructor-arg index="1" ref="mitigationInfoHandler"/>
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
+        <constructor-arg name="mitigationInfoHandler" ref="ddbBasedInstanceInfoHandler"/>
     </bean>
-    -->
+    
+    <bean class="com.amazon.lookout.mitigation.service.activity.ListActiveMitigationsForServiceActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="activeMitigationInfoHandler" ref="ddbBasedRequestInfoHandler"/>
+        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
+    </bean>
     
     <!-- All the beans required by the activities go here -->
     <bean id="requestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.RequestValidator"/>
@@ -40,6 +45,16 @@
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
+    </bean>
+    
+    <bean id="ddbBasedRequestInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedListMitigationsHandler">
+        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
+        <constructor-arg name="domain" value="${domain}"/>
+    </bean>
+    
+    <bean id="ddbBasedInstanceInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedGetMitigationInfoHandler">
+        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
+        <constructor-arg name="domain" value="${domain}"/>
     </bean>
     
     <bean id="swfWorkflowStarter" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl">
@@ -96,21 +111,5 @@
        <bean id="cloudFrontFMSSubnetsFetcher" class="com.amazon.aws158.commons.customer.CloudFrontFMSSubnetsFetcher">
        <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
        </bean>
-    
-    <!-- Commenting out the beans required for GetRequestActivity until it is merged to development.
-    <bean id="requestInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedGetRequestStatusHandler">
-        <constructor-arg index="0" ref="dynamoDBClient"/>
-        <constructor-arg index="1" value="${domain}"/>
-        <constructor-arg index="2" ref="${realm}.dynamoEndpoint"/>
-        <constructor-arg index="3" ref="${realm}"/>
-    </bean>
-    
-    <bean id="mitigationInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedGetMitigationInfoHandler">
-        <constructor-arg index="0" ref="dynamoDBClient"/>
-        <constructor-arg index="1" value="${domain}"/>
-        <constructor-arg index="2" ref="${realm}.dynamoEndpoint"/>
-        <constructor-arg index="3" ref="${realm}"/>
-    </bean>
-    -->
-    
 </beans>
+

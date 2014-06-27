@@ -16,8 +16,8 @@ import com.amazon.coral.service.AuthorizationInfo;
 import com.amazon.coral.service.BasicAuthorizationInfo;
 import com.amazon.coral.service.Context;
 import com.amazon.coral.service.Identity;
-//import com.amazon.lookout.mitigation.service.GetRequestStatus;
-//import com.amazon.lookout.mitigation.service.ListMitigations;
+import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
+import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
@@ -123,15 +123,15 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         return (request instanceof MitigationModificationRequest); 
     }
     
-    /*
+    
     private boolean isGetRequestStatusRequest(final Object request) {
-        return (request instanceof GetRequestStatusRequest)
+        return (request instanceof GetRequestStatusRequest);
     }
     
-    private boolean isListMitigationsRequest(final Object request) {
-        return (request instanceof ListMitigationsRequest)
+    private boolean isListActiveMitigationsForServiceRequest(final Object request) {
+        return (request instanceof ListActiveMitigationsForServiceRequest);
     }
-    */
+    
     
     /* 
      * Generate Amazon Resource Name (ARN) looking inside the Request, with the following structure
@@ -174,18 +174,18 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 return null;
             }
             deviceName = deviceNameAndScope.getDeviceName().name();
-        } /*else if (isGetRequestStatusRequest(request)) {
+        } else if (isGetRequestStatusRequest(request)) {
             GetRequestStatusRequest getRequestStatusRequest = (GetRequestStatusRequest) request;
             mitigationTemplate = null;
             serviceName = getRequestStatusRequest.getServiceName();
             deviceName = getRequestStatusRequest.getDeviceName();
-        } else if (isListMitigationsRequest(request)) {
-            ListMitigationsRequest listMitigationsRequest = (ListMitigationsRequest) request;                       
+        } else if (isListActiveMitigationsForServiceRequest(request)) {
+            ListActiveMitigationsForServiceRequest listMitigationsRequest = (ListActiveMitigationsForServiceRequest) request;                       
             mitigationTemplate = null;
             serviceName = listMitigationsRequest.getServiceName();
             // deviceName is not required and may be null
             deviceName = listMitigationsRequest.getDeviceName();
-        }*/ else {
+        } else {
             recognizedRequest = false;
         }
         
