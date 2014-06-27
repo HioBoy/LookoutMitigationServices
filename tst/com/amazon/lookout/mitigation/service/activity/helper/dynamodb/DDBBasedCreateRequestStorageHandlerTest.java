@@ -117,7 +117,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         List<MitigationDeploymentCheck> checks = new ArrayList<>();
         checks.add(check1);
         checks.add(check2);
-        request.setPreDeploymentChecks(checks);
+//        request.setPreDeploymentChecks(checks);
         
         return request;
     }
