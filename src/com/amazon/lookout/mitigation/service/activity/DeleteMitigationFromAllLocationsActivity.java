@@ -114,16 +114,16 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             // No-op for now. There isn't anything we check based on the template for the delete requests, hence not invoking the templateBasedValidator here. 
             // If we ever do have an use-case for it, this would be the place to invoke the template-based request instance validator.
             
-            // Step3. Persist this request in DDB and get back the workflowId associated with this request.
-            long workflowId = requestStorageManager.storeRequestForWorkflow(deleteRequest, RequestType.DeleteRequest, tsdMetrics);
-            
-            // Step4. Create new workflow client to be used for running the workflow.
-            WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, deleteRequest, deviceName, tsdMetrics);
-            
-            // Step5. Get the locations where we need to start running the workflow.
+            // Step3. Get the locations where we need to start running the workflow.
             // In most cases it is provided by the client, but for some templates we might have locations based on the templateName, 
             // hence checking with the templateBasedLocationsHelper and also passing it the original request to have the entire context.
             Set<String> locationsToDeploy = templateBasedLocationsManager.getLocationsForDeployment(deleteRequest);
+            
+            // Step4. Persist this request in DDB and get back the workflowId associated with this request.
+            long workflowId = requestStorageManager.storeRequestForWorkflow(deleteRequest, locationsToDeploy, RequestType.DeleteRequest, tsdMetrics);
+            
+            // Step5. Create new workflow client to be used for running the workflow.
+            WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, deleteRequest, deviceName, tsdMetrics);
             
             // Step6. Start running the workflow.
             workflowStarter.startWorkflow(workflowId, deleteRequest, locationsToDeploy, RequestType.DeleteRequest, 

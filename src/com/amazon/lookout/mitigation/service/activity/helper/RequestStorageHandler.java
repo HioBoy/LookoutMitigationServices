@@ -1,5 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.helper;
 
+import java.util.Set;
+
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 
@@ -10,7 +12,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
  */
 public interface RequestStorageHandler {
     
-    public long storeRequestForWorkflow(MitigationModificationRequest mitigationRequest, TSDMetrics metrics);
+    public long storeRequestForWorkflow(MitigationModificationRequest mitigationRequest, Set<String> locations, TSDMetrics metrics);
     
     public void updateRunIdForWorkflowRequest(String deviceName, long workflowId, String runId, TSDMetrics metrics);
 }

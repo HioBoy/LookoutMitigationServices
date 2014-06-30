@@ -2,6 +2,7 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import java.beans.ConstructorProperties;
 import java.util.EnumMap;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -68,13 +69,15 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
     /**
      * Stores the request that requires starting a new workflow into DDB and returns the corresponding workflowId to this workflow.
      * @param request Request that needs to be stored.
+     * @param locations Set of String representing the locations where this request applies.
      * @param requestType Type of request (eg: Create/Edit/Delete).
      * @param metrics
      * @return WorkflowId to be used to for processing this request, which was determined by the RequestStorageHandler based on the workflowId we recorded this request with.
      */
     @Override
-    public long storeRequestForWorkflow(@Nonnull MitigationModificationRequest request, @Nonnull RequestType requestType, @Nonnull TSDMetrics metrics) {
+    public long storeRequestForWorkflow(@Nonnull MitigationModificationRequest request, @Nonnull Set<String> locations, @Nonnull RequestType requestType, @Nonnull TSDMetrics metrics) {
         Validate.notNull(request);
+        Validate.notEmpty(locations);
         Validate.notNull(requestType);
         Validate.notNull(metrics);
         
@@ -82,7 +85,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
         try {
             subMetrics.addProperty(REQUEST_TYPE_PROPERTY_KEY, requestType.name());
             RequestStorageHandler storageHandler = getRequestStorageHandler(requestType);
-            return storageHandler.storeRequestForWorkflow(request, subMetrics);
+            return storageHandler.storeRequestForWorkflow(request, locations, subMetrics);
         } finally {
             subMetrics.end();
         }

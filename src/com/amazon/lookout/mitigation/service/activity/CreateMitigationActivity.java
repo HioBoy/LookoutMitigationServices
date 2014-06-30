@@ -120,16 +120,16 @@ public class CreateMitigationActivity extends Activity {
             // Step2. Validate this request based on the template.
             templateBasedValidator.validateCreateRequestForTemplate(createRequest, tsdMetrics);
             
-            // Step3. Persist this request in DDB and get back the workflowId associated with this request.
-            long workflowId = requestStorageManager.storeRequestForWorkflow(createRequest, RequestType.CreateRequest, tsdMetrics);
-            
-            // Step4. Create new workflow client to be used for running the workflow.
-            WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, createRequest, deviceName, tsdMetrics);
-            
-            // Step5. Get the locations where we need to start running the workflow.
+            // Step3. Get the locations where we need to start running the workflow.
             // In most cases it is provided by the client, but for some templates we might have locations based on the templateName, 
             // hence checking with the templateBasedLocationsHelper and also passing it the original request to have the entire context.
             Set<String> locationsToDeploy = templateBasedLocationsManager.getLocationsForDeployment(createRequest);
+            
+            // Step4. Persist this request in DDB and get back the workflowId associated with this request.
+            long workflowId = requestStorageManager.storeRequestForWorkflow(createRequest, locationsToDeploy, RequestType.CreateRequest, tsdMetrics);
+            
+            // Step5. Create new workflow client to be used for running the workflow.
+            WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, createRequest, deviceName, tsdMetrics);
             
             // Step6. Start running the workflow.
             workflowStarter.startWorkflow(workflowId, createRequest, locationsToDeploy, RequestType.CreateRequest,

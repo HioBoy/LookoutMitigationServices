@@ -63,12 +63,14 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
      *    or it is some transient exception. In either case, we query the DDB table once again for mitigations >= maxWorkflowId for the device and
      *    continue with step 3. 
      * @param deleteRequest Request to be stored.
+     * @param locations Set of String where this request applies.
      * @param metrics
      * @return The workflowId that this request was stored with, using the algorithm above.
      */
     @Override
-    public long storeRequestForWorkflow(@Nonnull MitigationModificationRequest request, @Nonnull TSDMetrics metrics) {
+    public long storeRequestForWorkflow(@Nonnull MitigationModificationRequest request, @Nonnull Set<String> locations, @Nonnull TSDMetrics metrics) {
         Validate.notNull(request);
+        Validate.notEmpty(locations);
         Validate.notNull(metrics);
 
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedDeleteRequestStorageHandler.storeRequestForWorkflow");
@@ -119,7 +121,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                 }
 
                 try {
-                    storeRequestInDDB(deleteRequest, deviceNameAndScope, newWorkflowId, RequestType.DeleteRequest, deleteRequest.getMitigationVersion(), subMetrics);
+                    storeRequestInDDB(deleteRequest, locations, deviceNameAndScope, newWorkflowId, RequestType.DeleteRequest, deleteRequest.getMitigationVersion(), subMetrics);
                     return newWorkflowId;
                 } catch (Exception ex) {
                     lastCaughtException = ex;

@@ -5,7 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.coral.google.common.collect.Sets;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.model.RequestType;
@@ -41,12 +42,12 @@ public class DDBBasedRequestStorageManagerTest {
         when(storageManager.getRequestStorageHandler(RequestType.CreateRequest)).thenReturn(createRequestStorageHandler);
         
         long workflowIdToReturn = 1;
-        when(createRequestStorageHandler.storeRequestForWorkflow(any(MitigationModificationRequest.class), any(TSDMetrics.class))).thenReturn(workflowIdToReturn);
+        when(createRequestStorageHandler.storeRequestForWorkflow(any(MitigationModificationRequest.class), anySet(), any(TSDMetrics.class))).thenReturn(workflowIdToReturn);
         
-        when(storageManager.storeRequestForWorkflow(any(MitigationModificationRequest.class), any(RequestType.class), any(TSDMetrics.class))).thenCallRealMethod();
+        when(storageManager.storeRequestForWorkflow(any(MitigationModificationRequest.class), anySet(), any(RequestType.class), any(TSDMetrics.class))).thenCallRealMethod();
         
         CreateMitigationRequest request = new CreateMitigationRequest();
-        long workflowId = storageManager.storeRequestForWorkflow(request, RequestType.CreateRequest, tsdMetrics);
+        long workflowId = storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), RequestType.CreateRequest, tsdMetrics);
         assertEquals(workflowId, workflowIdToReturn);
     }
     
@@ -59,12 +60,12 @@ public class DDBBasedRequestStorageManagerTest {
         DDBBasedRequestStorageManager storageManager = mock(DDBBasedRequestStorageManager.class);
         CreateMitigationRequest request = new CreateMitigationRequest();
         RequestType requestType = RequestType.CreateRequest;
-        when(storageManager.storeRequestForWorkflow(request, requestType, tsdMetrics)).thenCallRealMethod();
+        when(storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), requestType, tsdMetrics)).thenCallRealMethod();
         when(storageManager.getRequestStorageHandler(any(RequestType.class))).thenReturn(null);
         
         Throwable caughtException = null;
         try {
-            storageManager.storeRequestForWorkflow(request, requestType, tsdMetrics);
+            storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), requestType, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -83,14 +84,14 @@ public class DDBBasedRequestStorageManagerTest {
         RequestType requestType = RequestType.DeleteRequest;
         
         DDBBasedDeleteRequestStorageHandler deleteRequestStorageHandler = mock(DDBBasedDeleteRequestStorageHandler.class);
-        when(deleteRequestStorageHandler.storeRequestForWorkflow(request, tsdMetrics)).thenThrow(new RuntimeException());
+        when(deleteRequestStorageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics)).thenThrow(new RuntimeException());
         when(storageManager.getRequestStorageHandler(requestType)).thenReturn(deleteRequestStorageHandler);
         
-        when(storageManager.storeRequestForWorkflow(request, requestType, tsdMetrics)).thenCallRealMethod();
+        when(storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), requestType, tsdMetrics)).thenCallRealMethod();
         
         Throwable caughtException = null;
         try {
-            storageManager.storeRequestForWorkflow(request, requestType, tsdMetrics);
+            storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), requestType, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }

@@ -58,6 +58,7 @@ import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 @SuppressWarnings("unchecked")
 public class DDBBasedCreateRequestStorageHandlerTest {
@@ -848,8 +849,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
-        when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), any(TSDMetrics.class))).thenCallRealMethod();
-        long workflowId = storageHandler.storeRequestForWorkflow(request, tsdMetrics);
+        when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), anySet(), any(TSDMetrics.class))).thenCallRealMethod();
+        long workflowId = storageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
         assertEquals(workflowId, maxWorkflowId + 1);
     }
     
@@ -868,8 +869,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
-        when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), any(TSDMetrics.class))).thenCallRealMethod();
-        long workflowId = storageHandler.storeRequestForWorkflow(request, tsdMetrics);
+        when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), anySet(), any(TSDMetrics.class))).thenCallRealMethod();
+        long workflowId = storageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
         assertEquals(workflowId, deviceNameAndScope.getDeviceScope().getMinWorkflowId());
     }
     
@@ -891,9 +892,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         Throwable caughtException = null;
         try {
-            when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), any(TSDMetrics.class))).thenCallRealMethod();
+            when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), anySet(), any(TSDMetrics.class))).thenCallRealMethod();
             doCallRealMethod().when(storageHandler).sanityCheckWorkflowId(anyLong(), any(DeviceNameAndScope.class));
-            storageHandler.storeRequestForWorkflow(request, tsdMetrics);
+            storageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -914,8 +915,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         Throwable caughtException = null;
         try {
-            when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), any(TSDMetrics.class))).thenCallRealMethod();
-            storageHandler.storeRequestForWorkflow(request, tsdMetrics);
+            when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), anySet(), any(TSDMetrics.class))).thenCallRealMethod();
+            storageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -935,14 +936,14 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         long maxWorkflowId = 3;
         when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
         
-        doThrow(new RuntimeException()).when(storageHandler).storeRequestInDDB(any(CreateMitigationRequest.class), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        doThrow(new RuntimeException()).when(storageHandler).storeRequestInDDB(any(CreateMitigationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
         Throwable caughtException = null;
         try {
-            when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), any(TSDMetrics.class))).thenCallRealMethod();
-            storageHandler.storeRequestForWorkflow(request, tsdMetrics);
+            when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), anySet(), any(TSDMetrics.class))).thenCallRealMethod();
+            storageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -961,12 +962,12 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         long maxWorkflowId = 3;
         when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
         
-        doThrow(new RuntimeException()).doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(storageHandler).storeRequestInDDB(any(CreateMitigationRequest.class), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        doThrow(new RuntimeException()).doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(storageHandler).storeRequestInDDB(any(CreateMitigationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
-        when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), any(TSDMetrics.class))).thenCallRealMethod();
-        long workflowId = storageHandler.storeRequestForWorkflow(request, tsdMetrics);
+        when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), anySet(), any(TSDMetrics.class))).thenCallRealMethod();
+        long workflowId = storageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
         assertEquals(workflowId, maxWorkflowId + 1);
         
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());

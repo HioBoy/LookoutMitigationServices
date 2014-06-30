@@ -79,12 +79,14 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
      *    or it is some transient exception. In either case, we query the DDB table once again for mitigations >= maxWorkflowId for the device and
      *    continue with step 4. 
      * @param request Request to be stored.
+     * @param locations Set of String representing the locations where this request applies.
      * @param metrics
      * @return The workflowId that this request was stored with, using the algorithm above.
      */
     @Override
-    public long storeRequestForWorkflow(@Nonnull MitigationModificationRequest request, @Nonnull TSDMetrics metrics) {
+    public long storeRequestForWorkflow(@Nonnull MitigationModificationRequest request, @Nonnull Set<String> locations, @Nonnull TSDMetrics metrics) {
         Validate.notNull(request);
+        Validate.notEmpty(locations);
         Validate.notNull(metrics);
         
         CreateMitigationRequest createMitigationRequest = (CreateMitigationRequest) request;
@@ -130,7 +132,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 }
 
                 try {
-                    storeRequestInDDB(createMitigationRequest, deviceNameAndScope, newWorkflowId, RequestType.CreateRequest, INITIAL_MITIGATION_VERSION, subMetrics);
+                    storeRequestInDDB(createMitigationRequest, locations, deviceNameAndScope, newWorkflowId, RequestType.CreateRequest, INITIAL_MITIGATION_VERSION, subMetrics);
                     return newWorkflowId;
                 } catch (Exception ex) {
                     String msg = "Caught exception when storing create request in DDB with newWorkflowId: " + newWorkflowId + " for DeviceName: " + deviceName + 
