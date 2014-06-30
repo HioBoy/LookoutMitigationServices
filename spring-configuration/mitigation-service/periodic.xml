@@ -20,7 +20,7 @@
         <constructor-arg value="MILLISECONDS"/>
     </bean>
 
-    <bean id="metronome" class="com.amazon.aws158.commons.periodic.Metronome">
+    <bean id="metronome" class="com.amazon.aws158.commons.periodic.Metronome" depends-on="logger">
         <property name="threadPoolSize" value="2"/>
         <property name="work">
             <set>
