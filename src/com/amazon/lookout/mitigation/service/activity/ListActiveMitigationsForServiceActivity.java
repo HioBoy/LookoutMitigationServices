@@ -25,7 +25,7 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceResponse;
-import com.amazon.lookout.mitigation.service.MitigationInstanceDescription;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -77,12 +77,12 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             List<ActiveMitigationDetails> listOfActiveMitigationDetails = activeMitigationInfoHandler.getActiveMitigationsForService(request.getServiceName(),
                     request.getDeviceName(), request.getLocations(), tsdMetrics);
             
-            // Create a map of deviceName and jobId to MitigationInstanceDescription. We want to condense the information within the ACTIVE_MITIGATIONS
+            // Create a map of deviceName and jobId to MitigationRequestDescription. We want to condense the information within the ACTIVE_MITIGATIONS
             // table based on deviceName and jobId so that we only query the request table for each unique jobId. Additionally we 
             // also aggregate all of the locations for each item in the table with a unique deviceName and jobId combination into a list that 
-            // will be set within each MitigationInstanceDescription that this key maps to. 
-            Map<String, MitigationInstanceDescription> mitigationDescriptions = new HashMap<>();
-            List<MitigationInstanceDescription> mitigationInstanceDescriptions = new ArrayList<>();
+            // will be set within each MitigationRequestDescription that this key maps to. 
+            Map<String, MitigationRequestDescription> mitigationDescriptions = new HashMap<>();
+            List<MitigationRequestDescription> mitigationRequestDescriptions = new ArrayList<>();
             // Step 3. Iterate through the list of ActiveMitigationDetails and use the deviceName and jobId to get the remaining information needed 
             // for our response.
             for (ActiveMitigationDetails activeMitigationDetails : listOfActiveMitigationDetails) {
@@ -94,28 +94,28 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
                     // Store the request data for a given mitigation in a RequestInfo object. The data contained here will be joined
                     // with the data contained in the ActiveMitigationDetails object to get the full picture of an active mitigation.
                     MitigationMetadata mitigationMetadata = requestInfoHandler.getMitigationMetadata(deviceName, jobId, tsdMetrics);
-                    // Step 4. Set all of the acquired information within a MitigationInstanceDescription and then pass that to the list of
-                    // MitigationInstanceDescriptions.
-                    MitigationInstanceDescription mitigationInstanceDescription = new MitigationInstanceDescription();
-                    mitigationInstanceDescription.setDeviceName(deviceName);
-                    mitigationInstanceDescription.setLocations(new ArrayList<String>(Arrays.asList(location)));
-                    mitigationInstanceDescription.setMitigationName(activeMitigationDetails.getMitigationName());
-                    mitigationInstanceDescription.setMitigationVersion(activeMitigationDetails.getMitigationVersion());
-                    mitigationInstanceDescription.setMitigationActionMetadata(mitigationMetadata.getMitigationActionMetadata());
-                    mitigationInstanceDescription.setMitigationDefinition(mitigationMetadata.getMitigationDefinition());
-                    mitigationInstanceDescription.setMitigationTemplate(mitigationMetadata.getMitigationTemplate());
+                    // Step 4. Set all of the acquired information within a MitigationRequestDescription and then pass that to the list of
+                    // MitigationRequestDescriptions.
+                    MitigationRequestDescription mitigationRequestDescription = new MitigationRequestDescription();
+                    mitigationRequestDescription.setDeviceName(deviceName);
+                    mitigationRequestDescription.setLocations(new ArrayList<String>(Arrays.asList(location)));
+                    mitigationRequestDescription.setMitigationName(activeMitigationDetails.getMitigationName());
+                    mitigationRequestDescription.setMitigationVersion(activeMitigationDetails.getMitigationVersion());
+                    mitigationRequestDescription.setMitigationActionMetadata(mitigationMetadata.getMitigationActionMetadata());
+                    mitigationRequestDescription.setMitigationDefinition(mitigationMetadata.getMitigationDefinition());
+                    mitigationRequestDescription.setMitigationTemplate(mitigationMetadata.getMitigationTemplate());
                     
-                    mitigationDescriptions.put(key, mitigationInstanceDescription);
+                    mitigationDescriptions.put(key, mitigationRequestDescription);
                 } else {
                     mitigationDescriptions.get(key).getLocations().add(location);
                 }
             }
             
             // Create a List using the values from mitigationDescriptions
-            mitigationInstanceDescriptions = new ArrayList<MitigationInstanceDescription>(mitigationDescriptions.values());
+            mitigationRequestDescriptions = new ArrayList<MitigationRequestDescription>(mitigationDescriptions.values());
             ListActiveMitigationsForServiceResponse response = new ListActiveMitigationsForServiceResponse();
             response.setServiceName(request.getServiceName());
-            response.setMitigationInstanceDescriptions(mitigationInstanceDescriptions);
+            response.setMitigationRequestDescriptions(mitigationRequestDescriptions);
             LOG.info(String.format("ListMitigationsActivity called with RequestId: %s returned: %s.", requestId, ReflectionToStringBuilder.toString(response)));  
             
             return response;

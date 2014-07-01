@@ -82,7 +82,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         List<String> locationsToApplyMitigation = null;
         // Extract mitigationDefinition and locations from Create/Edit Mitigation Requests only.
         if (request instanceof CreateMitigationRequest) {
-            locationsToApplyMitigation = ((CreateMitigationRequest) request).getLocation();
+            locationsToApplyMitigation = ((CreateMitigationRequest) request).getLocations();
             mitigationDefinition = ((CreateMitigationRequest) request).getMitigationDefinition();
         }
         if (request instanceof EditMitigationRequest) {

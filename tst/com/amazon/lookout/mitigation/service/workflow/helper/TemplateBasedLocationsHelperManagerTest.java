@@ -36,7 +36,7 @@ public class TemplateBasedLocationsHelperManagerTest {
         
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
         List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");
-        request.setLocation(requestLocations);
+        request.setLocations(requestLocations);
         
         Set<String> locations = manager.getLocationsForDeployment(request);
         assertNotNull(locations);
@@ -54,7 +54,7 @@ public class TemplateBasedLocationsHelperManagerTest {
         
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
         List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");
-        request.setLocation(requestLocations);
+        request.setLocations(requestLocations);
         request.setMitigationTemplate("SomeRandomTemplate");
         
         Set<String> locations = manager.getLocationsForDeployment(request);

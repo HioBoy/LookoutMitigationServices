@@ -45,7 +45,7 @@ public class TemplateBasedLocationsManager {
         }
         
         if (request instanceof CreateMitigationRequest) {
-            return new HashSet<String>(((CreateMitigationRequest) request).getLocation());
+            return new HashSet<String>(((CreateMitigationRequest) request).getLocations());
         }
         
         if (request instanceof EditMitigationRequest) {

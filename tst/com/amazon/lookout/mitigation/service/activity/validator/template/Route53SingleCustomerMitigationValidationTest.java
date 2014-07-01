@@ -133,7 +133,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
         CreateMitigationRequest request = generateCreateMitigationRequest();
-        request.setLocation(Lists.newArrayList("POP1", "POP2"));
+        request.setLocations(Lists.newArrayList("POP1", "POP2"));
         request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
         
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());

@@ -161,7 +161,7 @@ public class DDBBasedRequestStorageHandlerTest {
         DDBBasedRequestStorageHandler storageHandler = mock(DDBBasedRequestStorageHandler.class);
         
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
-        request.setLocation(Lists.newArrayList("POP1", "POP2"));
+        request.setLocations(Lists.newArrayList("POP1", "POP2"));
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         Long workflowId = (long) 1;
         RequestType requestType = RequestType.CreateRequest;
@@ -236,7 +236,7 @@ public class DDBBasedRequestStorageHandlerTest {
         
         assertTrue(attributesToStore.containsKey(DDBBasedRequestStorageHandler.LOCATIONS_KEY));
         List<String> locations = attributesToStore.get(DDBBasedRequestStorageHandler.LOCATIONS_KEY).getSS();
-        assertEquals(locations, request.getLocation());
+        assertEquals(locations, request.getLocations());
         
         assertTrue(attributesToStore.containsKey(DDBBasedRequestStorageHandler.MITIGATION_DEFINITION_KEY));
         String newMitigationDefinitionAsJsonStr = attributesToStore.get(DDBBasedRequestStorageHandler.MITIGATION_DEFINITION_KEY).getS();

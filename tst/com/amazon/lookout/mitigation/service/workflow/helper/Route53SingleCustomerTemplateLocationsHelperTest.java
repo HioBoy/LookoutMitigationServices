@@ -33,7 +33,7 @@ public class Route53SingleCustomerTemplateLocationsHelperTest {
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
         
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
-        request.setLocation(Lists.newArrayList("SomePOP1", "SomePOP2"));
+        request.setLocations(Lists.newArrayList("SomePOP1", "SomePOP2"));
         
         Set<String> locations = helper.getLocationsForDeployment(request);
         assertNotNull(locations);
