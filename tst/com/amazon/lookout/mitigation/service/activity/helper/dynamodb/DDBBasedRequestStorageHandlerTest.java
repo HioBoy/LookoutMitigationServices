@@ -171,7 +171,7 @@ public class DDBBasedRequestStorageHandlerTest {
         when(storageHandler.getJSONDataConverter()).thenReturn(jsonDataConverter);
         when(storageHandler.generateAttributesToStore(any(MitigationModificationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt())).thenCallRealMethod();
         
-        Map<String, AttributeValue> attributesToStore = storageHandler.generateAttributesToStore(request, Sets.newHashSet(request.getLocation()), deviceNameAndScope, workflowId, requestType, mitigationVersion);
+        Map<String, AttributeValue> attributesToStore = storageHandler.generateAttributesToStore(request, Sets.newHashSet(request.getLocations()), deviceNameAndScope, workflowId, requestType, mitigationVersion);
         
         assertTrue(attributesToStore.containsKey(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY));
         String deviceNameString = attributesToStore.get(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY).getS();
