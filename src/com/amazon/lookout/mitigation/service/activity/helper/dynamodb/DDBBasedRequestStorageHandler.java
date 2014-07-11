@@ -84,6 +84,7 @@ public abstract class DDBBasedRequestStorageHandler {
     public static final String NUM_POST_DEPLOY_CHECKS_KEY = "NumPostDeployChecks";
     public static final String POST_DEPLOY_CHECKS_DEFINITION_KEY = "PostDeployChecks";
     public static final String UPDATE_WORKFLOW_ID_KEY = "UpdateWorkflowId";
+    public static final String DELETION_DATE_KEY = "DeletionDate";
     
     // Keys for TSDMetrics.
     private static final String NUM_DDB_PUT_ITEM_ATTEMPTS_KEY = "NumPutAttempts";

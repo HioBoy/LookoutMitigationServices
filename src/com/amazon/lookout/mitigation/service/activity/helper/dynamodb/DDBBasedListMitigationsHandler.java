@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
@@ -17,8 +16,6 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.mitigation.service.BadRequest400;
-import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
@@ -42,7 +39,6 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     
     public static final String LOCATION_KEY = "Location";
     public static final String JOB_ID_KEY = "JobId";
-    public static final String MITIGATION_STATUS_KEY = "MitigationStatus";
     public static final String DEVICE_NAME_INDEX = "DeviceName-index";
     
     // Keys for TSDMetric property.s
@@ -148,13 +144,14 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         
         Map<String, AttributeValue> lastEvaluatedKey = null;
         QueryResult result = null;
-        Map<String, Condition> queryFilter = null;
-                
+        Map<String, Condition> queryFilter = new HashMap<>();
+        queryFilter.put(DELETION_DATE_KEY, new Condition().withComparisonOperator(ComparisonOperator.NULL));      
+        
         Set<String> attributes = Sets.newHashSet(MITIGATION_NAME_KEY, LOCATION_KEY, JOB_ID_KEY, DEVICE_NAME_KEY, MITIGATION_VERSION_KEY);
         Map<String, Condition> keyConditions = generateKeyConditionsForServiceAndDevice(serviceName, deviceName);
         
         if (!CollectionUtils.isEmpty(locations)) {
-            queryFilter = generateMitigationLocationQueryFilter(Sets.newHashSet(locations));
+            queryFilter.putAll(generateMitigationLocationQueryFilter(Sets.newHashSet(locations)));
         }
         
         QueryRequest queryRequest = generateQueryRequest(attributes, keyConditions, queryFilter, tableName, true, indexToUse, lastEvaluatedKey);
