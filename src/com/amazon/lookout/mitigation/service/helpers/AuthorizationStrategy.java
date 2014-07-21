@@ -63,7 +63,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     
     // Constants used for generating ARN
     private static final String PARTITION = "aws";
-    private static String region;
+    private String region;
     private static final String VENDOR = "lookout";
     private static final String NAMESPACE = "";
     private static final String SEPARATOR = "-";

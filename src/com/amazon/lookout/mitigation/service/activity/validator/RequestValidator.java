@@ -105,7 +105,7 @@ public class RequestValidator {
         
         // This will throw an exception if the deviceName is not defined within the DeviceName enum.
         try {
-            DeviceName testName = DeviceName.valueOf(deviceName);
+            DeviceName.valueOf(deviceName);
         } catch (Exception ex) {
             String msg = "The device name that was provided, " + deviceName + ", is not a valid name.";
             LOG.info(msg);
@@ -169,7 +169,7 @@ public class RequestValidator {
         
         // This will throw an exception if the deviceName is not defined within the DeviceName enum.
         try {
-            DeviceName testName = DeviceName.valueOf(deviceName);  
+            DeviceName.valueOf(deviceName);  
         } catch (Exception ex) {
             String msg = "The device name that was provided, " + deviceName + ", is not a valid name.";
             LOG.info(msg);

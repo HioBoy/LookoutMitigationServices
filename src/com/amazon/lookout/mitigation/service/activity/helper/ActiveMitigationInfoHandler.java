@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.activities.model.ActiveMitigationDetails;
-import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 
 /**
  * ActiveMitigationInfoHandler is responsible for retrieving data from the ACTIVE_MITIGATIONS table.
