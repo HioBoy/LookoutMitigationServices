@@ -129,11 +129,11 @@ public class CreateMitigationActivity extends Activity {
             long workflowId = requestStorageManager.storeRequestForWorkflow(createRequest, locationsToDeploy, RequestType.CreateRequest, tsdMetrics);
             
             // Step5. Create new workflow client to be used for running the workflow.
-            WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, createRequest, deviceName, tsdMetrics);
+            WorkflowClientExternal workflowClient = workflowStarter.createMitigationModificationWorkflowClient(workflowId, createRequest, deviceName, tsdMetrics);
             
             // Step6. Start running the workflow.
-            workflowStarter.startWorkflow(workflowId, createRequest, locationsToDeploy, RequestType.CreateRequest,
-                                          DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, deviceName, deviceScope, workflowClient, tsdMetrics);
+            workflowStarter.startMitigationModificationWorkflow(workflowId, createRequest, locationsToDeploy, RequestType.CreateRequest,
+                                                                DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, deviceName, deviceScope, workflowClient, tsdMetrics);
             
             // Step7. Update the record for this workflow request and store the runId that SWF associates with this workflow.
             String swfRunId = workflowClient.getWorkflowExecution().getRunId();

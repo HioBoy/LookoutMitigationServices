@@ -9,9 +9,10 @@ import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.workflow.LookoutMitigationWorkflowClientExternalFactory;
 import com.amazon.lookout.workflow.LookoutMitigationWorkflowClientExternalFactoryImpl;
+import com.amazon.lookout.workflow.LookoutReaperWorkflowClientExternalFactory;
+import com.amazon.lookout.workflow.LookoutReaperWorkflowClientExternalFactoryImpl;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 
@@ -23,15 +24,19 @@ import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 public class SWFWorkflowClientProviderImpl implements SWFWorkflowClientProvider {
     private static final Log LOG = LogFactory.getLog(SWFWorkflowClientProvider.class);
     
-    // As of now (2014-04-17) we only have a single workflow, keeping a cached copy of that client factory here.
-    private final LookoutMitigationWorkflowClientExternalFactory workflowFactory;
+    // Keep a cached copy of the mitigation modification workflow client factory here.
+    private final LookoutMitigationWorkflowClientExternalFactory mitigationModificationWorkflowFactory;
+    
+    // Keep a cached copy of the reaper workflow client factory here.
+    private final LookoutReaperWorkflowClientExternalFactory reaperWorkflowFactory;
     
     @ConstructorProperties({"swfClient", "swfDomain"})
     public SWFWorkflowClientProviderImpl(@Nonnull AmazonSimpleWorkflowClient simpleWorkflowClient, @Nonnull String swfDomain) {
         Validate.notNull(simpleWorkflowClient);
         Validate.notEmpty(swfDomain);
         
-        this.workflowFactory = new LookoutMitigationWorkflowClientExternalFactoryImpl(simpleWorkflowClient, swfDomain);
+        this.mitigationModificationWorkflowFactory = new LookoutMitigationWorkflowClientExternalFactoryImpl(simpleWorkflowClient, swfDomain);
+        this.reaperWorkflowFactory = new LookoutReaperWorkflowClientExternalFactoryImpl(simpleWorkflowClient, swfDomain);
     }
 
     /**
@@ -39,24 +44,30 @@ public class SWFWorkflowClientProviderImpl implements SWFWorkflowClientProvider 
      * @param template Template name corresponding to which we require a workflow client.
      * @param deviceName Device where the workflow is to be run.
      * @param workflowId WorkflowId for the workflow to be run.
-     * @param metrics TSDMetrics to record the time it takes for the factory to hand us a workflow client (after checking for duplicate workflowId).
      * @return WorkflowClientExternal which represents the workflow client to be used for this template and device.
      */
     @Override
-    public WorkflowClientExternal getWorkflowClient(@Nonnull String template, @Nonnull String deviceName, long workflowId, @Nonnull TSDMetrics metrics) {
+    public WorkflowClientExternal getMitigationModificationWorkflowClient(@Nonnull String template, @Nonnull String deviceName, long workflowId) {
         Validate.notEmpty(template);
         Validate.notEmpty(deviceName);
-        Validate.notNull(metrics);
+        Validate.isTrue(workflowId > 0);
         
-        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowClientProviderImpl.getWorkflowClient");
-        try {
-            String swfWorkflowId = deviceName + "_" + workflowId;
-            LOG.debug("Requested WorkflowFactory for template: " + template + ", device: " + deviceName + ", workflowId: " + workflowId + 
-                      " Returning workflow client with SWF workflowId set to: " + swfWorkflowId);
-            
-            return workflowFactory.getClient(swfWorkflowId);
-        } finally {
-            subMetrics.end();
-        }
+        String swfWorkflowId = deviceName + "_" + workflowId;
+        LOG.debug("Requested WorkflowFactory for template: " + template + ", device: " + deviceName + ", workflowId: " + workflowId + 
+                  " Returning workflow client with SWF workflowId set to: " + swfWorkflowId);
+        return mitigationModificationWorkflowFactory.getClient(swfWorkflowId);
+    }
+    
+    /**
+     * Get a reaper workflow client for the swfWorkflowId passed as input.
+     * @param swfWorkflowId WorkflowId for the reaper workflow to be run.
+     * @return WorkflowClientExternal which represents the reaper workflow client to be used.
+     */
+    @Override
+    public WorkflowClientExternal getReaperWorkflowClient(@Nonnull String swfWorkflowId) {
+        Validate.notEmpty(swfWorkflowId);
+        
+        LOG.debug("Requested ReaperWorkflowFactory for workflowId: " + swfWorkflowId);
+        return reaperWorkflowFactory.getClient(swfWorkflowId);
     }
 }

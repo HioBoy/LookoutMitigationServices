@@ -123,10 +123,10 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             long workflowId = requestStorageManager.storeRequestForWorkflow(deleteRequest, locationsToDeploy, RequestType.DeleteRequest, tsdMetrics);
             
             // Step5. Create new workflow client to be used for running the workflow.
-            WorkflowClientExternal workflowClient = workflowStarter.createSWFWorkflowClient(workflowId, deleteRequest, deviceName, tsdMetrics);
+            WorkflowClientExternal workflowClient = workflowStarter.createMitigationModificationWorkflowClient(workflowId, deleteRequest, deviceName, tsdMetrics);
             
             // Step6. Start running the workflow.
-            workflowStarter.startWorkflow(workflowId, deleteRequest, locationsToDeploy, RequestType.DeleteRequest, 
+            workflowStarter.startMitigationModificationWorkflow(workflowId, deleteRequest, locationsToDeploy, RequestType.DeleteRequest, 
                                           deleteRequest.getMitigationVersion(), deviceName, deviceScope, workflowClient, tsdMetrics);
             
             // Step7. Once the workflow is running, it should have an associated swfRunId, update the request record for this workflow request and store the associated runId.

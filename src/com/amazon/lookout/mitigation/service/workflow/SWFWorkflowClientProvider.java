@@ -1,6 +1,5 @@
 package com.amazon.lookout.mitigation.service.workflow;
 
-import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 
 /**
@@ -9,6 +8,9 @@ import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
  */
 public interface SWFWorkflowClientProvider {
     
-    // Get workflow client corresponding to the template and device.
-    public WorkflowClientExternal getWorkflowClient(String template, String device, long workflowId, TSDMetrics metrics);
+    // Get mitigation modification workflow client for the corresponding template, device and workflowId.
+    public WorkflowClientExternal getMitigationModificationWorkflowClient(String template, String device, long workflowId);
+    
+    // Get reaper workflow client for the corresponding workflowId.
+    public WorkflowClientExternal getReaperWorkflowClient(String workflowId);
 }

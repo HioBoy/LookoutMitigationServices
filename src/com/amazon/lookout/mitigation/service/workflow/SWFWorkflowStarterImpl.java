@@ -14,6 +14,8 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.workflow.LookoutMitigationWorkflowClientExternal;
+import com.amazon.lookout.workflow.LookoutReaperWorkflowClientExternal;
+import com.amazon.lookout.workflow.model.RequestToReap;
 import com.amazonaws.services.simpleworkflow.flow.StartWorkflowOptions;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
@@ -56,18 +58,31 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * @return WorkflowClientExternal Representing the client that should be used to start running this workflow.
      */
     @Override
-    public WorkflowClientExternal createSWFWorkflowClient(long workflowId, @Nonnull MitigationModificationRequest request, @Nonnull String deviceName, @Nonnull TSDMetrics metrics) {
+    public WorkflowClientExternal createMitigationModificationWorkflowClient(long workflowId, @Nonnull MitigationModificationRequest request, @Nonnull String deviceName, @Nonnull TSDMetrics metrics) {
         Validate.isTrue(workflowId > 0);
         Validate.notNull(request);
         Validate.notEmpty(deviceName);
         Validate.notNull(metrics);
         
-        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.createSWFWorkflowClient");
+        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.createMitigationModificationWorkflowClient");
         try {
             String mitigationTemplate = request.getMitigationTemplate();
             
             // Get workflow client for this template + device.
-            return workflowClientProvider.getWorkflowClient(mitigationTemplate, deviceName, workflowId, subMetrics);
+            return workflowClientProvider.getMitigationModificationWorkflowClient(mitigationTemplate, deviceName, workflowId);
+        } finally {
+            subMetrics.end();
+        }
+    }
+    
+    @Override
+    public WorkflowClientExternal createReaperWorkflowClient(String swfWorkflowId, @Nonnull TSDMetrics metrics) {
+        Validate.notEmpty(swfWorkflowId);
+        Validate.notNull(metrics);
+        
+        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.createReaperWorkflowClient");
+        try {
+            return workflowClientProvider.getReaperWorkflowClient(swfWorkflowId);
         } finally {
             subMetrics.end();
         }
@@ -84,11 +99,11 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * @param deviceScope String representing the deviceScope for the device on which this mitigation needs to be applied.
      * @param workflowExternalClient Pass the WorkflowClient to start the workflow.
      * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to check for workflowId's uniqueness.
-     * @return String representing the runId that SWF assigns to our workflow.
      */
     @Override
-    public void startWorkflow(long workflowId, @Nonnull MitigationModificationRequest request, @Nonnull Set<String> locationsToDeploy, @Nonnull RequestType requestType, int mitigationVersion, 
-                              @Nonnull String deviceName, @Nonnull String deviceScope, @Nonnull WorkflowClientExternal workflowExternalClient, @Nonnull TSDMetrics metrics) {
+    public void startMitigationModificationWorkflow(long workflowId, @Nonnull MitigationModificationRequest request, @Nonnull Set<String> locationsToDeploy, 
+                                                    @Nonnull RequestType requestType, int mitigationVersion, @Nonnull String deviceName, @Nonnull String deviceScope, 
+                                                    @Nonnull WorkflowClientExternal workflowExternalClient, @Nonnull TSDMetrics metrics) {
         Validate.isTrue(workflowId > 0);
         Validate.notNull(request);
         Validate.notEmpty(locationsToDeploy);
@@ -98,7 +113,7 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
         Validate.notNull(workflowExternalClient);
         Validate.notNull(metrics);
         
-        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.startWorkflow");
+        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.startMitigationModificationWorkflow");
         try {
             // Add workflow properties to request metrics.
             WorkflowType workflowType = workflowExternalClient.getWorkflowType();
@@ -131,6 +146,56 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             LOG.debug("Started workflow for workflowId: " + workflowId + " in SWF, with SWFWorkflowId: " + swfWorkflowId + " SWFRunId: " + swfRunId + 
                       " WorkflowType: " + workflowTypeName + " WorkflowTypeVersion: " + workflowTypeVersion + " for request: " + ReflectionToStringBuilder.toString(request) + 
                       " with mitigationVersion: " + mitigationVersion + " in locations: " + locationsToDeploy);
+        } finally {
+            subMetrics.end();
+        }
+    }
+    
+    /**
+     * Start the reaper workflow using the WorkflowExternalClient and request instance passed as input.
+     * @param workflowId WorkflowId to use for the new workflow to be run.
+     * @param requestToReap Request that needs to be reaped by this new reaper workflow.
+     * @param workflowExternalClient Pass the WorkflowClient to start the workflow.
+     * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to check for workflowId's uniqueness.
+     */
+    @Override
+    public void startReaperWorkflow(@Nonnull String workflowId, @Nonnull RequestToReap requestToReap, @Nonnull WorkflowClientExternal workflowExternalClient, @Nonnull TSDMetrics metrics) {
+        Validate.notEmpty(workflowId);
+        Validate.notNull(requestToReap);
+        Validate.notNull(workflowExternalClient);
+        Validate.notNull(metrics);
+        
+        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.startReaperWorkflow");
+        try {
+            // Add workflow properties to request metrics.
+            WorkflowType workflowType = workflowExternalClient.getWorkflowType();
+            String workflowTypeName = workflowType.getName();
+            String workflowTypeVersion = workflowType.getVersion();
+            subMetrics.addProperty(WORKFLOW_TYPE_NAME_METRIC_PROPERTY_KEY, workflowTypeName);
+            subMetrics.addProperty(WORKFLOW_TYPE_VERSION_METRIC_PROPERTY_KEY, workflowTypeVersion);
+            
+            // Get the default configurations for the workflow.
+            StartWorkflowOptions workflowOptions = getDefaultStartWorkflowOptions();
+            
+            if (workflowExternalClient instanceof LookoutReaperWorkflowClientExternal) {
+                // Start running the workflow.
+                ((LookoutReaperWorkflowClientExternal) workflowExternalClient).startReaperWorkflow(requestToReap, workflowOptions);
+            } else {
+                String msg = "WorkflowExternalClient is of type: " + workflowExternalClient.getClass().getName() + ". Currently there exists no setup to run workflow of " +
+                             "this reaper workflow type for reaping the request: " + requestToReap;
+                LOG.error(msg);
+                throw new IllegalStateException(msg);
+            }
+            
+            // We have access to the swfRunId only after starting the workflow.
+            WorkflowExecution workflowExecution = workflowExternalClient.getWorkflowExecution();
+            String swfWorkflowId = workflowExecution.getWorkflowId();
+            String swfRunId = workflowExecution.getRunId();
+            subMetrics.addProperty(WORKFLOW_ID_METRIC_PROPERTY_KEY, swfWorkflowId);
+            subMetrics.addProperty(WORKFLOW_SWF_RUN_ID_METRIC_PROPERTY_KEY, swfRunId);
+            
+            LOG.debug("Started reaper workflow for workflowId: " + workflowId + " in SWF, with SWFWorkflowId: " + swfWorkflowId + " SWFRunId: " + swfRunId + 
+                      " WorkflowType: " + workflowTypeName + " WorkflowTypeVersion: " + workflowTypeVersion + " for requestToReap: " + requestToReap);
         } finally {
             subMetrics.end();
         }

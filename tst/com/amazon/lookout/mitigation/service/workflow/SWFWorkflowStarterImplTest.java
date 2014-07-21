@@ -2,7 +2,6 @@ package com.amazon.lookout.mitigation.service.workflow;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -11,7 +10,6 @@ import static org.mockito.Mockito.when;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
@@ -31,7 +29,7 @@ public class SWFWorkflowStarterImplTest {
     public void testRunIdReturnedOnCreatingNewWorkflowClient() {
         LookoutMitigationWorkflowClientExternal mockWorkflowClient = mock(LookoutMitigationWorkflowClientExternal.class);
         SWFWorkflowClientProvider mockWorkflowClientProvider = mock(SWFWorkflowClientProvider.class);
-        when(mockWorkflowClientProvider.getWorkflowClient(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(mockWorkflowClient);
+        when(mockWorkflowClientProvider.getMitigationModificationWorkflowClient(anyString(), anyString(), anyLong())).thenReturn(mockWorkflowClient);
         
         MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
         
@@ -41,7 +39,7 @@ public class SWFWorkflowStarterImplTest {
         when(mockWorkflowClient.getWorkflowType()).thenReturn(workflowType);
         
         SWFWorkflowStarterImpl workflowStarterImpl = new SWFWorkflowStarterImpl(mockWorkflowClientProvider);
-        WorkflowClientExternal workflowClient = workflowStarterImpl.createSWFWorkflowClient(1, request, "TestDevice", TestUtils.newNopTsdMetrics());
+        WorkflowClientExternal workflowClient = workflowStarterImpl.createMitigationModificationWorkflowClient(1, request, "TestDevice", TestUtils.newNopTsdMetrics());
         String swfRunId = workflowClient.getWorkflowExecution().getRunId();
         assertNotNull(swfRunId);
         assertEquals(swfRunId, "TestRunId");
