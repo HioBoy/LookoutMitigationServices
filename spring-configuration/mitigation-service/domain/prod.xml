@@ -19,15 +19,9 @@
     </bean>
     
     <util:set id="prod.popsWithCiscoRouter">
-        <value>ARN1</value>
         <value>DUB2</value>
         <value>EWR2</value>
-        <value>GRU1</value>
         <value>HKG1</value>
-        <value>JFK1</value>
-        <value>NRT53</value>
-        <value>SFO4</value>
-        <value>SIN2</value>
         <value>STL2</value>
     </util:set>
 </beans>
