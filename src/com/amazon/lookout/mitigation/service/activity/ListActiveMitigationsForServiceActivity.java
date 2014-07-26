@@ -26,6 +26,7 @@ import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceResponse;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -81,8 +82,7 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             // table based on deviceName and jobId so that we only query the request table for each unique jobId. Additionally we 
             // also aggregate all of the locations for each item in the table with a unique deviceName and jobId combination into a list that 
             // will be set within each MitigationRequestDescription that this key maps to. 
-            Map<String, MitigationRequestDescription> mitigationDescriptions = new HashMap<>();
-            List<MitigationRequestDescription> mitigationRequestDescriptions = new ArrayList<>();
+            Map<String, MitigationRequestDescriptionWithLocations> descriptionsWithLocationsMap = new HashMap<>();
             // Step 3. Iterate through the list of ActiveMitigationDetails and use the deviceName and jobId to get the remaining information needed 
             // for our response.
             for (ActiveMitigationDetails activeMitigationDetails : listOfActiveMitigationDetails) {
@@ -90,7 +90,7 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
                 long jobId = activeMitigationDetails.getJobId();
                 String location = activeMitigationDetails.getLocation();
                 final String key = deviceName + KEY_SEPARATOR + jobId;
-                if (!mitigationDescriptions.containsKey(key)) {
+                if (!descriptionsWithLocationsMap.containsKey(key)) {
                     // Store the request data for a given mitigation in a RequestInfo object. The data contained here will be joined
                     // with the data contained in the ActiveMitigationDetails object to get the full picture of an active mitigation.
                     MitigationMetadata mitigationMetadata = requestInfoHandler.getMitigationMetadata(deviceName, jobId, tsdMetrics);
@@ -98,24 +98,28 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
                     // MitigationRequestDescriptions.
                     MitigationRequestDescription mitigationRequestDescription = new MitigationRequestDescription();
                     mitigationRequestDescription.setDeviceName(deviceName);
-                    mitigationRequestDescription.setLocations(new ArrayList<String>(Arrays.asList(location)));
                     mitigationRequestDescription.setMitigationName(activeMitigationDetails.getMitigationName());
                     mitigationRequestDescription.setMitigationVersion(activeMitigationDetails.getMitigationVersion());
                     mitigationRequestDescription.setMitigationActionMetadata(mitigationMetadata.getMitigationActionMetadata());
                     mitigationRequestDescription.setMitigationDefinition(mitigationMetadata.getMitigationDefinition());
                     mitigationRequestDescription.setMitigationTemplate(mitigationMetadata.getMitigationTemplate());
-                    
-                    mitigationDescriptions.put(key, mitigationRequestDescription);
+                    mitigationRequestDescription.setRequestDate(mitigationMetadata.getRequestDate());
+
+                    MitigationRequestDescriptionWithLocations descriptionWithLocations = new MitigationRequestDescriptionWithLocations();
+                    descriptionWithLocations.setMitigationRequestDescription(mitigationRequestDescription);
+                    descriptionWithLocations.setLocations(Arrays.asList(location));
+
+                    descriptionsWithLocationsMap.put(key, descriptionWithLocations);
                 } else {
-                    mitigationDescriptions.get(key).getLocations().add(location);
+                    descriptionsWithLocationsMap.get(key).getLocations().add(location);
                 }
             }
             
             // Create a List using the values from mitigationDescriptions
-            mitigationRequestDescriptions = new ArrayList<MitigationRequestDescription>(mitigationDescriptions.values());
+            List<MitigationRequestDescriptionWithLocations> requestDescriptionsWithLocations = new ArrayList<>(descriptionsWithLocationsMap.values());
             ListActiveMitigationsForServiceResponse response = new ListActiveMitigationsForServiceResponse();
             response.setServiceName(request.getServiceName());
-            response.setMitigationRequestDescriptions(mitigationRequestDescriptions);
+            response.setMitigationRequestDescriptionsWithLocations(requestDescriptionsWithLocations);
             LOG.info(String.format("ListMitigationsActivity called with RequestId: %s returned: %s.", requestId, ReflectionToStringBuilder.toString(response)));  
             
             return response;

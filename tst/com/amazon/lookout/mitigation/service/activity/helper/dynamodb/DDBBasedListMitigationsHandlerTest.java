@@ -177,7 +177,7 @@ public class DDBBasedListMitigationsHandlerTest {
         data.setUser("lookout");
         
         metaData.setMitigationActionMetadata(data);
-        
+        metaData.setRequestDate(Long.valueOf("1403552269925"));
         metaData.setMitigationDefinition(jsonDataConverter.fromData("[\"com.amazon.lookout.mitigation.service.MitigationDefinition\",{\"constraint\":[\"com.amazon.lookout.mitigation.service.SimpleConstraint\",{\"attributeName\":\"SOURCE_ASN\",\"attributeValues\":[\"java.util.ArrayList\",[\"1234\",\"4567\",\"4192\"]]}],\"action\":null}]", MitigationDefinition.class));
         metaData.setMitigationTemplate("template");
         
