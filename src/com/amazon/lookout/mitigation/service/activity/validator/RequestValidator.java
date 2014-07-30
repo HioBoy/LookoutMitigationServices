@@ -161,19 +161,15 @@ public class RequestValidator {
         }
         
         String deviceName = request.getDeviceName();
-        if (deviceName != null && StringUtils.isBlank(deviceName)) {
-            String msg = "Empty device name found in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // This will throw an exception if the deviceName is not defined within the DeviceName enum.
-        try {
-            DeviceName.valueOf(deviceName);  
-        } catch (Exception ex) {
-            String msg = "The device name that was provided, " + deviceName + ", is not a valid name.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
+        if (deviceName != null) {
+            // This will throw an exception if the deviceName is not defined within the DeviceName enum.
+            try {
+                DeviceName.valueOf(deviceName);  
+            } catch (Exception ex) {
+                String msg = "The device name that was provided, " + deviceName + ", is not a valid name.";
+                LOG.info(msg);
+                throw new IllegalArgumentException(msg);
+            }
         }
         
         String serviceName = request.getServiceName();

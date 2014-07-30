@@ -7,6 +7,9 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -16,6 +19,7 @@ import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
+import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
@@ -434,5 +438,60 @@ public class RequestValidatorTest {
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
         assertTrue(caughtException.getMessage().startsWith("Duplicate related tickets found in actionMetadata"));
+    }
+    
+    @Test
+    public void testListActiveMitigationsForService() {        
+        ListActiveMitigationsForServiceRequest request = new ListActiveMitigationsForServiceRequest();
+        RequestValidator validator = new RequestValidator();
+        
+        // deviceName and locations are optional
+        request.setServiceName(serviceName);
+        validator.validateListActiveMitigationsForServiceRequest(request);
+        
+        // devicename may not be empty
+        request.setDeviceName("");
+        Throwable caughtException = null;
+        try {
+            validator.validateListActiveMitigationsForServiceRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        
+        // deviceName may not be a random name.
+        caughtException = null;
+        request.setDeviceName("arbit");
+        try {
+            validator.validateListActiveMitigationsForServiceRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        
+        // valid device name
+        request.setDeviceName("POP_ROUTER");
+        validator.validateListActiveMitigationsForServiceRequest(request);
+        
+        // locations if set may not be empty
+        caughtException = null;
+        request.setLocations(new ArrayList<String>());
+        try {
+            validator.validateListActiveMitigationsForServiceRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        
+        // locations may not be empty
+        caughtException = null;
+        request.setLocations(Arrays.asList(""));
+        try {
+            validator.validateListActiveMitigationsForServiceRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        
+        request.setLocations(Arrays.asList("alocation"));
+        validator.validateListActiveMitigationsForServiceRequest(request);
     }
 }

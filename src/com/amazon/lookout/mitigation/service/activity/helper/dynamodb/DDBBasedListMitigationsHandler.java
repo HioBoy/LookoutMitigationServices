@@ -192,10 +192,12 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         mitigationActionMetadata.setUser(keyValues.get(USERNAME_KEY).getS());
         mitigationActionMetadata.setDescription(keyValues.get(USER_DESC_KEY).getS());
         mitigationActionMetadata.setToolName(keyValues.get(TOOL_NAME_KEY).getS());
-        List<String> tickets = keyValues.get(RELATED_TICKETS_KEY).getSS();
-        if (!CollectionUtils.isEmpty(tickets)) {
-            mitigationActionMetadata.setRelatedTickets(keyValues.get(RELATED_TICKETS_KEY).getSS());
-        }        
+        if (keyValues.containsKey(RELATED_TICKETS_KEY)) {
+            List<String> tickets = keyValues.get(RELATED_TICKETS_KEY).getSS();
+            if (!CollectionUtils.isEmpty(tickets)) {
+                mitigationActionMetadata.setRelatedTickets(keyValues.get(RELATED_TICKETS_KEY).getSS());
+            }
+        }
         
         MitigationDefinition mitigationDefinition = jsonDataConverter.fromData(
             keyValues.get(MITIGATION_DEFINITION_KEY).getS(), MitigationDefinition.class);
