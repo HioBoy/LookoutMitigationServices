@@ -136,6 +136,7 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             // Step8. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
             mitigationModificationResponse.setMitigationName(deleteRequest.getMitigationName());
+            mitigationModificationResponse.setMitigationTemplate(deleteRequest.getMitigationTemplate());
             mitigationModificationResponse.setDeviceName(deviceName);
             mitigationModificationResponse.setServiceName(deleteRequest.getServiceName());
             mitigationModificationResponse.setJobId(workflowId);

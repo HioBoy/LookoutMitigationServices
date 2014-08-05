@@ -34,7 +34,7 @@ public class TemplateBasedLocationsHelperManagerTest {
         
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
         
-        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
+        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");
         request.setLocations(requestLocations);
         
@@ -52,7 +52,7 @@ public class TemplateBasedLocationsHelperManagerTest {
         
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
         
-        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
+        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");
         request.setLocations(requestLocations);
         request.setMitigationTemplate("SomeRandomTemplate");

@@ -32,10 +32,20 @@ public class Route53SingleCustomerTemplateLocationsHelperTest {
         Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, ciscoLocations);
         when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
         
-        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
+        // RateLimit MitigationTemplate
+        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         request.setLocations(Lists.newArrayList("SomePOP1", "SomePOP2"));
         
         Set<String> locations = helper.getLocationsForDeployment(request);
+        assertNotNull(locations);
+        assertTrue(locations.size() == (nonBWLocations.size() - ciscoLocations.size()));
+        assertEquals(locations, Sets.difference(nonBWLocations, ciscoLocations));
+        
+        // CountMode MitigationTemplate
+        request = DDBBasedCreateRequestStorageHandlerTest.generateCountModeMitigationRequest();
+        request.setLocations(Lists.newArrayList("SomePOP1", "SomePOP2"));
+        
+        locations = helper.getLocationsForDeployment(request);
         assertNotNull(locations);
         assertTrue(locations.size() == (nonBWLocations.size() - ciscoLocations.size()));
         assertEquals(locations, Sets.difference(nonBWLocations, ciscoLocations));

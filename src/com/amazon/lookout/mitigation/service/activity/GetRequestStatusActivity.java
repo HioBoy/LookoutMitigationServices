@@ -61,6 +61,7 @@ public class GetRequestStatusActivity extends Activity{
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;
         String deviceName = request.getDeviceName();
+        String templateName = request.getMitigationTemplate();
         String serviceName = request.getServiceName();
         long jobId = Long.valueOf(request.getJobId());
         try {            
@@ -69,7 +70,7 @@ public class GetRequestStatusActivity extends Activity{
             // Step 1. Validate this request
             requestValidator.validateGetRequestStatusRequest(request);
             // Step 2. Get the mitigation name and request-status
-            MitigationNameAndRequestStatus mitigationNameAndRequestStatus = requestInfoHandler.getMitigationNameAndRequestStatus(deviceName, jobId, tsdMetrics);
+            MitigationNameAndRequestStatus mitigationNameAndRequestStatus = requestInfoHandler.getMitigationNameAndRequestStatus(deviceName, templateName, jobId, tsdMetrics);
             // Step 3. Get the mitigation instance statuses by location from the MITIGATION_INSTANCES_TABLE
             List<MitigationInstanceStatus> mitigationStatusesResult = mitigationInfoHandler.getMitigationInstanceStatus(deviceName, jobId, tsdMetrics);
             GetRequestStatusResponse response = new GetRequestStatusResponse();
@@ -81,9 +82,8 @@ public class GetRequestStatusActivity extends Activity{
             response.setMitigationInstanceStatuses(mitigationStatusesResult);
             
             return response;
-        } catch (IllegalArgumentException ex) {
-            String msg = String.format("Caught IllegalArgumentException in request for GetRequestStatusActivity for requestId: " + requestId + 
-                    ", reason: " + ex.getMessage() + " for request: " + ReflectionToStringBuilder.toString(request));
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            String msg = String.format("Caught Illegal%sException in request for GetRequestStatusActivity for requestId: %s, reason: %s for request: %s", (ex instanceof IllegalArgumentException ? "Argument" : "State"), requestId, ex.getMessage(), ReflectionToStringBuilder.toString(request));
             LOG.warn(msg, ex);
             throw new BadRequest400(msg, ex);
         } catch (Exception internalError) {

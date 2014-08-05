@@ -34,7 +34,7 @@ import com.amazonaws.services.simpleworkflow.flow.DataConverter;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.google.common.collect.Sets;
 
-public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandler implements RequestInfoHandler, ActiveMitigationInfoHandler{
+public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandler implements RequestInfoHandler, ActiveMitigationInfoHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedListMitigationsHandler.class);
     
     public static final String LOCATION_KEY = "Location";
@@ -98,34 +98,48 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * of the name of the mitigation you want.
      */
     @Override
-    public MitigationNameAndRequestStatus getMitigationNameAndRequestStatus(String deviceName, long jobId, TSDMetrics tsdMetrics) {
+    public MitigationNameAndRequestStatus getMitigationNameAndRequestStatus(String deviceName, String templateName, long jobId, TSDMetrics tsdMetrics) {
         Validate.notEmpty(deviceName);
+        Validate.notEmpty(templateName);
         Validate.isTrue(jobId > 0);
         Validate.notNull(tsdMetrics); 
         final TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getMitigationNameAndRequestStatus");
         try {
             Map<String, AttributeValue> key = generateRequestInfoKey(deviceName, jobId);
-            GetItemResult result = getRequestInDDB(key, subMetrics);
-            Map<String, AttributeValue> item = result.getItem();
+            Map<String, AttributeValue> item;
+            try {
+                GetItemResult result = getRequestInDDB(key, subMetrics);
+                item = result.getItem();
+            } catch (IllegalArgumentException ex) {
+                String msg = "The request associated with job id: " + jobId
+                        + " and device : " + deviceName + " does not exist";
+                LOG.warn(msg, ex);
+                throw new IllegalArgumentException(msg);
+            } catch (Exception ex) {
+                String msg = "Caught Exception when querying for the mitigation name associated with job id: " + jobId
+                             + " and device : " + deviceName;
+                LOG.warn(msg, ex);
+                throw new RuntimeException(msg);
+            }
+
             // Throw an IllegalArgumentException if the result of the query,i.e, no requests were found.
             if (CollectionUtils.isEmpty(item)) {
-                throw new IllegalArgumentException();
+                String msg = String.format("Could not find an item for the requested jobId %d, device name %s, and template %s", jobId, deviceName, templateName);
+                LOG.info(msg);
+                throw new IllegalStateException(msg);
+            } 
+
+            String resultTemplateName = item.get(MITIGATION_TEMPLATE_KEY).getS();
+            if (!templateName.equals(resultTemplateName)) {
+                String msg = String.format("The request associated with job id: %s is associated with a different template than requested: %s", jobId, templateName);
+                LOG.info(msg + " Expected template: " + resultTemplateName);
+                throw new IllegalStateException(msg);
             }
             
             String mitigationName = item.get(MITIGATION_NAME_KEY).getS();
             String requestStatus = item.get(WORKFLOW_STATUS_KEY).getS();
             
             return new MitigationNameAndRequestStatus(mitigationName, requestStatus);
-        } catch (IllegalArgumentException ex) {
-            String msg = "The request associated with job id: " + jobId
-                    + " and device : " + deviceName + " does not exist";
-            LOG.warn(msg, ex);
-            throw new IllegalArgumentException(msg);
-        } catch (Exception ex) {
-            String msg = "Caught Exception when querying for the mitigation name associated with job id: " + jobId
-                    + " and device : " + deviceName;
-            LOG.warn(msg, ex);
-            throw new RuntimeException(msg);
         } finally {
             subMetrics.addOne(NUM_ATTEMPTS_TO_GET_MITIGATION_NAME_AND_REQUEST_STATUS);
             subMetrics.end();

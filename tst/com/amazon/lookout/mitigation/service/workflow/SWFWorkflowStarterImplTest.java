@@ -31,7 +31,7 @@ public class SWFWorkflowStarterImplTest {
         SWFWorkflowClientProvider mockWorkflowClientProvider = mock(SWFWorkflowClientProvider.class);
         when(mockWorkflowClientProvider.getMitigationModificationWorkflowClient(anyString(), anyString(), anyLong())).thenReturn(mockWorkflowClient);
         
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
+        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         
         WorkflowExecution workflowExecution = new WorkflowExecution().withRunId("TestRunId").withWorkflowId("TestWorkflowId");
         WorkflowType workflowType = new WorkflowType().withName("TestWorkflowName").withVersion("TestVersion");

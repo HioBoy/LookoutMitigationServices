@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
@@ -62,13 +63,13 @@ public class DDBBasedListMitigationsHandlerTest {
         
         when(requestInfoHandler.getRequestInDDB(key, tsdMetrics)).thenReturn(createGetItemResultForMitigationNameAndRequestStatus());
         
-        when(requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), Long.valueOf(request.getJobId()), tsdMetrics)).thenCallRealMethod();
-        MitigationNameAndRequestStatus nameAndStatus = requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), Long.valueOf(request.getJobId()), tsdMetrics);
+        when(requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics)).thenCallRealMethod();
+        MitigationNameAndRequestStatus nameAndStatus = requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics);
         assertEquals(nameAndStatus.getMitigationName(), "Mitigation-1");
         assertEquals(nameAndStatus.getRequestStatus(), "DEPLOYED");
     }
     
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testGetMitigationNameAndRequestStatusWhenNoRequests() {
         DDBBasedListMitigationsHandler requestInfoHandler = mock(DDBBasedListMitigationsHandler.class);
         
@@ -77,8 +78,12 @@ public class DDBBasedListMitigationsHandlerTest {
         
         when(requestInfoHandler.getRequestInDDB(key, tsdMetrics)).thenReturn(createEmptyGetItemResultForMitigationNameAndRequestStatus());
         
-        when(requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), Long.valueOf(request.getJobId()), tsdMetrics)).thenCallRealMethod();
-        MitigationNameAndRequestStatus nameAndStatus = requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), Long.valueOf(request.getJobId()), tsdMetrics);
+        when(requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics)).thenCallRealMethod();
+        try {
+            MitigationNameAndRequestStatus nameAndStatus = requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics);
+        } catch (IllegalStateException ex) {
+            assertTrue(ex.getMessage().contains("Could not find an item for the requested"));
+        }
     }
     
     @Test(expected=IllegalArgumentException.class)
@@ -90,8 +95,25 @@ public class DDBBasedListMitigationsHandlerTest {
         
         when(requestInfoHandler.getRequestInDDB(key, tsdMetrics)).thenReturn(createEmptyGetItemResultForMitigationNameAndRequestStatus());
         
-        when(requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), Long.valueOf(request.getJobId()), tsdMetrics)).thenCallRealMethod();
-        MitigationNameAndRequestStatus nameAndStatus = requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), Long.valueOf(request.getJobId()), tsdMetrics);
+        when(requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics)).thenCallRealMethod();
+        MitigationNameAndRequestStatus nameAndStatus = requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics);
+    }
+    
+    @Test
+    public void testGetMitigationNameAndRequestStatusWhenWrongTemplate() {
+        DDBBasedListMitigationsHandler requestInfoHandler = mock(DDBBasedListMitigationsHandler.class);
+        
+        GetRequestStatusRequest request = createRequestStatusRequest();
+        Map<String, AttributeValue> key= requestInfoHandler.generateRequestInfoKey(request.getDeviceName(), Long.valueOf(request.getJobId()));
+        
+        when(requestInfoHandler.getRequestInDDB(key, tsdMetrics)).thenReturn(createGetItemResultWithWrongTemplateForMitigationNameAndRequestStatus());
+        
+        when(requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics)).thenCallRealMethod();
+        try {
+            MitigationNameAndRequestStatus nameAndStatus = requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics);
+        } catch (IllegalStateException ex) {
+            assertTrue(ex.getMessage().contains("associated with a different template than requested"));
+        }
     }
     
     @Test
@@ -105,29 +127,32 @@ public class DDBBasedListMitigationsHandlerTest {
         assertEquals(list, new ArrayList<ActiveMitigationDetails>());
     }
     
-    public static GetRequestStatusRequest createRequestStatusRequest() {
+    private GetRequestStatusRequest createRequestStatusRequest() {
         GetRequestStatusRequest request = new GetRequestStatusRequest();
-        request.setDeviceName("POP_Router");
+        request.setDeviceName("POP_ROUTER");
+        request.setMitigationTemplate("Router_RateLimit_Route53Customer");
         request.setJobId(Long.valueOf("1"));
         request.setServiceName("Route53");
         
         return request;
     }
     
-    public static GetItemResult createGetItemResultForMitigationNameAndRequestStatus() {
+    private GetItemResult createGetItemResultForMitigationNameAndRequestStatus() {
         Map<String, AttributeValue> item = new HashMap<>();
         
         AttributeValue attributeValue = new AttributeValue("Mitigation-1");
         item.put(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, attributeValue);
         attributeValue = new AttributeValue("DEPLOYED");
         item.put(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, attributeValue);
+        attributeValue = new AttributeValue("Router_RateLimit_Route53Customer");
+        item.put(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, attributeValue);
         GetItemResult result = new GetItemResult();
         result.setItem(item);
         
         return result;
     }
     
-    public static GetItemResult createEmptyGetItemResultForMitigationNameAndRequestStatus() {
+    private GetItemResult createEmptyGetItemResultForMitigationNameAndRequestStatus() {
         Map<String, AttributeValue> item = new HashMap<>();
         
         GetItemResult result = new GetItemResult();
@@ -136,8 +161,22 @@ public class DDBBasedListMitigationsHandlerTest {
         return result;
     }
     
+    private GetItemResult createGetItemResultWithWrongTemplateForMitigationNameAndRequestStatus() {
+        Map<String, AttributeValue> item = new HashMap<>();
+        
+        AttributeValue attributeValue = new AttributeValue("Mitigation-1");
+        item.put(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, attributeValue);
+        attributeValue = new AttributeValue("DEPLOYED");
+        item.put(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, attributeValue);
+        attributeValue = new AttributeValue("Wrong_Template");
+        item.put(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, attributeValue);
+        GetItemResult result = new GetItemResult();
+        result.setItem(item);
     
-    public static ListActiveMitigationsForServiceRequest createListActiveMitigationsForServiceRequest() {
+        return result;
+    }
+
+    private ListActiveMitigationsForServiceRequest createListActiveMitigationsForServiceRequest() {
         ListActiveMitigationsForServiceRequest request = new ListActiveMitigationsForServiceRequest(); 
         request.setDeviceName("POP_ROUTER");
         request.setLocations(Arrays.asList("AMS1", "AMS50"));
@@ -146,7 +185,7 @@ public class DDBBasedListMitigationsHandlerTest {
         return request;
     }
     
-    public static GetItemResult createGetItemResult() {
+    private GetItemResult createGetItemResult() {
         Map<String, AttributeValue> item = new HashMap<>();
         
         AttributeValue attributeValue = new AttributeValue("lookout");
@@ -167,7 +206,7 @@ public class DDBBasedListMitigationsHandlerTest {
         return result;
     }
     
-    public static MitigationMetadata createMitigationMetadata() {
+    private MitigationMetadata createMitigationMetadata() {
         DataConverter jsonDataConverter = new JsonDataConverter();
         MitigationMetadata metaData = new MitigationMetadata();
         MitigationActionMetadata data = new MitigationActionMetadata();

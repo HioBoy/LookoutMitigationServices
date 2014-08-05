@@ -161,7 +161,7 @@ public class RequestValidator {
         }
         
         String deviceName = request.getDeviceName();
-        if (deviceName != null) {
+        if (deviceName != null) {         
             // This will throw an exception if the deviceName is not defined within the DeviceName enum.
             try {
                 DeviceName.valueOf(deviceName);  

@@ -10,7 +10,7 @@ import com.amazon.lookout.activities.model.MitigationMetadata;
  */
 public interface RequestInfoHandler {
     
-    public MitigationNameAndRequestStatus getMitigationNameAndRequestStatus(String deviceName, long jobId, TSDMetrics metrics);
+    public MitigationNameAndRequestStatus getMitigationNameAndRequestStatus(String deviceName, String templateName, long jobId, TSDMetrics metrics);
     
     public MitigationMetadata getMitigationMetadata(String deviceName, long jobId, TSDMetrics tsdMetrics);
     

@@ -19,6 +19,7 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.annotation.Documentation;
 import com.amazon.coral.annotation.Operation;
 import com.amazon.coral.annotation.Service;
+import com.amazon.coral.google.common.collect.Lists;
 import com.amazon.coral.service.Activity;
 import com.amazon.coral.validate.Validated;
 import com.amazon.lookout.mitigation.service.BadRequest400;
@@ -107,8 +108,8 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
 
                     MitigationRequestDescriptionWithLocations descriptionWithLocations = new MitigationRequestDescriptionWithLocations();
                     descriptionWithLocations.setMitigationRequestDescription(mitigationRequestDescription);
-                    descriptionWithLocations.setLocations(Arrays.asList(location));
-
+                    descriptionWithLocations.setLocations(Lists.newArrayList(location));
+                    
                     descriptionsWithLocationsMap.put(key, descriptionWithLocations);
                 } else {
                     descriptionsWithLocationsMap.get(key).getLocations().add(location);

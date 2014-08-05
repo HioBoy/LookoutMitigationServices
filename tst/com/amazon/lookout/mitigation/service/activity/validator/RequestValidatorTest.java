@@ -33,7 +33,8 @@ public class RequestValidatorTest {
     private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
     
     private final String mitigationName = "TestMitigationName";
-    private final String mitigationTemplate = MitigationTemplate.Router_RateLimit_Route53Customer;
+    private final String rateLimitMitigationTemplate = MitigationTemplate.Router_RateLimit_Route53Customer;
+    private final String countModeMitigationTemplate = MitigationTemplate.Router_CountMode_Route53Customer;
     private final String serviceName = ServiceName.Route53;
     private final String userName = "TestUserName";
     private final String toolName = "TestToolName";
@@ -54,9 +55,10 @@ public class RequestValidatorTest {
      */
     @Test
     public void testHappyCase() {
+        // RateLimit MitigationTemplate
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(mitigationTemplate);
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -73,14 +75,12 @@ public class RequestValidatorTest {
         request.setMitigationDefinition(definition);
         
         RequestValidator validator = new RequestValidator();
+                
+        validator.validateCreateRequest(request);
         
-        Throwable caughtException = null;
-        try {
-            validator.validateCreateRequest(request);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNull(caughtException);
+        // CountMode MitigationTemplate
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        validator.validateCreateRequest(request);
     }
     
     /**
@@ -89,8 +89,9 @@ public class RequestValidatorTest {
      */
     @Test
     public void testMissingMitigationName() {
+        // RateLimit MitigationTemplate
         CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationTemplate(mitigationTemplate);
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -111,12 +112,22 @@ public class RequestValidatorTest {
         Throwable caughtException = null;
         try {
             validator.validateCreateRequest(request);
-        } catch (Exception ex) {
+        } catch (IllegalArgumentException ex) {
             caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Null or empty mitigation name"));
         }
         assertNotNull(caughtException);
-        assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("Null or empty mitigation name"));
+        
+        // CountMode MitigationTemplate
+        request.setMitigationTemplate(countModeMitigationTemplate);
+        caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Null or empty mitigation name"));
+        }
+        assertNotNull(caughtException);
     }
     
     /**
@@ -124,7 +135,7 @@ public class RequestValidatorTest {
      * We expect an exception to be thrown in this case.
      */
     @Test
-    public void testMissingOrInvalidMitigationTemplate() {
+    public void testMissingOrInvalidrateLimitMitigationTemplate() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setServiceName(serviceName);
@@ -173,7 +184,7 @@ public class RequestValidatorTest {
     public void testMissingOrInvalidServiceName() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(mitigationTemplate);
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -220,7 +231,7 @@ public class RequestValidatorTest {
     public void testMissingMitigationActionMetadata() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(mitigationTemplate);
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
         request.setServiceName(serviceName);
         
         SimpleConstraint constraint = new SimpleConstraint();
@@ -251,7 +262,7 @@ public class RequestValidatorTest {
     public void testMissingUserName() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(mitigationTemplate);
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -287,7 +298,7 @@ public class RequestValidatorTest {
     public void testMissingToolName() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(mitigationTemplate);
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -323,7 +334,7 @@ public class RequestValidatorTest {
     public void testMissingMitigationDescription() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(mitigationTemplate);
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -356,9 +367,10 @@ public class RequestValidatorTest {
      */
     @Test
     public void testValidateDeleteRequestHappyCase() {
+        // RateLimit MitigationTemplate
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(mitigationTemplate);
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
         request.setServiceName(serviceName);
         request.setMitigationVersion(2);
         
@@ -370,13 +382,11 @@ public class RequestValidatorTest {
         
         RequestValidator validator = new RequestValidator();
         
-        Throwable caughtException = null;
-        try {
-            validator.validateDeleteRequest(request);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNull(caughtException);
+        validator.validateDeleteRequest(request);
+        
+        // CountMode MitigationTemplate
+        request.setMitigationTemplate(countModeMitigationTemplate);
+        validator.validateDeleteRequest(request);       
     }
     
     /**
@@ -385,9 +395,10 @@ public class RequestValidatorTest {
      */
     @Test
     public void testDeleteRequestWithInvalidMitigationVersion() {
+        // RateLimit MitigationTemplate
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(mitigationTemplate);
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -401,12 +412,21 @@ public class RequestValidatorTest {
         Throwable caughtException = null;
         try {
             validator.validateDeleteRequest(request);
-        } catch (Exception ex) {
+        } catch (IllegalArgumentException ex) {
             caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Version of the mitigation to be deleted should be set to >=1"));
         }
-        assertNotNull(caughtException);
-        assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("Version of the mitigation to be deleted should be set to >=1"));
+        assertNotNull(caughtException);        
+        
+        // CountMode MitigationTemplate
+        request.setMitigationTemplate(countModeMitigationTemplate);
+        caughtException = null;
+        try {
+            validator.validateDeleteRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Version of the mitigation to be deleted should be set to >=1"));
+        }
     }
     
     /**
@@ -415,9 +435,9 @@ public class RequestValidatorTest {
      */
     @Test
     public void testCreateRequestWithDuplicateRelatedTickets() {
-        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
+        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(mitigationTemplate);
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();

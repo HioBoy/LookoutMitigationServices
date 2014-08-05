@@ -52,8 +52,11 @@ public class EditMitigationActivity extends Activity {
             String serviceName = editRequest.getServiceName();
             
             mitigationModificationResponse = new MitigationModificationResponse();            
-            mitigationModificationResponse.setMitigationName(editRequest.getMitigationName());            
-            mitigationModificationResponse.setServiceName(editRequest.getServiceName());
+            mitigationModificationResponse.setMitigationName(editRequest.getMitigationName());
+            mitigationModificationResponse.setMitigationTemplate(editRequest.getMitigationTemplate());
+            mitigationModificationResponse.setDeviceName(deviceName);
+            mitigationModificationResponse.setServiceName(serviceName);
+            // mitigationModificationResponse.setRequestStatus(WorkflowStatus.RUNNING);
 
             tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_FAILURE, 0, Unit.ONE);
         } catch (BadRequest400 badRequest) {   

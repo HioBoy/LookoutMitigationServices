@@ -74,7 +74,7 @@ public class DDBBasedRequestStorageHandlerTest {
     public void testHappyCase() {
         DDBBasedRequestStorageHandler storageHandler = mock(DDBBasedRequestStorageHandler.class);
         
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
+        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         long workflowId = 1;
         RequestType requestType = RequestType.CreateRequest;
@@ -101,7 +101,7 @@ public class DDBBasedRequestStorageHandlerTest {
     public void testTransientFailuresCase() {
         DDBBasedRequestStorageHandler storageHandler = mock(DDBBasedRequestStorageHandler.class);
         
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
+        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         long workflowId = 1;
         RequestType requestType = RequestType.CreateRequest;
@@ -131,7 +131,7 @@ public class DDBBasedRequestStorageHandlerTest {
     public void testStorageFailuresCase() {
         DDBBasedRequestStorageHandler storageHandler = mock(DDBBasedRequestStorageHandler.class);
         
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
+        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         long workflowId = 1;
         RequestType requestType = RequestType.CreateRequest;
@@ -160,7 +160,7 @@ public class DDBBasedRequestStorageHandlerTest {
     public void testGenerateAttributesToStore() {
         DDBBasedRequestStorageHandler storageHandler = mock(DDBBasedRequestStorageHandler.class);
         
-        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
+        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         request.setLocations(Lists.newArrayList("POP1", "POP2"));
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         Long workflowId = (long) 1;
@@ -328,7 +328,7 @@ public class DDBBasedRequestStorageHandlerTest {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, "test", templateBasedValidator);
         
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateMitigationRequest();
+        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         Map<String, Condition> keyValues = storageHandler.getKeysForActiveMitigationsForDevice(deviceNameAndScope.getDeviceName().name());
         

@@ -138,6 +138,9 @@ public class TemplateBasedRequestValidator {
             case MitigationTemplate.Router_RateLimit_Route53Customer:
                 serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getRoute53SingleCustomerValidator(serviceSubnetsMatcher));
                 break;
+            case MitigationTemplate.Router_CountMode_Route53Customer:
+                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getRoute53SingleCustomerValidator(serviceSubnetsMatcher));
+                break;
             default:
                 String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". Each template must be associated with some validation checks.";
                 LOG.error(msg);

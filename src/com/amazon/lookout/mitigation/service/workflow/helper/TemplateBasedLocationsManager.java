@@ -27,6 +27,9 @@ public class TemplateBasedLocationsManager {
         
         ImmutableMap.Builder<String, TemplateBasedLocationsHelper> mapBuilder = new ImmutableMap.Builder<>();
         mapBuilder.put(MitigationTemplate.Router_RateLimit_Route53Customer, route53SingleCustomerHelper);
+        // Router_CountMode_Route53Customer is currently used only by external monitors, and
+        // it shares the locationHelper with the Router_RateLimit_Route53Customer template
+        mapBuilder.put(MitigationTemplate.Router_CountMode_Route53Customer, route53SingleCustomerHelper);
         
         templateBasedLocationsHelpers = mapBuilder.build();
     }

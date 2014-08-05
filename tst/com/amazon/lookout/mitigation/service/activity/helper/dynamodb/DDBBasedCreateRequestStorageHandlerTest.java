@@ -88,10 +88,10 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         return definition;
     }
     
-    public static CreateMitigationRequest generateCreateMitigationRequest() {
+    private static CreateMitigationRequest generateCreateMitigationRequest(String template) {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName("TestMitigationName");
-        request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
+        request.setMitigationTemplate(template);
         request.setServiceName(ServiceName.Route53);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -121,6 +121,14 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         request.setPreDeploymentChecks(checks);
         
         return request;
+    }
+    
+    public static CreateMitigationRequest generateCreateRateLimitMitigationRequest() {
+        return generateCreateMitigationRequest(MitigationTemplate.Router_RateLimit_Route53Customer);
+    }
+    
+    public static CreateMitigationRequest generateCountModeMitigationRequest() {
+        return generateCreateMitigationRequest(MitigationTemplate.Router_CountMode_Route53Customer);
     }
     
     private class DDBItemBuilder {
@@ -166,7 +174,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         
-        MitigationModificationRequest request = generateCreateMitigationRequest();
+        MitigationModificationRequest request = generateCreateRateLimitMitigationRequest();
         MitigationDefinition newDefinition = defaultCreateMitigationDefinition();
         String newDefinitionJsonString = jsonDataConverter.toData(newDefinition);
         int newDefinitionHashcode = newDefinitionJsonString.hashCode();
@@ -423,7 +431,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         String deviceName = DeviceName.POP_ROUTER.name();
         String deviceScope = DeviceScope.GLOBAL.name();
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         
         MitigationDefinition definition = request.getMitigationDefinition();
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
@@ -501,7 +509,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         int newDefinitionHashcode = jsonDataConverter.toData(request.getMitigationDefinition()).hashCode();
         
         MitigationDefinition definition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_IP.name(), Lists.newArrayList("1.2.3.4"));
@@ -564,7 +572,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         int newDefinitionHashcode = jsonDataConverter.toData(request.getMitigationDefinition()).hashCode();
         
         MitigationDefinition definition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_IP.name(), Lists.newArrayList("1.2.3.4"));
@@ -628,7 +636,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         int newDefinitionHashcode = jsonDataConverter.toData(request.getMitigationDefinition()).hashCode();
         
         String mitigationName = request.getMitigationName();
@@ -682,7 +690,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         String deviceName = DeviceName.POP_ROUTER.name();
         String deviceScope = DeviceScope.GLOBAL.name();
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         
         MitigationDefinition definition = request.getMitigationDefinition();
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
@@ -754,7 +762,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         MitigationDefinition definition = request.getMitigationDefinition();
         String mitigationDefinitionAsJsonString = new JsonDataConverter().toData(definition);
         int newDefinitionHashcode = mitigationDefinitionAsJsonString.hashCode();
@@ -800,7 +808,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         MitigationDefinition definition = request.getMitigationDefinition();
         String mitigationDefinitionAsJsonString = new JsonDataConverter().toData(definition);
         int newDefinitionHashcode = mitigationDefinitionAsJsonString.hashCode();
@@ -842,7 +850,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public void testStoreRequestForWorkflowHappyCase() {
         DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         
         long maxWorkflowId = 3;
         when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
@@ -862,7 +870,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public void testStoreRequestForWorkflowForNullMaxWorkflowId() {
         DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(null);
@@ -882,7 +890,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public void testStoreRequestForWorkflowForOutOfBoundsWorkflowId() {
         DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         long maxWorkflowId = deviceNameAndScope.getDeviceScope().getMaxWorkflowId();
@@ -909,7 +917,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public void testStoreRequestForWorkflowWhereGetMaxWorkflowIdFails() {
         DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         
         when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenThrow(new RuntimeException());
         
@@ -931,7 +939,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public void testStoreRequestForWorkflowWhereStorageFails() {
         DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         
         long maxWorkflowId = 3;
         when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
@@ -957,7 +965,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public void testStoreRequestForWorkflowWithTransientStorageFailures() {
         DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
         
-        CreateMitigationRequest request = generateCreateMitigationRequest();
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         
         long maxWorkflowId = 3;
         when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);

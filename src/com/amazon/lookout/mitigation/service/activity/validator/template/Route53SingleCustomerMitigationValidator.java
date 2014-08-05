@@ -102,37 +102,60 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     private void validateMitigationName(String mitigationName, String mitigationTemplate) {
         switch (mitigationTemplate) {
         case MitigationTemplate.Router_RateLimit_Route53Customer:
-            Matcher matcher = INVALID_ROUTER_MITIGATION_NAME_PATTERN.matcher(mitigationName);
-            if (matcher.find()) {
-                String msg = "Invalid mitigationName + " + mitigationName + " found for template: " + mitigationTemplate + ". Name cannot contain any control characters.";
-                LOG.info(msg);
-                throw new IllegalArgumentException(msg);
-            }
+            validateRouterMitigationName(mitigationName, mitigationTemplate);
             break;
+        case MitigationTemplate.Router_CountMode_Route53Customer:
+            validateRouterMitigationName(mitigationName, mitigationTemplate);
+            break;
+        }            
+    }
+    
+    private void validateRouterMitigationName(String mitigationName, String mitigationTemplate) {
+        Matcher matcher = INVALID_ROUTER_MITIGATION_NAME_PATTERN.matcher(mitigationName);
+        if (matcher.find()) {
+            String msg = "Invalid mitigationName + " + mitigationName + " found for template: " + mitigationTemplate + ". Name cannot contain any control characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
         }
     }
     
     private void validateLocationsToApply(List<String> locationsToApplyMitigation, String mitigationTemplate) {
         switch (mitigationTemplate) {
         case MitigationTemplate.Router_RateLimit_Route53Customer:
-            if ((locationsToApplyMitigation != null) && !locationsToApplyMitigation.isEmpty()) {
-                String msg = "For the template: " + mitigationTemplate + " no locations are expected to be provided in the request, since this mitigation is " +
-                             "expected to be applied to all non-Blackwatch POPs.";
-                LOG.info(msg);
-                throw new IllegalArgumentException(msg);
-            }
+            checkForNoLocations(locationsToApplyMitigation, mitigationTemplate);
+            break;
+        case MitigationTemplate.Router_CountMode_Route53Customer:
+            checkForNoLocations(locationsToApplyMitigation, mitigationTemplate);
             break;
         }
     }
+
+    private void checkForNoLocations(List<String> locationsToApplyMitigation, String mitigationTemplate) {
+        if ((locationsToApplyMitigation != null) && !locationsToApplyMitigation.isEmpty()) {
+            String msg = "For the template: " + mitigationTemplate + " no locations are expected to be provided in the request, since this mitigation is " +
+                        "expected to be applied to all non-Blackwatch POPs.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
     
     private void validateActionType(ActionType actionType, String mitigationTemplate) {
         if (mitigationTemplate.equals(MitigationTemplate.Router_RateLimit_Route53Customer)) {
-            if (actionType != null) {
-                String msg = "ActionType must not be specified for mitigationTemplate: " + mitigationTemplate + ". ActionType is hard-coded for this template " +
-                             "to be rate-limit with a fixed value. Instead found actionType: " + actionType;
-                LOG.info(msg);
-                throw new IllegalArgumentException(msg);
-            }
+            checkForNoAction(actionType, mitigationTemplate);
+        }
+        
+        if (mitigationTemplate.equals(MitigationTemplate.Router_CountMode_Route53Customer)) {
+            checkForNoAction(actionType, mitigationTemplate);
+        }
+    }
+
+    private void checkForNoAction(ActionType actionType, String mitigationTemplate) {
+        if (actionType != null) {
+            String msg = "ActionType must not be specified for mitigationTemplate: " + mitigationTemplate + ". ActionType is hard-coded for this template " +
+                         "to be CountAction. Instead found actionType: " + actionType;
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
         }
     }
     
@@ -205,11 +228,24 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         Validate.notEmpty(nameForExistingDefinition);
         Validate.notNull(existingDefinition);
         
-        if ((templateForNewDefinition.equals(MitigationTemplate.Router_RateLimit_Route53Customer)) && (templateForNewDefinition.equals(templateForExistingDefinition))) {
+        if (templateForNewDefinition.equals(MitigationTemplate.Router_RateLimit_Route53Customer)) {
+            checkForDuplicateDefinition(templateForNewDefinition, nameForNewDefinition, newDefinition, templateForExistingDefinition, nameForExistingDefinition, existingDefinition);
+        }
+        
+        if (templateForNewDefinition.equals(MitigationTemplate.Router_CountMode_Route53Customer)) {
+            checkForDuplicateDefinition(templateForNewDefinition, nameForNewDefinition, newDefinition, templateForExistingDefinition, nameForExistingDefinition, existingDefinition);
+        }
+    }
+
+    private void checkForDuplicateDefinition(@Nonnull String templateForNewDefinition, @Nonnull String nameForNewDefinition, 
+                                             @Nonnull MitigationDefinition newDefinition, @Nonnull String templateForExistingDefinition, 
+                                             @Nonnull String nameForExistingDefinition, @Nonnull MitigationDefinition existingDefinition) {
+        if (templateForNewDefinition.equals(templateForExistingDefinition)) {
             String msg = "For MitigationTemplate: " + templateForNewDefinition + " we can have at most 1 mitigation active at a time. Currently mitigation: " + 
                          nameForExistingDefinition + " already exists for this template";
             LOG.info(msg);
             throw new DuplicateDefinitionException400(msg);
         }
     }
+    
 }
