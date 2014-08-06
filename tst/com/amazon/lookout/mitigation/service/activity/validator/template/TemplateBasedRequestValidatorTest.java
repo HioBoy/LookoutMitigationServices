@@ -48,6 +48,7 @@ public class TemplateBasedRequestValidatorTest {
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher);
         MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
+        request.setPreDeploymentChecks(null);
         Throwable caughtException = null;
         try {
             templateBasedValidator.validateCreateRequestForTemplate(request, tsdMetrics);
