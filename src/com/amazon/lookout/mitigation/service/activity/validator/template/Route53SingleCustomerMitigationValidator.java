@@ -5,6 +5,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 import org.apache.commons.lang.Validate;
@@ -21,6 +22,7 @@ import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
+import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
@@ -97,6 +99,8 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         validateLocationsToApply(locationsToApplyMitigation, mitigationTemplate);
         validateActionType(mitigationAction, mitigationTemplate);
         validateMitigationConstraint(mitigationConstraint, mitigationTemplate);
+        validatePreDeploymentChecks(request.getPreDeploymentChecks(), mitigationTemplate);
+        validatePostDeploymentChecks(request.getPostDeploymentChecks(), mitigationTemplate);
     }
     
     private void validateMitigationName(String mitigationName, String mitigationTemplate) {
@@ -152,8 +156,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
 
     private void checkForNoAction(ActionType actionType, String mitigationTemplate) {
         if (actionType != null) {
-            String msg = "ActionType must not be specified for mitigationTemplate: " + mitigationTemplate + ". ActionType is hard-coded for this template " +
-                         "to be CountAction. Instead found actionType: " + actionType;
+            String msg = "ActionType must not be specified for mitigationTemplate: " + mitigationTemplate + ", instead found : " + actionType;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
@@ -248,4 +251,33 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         }
     }
     
+    private void validatePreDeploymentChecks(@Nullable List<MitigationDeploymentCheck> preDeploymentChecks, @Nonnull String mitigationTemplate) {
+        switch (mitigationTemplate) {
+        case MitigationTemplate.Router_RateLimit_Route53Customer:
+            validateNoDeploymentChecks(preDeploymentChecks, mitigationTemplate);
+            break;
+        case MitigationTemplate.Router_CountMode_Route53Customer:
+            validateNoDeploymentChecks(preDeploymentChecks, mitigationTemplate);
+            break;
+        }
+    }
+    
+    private void validatePostDeploymentChecks(@Nullable List<MitigationDeploymentCheck> postDeploymentChecks, @Nonnull String mitigationTemplate) {
+        switch (mitigationTemplate) {
+        case MitigationTemplate.Router_RateLimit_Route53Customer:
+            validateNoDeploymentChecks(postDeploymentChecks, mitigationTemplate);
+            break;
+        case MitigationTemplate.Router_CountMode_Route53Customer:
+            validateNoDeploymentChecks(postDeploymentChecks, mitigationTemplate);
+            break;
+        }
+    }
+    
+    private void validateNoDeploymentChecks(List<MitigationDeploymentCheck> deploymentChecks, String mitigationTemplate) {
+        if ((deploymentChecks != null) && !deploymentChecks.isEmpty()) {
+            String msg = "For MitigationTemplate: " + mitigationTemplate + " we expect to not have any deployment checks to be performed.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }    
 }

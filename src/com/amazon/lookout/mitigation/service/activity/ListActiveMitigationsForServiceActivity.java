@@ -2,7 +2,6 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +21,8 @@ import com.amazon.coral.annotation.Service;
 import com.amazon.coral.google.common.collect.Lists;
 import com.amazon.coral.service.Activity;
 import com.amazon.coral.validate.Validated;
+import com.amazon.lookout.activities.model.ActiveMitigationDetails;
+import com.amazon.lookout.activities.model.MitigationMetadata;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
@@ -32,8 +33,6 @@ import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInf
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
-import com.amazon.lookout.activities.model.ActiveMitigationDetails;
-import com.amazon.lookout.activities.model.MitigationMetadata;
 
 @ThreadSafe
 @Service("LookoutMitigationService")

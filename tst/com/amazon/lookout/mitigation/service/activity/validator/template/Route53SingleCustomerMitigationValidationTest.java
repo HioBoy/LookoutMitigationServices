@@ -12,6 +12,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -19,6 +22,7 @@ import org.junit.Test;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.mitigation.service.BlastRadiusCheck;
 import com.amazon.lookout.mitigation.service.CompositeOrConstraint;
 import com.amazon.lookout.mitigation.service.CountAction;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
@@ -26,6 +30,7 @@ import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
+import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.RateLimitAction;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
@@ -156,6 +161,82 @@ public class Route53SingleCustomerMitigationValidationTest {
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         Throwable caughtException = null;
+        try {
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+    }
+    
+    @Test
+    public void testWhenPreDeploymentChecksAreSpecified() {
+        ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(subnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
+        
+        Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
+        
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
+        request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
+        
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        // Ensure the call goes through fine with the default request object.
+        Throwable caughtException = null;
+        try {
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNull(caughtException);
+        
+        request = generateCreateRateLimitMitigationRequest();
+        // Only change the preDeployment checks for the request object from above.
+        List<MitigationDeploymentCheck> preDeploymentChecks = new ArrayList<>();
+        preDeploymentChecks.add(new BlastRadiusCheck());
+        request.setPreDeploymentChecks(preDeploymentChecks);
+        request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
+        
+        caughtException = null;
+        try {
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+    }
+    
+    @Test
+    public void testWhenPostDeploymentChecksAreSpecified() {
+        ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(subnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
+        
+        Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
+        
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
+        request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
+        
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        // Ensure the call goes through fine with the default request object.
+        Throwable caughtException = null;
+        try {
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNull(caughtException);
+        
+        request = generateCreateRateLimitMitigationRequest();
+        // Only change the postDeployment checks for the request object from above.
+        List<MitigationDeploymentCheck> postDeploymentChecks = new ArrayList<>();
+        postDeploymentChecks.add(new BlastRadiusCheck());
+        request.setPostDeploymentChecks(postDeploymentChecks);
+        request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer);
+        
+        caughtException = null;
         try {
             route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
         } catch (Exception ex) {
