@@ -86,25 +86,25 @@ public class RequestsReaper implements Runnable {
     private final int maxSecondsToStartWorkflow;
     private final SWFWorkflowStarter workflowStarter;
     
-    @ConstructorProperties({"dynamoDBClient", "swfClient", "swfDomain", "swfDomainName", "swfSocketTimeoutSeconds", "swfConnTimeoutSeconds", "workflowStarter", "metricsFactory"})
-    public RequestsReaper(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull AmazonSimpleWorkflowClient swfClient, @Nonnull String domain, @Nonnull String swfDomain, 
-                          int swfSocketTimeoutSeconds, int swfConnTimeoutSeconds, @Nonnull SWFWorkflowStarter workflowStarter, @Nonnull MetricsFactory metricsFactory) {
+    @ConstructorProperties({"dynamoDBClient", "swfClient", "appDomain", "swfDomainName", "swfSocketTimeoutMillis", "swfConnTimeoutMillis", "workflowStarter", "metricsFactory"})
+    public RequestsReaper(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull AmazonSimpleWorkflowClient swfClient, @Nonnull String appDomain, @Nonnull String swfDomain, 
+                          int swfSocketTimeoutMillis, int swfConnTimeoutMillis, @Nonnull SWFWorkflowStarter workflowStarter, @Nonnull MetricsFactory metricsFactory) {
         Validate.notNull(dynamoDBClient);
         this.dynamoDBClient = dynamoDBClient;
         
         Validate.notNull(swfClient);
         this.swfClient = swfClient;
         
-        Validate.notEmpty(domain);
-        this.mitigationRequestsTableName = MitigationRequestsModel.MITIGATION_REQUESTS_TABLE_NAME_PREFIX + domain.toUpperCase();
-        this.mitigationInstancesTableName = MitigationInstancesModel.MITIGATION_INSTANCES_TABLE_NAME_PREFIX + domain.toUpperCase();
+        Validate.notEmpty(appDomain);
+        this.mitigationRequestsTableName = MitigationRequestsModel.MITIGATION_REQUESTS_TABLE_NAME_PREFIX + appDomain.toUpperCase();
+        this.mitigationInstancesTableName = MitigationInstancesModel.MITIGATION_INSTANCES_TABLE_NAME_PREFIX + appDomain.toUpperCase();
         
         Validate.notEmpty(swfDomain);
         this.swfDomain = swfDomain;
         
-        Validate.isTrue(swfConnTimeoutSeconds > 0);
-        Validate.isTrue(swfSocketTimeoutSeconds > 0);
-        maxSecondsToStartWorkflow = swfConnTimeoutSeconds + swfSocketTimeoutSeconds + BUFFER_SECONDS_BEFORE_STARTING_WORKFLOW;
+        Validate.isTrue(swfConnTimeoutMillis > 0);
+        Validate.isTrue(swfSocketTimeoutMillis > 0);
+        maxSecondsToStartWorkflow = swfConnTimeoutMillis/1000 + swfSocketTimeoutMillis/1000 + BUFFER_SECONDS_BEFORE_STARTING_WORKFLOW;
         
         Validate.notNull(workflowStarter);
         this.workflowStarter = workflowStarter;

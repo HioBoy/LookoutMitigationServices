@@ -30,19 +30,22 @@
                     <property name="timeUnit" ref="minutes"/>
                 </bean>
                 <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
-                    <property name="runnable" ref="swfFailedWorkflowReaper"/>
-                    <property name="period" value="15"/>
-                    <property name="timeUnit" ref="minutes"/>
+                    <property name="runnable" ref="requestsReaper"/>
+                    <property name="period" value="30"/>
+                    <property name="timeUnit" ref="seconds"/>
                 </bean>
             </set>
         </property>
     </bean>
     
-    <bean id="swfFailedWorkflowReaper" class="com.amazon.lookout.mitigation.service.workflow.SWFFailedWorkflowReaper">
+    <bean id="requestsReaper" class="com.amazon.lookout.mitigation.service.workflow.helper.RequestsReaper">
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="swfClient" ref="swfClient"/>
-        <constructor-arg name="mitigationServiceDomain" value="${domain}"/>
+        <constructor-arg name="appDomain" value="${domain}"/>
         <constructor-arg name="swfDomainName" value="${domain}.swfDomainName"/>
+        <constructor-arg name="swfSocketTimeoutMillis" ref="swfClientSocketTimeoutMillis"/>
+        <constructor-arg name="swfConnTimeoutMillis" ref="swfClientConnectionTimeoutMillis"/>
+        <constructor-arg name="workflowStarter" ref="swfWorkflowStarter"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
 

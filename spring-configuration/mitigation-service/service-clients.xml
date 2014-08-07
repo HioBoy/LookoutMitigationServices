@@ -14,17 +14,17 @@
         <property name="endpoint" ref="${realm}.swfEndpoint"/>
     </bean>
     
-    <bean id="swfClientConnectionTimeout" class="java.lang.Integer">
+    <bean id="swfClientConnectionTimeoutMillis" class="java.lang.Integer">
         <constructor-arg value="30000"/> <!-- Set the SWF client connection timeout for the MitigationService to be 30s. -->
     </bean>
     
-    <bean id="swfClientSocketTimeout" class="java.lang.Integer">
+    <bean id="swfClientSocketTimeoutMillis" class="java.lang.Integer">
         <constructor-arg value="30000"/> <!-- Set the timeout for the MitigationService to communicate with SWF to be 30s - long enough for all the query APIs to finish. -->
     </bean>
     
     <bean id="swfClientConfig" class="com.amazonaws.ClientConfiguration">
-        <property name="socketTimeout" ref="swfClientSocketTimeout"/>
-        <property name="connectionTimeout" ref="swfClientConnectionTimeout"/>
+        <property name="socketTimeout" ref="swfClientSocketTimeoutMillis"/>
+        <property name="connectionTimeout" ref="swfClientConnectionTimeoutMillis"/>
     </bean>
 
     <bean id="daasControlAPIServiceClient" class="com.amazon.daas.control.DaasControlAPIServiceV20100701ClientImpl">

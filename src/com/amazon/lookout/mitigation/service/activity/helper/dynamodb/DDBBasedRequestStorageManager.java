@@ -31,7 +31,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 public class DDBBasedRequestStorageManager implements RequestStorageManager {
     private static final Log LOG = LogFactory.getLog(DDBBasedRequestStorageManager.class);
     
-    private static final String NO_STORAGE_HANDLE_FOUND_LOG_TAG = "[NO_REQUST_STORAGE_HANDLER]";
+    private static final String NO_STORAGE_HANDLE_FOUND_LOG_TAG = "[NO_REQUEST_STORAGE_HANDLER]";
     
     private static final String REQUEST_TYPE_PROPERTY_KEY = "RequestType";
 

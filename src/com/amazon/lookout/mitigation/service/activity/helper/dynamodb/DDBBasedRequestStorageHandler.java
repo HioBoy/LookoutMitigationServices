@@ -53,7 +53,7 @@ public abstract class DDBBasedRequestStorageHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedRequestStorageHandler.class);
     
     // Log prefix to use if the sanity check for workflowId fails - we can use this tag to set logscan alarms on.
-    private static final String WORKFLOW_ID_SANITY_CHECK_FAILURE_LOG_PREFIX = "[SANITY_CHECK_FAILURE] ";
+    private static final String WORKFLOW_ID_SANITY_CHECK_FAILURE_LOG_PREFIX = "[WORKFLOW_ID_RANGE_CHECK_FAILURE] ";
     
     public static final String MITIGATION_REQUEST_TABLE_NAME_PREFIX = "MITIGATION_REQUESTS_";
     public static final String ACTIVE_MITIGATIONS_TABLE_NAME_PREFIX = "ACTIVE_MITIGATIONS_";
