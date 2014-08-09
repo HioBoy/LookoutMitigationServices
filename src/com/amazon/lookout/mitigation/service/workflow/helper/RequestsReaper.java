@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 import org.apache.commons.lang.Validate;
+import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.joda.time.DateTime;
@@ -204,14 +205,17 @@ public class RequestsReaper implements Runnable {
                         // Get a list of active requests which weren't successful and haven't been reaped as yet.
                         QueryResult queryResult = getUnsuccessfulUnreapedRequests(deviceName.name(), lastEvaluatedKey);
                         if ((queryResult == null) || (queryResult.getCount() == 0)) {
+                            LOG.debug("Found no unsuccessful + unreaped requests");
                             continue;
                         }
+                        LOG.debug("Found: " + queryResult.getItems().size() + " unsuccessful+unreaped requests: " + ReflectionToStringBuilder.toString(queryResult));
                         
                         for (Map<String, AttributeValue> item : queryResult.getItems()) {
                             String workflowIdStr = item.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN();
                             List<String> locations = item.get(MitigationRequestsModel.LOCATIONS_KEY).getSS();
                             String workflowStatus = item.get(MitigationRequestsModel.WORKFLOW_STATUS_KEY).getS();
                             long requestDateInMillis = Long.parseLong(item.get(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY).getN());
+                            DateTime requestDateTime = new DateTime(requestDateInMillis);
                             String mitigationName = item.get(MitigationRequestsModel.MITIGATION_NAME_KEY).getS();
                             int mitigationVersion = Integer.parseInt(item.get(MitigationRequestsModel.MITIGATION_VERSION_KEY).getN());
                             String mitigationTemplate = item.get(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY).getS();
@@ -229,11 +233,16 @@ public class RequestsReaper implements Runnable {
                             if (workflowStatus.equals(WorkflowStatus.RUNNING)) {
                                 DateTime now = new DateTime(DateTimeZone.UTC);
                                 if (now.minusSeconds(getMaxSecondsToStartWorkflow()).isBefore(requestDateInMillis)) {
+                                    LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
+                                              " at locations: " + locations + " has recently started within the last: " + getMaxSecondsToStartWorkflow() + 
+                                              " number of seconds, hence not reaping. Workflow RequestDate: " + requestDateTime);
                                     continue;
                                 }
                                 
                                 // Query SWF to see if this workflow is still active or not. If it is still active, don't perform any further steps.
                                 if (!isWorkflowClosedInSWF(deviceName.name(), workflowIdStr, requestDateInMillis, subMetrics)) {
+                                    LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
+                                                " at locations: " + locations + " with RequestDate: " + requestDateTime + " doesn't show as CLOSED in SWF, hence skipping any reaping activity.");
                                     continue;
                                 }
                             }
@@ -243,10 +252,14 @@ public class RequestsReaper implements Runnable {
                             
                             // Filter only the instances that need some state to be corrected.
                             Map<String, Map<String, AttributeValue>> instancesToBeReaped = filterInstancesToBeReaped(locations, instancesDetails);
+                            LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
+                                        " at locations: " + locations + " has " +  instancesToBeReaped.size() + " instances to be reaped. Instances: " + 
+                                      ReflectionToStringBuilder.toString(instancesToBeReaped));
                             
                             // Wrap up this request and its instances in a RequestToReap object. 
                             RequestToReap workflowInfo = new RequestToReap(workflowIdStr, swfRunId, deviceName.name(), deviceScope, serviceName, mitigationName, 
                                                                            mitigationVersion, mitigationTemplate, requestType, requestDateInMillis, instancesToBeReaped);
+                            LOG.info("Request that needs to be reaped: " + workflowInfo);
                             requestsToBeReaped.add(workflowInfo);
                         }
                         lastEvaluatedKey = queryResult.getLastEvaluatedKey();
@@ -477,6 +490,9 @@ public class RequestsReaper implements Runnable {
                 }
             } while ((nextPageToken != null) && (numAttempts < MAX_SWF_QUERY_ATTEMPTS));
             
+            LOG.debug("Got: " + workflowExecutionInfos.size() + " results when querying SWF for closed workflows using the listClosedWorkflowExecutions " +
+                      "API with request: " + ReflectionToStringBuilder.toString(listExecutionsRequest));
+            
             // If the API didn't return an entry when searching for closed workflows, then return false to indicate that this workflow isn't CLOSED as yet.
             if (workflowExecutionInfos.isEmpty()) {
                 return false;
@@ -489,6 +505,7 @@ public class RequestsReaper implements Runnable {
             }
             
             WorkflowExecutionInfo executionInfo = workflowExecutionInfos.get(0);
+            LOG.debug("Got WorkflowExecutionInfo: " + executionInfo + " for querying with request: " + ReflectionToStringBuilder.toString(listExecutionsRequest));
             
             String executionStatus = executionInfo.getExecutionStatus();
             if (executionStatus.equals(ExecutionStatus.CLOSED.name())) {
