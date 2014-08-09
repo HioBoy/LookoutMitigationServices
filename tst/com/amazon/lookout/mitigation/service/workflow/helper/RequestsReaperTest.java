@@ -7,6 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyList;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -117,7 +118,7 @@ public class RequestsReaperTest {
     @Test
     public void testIsWorkflowClosedForActiveWorkflow() {
         RequestsReaper reaper = mock(RequestsReaper.class);
-        when(reaper.isWorkflowClosedInSWF(anyString(), anyString(), any(TSDMetrics.class))).thenCallRealMethod();
+        when(reaper.isWorkflowClosedInSWF(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
         when(reaper.getSWFDomain()).thenReturn("TestDomain");
         
         AmazonSimpleWorkflowClient swfClient = mock(AmazonSimpleWorkflowClient.class);
@@ -129,14 +130,14 @@ public class RequestsReaperTest {
         workflowInfos.setExecutionInfos(Lists.newArrayList(info));
         when(swfClient.listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class))).thenReturn(workflowInfos);
         
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", TestUtils.newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", 12345, TestUtils.newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
     }
     
     @Test
     public void testIsWorkflowClosedForClosedWorkflow() {
         RequestsReaper reaper = mock(RequestsReaper.class);
-        when(reaper.isWorkflowClosedInSWF(anyString(), anyString(), any(TSDMetrics.class))).thenCallRealMethod();
+        when(reaper.isWorkflowClosedInSWF(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
         when(reaper.getSWFDomain()).thenReturn("TestDomain");
         
         AmazonSimpleWorkflowClient swfClient = mock(AmazonSimpleWorkflowClient.class);
@@ -149,7 +150,7 @@ public class RequestsReaperTest {
         workflowInfos.setExecutionInfos(Lists.newArrayList(info));
         when(swfClient.listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class))).thenReturn(null).thenReturn(workflowInfos);
         
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", TestUtils.newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", 12345, TestUtils.newNopTsdMetrics());
         assertTrue(isWorkflowClosedInSWF);
         verify(swfClient, times(2)).listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class));
     }
@@ -334,7 +335,8 @@ public class RequestsReaperTest {
         item2.put(MitigationRequestsModel.WORKFLOW_ID_KEY, new AttributeValue().withN("2"));
         item2.put(MitigationRequestsModel.LOCATIONS_KEY, new AttributeValue().withSS(Lists.newArrayList("TST1", "TST3")));
         item2.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, new AttributeValue(WorkflowStatus.RUNNING));
-        item2.put(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, new AttributeValue().withN(String.valueOf(new DateTime(DateTimeZone.UTC).minusSeconds(120).getMillis())));
+        long workflowRequestDate_2 = new DateTime(DateTimeZone.UTC).minusSeconds(120).getMillis();
+        item2.put(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, new AttributeValue().withN(String.valueOf(workflowRequestDate_2)));
         item2.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue("TstMit2"));
         item2.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN("1"));
         item2.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit1Template"));
@@ -343,14 +345,15 @@ public class RequestsReaperTest {
         item2.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Route53));
         item2.put(MitigationRequestsModel.RUN_ID_KEY, new AttributeValue("RandomRunID1"));
         items.add(item2);
-        when(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", metrics)).thenReturn(false);
+        when(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "2", workflowRequestDate_2, metrics)).thenReturn(false);
         
         // Item3, status is running for a while, but SWF API confirms that this workflow is now marked as closed in SWF.
         Map<String, AttributeValue> item3 = new HashMap<>();
         item3.put(MitigationRequestsModel.WORKFLOW_ID_KEY, new AttributeValue().withN("3"));
         item3.put(MitigationRequestsModel.LOCATIONS_KEY, new AttributeValue().withSS(Lists.newArrayList("TST2", "TST3")));
         item3.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, new AttributeValue(WorkflowStatus.RUNNING));
-        item3.put(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, new AttributeValue().withN(String.valueOf(new DateTime(DateTimeZone.UTC).minusSeconds(120).getMillis())));
+        long workflowRequestDate_3 = new DateTime(DateTimeZone.UTC).minusSeconds(120).getMillis();
+        item3.put(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, new AttributeValue().withN(String.valueOf(workflowRequestDate_3)));
         item3.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue("TstMit3"));
         item3.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN("2"));
         item3.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit3Template"));
@@ -359,7 +362,7 @@ public class RequestsReaperTest {
         item3.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Route53));
         item3.put(MitigationRequestsModel.RUN_ID_KEY, new AttributeValue("RandomRunID1"));
         items.add(item3);
-        when(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "3", metrics)).thenReturn(true);
+        when(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "3", workflowRequestDate_3, metrics)).thenReturn(true);
         Map<String, Map<String, AttributeValue>> instancesDetails = new HashMap<>();
         Map<String, AttributeValue> info = new HashMap<>();
         info.put(MitigationInstancesModel.LOCATION_KEY, new AttributeValue("TST2"));
@@ -376,7 +379,8 @@ public class RequestsReaperTest {
         item4.put(MitigationRequestsModel.WORKFLOW_ID_KEY, new AttributeValue().withN("4"));
         item4.put(MitigationRequestsModel.LOCATIONS_KEY, new AttributeValue().withSS(Lists.newArrayList("TST1", "TST2", "TST3", "TST4")));
         item4.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, new AttributeValue(WorkflowStatus.RUNNING));
-        item4.put(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, new AttributeValue().withN(String.valueOf(new DateTime(DateTimeZone.UTC).minusSeconds(120).getMillis())));
+        long workflowRequestDate_4 = new DateTime(DateTimeZone.UTC).minusSeconds(120).getMillis();
+        item4.put(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, new AttributeValue().withN(String.valueOf(workflowRequestDate_4)));
         item4.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue("TstMit1"));
         item4.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN("5"));
         item4.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit4Template"));
@@ -385,7 +389,7 @@ public class RequestsReaperTest {
         item4.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Route53));
         item4.put(MitigationRequestsModel.RUN_ID_KEY, new AttributeValue("RandomRunID1"));
         items.add(item4);
-        when(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "4", metrics)).thenReturn(true);
+        when(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "4", workflowRequestDate_4, metrics)).thenReturn(true);
         instancesDetails = new HashMap<>();
         instancesDetails.put("TST1", new HashMap<String, AttributeValue>());
         instancesDetails.put("TST2", new HashMap<String, AttributeValue>());

@@ -35,6 +35,7 @@ import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.ExecutionStatus;
+import com.amazonaws.services.simpleworkflow.model.ExecutionTimeFilter;
 import com.amazonaws.services.simpleworkflow.model.ListClosedWorkflowExecutionsRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionAlreadyStartedException;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionFilter;
@@ -232,7 +233,7 @@ public class RequestsReaper implements Runnable {
                                 }
                                 
                                 // Query SWF to see if this workflow is still active or not. If it is still active, don't perform any further steps.
-                                if (!isWorkflowClosedInSWF(deviceName.name(), workflowIdStr, subMetrics)) {
+                                if (!isWorkflowClosedInSWF(deviceName.name(), workflowIdStr, requestDateInMillis, subMetrics)) {
                                     continue;
                                 }
                             }
@@ -427,10 +428,11 @@ public class RequestsReaper implements Runnable {
      * Responsible for querying SWF API to identify if the workflow run represented by the input parameters is considered Closed by SWF. Protected to allow unit-tests.
      * @param deviceName Device corresponding to the workflow run whose SWF status is being queried.
      * @param workflowIdStr WorkflowId represented as String
+     * @param requestDateInMillis Timestamp in millis of when this request was created.
      * @param metrics
      * @return boolean flag indicating true if the workflow represented by the input parameters is considered Closed by SWF, false otherwise. 
      */
-    protected boolean isWorkflowClosedInSWF(@Nonnull String deviceName, @Nonnull String workflowIdStr, @Nonnull TSDMetrics metrics) {
+    protected boolean isWorkflowClosedInSWF(@Nonnull String deviceName, @Nonnull String workflowIdStr, long requestDateInMillis, @Nonnull TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("isWorkflowClosedInSWF");
         try {
             DateTime now = new DateTime(DateTimeZone.UTC);
@@ -442,6 +444,11 @@ public class RequestsReaper implements Runnable {
             WorkflowExecutionFilter executionFilter = new WorkflowExecutionFilter();
             executionFilter.setWorkflowId(swfWorkflowId);
             listExecutionsRequest.setExecutionFilter(executionFilter);
+            
+            // We subtract a minute for the oldestStartTime constraint to ensure the SWF start time is definitely after the oldestStartTime.
+            DateTime oldestStartTime = new DateTime(requestDateInMillis).minusMinutes(1);
+            ExecutionTimeFilter executionTime = new ExecutionTimeFilter().withOldestDate(oldestStartTime.toDate());
+            listExecutionsRequest.setStartTimeFilter(executionTime);
             
             WorkflowExecutionInfos listClosedWorkflowResult = null;
             String nextPageToken = null;
@@ -469,6 +476,11 @@ public class RequestsReaper implements Runnable {
                     }
                 }
             } while ((nextPageToken != null) && (numAttempts < MAX_SWF_QUERY_ATTEMPTS));
+            
+            // If the API didn't return an entry when searching for closed workflows, then return false to indicate that this workflow isn't CLOSED as yet.
+            if (workflowExecutionInfos.isEmpty()) {
+                return false;
+            }
             
             if (workflowExecutionInfos.size() > 1) {
                 String msg = "Got more than 1 WorkflowExecution when querying status in SWF for workflow: " + workflowIdStr + ", deviceName: " + deviceName + 
