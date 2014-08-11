@@ -2,9 +2,11 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 
@@ -30,14 +32,26 @@ import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceResp
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
+import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
+import com.google.common.collect.Sets;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
 public class ListActiveMitigationsForServiceActivity extends Activity {
     private static final Log LOG = LogFactory.getLog(ListActiveMitigationsForServiceActivity.class);
+    
+    private enum ListActiveMitigationsExceptions {
+        BadRequest,
+        InternalError
+    };
+    
+    // Maintain a Set<String> for all the exceptions to allow passing it to the CommonActivityMetricsHelper which is called from
+    // different activities. Hence not using an EnumSet in this case.
+    private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(Sets.newHashSet(ListActiveMitigationsExceptions.BadRequest.name(),
+                                                                                                      ListActiveMitigationsExceptions.InternalError.name()));
     
     private final RequestValidator requestValidator;
     private final ActiveMitigationInfoHandler activeMitigationInfoHandler;
@@ -70,7 +84,9 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
         boolean requestSuccessfullyProcessed = true;
         
         try {            
-            LOG.info(String.format("ListActiveMitigationsForServiceActivity called with RequestId: %s and request: %s.", requestId, ReflectionToStringBuilder.toString(request)));  
+            LOG.info(String.format("ListActiveMitigationsForServiceActivity called with RequestId: %s and request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
+            CommonActivityMetricsHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
+            
             // Step 1. Validate your request.
             requestValidator.validateListActiveMitigationsForServiceRequest(request);
             // Step 2. Get a list of ActiveMitigationDetails. This will contain the deviceName, location, jobId and mitigationName. The information
@@ -127,11 +143,13 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             String msg = String.format("Caught IllegalArgumentException in ListActiveMitigationsForServiceActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(request));
             LOG.warn(msg, ex);
+            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ListActiveMitigationsExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
         } catch (Exception internalError) {
             String msg = String.format("Internal error while fulfilling request for ListActiveMitigationsForServiceActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(request));
             LOG.error(msg, internalError);
             requestSuccessfullyProcessed = false;
+            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ListActiveMitigationsExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
         } finally {
             tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_SUCCESS, requestSuccessfullyProcessed ? 1 : 0);

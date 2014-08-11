@@ -162,26 +162,26 @@ public class CreateMitigationActivity extends Activity {
             String msg = String.format("Caught IllegalArgumentException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
-            tsdMetrics.addCount(CreateExceptions.BadRequest.name(), 1);
+            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
         } catch (DuplicateRequestException400 ex) {
             String msg = String.format("Caught DuplicateRequestException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
-            tsdMetrics.addCount(CreateExceptions.DuplicateRequest.name(), 1);
+            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.DuplicateRequest.name(), 1);
             throw ex;
         } catch (DuplicateDefinitionException400 ex) {
             String msg = String.format("Caught DuplicateDefinitionException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
-            tsdMetrics.addCount(CreateExceptions.DuplicateDefinition.name(), 1);
+            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.DuplicateDefinition.name(), 1);
             throw ex;
         } catch (Exception internalError) {
             String msg = String.format("Internal error while fulfilling request for CreateMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.error(msg, internalError);
             requestSuccessfullyProcessed = false;
-            tsdMetrics.addCount(CreateExceptions.InternalError.name(), 1);
+            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
         } finally {
             if (requestSuccessfullyProcessed) {

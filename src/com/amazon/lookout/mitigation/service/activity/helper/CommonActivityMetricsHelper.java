@@ -19,6 +19,14 @@ import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 @ThreadSafe
 public class CommonActivityMetricsHelper {
     
+    private static final String TEMPLATE_NAME_COUNT_METRIC_PREFIX = "TemplateName:";
+    private static final String DEVICE_NAME_COUNT_METRIC_PREFIX = "DeviceName:";
+    private static final String DEVICE_SCOPE_COUNT_METRIC_PREFIX = "DeviceScope:";
+    private static final String SERVICE_NAME_COUNT_METRIC_PREFIX = "ServiceName:";
+    
+    // Declared as public to allow individual Activities to prefix the exceptions they receive with this.
+    public static final String EXCEPTION_COUNT_METRIC_PREFIX = "Exception:";
+    
     /**
      * Add metrics to be able to track the template for which a request was made.
      * @param templateInRequest String representing the template that was passed in the request.
@@ -30,9 +38,9 @@ public class CommonActivityMetricsHelper {
         
         // Add the metric to track the template for which this request was made.
         for (String template : MitigationTemplate.values()) {
-            tsdMetrics.addCount(template, 0);
+            tsdMetrics.addCount(TEMPLATE_NAME_COUNT_METRIC_PREFIX + template, 0);
         }
-        tsdMetrics.addCount(templateInRequest, 1);
+        tsdMetrics.addCount(TEMPLATE_NAME_COUNT_METRIC_PREFIX + templateInRequest, 1);
     }
     
     /**
@@ -46,9 +54,9 @@ public class CommonActivityMetricsHelper {
         
         // Add the metric to track the device for which this request was made.
         for (DeviceName device : DeviceName.values()) {
-            tsdMetrics.addCount(device.name(), 0);
+            tsdMetrics.addCount(DEVICE_NAME_COUNT_METRIC_PREFIX + device.name(), 0);
         }
-        tsdMetrics.addCount(deviceNameInRequest, 1);
+        tsdMetrics.addCount(DEVICE_NAME_COUNT_METRIC_PREFIX + deviceNameInRequest, 1);
     }
     
     /**
@@ -62,9 +70,9 @@ public class CommonActivityMetricsHelper {
         
         // Add the metric to track the device for which this request was made.
         for (DeviceScope deviceScope : DeviceScope.values()) {
-            tsdMetrics.addCount(deviceScope.name(), 0);
+            tsdMetrics.addCount(DEVICE_SCOPE_COUNT_METRIC_PREFIX + deviceScope.name(), 0);
         }
-        tsdMetrics.addCount(deviceScopeInRequest, 1);
+        tsdMetrics.addCount(DEVICE_SCOPE_COUNT_METRIC_PREFIX + deviceScopeInRequest, 1);
     }
     
     /**
@@ -78,9 +86,9 @@ public class CommonActivityMetricsHelper {
         
         // Add the metric to track the device for which this request was made.
         for (String serviceName : ServiceName.values()) {
-            tsdMetrics.addCount(serviceName, 0);
+            tsdMetrics.addCount(SERVICE_NAME_COUNT_METRIC_PREFIX + serviceName, 0);
         }
-        tsdMetrics.addCount(serviceNameInRequest, 1);
+        tsdMetrics.addCount(SERVICE_NAME_COUNT_METRIC_PREFIX + serviceNameInRequest, 1);
     }
     
     /**
@@ -94,7 +102,7 @@ public class CommonActivityMetricsHelper {
         
         // Initialize all requestExceptions to 0.
         for (String exception : exceptions) {
-            tsdMetrics.addCount(exception, 0);
+            tsdMetrics.addCount(EXCEPTION_COUNT_METRIC_PREFIX + exception, 0);
         }
     }
 }

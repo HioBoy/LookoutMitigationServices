@@ -156,26 +156,26 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             String msg = String.format("Caught IllegalArgumentException in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(deleteRequest));
             LOG.warn(msg, ex);
-            tsdMetrics.addCount(DeleteExceptions.BadRequest.name(), 1);
+            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
         } catch (DuplicateRequestException400 ex) {
             String msg = String.format("Caught DuplicateDefinitionException in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(deleteRequest));
             LOG.warn(msg, ex);
-            tsdMetrics.addCount(DeleteExceptions.DuplicateRequest.name(), 1);
+            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.DuplicateRequest.name(), 1);
             throw ex;
         } catch (MissingMitigationException400 ex) {
             String msg = String.format("Caught MissingMitigationException in DeleteMitigationActivity for requestId: " + requestId + " with request: " + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(deleteRequest));
             LOG.warn(msg, ex);
-            tsdMetrics.addCount(DeleteExceptions.MissingMitigation.name(), 1);
+            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.MissingMitigation.name(), 1);
             throw ex;
         } catch (Exception internalError) {
             String msg = String.format("Internal error while fulfilling request for DeleteMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(deleteRequest));
             LOG.error(msg, internalError);
             requestSuccessfullyProcessed = false;
-            tsdMetrics.addCount(DeleteExceptions.InternalError.name(), 1);
+            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
         } finally {
             if (requestSuccessfullyProcessed) {
