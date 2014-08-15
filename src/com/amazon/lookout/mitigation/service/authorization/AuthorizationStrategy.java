@@ -1,4 +1,4 @@
-package com.amazon.lookout.mitigation.service.helpers;
+package com.amazon.lookout.mitigation.service.authorization;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -68,6 +68,9 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     private static final String NAMESPACE = "";
     private static final String SEPARATOR = "-";
     
+    // Some APIs do not concern with MitigationTemplate. In such cases we use ANY_TEMPLATE constant in the ARN. 
+    protected static final String ANY_TEMPLATE = "ANY_TEMPLATE";
+    
     public AuthorizationStrategy(Configuration arcConfig, String region) {
         super(arcConfig);
         this.region = region;
@@ -121,8 +124,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     
     private boolean isMitigationModificationRequest(final Object request) {
         return (request instanceof MitigationModificationRequest); 
-    }
-    
+    }    
     
     private boolean isGetRequestStatusRequest(final Object request) {
         return (request instanceof GetRequestStatusRequest);
@@ -131,8 +133,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     private boolean isListActiveMitigationsForServiceRequest(final Object request) {
         return (request instanceof ListActiveMitigationsForServiceRequest);
     }
-    
-    
+        
     /* 
      * Generate Amazon Resource Name (ARN) looking inside the Request, with the following structure
      * arn:<partition>:<vendor>:<region>:<namespace>:<relative-id>, as described at:
@@ -206,7 +207,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      * serviceName+deviceName combinations. E.g., different sets of users may be authorized for applying
      * ratelimit and count filters on routers.
      */
-    protected String getRelativeId(final String mitigationTemplate, final String serviceName, String deviceName) {
+    protected String getRelativeId(String mitigationTemplate, final String serviceName, String deviceName) {
         if (deviceName == null) {
             /**
              * for some request types deviceName is not a required field. In those cases deviceName is 
@@ -214,12 +215,13 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
              */
             deviceName = DeviceName.ANY_DEVICE.name();
         }
-        StringBuilder relativeidBuilder = new StringBuilder();
-        if (mitigationTemplate != null) {
-            relativeidBuilder.append(mitigationTemplate)
-                             .append("/");
+        if (mitigationTemplate == null) {
+            mitigationTemplate = ANY_TEMPLATE;
         }
-        relativeidBuilder.append(serviceName)
+        StringBuilder relativeidBuilder = new StringBuilder();
+        relativeidBuilder.append(mitigationTemplate)
+                         .append("/")        
+                         .append(serviceName)
                          .append(SEPARATOR)
                          .append(deviceName);
 

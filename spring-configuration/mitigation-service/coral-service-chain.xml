@@ -85,7 +85,7 @@
     </bean>
 
     <!-- Strategy to employ for authorizing calls to LookoutMitigationService -->
-    <bean id="AuthorizationStrategy" class="com.amazon.lookout.mitigation.service.helpers.AuthorizationStrategy">
+    <bean id="AuthorizationStrategy" class="com.amazon.lookout.mitigation.service.authorization.AuthorizationStrategy">
         <constructor-arg ref="ArcConfig"/>
         <constructor-arg value="${realm}"/>
     </bean>

@@ -147,9 +147,9 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     }
     
     @Override
-    public List<ActiveMitigationDetails> getActiveMitigationsForService(String serviceName, String deviceName, List<String> locations, TSDMetrics tsdMetrics) {
+    public List<ActiveMitigationDetails> getActiveMitigationsForService(@Nonnull String serviceName, String deviceName, List<String> locations, @Nonnull TSDMetrics tsdMetrics) {
         Validate.notEmpty(serviceName);
-        Validate.notEmpty(deviceName);
+        // deviceName and locations may be null
         Validate.notNull(tsdMetrics);
         final TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getActiveMitigationsForService");
         
