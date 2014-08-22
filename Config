@@ -92,6 +92,8 @@ package.LookoutMitigationService = {
         1.0 = {
             junit = 4;
             Mockito = 1.9.5;
+            # For TOD-based approval step in the pipeline
+            LookoutMitigationServiceMonitor = 1.0;
         };
     };
 
