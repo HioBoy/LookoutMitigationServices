@@ -13,12 +13,12 @@
     
     <!-- TODO: For now us-west-1 uses the same credentials as us-east-1. Once snowforting happens, we should create separate credentials for us-west-1. -->
     <bean id="us-west-1.dynamoDBCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg value="com.amazon.lookout.dynamodb"/>
+        <constructor-arg value="com.amazon.lookout.dynamodb.mitigationservice.${domain}"/>
     </bean>
     
     <!-- TODO: For now us-west-1 uses the same credentials as us-east-1. Once snowforting happens, we should create separate credentials for us-west-1. -->
     <bean id="us-west-1.swfCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg value="com.amazon.lookout.swf"/>
+        <constructor-arg value="com.amazon.lookout.swf.mitigationservice.${domain}"/>
     </bean>
     
     <!-- TODO: For now us-west-1 uses the us-east-1 SWF service since we run on a single us-east-1 stack. Once snowforting happens, we should move this to point to us-west-1. -->

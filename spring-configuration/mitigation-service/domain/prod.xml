@@ -14,10 +14,6 @@
         <constructor-arg value="http://edge-operator-service.amazon.com:8080"/>
     </bean>
     
-    <bean id="prod.swfDomainName" class="java.lang.String">
-        <constructor-arg value="Lookout-Prod-Domain"/>
-    </bean>
-    
     <util:set id="prod.popsWithCiscoRouter">
         <value>DUB2</value>
         <value>EWR2</value>

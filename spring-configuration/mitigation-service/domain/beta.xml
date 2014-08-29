@@ -14,10 +14,6 @@
         <constructor-arg value="http://edge-operator-service-gamma.amazon.com:80"/> <!-- Use gamma endpoint for beta as well, since we don't have any beta POPs. -->
     </bean>
     
-    <bean id="beta.swfDomainName" class="java.lang.String">
-        <constructor-arg value="Lookout-Beta-Domain"/>
-    </bean>
-    
     <util:set id="beta.popsWithCiscoRouter">
         <value>G-JFK</value>
         <value>G-SEA19</value>

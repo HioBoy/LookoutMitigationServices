@@ -42,7 +42,7 @@
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="swfClient" ref="swfClient"/>
         <constructor-arg name="appDomain" value="${domain}"/>
-        <constructor-arg name="swfDomainName" ref="${domain}.swfDomainName"/>
+        <constructor-arg name="swfDomainName" value="LookoutMitigationService-${domain}"/>
         <constructor-arg name="swfSocketTimeoutMillis" ref="swfClientSocketTimeoutMillis"/>
         <constructor-arg name="swfConnTimeoutMillis" ref="swfClientConnectionTimeoutMillis"/>
         <constructor-arg name="workflowStarter" ref="swfWorkflowStarter"/>

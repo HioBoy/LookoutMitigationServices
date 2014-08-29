@@ -14,10 +14,6 @@
         <constructor-arg value="http://edge-operator-service-gamma.amazon.com:80"/>
     </bean>
     
-    <bean id="gamma.swfDomainName" class="java.lang.String">
-        <constructor-arg value="Lookout-Gamma-Domain"/>
-    </bean>
-    
     <util:set id="gamma.popsWithCiscoRouter">
         <value>G-SEA19</value>
     </util:set>
