@@ -1,7 +1,6 @@
 package com.amazon.lookout.mitigation.service.authorization;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -9,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.LinkedList;
 import java.util.List;
+
 import javax.annotation.concurrent.ThreadSafe;
 
 import org.junit.Before;
@@ -16,6 +16,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import aws.auth.client.config.Configuration;
+
 import com.amazon.aspen.entity.Policy;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.coral.security.AccessDeniedException;
@@ -25,13 +26,14 @@ import com.amazon.coral.service.Context;
 import com.amazon.coral.service.Identity;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
-/*import com.amazon.lookout.mitigation.service.EditMitigationRequest;*/
+import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
+import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 
 @ThreadSafe
@@ -48,6 +50,7 @@ public class AuthorizationStrategyTest {
     /*private EditMitigationRequest editRequest;*/
     private GetRequestStatusRequest getRequestStatusRequest;
     private ListActiveMitigationsForServiceRequest listMitigationsRequest;
+    private GetMitigationInfoRequest getMitigationInfoRequest;
     private String region = "region";
      
     /**
@@ -67,7 +70,7 @@ public class AuthorizationStrategyTest {
     private final String deviceName = "SomeDevice";
     private final String serviceName = "SomeService";
     private final String mitigationTemplate = "SomeMitigationTemplate";
-        
+    
     private final String resourceOwner = "owner";
     private Identity identity;
          
@@ -103,7 +106,13 @@ public class AuthorizationStrategyTest {
         getRequestStatusRequest.setDeviceName(popRouterDeviceName);
         
         listMitigationsRequest = new ListActiveMitigationsForServiceRequest();
-        listMitigationsRequest.setServiceName(route53ServiceName);        
+        listMitigationsRequest.setServiceName(route53ServiceName);
+        
+        getMitigationInfoRequest = new GetMitigationInfoRequest();
+        getMitigationInfoRequest.setServiceName(route53ServiceName);
+        getMitigationInfoRequest.setDeviceName(popRouterDeviceName);
+        getMitigationInfoRequest.setDeviceScope(DeviceScope.GLOBAL.name());
+        getMitigationInfoRequest.setMitigationName(mitigationName);
     }
     
     private void updateMitigationModificationRequest(MitigationModificationRequest modificationRequest) {
@@ -220,6 +229,18 @@ public class AuthorizationStrategyTest {
         
         authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
         expectedAuthInfo = getBasicAuthorizationInfo("lookout:read-ListActiveMitigationsForService", "arn:aws:lookout:region::ANY_TEMPLATE/Route53-POP_ROUTER");
+        assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
+    }
+    
+    // validate the authorization info generated from getMitigationInfoRequest
+    @Test
+    public void testForGetMitigationInfoRequest() throws Throwable {
+        setOperationNameForContext("GetMitigationInfo");
+        List<AuthorizationInfo> authInfoList = authStrategy.getAuthorizationInfoList(context, getMitigationInfoRequest);
+        assertTrue(authInfoList.size() == 1);
+        
+        BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
+        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:read-GetMitigationInfo", "arn:aws:lookout:region::ANY_TEMPLATE/Route53-POP_ROUTER");
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
     }
     

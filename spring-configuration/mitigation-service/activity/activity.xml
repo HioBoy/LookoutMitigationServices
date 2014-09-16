@@ -34,6 +34,12 @@
         <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
     </bean>
     
+    <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationInfoActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
+        <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
+    </bean>
+    
     <!-- All the beans required by the activities go here -->
     <bean id="requestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.RequestValidator"/>
     

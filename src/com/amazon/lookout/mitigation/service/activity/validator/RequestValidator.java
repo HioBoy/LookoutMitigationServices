@@ -17,13 +17,15 @@ import org.springframework.util.CollectionUtils;
 
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
+import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
+import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
-import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
+import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.google.common.collect.Sets;
 
 /**
@@ -120,7 +122,7 @@ public class RequestValidator {
         }
         
         // This will throw an exception if the serviceName is not defined within the ServiceName enum.
-        if(!Arrays.asList(ServiceName.values()).contains(serviceName)) {
+        if(!serviceNames.contains(serviceName)) {
             String msg = "The service name that was provided, " + serviceName + ", is not a valid name";
             throw new IllegalArgumentException(msg);
         }
@@ -135,6 +137,70 @@ public class RequestValidator {
         // This will throw an exception if the mitigationTemplate is not defined within the MitigationTemplate enum.
         if(!Arrays.asList(MitigationTemplate.values()).contains(mitigationTemplate)) {
             String msg = "The mitigationTemplate that was provided, " + mitigationTemplate + ", is not a valid mitigationTemplate";
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    /**
+     * Validates if the request object passed to the GetMitigationInfo API is valid
+     * @param An instance of GetMitigationInfoRequest representing the input to the GetMitigationInfo API
+     * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
+     */
+    public void validateGetMitigationInfoRequest(@Nonnull GetMitigationInfoRequest request) {
+        Validate.notNull(request);
+        
+        // Validate service name.
+        String serviceName = request.getServiceName();
+        if (StringUtils.isEmpty(serviceName)) {
+            String msg = "Null or empty service name found in request: " + ReflectionToStringBuilder.toString(request);
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        // This will throw an exception if the serviceName is not defined within the ServiceName enum.
+        if(!serviceNames.contains(serviceName)) {
+            String msg = "The service name that was provided, " + serviceName + ", is not a valid name";
+            throw new IllegalArgumentException(msg);
+        }
+        
+        // Validate device name.
+        String deviceName = request.getDeviceName();
+        if (StringUtils.isEmpty(deviceName)) {
+            String msg = "Null or empty device name found in request: " + ReflectionToStringBuilder.toString(request);
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        // This will throw an exception if the deviceName is not defined within the DeviceName enum.
+        try {
+            DeviceName.valueOf(deviceName);
+        } catch (Exception ex) {
+            String msg = "The device name that was provided, " + deviceName + ", is not a valid name.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        // Validate device scope.
+        String deviceScope = request.getDeviceScope();
+        if (StringUtils.isEmpty(deviceScope)) {
+            String msg = "Null or empty device scope found in request: " + ReflectionToStringBuilder.toString(request);
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        // This will throw an exception if the deviceScope is not defined within the DeviceScope enum.
+        try {
+            DeviceScope.valueOf(deviceScope);
+        } catch (Exception ex) {
+            String msg = "The device scope that was provided, " + deviceScope + ", is not valid.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        String mitigationName = request.getMitigationName();
+        if (StringUtils.isEmpty(mitigationName)) {
+            String msg = "Null or empty mitigationName found in request: " + ReflectionToStringBuilder.toString(request);
+            LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
     }
@@ -185,6 +251,7 @@ public class RequestValidator {
             throw new IllegalArgumentException(msg);
         }
     }
+    
     /**
      * Private helper method to validate the common parameters for some of the modification requests.
      * @param mitigationName Name of the mitigation passed in the request by the client.

@@ -18,6 +18,7 @@ import org.joda.time.DateTimeZone;
 
 import com.amazon.aws158.commons.dynamo.DynamoDBHelper;
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
@@ -55,35 +56,37 @@ public abstract class DDBBasedRequestStorageHandler {
     // Log prefix to use if the sanity check for workflowId fails - we can use this tag to set logscan alarms on.
     private static final String WORKFLOW_ID_SANITY_CHECK_FAILURE_LOG_PREFIX = "[WORKFLOW_ID_RANGE_CHECK_FAILURE] ";
     
-    public static final String MITIGATION_REQUEST_TABLE_NAME_PREFIX = "MITIGATION_REQUESTS_";
+    public static final String MITIGATION_REQUEST_TABLE_NAME_PREFIX = MitigationRequestsModel.MITIGATION_REQUESTS_TABLE_NAME_PREFIX;
     public static final String ACTIVE_MITIGATIONS_TABLE_NAME_PREFIX = "ACTIVE_MITIGATIONS_";
     
     private static final int NUM_RECORDS_TO_FETCH_FOR_MAX_WORKFLOW_ID = 5;
     
     // Below is a list of all the attributes we store in the MitigationRequests table.
-    public static final String DEVICE_NAME_KEY = "DeviceName";
-    public static final String WORKFLOW_ID_KEY = "WorkflowId";
-    public static final String SWF_RUN_ID_KEY = "SWFRunId";
-    public static final String DEVICE_SCOPE_KEY = "DeviceScope";
-    public static final String WORKFLOW_STATUS_KEY = "WorkflowStatus";
-    public static final String MITIGATION_NAME_KEY = "MitigationName";
-    public static final String MITIGATION_VERSION_KEY = "MitigationVersion";
-    public static final String MITIGATION_TEMPLATE_KEY = "MitigationTemplate";
-    public static final String SERVICE_NAME_KEY = "ServiceName";
-    public static final String REQUEST_DATE_KEY = "RequestDate";
-    public static final String REQUEST_TYPE_KEY = "RequestType";
-    public static final String USERNAME_KEY = "UserName";
-    public static final String TOOL_NAME_KEY = "ToolName";
-    public static final String USER_DESC_KEY = "UserDescription";
-    public static final String RELATED_TICKETS_KEY = "RelatedTickets";
-    public static final String LOCATIONS_KEY = "Locations";
-    public static final String MITIGATION_DEFINITION_KEY = "MitigationDefinition";
-    public static final String MITIGATION_DEFINITION_HASH_KEY = "MitigationDefinitionHash";
-    public static final String NUM_PRE_DEPLOY_CHECKS_KEY = "NumPreDeployChecks";
+    public static final String DEVICE_NAME_KEY = MitigationRequestsModel.DEVICE_NAME_KEY;
+    public static final String WORKFLOW_ID_KEY = MitigationRequestsModel.WORKFLOW_ID_KEY;
+    public static final String SWF_RUN_ID_KEY = MitigationRequestsModel.SWF_RUN_ID_KEY;
+    public static final String DEVICE_SCOPE_KEY = MitigationRequestsModel.DEVICE_SCOPE_KEY;
+    public static final String WORKFLOW_STATUS_KEY = MitigationRequestsModel.WORKFLOW_STATUS_KEY;
+    public static final String MITIGATION_NAME_KEY = MitigationRequestsModel.MITIGATION_NAME_KEY;
+    public static final String MITIGATION_VERSION_KEY = MitigationRequestsModel.MITIGATION_VERSION_KEY;
+    public static final String MITIGATION_TEMPLATE_KEY = MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY;
+    public static final String SERVICE_NAME_KEY = MitigationRequestsModel.SERVICE_NAME_KEY;
+    public static final String REQUEST_DATE_KEY = MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY;
+    public static final String REQUEST_TYPE_KEY = MitigationRequestsModel.REQUEST_TYPE_KEY;
+    public static final String USERNAME_KEY = MitigationRequestsModel.USER_NAME_KEY;
+    public static final String TOOL_NAME_KEY = MitigationRequestsModel.TOOL_NAME_KEY;
+    public static final String USER_DESC_KEY = MitigationRequestsModel.USER_DESCRIPTION_KEY;
+    public static final String RELATED_TICKETS_KEY = MitigationRequestsModel.RELATED_TICKETS_KEY;
+    public static final String LOCATIONS_KEY = MitigationRequestsModel.LOCATIONS_KEY;
+    public static final String MITIGATION_DEFINITION_KEY = MitigationRequestsModel.MITIGATION_DEFINITION_KEY;
+    public static final String MITIGATION_DEFINITION_HASH_KEY = MitigationRequestsModel.MITIGATION_DEFINITION_HASH_KEY;
+    public static final String NUM_PRE_DEPLOY_CHECKS_KEY = MitigationRequestsModel.NUM_PRE_DEPLOY_CHECKS_KEY;
     public static final String PRE_DEPLOY_CHECKS_DEFINITION_KEY = "PreDeployChecks";
-    public static final String NUM_POST_DEPLOY_CHECKS_KEY = "NumPostDeployChecks";
+    public static final String NUM_POST_DEPLOY_CHECKS_KEY = MitigationRequestsModel.NUM_POST_DEPLOY_CHECKS_KEY;
     public static final String POST_DEPLOY_CHECKS_DEFINITION_KEY = "PostDeployChecks";
-    public static final String UPDATE_WORKFLOW_ID_KEY = "UpdateWorkflowId";
+    public static final String UPDATE_WORKFLOW_ID_KEY = MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY;
+    
+    // Below is a list of relevant keys from the Active Mitigations table.
     public static final String DELETION_DATE_KEY = "DeletionDate";
     
     // Keys for TSDMetrics.
@@ -105,7 +108,7 @@ public abstract class DDBBasedRequestStorageHandler {
     
     public static final int UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS = 0;
     
-    protected static final String UNEDITED_MITIGATIONS_LSI_NAME = "UpdateWorkflowId-index";
+    protected static final String UNEDITED_MITIGATIONS_LSI_NAME = MitigationRequestsModel.UNEDITED_MITIGATIONS_LSI_NAME;
     
     private final DataConverter jsonDataConverter = new JsonDataConverter();
     
@@ -506,7 +509,7 @@ public abstract class DDBBasedRequestStorageHandler {
             throw new RuntimeException(msg);
         } finally {
             subMetrics.addCount(NUM_DDB_UPDATE_ITEM_ATTEMPTS_KEY, numAttempts);
-	    subMetrics.end();
+            subMetrics.end();
          }
     }
    

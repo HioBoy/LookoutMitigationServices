@@ -3,12 +3,14 @@ package com.amazon.lookout.mitigation.service.authorization;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
 import javax.annotation.concurrent.ThreadSafe;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import aws.auth.client.config.Configuration;
+
 import com.amazon.aspen.entity.Policy;
 import com.amazon.coral.security.AccessDeniedException;
 import com.amazon.coral.service.AbstractAwsAuthorizationStrategy;
@@ -16,6 +18,7 @@ import com.amazon.coral.service.AuthorizationInfo;
 import com.amazon.coral.service.BasicAuthorizationInfo;
 import com.amazon.coral.service.Context;
 import com.amazon.coral.service.Identity;
+import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
@@ -133,6 +136,10 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     private boolean isListActiveMitigationsForServiceRequest(final Object request) {
         return (request instanceof ListActiveMitigationsForServiceRequest);
     }
+    
+    private boolean isGetMitigationInfoRequest(final Object request) {
+        return (request instanceof GetMitigationInfoRequest);
+    }
         
     /* 
      * Generate Amazon Resource Name (ARN) looking inside the Request, with the following structure
@@ -186,6 +193,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
             serviceName = listMitigationsRequest.getServiceName();
             // deviceName is not required and may be null
             deviceName = listMitigationsRequest.getDeviceName();
+        } else if (isGetMitigationInfoRequest(request)) {
+            GetMitigationInfoRequest getMitigationInfoRequestRequest = (GetMitigationInfoRequest) request;
+            mitigationTemplate = null;
+            serviceName = getMitigationInfoRequestRequest.getServiceName();
+            deviceName = getMitigationInfoRequestRequest.getDeviceName();
         } else {
             recognizedRequest = false;
         }

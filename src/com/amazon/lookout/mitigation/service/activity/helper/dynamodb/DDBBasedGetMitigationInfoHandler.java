@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javax.annotation.Nonnull;
 
 import org.apache.commons.lang.Validate;
@@ -13,7 +14,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-
+import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
@@ -27,8 +28,8 @@ import com.google.common.collect.Sets;
 public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageHandler implements MitigationInstanceInfoHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedGetMitigationInfoHandler.class);
     
+    // Keys for TSDMetric properties.
     private static final String NUM_ATTEMPTS_TO_GET_MITIGATION_INSTANCE_STATUSES = "NumGetMitigationInstanceStatusesAttempts";
-    private static final String DEVICE_WORKFLOW_ID_SEPARATOR = "#";
     
     public DDBBasedGetMitigationInfoHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain) {
         super(dynamoDBClient, domain);
@@ -54,7 +55,7 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
         String indexToUse = null;
         
         Set<String> attributes = Sets.newHashSet(LOCATION_KEY, MITIGATION_STATUS_KEY);
-        Map<String, Condition> keyConditions = generateKeyConditionForDeviceWorkflowId(deviceName + DEVICE_WORKFLOW_ID_SEPARATOR + jobId);
+        Map<String, Condition> keyConditions = generateKeyConditionForDeviceWorkflowId(MitigationInstancesModel.getDeviceWorkflowId(deviceName, jobId));
         
         QueryRequest queryRequest = generateQueryRequest(attributes, keyConditions, queryFilter, tableName, true, indexToUse, lastEvaluatedKey);
         try {
@@ -68,8 +69,8 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
                 lastEvaluatedKey = result.getLastEvaluatedKey();
             }
         } catch (Exception ex) {
-            String msg = "Caught Exception when querying for the mitigation instance status associated with the device workflow id of: " + deviceName +
-                    DEVICE_WORKFLOW_ID_SEPARATOR + jobId;
+            String msg = "Caught Exception when querying for the mitigation instance status associated with the device workflow id of: " + 
+                         MitigationInstancesModel.getDeviceWorkflowId(deviceName, jobId);
             LOG.warn(msg, ex);
             throw new RuntimeException(msg);
         } finally {
@@ -131,8 +132,8 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
      * @return a QueryRequest object
      */
     protected QueryRequest generateQueryRequest(Set<String> attributesToGet, Map<String, Condition> keyConditions,
-            Map<String, Condition> queryFilter, String tableName, Boolean consistentRead, String indexName,
-            Map<String, AttributeValue> lastEvaluatedKey) {
+                                                Map<String, Condition> queryFilter, String tableName, Boolean consistentRead, String indexName,
+                                                Map<String, AttributeValue> lastEvaluatedKey) {
         QueryRequest queryRequest = new QueryRequest();
         queryRequest.setAttributesToGet(attributesToGet);
         queryRequest.setTableName(tableName);

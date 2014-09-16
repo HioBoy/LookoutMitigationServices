@@ -2,7 +2,6 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import javax.annotation.Nonnull;
 
-import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -52,10 +51,7 @@ public abstract class DDBBasedMitigationStorageHandler {
     protected final String activeMitigationsTableName;
     
     public DDBBasedMitigationStorageHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain) {
-        Validate.notNull(dynamoDBClient);
         this.dynamoDBClient = dynamoDBClient;
-        
-        Validate.notEmpty(domain);
         this.mitigationInstancesTableName = MITIGATION_INSTANCES_TABLE_NAME_PREFIX + domain.toUpperCase();
         this.activeMitigationsTableName = ACTIVE_MITIGATIONS_TABLE_NAME_PREFIX + domain.toUpperCase();
     }
