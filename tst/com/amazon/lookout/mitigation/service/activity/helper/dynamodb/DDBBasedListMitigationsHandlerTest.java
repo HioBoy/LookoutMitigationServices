@@ -28,7 +28,9 @@ import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -394,5 +396,126 @@ public class DDBBasedListMitigationsHandlerTest {
         result.setItem(item);
     
         return result;
+    }
+    
+    /**
+     * Test to ensure we pass the right set of keys/queryFilters when querying DDB for fetching mitigation description.
+     * Also checks if we correctly parse the QueryResult to wrap it into List of MitigationRequestDescription instances.
+     */
+    @Test
+    public void testGetInProgressRequestsDescription() {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        DDBBasedListMitigationsHandler listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, domain);
+        
+        String deviceName = "testDevice";
+        long workflowId = 5;
+        String deviceScope = "testScope";
+        List<String> locations = Lists.newArrayList("TST1", "TST2", "TST3");
+        String mitigationName = "testMitigation";
+        String mitigationTemplate = "testTemplate";
+        int mitigationVersion = 3;
+        int numPreDeployChecks = 0;
+        int numPostDeployChecks = 0;
+        String reaped = "false";
+        List<String> relatedTickets = Lists.newArrayList("tt/1", "tt/2");
+        long requestDate = Long.parseLong("1410896163");
+        String requestType = RequestType.CreateRequest.name();
+        String swfRunId = "22Ans97eYkYe5pHRfsPirITXUHwowfqWWjfHQ2sKquXzI=";
+        String serviceName = ServiceName.Route53;
+        String toolName = "LookoutMitigationServiceUI";
+        long updateWorkflowId = 0;
+        String userDescription = "randomString";
+        String userName = "testUser";
+        String workflowStatus = "SUCCEEDED";
+        
+        // Setup the keys to check.
+        Map<String, Condition> keyConditions = new HashMap<>();
+        AttributeValue value = new AttributeValue(deviceName);
+        Condition deviceCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
+        keyConditions.put(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY, deviceCondition);
+        
+        value = new AttributeValue().withN("0");
+        Condition uneditedCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
+        keyConditions.put(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY, uneditedCondition);
+        
+        // Setup the queryFilters to check.
+        Map<String, Condition> queryFilter = new HashMap<>();
+        value = new AttributeValue(serviceName);
+        Condition serviceNameCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
+        queryFilter.put(DDBBasedRequestStorageHandler.SERVICE_NAME_KEY, serviceNameCondition);
+        
+        value = new AttributeValue(WorkflowStatus.RUNNING);
+        Condition runningCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
+        queryFilter.put(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, runningCondition);
+        
+        Set<String> attributes = Sets.newHashSet(MitigationRequestsModel.getAttributeNamesForRequestTable());
+        
+        MitigationDefinition mitigationDefinition = DDBBasedCreateRequestStorageHandlerTest.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));
+        JsonDataConverter jsonDataConverter = new JsonDataConverter();
+        String mitigationDefinitionJsonString = jsonDataConverter.toData(mitigationDefinition);
+        
+        QueryRequest queryRequest = new QueryRequest().withAttributesToGet(attributes)
+                                                      .withTableName(MitigationRequestsModel.MITIGATION_REQUESTS_TABLE_NAME_PREFIX + domain.toUpperCase())
+                                                      .withConsistentRead(true)
+                                                      .withKeyConditions(keyConditions)
+                                                      .withQueryFilter(queryFilter)
+                                                      .withExclusiveStartKey(null)
+                                                      .withIndexName(DDBBasedRequestStorageHandler.UNEDITED_MITIGATIONS_LSI_NAME);
+        
+        QueryResult queryResult = new QueryResult();
+        
+        List<Map<String, AttributeValue>> listOfItems = new ArrayList<>();
+        Map<String, AttributeValue> item = new HashMap<>();
+        item.put(MitigationRequestsModel.DEVICE_NAME_KEY, new AttributeValue(deviceName));
+        item.put(MitigationRequestsModel.WORKFLOW_ID_KEY, new AttributeValue().withN(String.valueOf(workflowId)));
+        item.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(deviceScope));
+        item.put(MitigationRequestsModel.LOCATIONS_KEY, new AttributeValue().withSS(locations));
+        item.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue(mitigationName));
+        item.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue(mitigationTemplate));
+        item.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN(String.valueOf(mitigationVersion)));
+        item.put(MitigationRequestsModel.NUM_PRE_DEPLOY_CHECKS_KEY, new AttributeValue().withN(String.valueOf("0")));
+        item.put(MitigationRequestsModel.NUM_POST_DEPLOY_CHECKS_KEY, new AttributeValue().withN(String.valueOf("0")));
+        item.put(MitigationRequestsModel.REAPED_FLAG_KEY, new AttributeValue(reaped));
+        item.put(MitigationRequestsModel.RELATED_TICKETS_KEY, new AttributeValue().withSS(relatedTickets));
+        item.put(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, new AttributeValue().withN(String.valueOf(requestDate)));
+        item.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(requestType));
+        item.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue(swfRunId));
+        item.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(serviceName));
+        item.put(MitigationRequestsModel.TOOL_NAME_KEY, new AttributeValue(toolName));
+        item.put(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY, new AttributeValue().withN(String.valueOf(updateWorkflowId)));
+        item.put(MitigationRequestsModel.USER_DESCRIPTION_KEY, new AttributeValue(userDescription));
+        item.put(MitigationRequestsModel.USER_NAME_KEY, new AttributeValue(userName));
+        item.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, new AttributeValue(workflowStatus));
+        item.put(MitigationRequestsModel.MITIGATION_DEFINITION_KEY, new AttributeValue(mitigationDefinitionJsonString));
+        listOfItems.add(item);
+        queryResult.setCount(1);
+        queryResult.setItems(listOfItems);
+        
+        when(dynamoDBClient.query(queryRequest)).thenReturn(queryResult);
+        
+        List<MitigationRequestDescriptionWithLocations> descriptions = listHandler.getInProgressRequestsDescription(serviceName, deviceName, tsdMetrics);
+        
+        assertEquals(descriptions.size(), 1);
+        MitigationRequestDescriptionWithLocations descriptionWithLocations = descriptions.get(0);
+        MitigationRequestDescription description = descriptionWithLocations.getMitigationRequestDescription();
+        assertEquals(description.getDeviceName(), deviceName);
+        assertEquals(description.getJobId(), workflowId);
+        assertEquals(description.getDeviceScope(), deviceScope);
+        assertEquals(description.getMitigationName(), mitigationName);
+        assertEquals(description.getMitigationTemplate(), mitigationTemplate);
+        assertEquals(description.getMitigationVersion(), mitigationVersion);
+        assertEquals(description.getNumPreDeployChecks(), numPreDeployChecks);
+        assertEquals(description.getNumPostDeployChecks(), numPostDeployChecks);
+        assertEquals(description.getMitigationActionMetadata().getRelatedTickets(), relatedTickets);
+        assertEquals(description.getMitigationActionMetadata().getDescription(), userDescription);
+        assertEquals(description.getMitigationActionMetadata().getUser(), userName);
+        assertEquals(description.getMitigationActionMetadata().getToolName(), toolName);
+        assertEquals(description.getRequestDate(), requestDate);
+        assertEquals(description.getRequestType(), requestType);
+        assertEquals(description.getServiceName(), serviceName);
+        assertEquals(description.getUpdateJobId(), updateWorkflowId);
+        assertEquals(description.getRequestStatus(), workflowStatus);
+        assertEquals(description.getMitigationDefinition(), mitigationDefinition);
+        assertEquals(descriptionWithLocations.getLocations(), locations);
     }
 }

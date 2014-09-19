@@ -39,6 +39,7 @@ import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.RateLimitAction;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.activity.validator.template.Route53SingleCustomerMitigationValidator;
@@ -48,6 +49,7 @@ import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
+import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToFixedActionMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
@@ -858,8 +860,18 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
         when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), anySet(), any(TSDMetrics.class))).thenCallRealMethod();
+        
+        // Asserting that the request's mitigation definition has a null action, which should get populated in the storeRequestForWorkflow method.
+        assertNull(request.getMitigationDefinition().getAction());
+        
         long workflowId = storageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
         assertEquals(workflowId, maxWorkflowId + 1);
+        
+        // Check that the ActionType has been loaded for the request's mitigation definition.
+        assertNotNull(request.getMitigationDefinition().getAction());
+        assertTrue(request.getMitigationDefinition().getAction() instanceof RateLimitAction);
+        assertEquals(((RateLimitAction) request.getMitigationDefinition().getAction()).getBurstSizeInKB(), MitigationTemplateToFixedActionMapper.ROUTE53_SINGLE_CUSTOMER_ROUTER_DEFAULT_BURST_LIMIT_KBPS);
+        assertEquals(((RateLimitAction) request.getMitigationDefinition().getAction()).getRateLimitInKBps(), MitigationTemplateToFixedActionMapper.ROUTE53_SINGLE_CUSTOMER_ROUTER_DEFAULT_BANDWIDTH_LIMIT_KBPS);
     }
     
     /**

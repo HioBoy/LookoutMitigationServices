@@ -56,7 +56,7 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
     private final ActiveMitigationInfoHandler activeMitigationInfoHandler;
     private final RequestInfoHandler requestInfoHandler;
     
-    private final String KEY_SEPARATOR = "#";
+    public static final String KEY_SEPARATOR = "#";
     
     @ConstructorProperties({"requestValidator", "activeMitigationInfoHandler", "requestInfoHandler"})
     public ListActiveMitigationsForServiceActivity(@Nonnull RequestValidator requestValidator, @Nonnull ActiveMitigationInfoHandler activeMitigationInfoHandler,
@@ -120,6 +120,14 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
                 }
             }
             
+            // Step 5. Get a list of mitigation descriptions for requests which are being worked on right now.
+            List<MitigationRequestDescriptionWithLocations> ongoingRequestsDescription = 
+                                                        requestInfoHandler.getInProgressRequestsDescription(request.getServiceName(), request.getDeviceName(), tsdMetrics);
+            
+            // Step 6. Some of the ongoing requests might have been captured from the ActiveMitigations table, filter those out from this list, 
+            // else add the ongoing request to the descriptionsWithLocationsMap structure.
+            mergeOngoingRequestsToActiveOnes(ongoingRequestsDescription, descriptionsWithLocationsMap);
+            
             // Create a List using the values from mitigationDescriptions
             List<MitigationRequestDescriptionWithLocations> requestDescriptionsWithLocations = new ArrayList<>(descriptionsWithLocationsMap.values());
             ListActiveMitigationsForServiceResponse response = new ListActiveMitigationsForServiceResponse();
@@ -144,6 +152,39 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_SUCCESS, requestSuccessfullyProcessed ? 1 : 0);
             tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_FAILURE, requestSuccessfullyProcessed ? 0 : 1);
             tsdMetrics.end();
+        }
+    }
+    
+    /**
+     * Helps merge ongoing requests to the currently active requests. If a request is marked as ongoing (since the WorkflowStatus is Running), but the 
+     * tasks at a location has already completed, then it would show up in the currently active ones - hence in such cases we only add the locations
+     * which haven't yet completed to the MitigationRequestDescriptionWithLocations, to avoid having the loactions with active mitigations listed twice.
+     * @param ongoingRequestsWithLocations List of MitigationRequestDescriptionWithLocations instances, each instance defining an ongoing request along with the locations where this request is running.
+     * @param descriptionsWithLocationsMap Map of active mitigations - with generated key of deviceName+Separator+jobId and value as an instance of MitigationRequestDescriptionWithLocations.
+     */
+    protected void mergeOngoingRequestsToActiveOnes(@Nonnull List<MitigationRequestDescriptionWithLocations> ongoingRequestsWithLocations, 
+                                                    @Nonnull Map<String, MitigationRequestDescriptionWithLocations> descriptionsWithLocationsMap) {
+        Validate.notNull(ongoingRequestsWithLocations);
+        Validate.notNull(descriptionsWithLocationsMap);
+        
+        for (MitigationRequestDescriptionWithLocations descriptionWithLocations : ongoingRequestsWithLocations) {
+            MitigationRequestDescription description = descriptionWithLocations.getMitigationRequestDescription();
+            final String key = description.getDeviceName() + KEY_SEPARATOR + description.getJobId();
+            
+            if (!descriptionsWithLocationsMap.containsKey(key)) {
+                descriptionsWithLocationsMap.put(key, descriptionWithLocations);
+            } else {
+                // If there is an entry for this mitigation in the existing map of descriptionsWithLocationsMap, check if there are any missing locations and add them in,
+                // since the workflow is still running for this location.
+                List<String> locationsForExistingEntry = descriptionsWithLocationsMap.get(key).getLocations();
+                if (!locationsForExistingEntry.containsAll(descriptionWithLocations.getLocations())) {
+                    for (String location : descriptionWithLocations.getLocations()) {
+                        if (!locationsForExistingEntry.contains(location)) {
+                            locationsForExistingEntry.add(location);
+                        }
+                    }
+                }
+            }
         }
     }
 }

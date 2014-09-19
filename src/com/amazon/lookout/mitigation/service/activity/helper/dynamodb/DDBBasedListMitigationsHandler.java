@@ -24,8 +24,10 @@ import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
+import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -230,6 +232,94 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     }
     
     /**
+     * Fetches a list of MitigationRequestDescriptionWithLocations for each mitigation which is currently being worked on (whose WorkflowStatus is RUNNING).
+     * @param serviceName Service for which we need to fetch the mitigation request description for ongoing requests.
+     * @param deviceName DeviceName for which we need to fetch the mitigation request description for ongoing requests.
+     * @param tsdMetrics
+     * @return a List of MitigationRequestDescription, where each MitigationRequestDescription instance describes a mitigation that is currently being worked on (whose WorkflowStatus is RUNNING).
+     */
+    @Override
+    public List<MitigationRequestDescriptionWithLocations> getInProgressRequestsDescription(@Nonnull String serviceName, @Nonnull String deviceName, @Nonnull TSDMetrics tsdMetrics) {
+        Validate.notEmpty(serviceName);
+        Validate.notEmpty(deviceName);
+        Validate.notNull(tsdMetrics);
+        
+        final TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getInProgressRequestsDescription");
+        try {
+            String tableName = mitigationRequestsTableName;
+            String indexToUse = UNEDITED_MITIGATIONS_LSI_NAME;
+            
+            // Generate key condition to use when querying.
+            Map<String, Condition> keyConditions = generateKeyConditionsForUneditedRequests(deviceName);
+            
+            // Generate query filters to use when querying.
+            Map<String, Condition> queryFilter = new HashMap<>();
+            Condition runningWorkflowCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                                .withAttributeValueList(new AttributeValue(WorkflowStatus.RUNNING));
+            queryFilter.put(WORKFLOW_STATUS_KEY, runningWorkflowCondition);
+
+            Condition serviceNameCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                            .withAttributeValueList(new AttributeValue(serviceName));
+            queryFilter.put(SERVICE_NAME_KEY, serviceNameCondition);
+            
+            Map<String, AttributeValue> lastEvaluatedKey = null;
+            Set<String> attributes = new HashSet<>(MitigationRequestsModel.getAttributeNamesForRequestTable());
+            QueryRequest queryRequest = generateQueryRequest(attributes, keyConditions, queryFilter, tableName, true, indexToUse, lastEvaluatedKey);
+            
+            List<MitigationRequestDescriptionWithLocations> descriptions = new ArrayList<>();
+            // Query DDB until there are no more items to fetch (i.e. when lastEvaluatedKey is null)
+            do {
+                int numAttempts = 0;
+                Throwable lastCaughtException = null;
+                while (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
+                    ++numAttempts;
+                    subMetrics.addOne(NUM_ATTEMPTS_TO_GET_ACTIVE_MITIGATIONS_FOR_SERVICE);
+                    
+                    try {
+                        queryRequest.withExclusiveStartKey(lastEvaluatedKey);
+                        QueryResult result = queryRequestsInDDB(queryRequest, subMetrics);
+                        if (result.getCount() > 0) {
+                            for (Map<String, AttributeValue> item : result.getItems()) {
+                                MitigationRequestDescription description = convertToRequestDescription(item);
+                                
+                                MitigationRequestDescriptionWithLocations descriptionWithLocations = new MitigationRequestDescriptionWithLocations();
+                                descriptionWithLocations.setMitigationRequestDescription(description);
+                                
+                                descriptionWithLocations.setLocations(item.get(LOCATIONS_KEY).getSS());
+                                descriptions.add(descriptionWithLocations);
+                            }
+                        }
+                        lastEvaluatedKey = result.getLastEvaluatedKey();
+                        break;
+                    } catch (Exception ex) {
+                        lastCaughtException = ex;
+                        String msg = "Caught exception when querying currently running mitigations associated with service: " + serviceName + " on device: " + deviceName + 
+                                     ", ddbQuery: " + ReflectionToStringBuilder.toString(queryRequest);
+                        LOG.warn(msg, ex);
+                    }
+                    
+                    if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
+                        try {
+                            Thread.sleep(DDB_ACTIVITY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
+                        } catch (InterruptedException ignored) {}
+                    }
+                }
+                
+                if (numAttempts >= DDB_ACTIVITY_MAX_ATTEMPTS) {
+                    String msg = "Unable to query currently running mitigations associated with service: " + serviceName + " on device: " + deviceName +  
+                                 ReflectionToStringBuilder.toString(queryRequest) + " after " + numAttempts + " attempts";
+                    LOG.warn(msg, lastCaughtException);
+                    throw new RuntimeException(msg, lastCaughtException);
+                }
+            } while (lastEvaluatedKey != null);
+            
+            return descriptions;
+        } finally {
+            subMetrics.end();
+        }
+    }
+    
+    /**
      * Generate an instance of MitigationRequestDescription from a Map of String to AttributeValue.
      * @param item Map of String to AttributeValue.
      * @return A MitigationRequestDescription object.
@@ -371,6 +461,24 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
             keyConditions.put(DDBBasedMitigationStorageHandler.DEVICE_NAME_KEY, condition);
         }
         
+        return keyConditions;
+    }
+    
+    /**
+     * Generate the key condition for unedited requests for on a certain deviceName.
+     * @param deviceName The name of the device.
+     * @return a Map of String to Condition - map to be used as the DDB query key.
+     */
+    protected Map<String, Condition> generateKeyConditionsForUneditedRequests(String deviceName) {
+        Map<String, Condition> keyConditions = new HashMap<>();
+
+        Condition deviceNameCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                       .withAttributeValueList(new AttributeValue(deviceName));
+        keyConditions.put(DDBBasedMitigationStorageHandler.DEVICE_NAME_KEY, deviceNameCondition);
+        
+        Condition uneditedCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                     .withAttributeValueList(new AttributeValue().withN("0"));
+        keyConditions.put(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY, uneditedCondition);
         return keyConditions;
     }
     

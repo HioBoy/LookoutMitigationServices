@@ -14,6 +14,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.mitigation.service.ActionType;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
@@ -23,6 +24,7 @@ import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandl
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
+import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToFixedActionMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
@@ -103,6 +105,20 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
             String deviceScope = deviceNameAndScope.getDeviceScope().name();
 
             MitigationDefinition mitigationDefinition = createMitigationRequest.getMitigationDefinition();
+            
+            // If action is null, check with the MitigationTemplateToFixedActionMapper to get the action for this template.
+            // This is required to get the action stored with the mitigation definition in DDB, allowing it to be later displayed on the UI.
+            if (mitigationDefinition.getAction() == null) {
+                ActionType actionType = MitigationTemplateToFixedActionMapper.getActionTypesForTemplate(mitigationTemplate);
+                if (actionType == null) {
+                    String msg = "Validation for this request went through successfully, but this request doesn't have any action associated with it and no " +
+                                 "mapping found in the MitigationTemplateToFixedActionMapper for the template in this request. Request: " + ReflectionToStringBuilder.toString(createMitigationRequest);
+                    LOG.error(msg);
+                    throw new RuntimeException(msg);
+                }
+                mitigationDefinition.setAction(actionType);
+            }
+            
             String mitigationDefinitionAsJSONString = getJSONDataConverter().toData(mitigationDefinition);
             int mitigationDefinitionHash = mitigationDefinitionAsJSONString.hashCode();
 
@@ -112,8 +128,8 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
             // Get the max workflowId for existing mitigations, increment it by 1 and store it in the DDB. Return back the new workflowId
             // if successful, else end the loop and throw back an exception.
             while (numAttempts++ < DDB_ACTIVITY_MAX_ATTEMPTS) {
-            	prevMaxWorkflowId = currMaxWorkflowId;
-            	
+                prevMaxWorkflowId = currMaxWorkflowId;
+                
                 // First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
                 currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName, deviceScope, prevMaxWorkflowId, subMetrics);
                 
@@ -369,4 +385,5 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
     protected TemplateBasedRequestValidator getTemplateBasedValidator() {
         return templateBasedRequestValidator;
     }
+
 }
