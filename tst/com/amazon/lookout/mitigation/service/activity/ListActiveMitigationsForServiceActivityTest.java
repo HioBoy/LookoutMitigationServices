@@ -6,6 +6,7 @@ import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.anyMap;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,9 +16,16 @@ import java.util.Map;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
+import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
+import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
+import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
+import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.google.common.collect.Lists;
 
 public class ListActiveMitigationsForServiceActivityTest {
@@ -96,5 +104,64 @@ public class ListActiveMitigationsForServiceActivityTest {
         assertNotNull(requestDescWithLocations);
         assertEquals(requestDescWithLocations.getLocations(), locations);
         assertEquals(requestDescWithLocations.getMitigationRequestDescription(), desc);
+    }
+    
+    /**
+     * Test to ensure we filter out the locations that have failed mitigations. If an request has all locations failed, ensure that we filter that entire request out.
+     */
+    @Test
+    public void testFilterOutRequestsWithAllLocationsFailed() {
+        RequestValidator validator = mock(RequestValidator.class);
+        ActiveMitigationInfoHandler activeMitigationInfoHandler = mock(ActiveMitigationInfoHandler.class);
+        RequestInfoHandler requestInfoHandler = mock(RequestInfoHandler.class);
+        MitigationInstanceInfoHandler mitigationInstanceHandler = mock(MitigationInstanceInfoHandler.class);
+        ListActiveMitigationsForServiceActivity activity = new ListActiveMitigationsForServiceActivity(validator, activeMitigationInfoHandler, requestInfoHandler, mitigationInstanceHandler);
+        
+        String deviceName = "TestDevice";
+        long jobId1 = 1;
+        long jobId2 = 2;
+        
+        TSDMetrics tsdMetrics = mock(TSDMetrics.class);
+        
+        List<MitigationRequestDescriptionWithLocations> listOfDescriptions = new ArrayList<>();
+        MitigationRequestDescriptionWithLocations descWithLocations = new MitigationRequestDescriptionWithLocations();
+        MitigationRequestDescription desc = new MitigationRequestDescription();
+        desc.setJobId(jobId1);
+        desc.setDeviceName(deviceName);
+        descWithLocations.setMitigationRequestDescription(desc);
+        listOfDescriptions.add(descWithLocations);
+        
+        descWithLocations = new MitigationRequestDescriptionWithLocations();
+        desc = new MitigationRequestDescription();
+        desc.setJobId(jobId2);
+        desc.setDeviceName(deviceName);
+        descWithLocations.setMitigationRequestDescription(desc);
+        listOfDescriptions.add(descWithLocations);
+        
+        List<MitigationInstanceStatus> statuses1 = new ArrayList<>();
+        MitigationInstanceStatus status = new MitigationInstanceStatus();
+        status.setLocation("TST1");
+        status.setMitigationStatus(MitigationStatus.DEPLOY_FAILED);
+        statuses1.add(status);
+        
+        status = new MitigationInstanceStatus();
+        status.setLocation("TST2");
+        status.setMitigationStatus(MitigationStatus.DEPLOY_SUCCEEDED);
+        statuses1.add(status);
+        when(mitigationInstanceHandler.getMitigationInstanceStatus(deviceName, jobId1, tsdMetrics)).thenReturn(statuses1);
+        
+        List<MitigationInstanceStatus> statuses2 = new ArrayList<>();
+        status = new MitigationInstanceStatus();
+        status.setLocation("TST1");
+        status.setMitigationStatus(MitigationStatus.DEPLOY_FAILED);
+        statuses2.add(status);
+        when(mitigationInstanceHandler.getMitigationInstanceStatus(deviceName, jobId2, tsdMetrics)).thenReturn(statuses2);
+        
+        List<MitigationRequestDescriptionWithLocations> filteredList = activity.filterOutRequestsWithAllLocationsFailed(listOfDescriptions, tsdMetrics);
+        assertEquals(filteredList.size(), 1);
+        assertEquals(filteredList.get(0).getLocations().size(), 1);
+        assertEquals(filteredList.get(0).getLocations().get(0), "TST2");
+        assertEquals(filteredList.get(0).getMitigationRequestDescription().getDeviceName(), deviceName);
+        assertEquals(filteredList.get(0).getMitigationRequestDescription().getJobId(), jobId1);
     }
 }

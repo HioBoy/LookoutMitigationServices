@@ -448,6 +448,10 @@ public class DDBBasedListMitigationsHandlerTest {
         Condition runningCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
         queryFilter.put(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, runningCondition);
         
+        Condition deleteRequestCondition = new Condition().withComparisonOperator(ComparisonOperator.NE)
+                                                          .withAttributeValueList(new AttributeValue(RequestType.DeleteRequest.name()));
+        queryFilter.put(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, deleteRequestCondition);
+        
         Set<String> attributes = Sets.newHashSet(MitigationRequestsModel.getAttributeNamesForRequestTable());
         
         MitigationDefinition mitigationDefinition = DDBBasedCreateRequestStorageHandlerTest.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));

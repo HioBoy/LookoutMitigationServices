@@ -28,13 +28,16 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceResponse;
+import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
+import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
+import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.google.common.collect.Sets;
 
 @ThreadSafe
@@ -55,12 +58,13 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
     private final RequestValidator requestValidator;
     private final ActiveMitigationInfoHandler activeMitigationInfoHandler;
     private final RequestInfoHandler requestInfoHandler;
+    private final MitigationInstanceInfoHandler mitigationInstanceHandler;
     
     public static final String KEY_SEPARATOR = "#";
     
-    @ConstructorProperties({"requestValidator", "activeMitigationInfoHandler", "requestInfoHandler"})
+    @ConstructorProperties({"requestValidator", "activeMitigationInfoHandler", "requestInfoHandler", "mitigationInstanceHandler"})
     public ListActiveMitigationsForServiceActivity(@Nonnull RequestValidator requestValidator, @Nonnull ActiveMitigationInfoHandler activeMitigationInfoHandler,
-            @Nonnull RequestInfoHandler requestInfoHandler) {
+                                                   @Nonnull RequestInfoHandler requestInfoHandler,  @Nonnull MitigationInstanceInfoHandler mitigationInstanceHandler) {
         
         Validate.notNull(requestValidator);
         this.requestValidator = requestValidator;
@@ -71,6 +75,8 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
         Validate.notNull(requestInfoHandler);
         this.requestInfoHandler = requestInfoHandler;
         
+        Validate.notNull(mitigationInstanceHandler);
+        this.mitigationInstanceHandler = mitigationInstanceHandler;        
     }
     
     @Validated
@@ -124,9 +130,12 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             List<MitigationRequestDescriptionWithLocations> ongoingRequestsDescription = 
                                                         requestInfoHandler.getInProgressRequestsDescription(request.getServiceName(), request.getDeviceName(), tsdMetrics);
             
-            // Step 6. Some of the ongoing requests might have been captured from the ActiveMitigations table, filter those out from this list, 
+            // Step 6. For each request, get the current instance status and filter out the failed ones, leaving behind requests with at least 1 non-failed mitigation.
+            List<MitigationRequestDescriptionWithLocations> ongoingRequestsToIncludeInResponse = filterOutRequestsWithAllLocationsFailed(ongoingRequestsDescription, tsdMetrics);
+            
+            // Step 7. Some of the ongoing requests might have been captured from the ActiveMitigations table, filter those out from this list, 
             // else add the ongoing request to the descriptionsWithLocationsMap structure.
-            mergeOngoingRequestsToActiveOnes(ongoingRequestsDescription, descriptionsWithLocationsMap);
+            mergeOngoingRequestsToActiveOnes(ongoingRequestsToIncludeInResponse, descriptionsWithLocationsMap);
             
             // Create a List using the values from mitigationDescriptions
             List<MitigationRequestDescriptionWithLocations> requestDescriptionsWithLocations = new ArrayList<>(descriptionsWithLocationsMap.values());
@@ -186,5 +195,36 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
                 }
             }
         }
+    }
+    
+    /**
+     * For each ongoing request, get the current instance status and filter out the failed ones, leaving behind requests with at least 1 non-failed mitigation.
+     * @param ongoingRequests List of MitigationRequestDescriptionWithLocations instances, each representing an ongoing request and its locations.
+     * @param tsdMetrics
+     * @return List of MitigationRequestDescriptionWithLocations, for requests with at least 1 location that hasn't failed.
+     */
+    protected List<MitigationRequestDescriptionWithLocations> filterOutRequestsWithAllLocationsFailed(@Nonnull List<MitigationRequestDescriptionWithLocations> ongoingRequestsDescription, 
+                                                                                                      @Nonnull TSDMetrics tsdMetrics) {
+        List<MitigationRequestDescriptionWithLocations> ongoingRequestsToIncludeInResponse = new ArrayList<>();
+        for (MitigationRequestDescriptionWithLocations requestWithLocations : ongoingRequestsDescription) {
+            MitigationRequestDescription description = requestWithLocations.getMitigationRequestDescription();
+            
+            List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler.getMitigationInstanceStatus(description.getDeviceName(), description.getJobId(), tsdMetrics);
+            
+            List<String> ongoingLocations = new ArrayList<>();
+            for (MitigationInstanceStatus instanceStatus : instanceStatuses) {
+                if (!instanceStatus.getMitigationStatus().equals(MitigationStatus.DEPLOY_FAILED)) {
+                    ongoingLocations.add(instanceStatus.getLocation());
+                }
+            }
+            
+            if (!ongoingLocations.isEmpty()) {
+                MitigationRequestDescriptionWithLocations requestWithLocationsToInclude = new MitigationRequestDescriptionWithLocations();
+                requestWithLocationsToInclude.setMitigationRequestDescription(description);
+                requestWithLocationsToInclude.setLocations(ongoingLocations);
+                ongoingRequestsToIncludeInResponse.add(requestWithLocationsToInclude);
+            }
+        }
+        return ongoingRequestsToIncludeInResponse;
     }
 }

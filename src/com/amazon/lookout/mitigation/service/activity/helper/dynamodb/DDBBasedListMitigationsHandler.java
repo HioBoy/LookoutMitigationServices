@@ -262,6 +262,11 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                                                             .withAttributeValueList(new AttributeValue(serviceName));
             queryFilter.put(SERVICE_NAME_KEY, serviceNameCondition);
             
+            // Exclude delete requests.
+            Condition deleteRequestCondition = new Condition().withComparisonOperator(ComparisonOperator.NE)
+                                                              .withAttributeValueList(new AttributeValue(RequestType.DeleteRequest.name()));
+            queryFilter.put(REQUEST_TYPE_KEY, deleteRequestCondition);
+            
             Map<String, AttributeValue> lastEvaluatedKey = null;
             Set<String> attributes = new HashSet<>(MitigationRequestsModel.getAttributeNamesForRequestTable());
             QueryRequest queryRequest = generateQueryRequest(attributes, keyConditions, queryFilter, tableName, true, indexToUse, lastEvaluatedKey);
@@ -340,7 +345,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
             }
         }
         mitigationDescription.setMitigationActionMetadata(mitigationActionMetadata);
-        
+
         MitigationDefinition mitigationDefinition = jsonDataConverter.fromData(keyValues.get(MITIGATION_DEFINITION_KEY).getS(), MitigationDefinition.class);
         mitigationDescription.setMitigationDefinition(mitigationDefinition);
         
