@@ -1,9 +1,11 @@
 package com.amazon.lookout.mitigation.service.activity.helper;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
@@ -174,7 +176,7 @@ public class ServiceSubnetsMatcher {
                 return null;
             }
             
-            // If the subnets belong to different services, in that case too then we simply return null since
+            // If the subnets belong to different services, in that case too then we simply return null since we expect all the subnets to belong to a single service.
             if ((serviceForAllSubnets != null) && (!serviceForAllSubnets.equals(serviceForCurrentSubnet))) {
                 return null;
             } else {
@@ -184,5 +186,31 @@ public class ServiceSubnetsMatcher {
 
         LOG.debug("SubnetsToCheck: " + subnetsToCheck + " matched service: " + serviceForAllSubnets);
         return serviceForAllSubnets;
+    }
+    
+    /**
+     * Compare the input subnets against subnets belonging to different services, to identify which service's subnet(s) might be equal or 
+     * a super-set for all the input subnets. Return all such services which match, empty otherwise.
+     * @param subnetsToCheck List of subnets to check against service's subnets.
+     * @return Set<String> representing serviceNames for the services whose subnets matches (or is a super-set) one or more of the input subnets. Empty otherwise.
+     */
+    public Set<String> getAllServicesForSubnets(@Nonnull List<String> subnetsToCheck) {
+        Validate.notEmpty(subnetsToCheck);
+        
+        Set<String> servicesForSubnets = new HashSet<>();
+        
+        for (String subnet : subnetsToCheck) {
+            String serviceForCurrentSubnet = getServiceForSubnet(subnet);
+
+            // If we don't find any service to whom this subnet might belong, we simply continue checking the next subnet.
+            if (serviceForCurrentSubnet == null) {
+                continue;
+            }
+            
+            servicesForSubnets.add(serviceForCurrentSubnet);
+        }
+
+        LOG.debug("SubnetsToCheck: " + subnetsToCheck + " matched services: " + servicesForSubnets);
+        return servicesForSubnets;
     }
 }

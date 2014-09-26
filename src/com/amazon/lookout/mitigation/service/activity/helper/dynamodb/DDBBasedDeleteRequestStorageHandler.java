@@ -276,7 +276,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                 
                 // If we notice an existing delete request for the same mitigationName and version, then throw back an exception.
                 if (existingRequestType.equals(RequestType.DeleteRequest.name())) {
-                    String msg = "Found an existing delete workflow with workflowId: " + existingMitigationWorkflowId + "for mitigation: " + mitigationNameToDelete + " when requesting delete for version: " + 
+                    String msg = "Found an existing delete request with jobId: " + existingMitigationWorkflowId + "for mitigation: " + mitigationNameToDelete + " when requesting delete for version: " + 
                                  versionToDelete + " for device: " + deviceName + " in deviceScope: " + deviceScope + " corresponding to template: " + templateForMitigationToDelete;
                     LOG.warn(msg);
                     throw new DuplicateRequestException400(msg);

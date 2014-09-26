@@ -51,6 +51,7 @@ package.LookoutMitigationService = {
             CoralClientHttp = 1.0;
 
             LookoutMitigationServiceExplorer = 1.0;
+            LookoutRouterMitigationCommons = 1.0;
         };
     };
     

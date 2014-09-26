@@ -227,7 +227,13 @@ public class RequestValidator {
         }
         
         String deviceName = request.getDeviceName();
-        if (deviceName != null) {         
+        if (StringUtils.isBlank(deviceName)) {
+            String msg = "Null or empty device name found in request: " + ReflectionToStringBuilder.toString(request);
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        if (deviceName != null) {       
             // This will throw an exception if the deviceName is not defined within the DeviceName enum.
             try {
                 DeviceName.valueOf(deviceName);  

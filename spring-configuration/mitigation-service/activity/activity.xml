@@ -33,6 +33,8 @@
         <constructor-arg name="activeMitigationInfoHandler" ref="ddbBasedRequestInfoHandler"/>
         <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
         <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
+        <constructor-arg name="routerMetadataHelper" ref="routerMetadataHelper"/>
+        <constructor-arg name="threadPool" ref="listMitigationsActivityThreadPool"/>
     </bean>
     
     <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationInfoActivity">
@@ -108,15 +110,26 @@
     </bean>
     
     <bean id="route53SubnetFetcher" class="com.amazon.aws158.commons.customer.Route53SubnetsFetcher">
-        <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
-       </bean>
-   
-       <bean id="cloudFrontExternalVipsSubnetsFetcher" class="com.amazon.aws158.commons.customer.CloudFrontExternalVipsSubnetsFetcher">
        <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
-       </bean>
+    </bean>
    
-       <bean id="cloudFrontFMSSubnetsFetcher" class="com.amazon.aws158.commons.customer.CloudFrontFMSSubnetsFetcher">
+    <bean id="cloudFrontExternalVipsSubnetsFetcher" class="com.amazon.aws158.commons.customer.CloudFrontExternalVipsSubnetsFetcher">
        <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
-       </bean>
+    </bean>
+   
+    <bean id="cloudFrontFMSSubnetsFetcher" class="com.amazon.aws158.commons.customer.CloudFrontFMSSubnetsFetcher">
+       <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
+    </bean>
+
+    <!-- New coral Activities are created per request, by creating a pool here, we ensure Spring shuts down this pool during shutdown sequence and all Activity instances share the same singleton ThreadPool instance. -->
+    <bean id="listMitigationsActivityThreadPool" class="java.util.concurrent.Executors" factory-method="newFixedThreadPool">
+        <constructor-arg index="0"><value>15</value></constructor-arg>
+    </bean>
+    
+    <bean id="routerMetadataHelper" class="com.amazon.lookout.mitigation.service.activity.helper.DDBBasedRouterMetadataHelper">
+        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
+        <constructor-arg name="domain" value="${domain}"/>
+        <constructor-arg name="serviceSubnetsMatcher" ref="serviceSubnetsMatcher"/>
+    </bean>
 </beans>
 

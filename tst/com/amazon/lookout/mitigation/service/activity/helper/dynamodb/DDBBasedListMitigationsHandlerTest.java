@@ -448,10 +448,6 @@ public class DDBBasedListMitigationsHandlerTest {
         Condition runningCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
         queryFilter.put(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, runningCondition);
         
-        Condition deleteRequestCondition = new Condition().withComparisonOperator(ComparisonOperator.NE)
-                                                          .withAttributeValueList(new AttributeValue(RequestType.DeleteRequest.name()));
-        queryFilter.put(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, deleteRequestCondition);
-        
         Set<String> attributes = Sets.newHashSet(MitigationRequestsModel.getAttributeNamesForRequestTable());
         
         MitigationDefinition mitigationDefinition = DDBBasedCreateRequestStorageHandlerTest.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));
@@ -497,7 +493,7 @@ public class DDBBasedListMitigationsHandlerTest {
         
         when(dynamoDBClient.query(queryRequest)).thenReturn(queryResult);
         
-        List<MitigationRequestDescriptionWithLocations> descriptions = listHandler.getInProgressRequestsDescription(serviceName, deviceName, tsdMetrics);
+        List<MitigationRequestDescriptionWithLocations> descriptions = listHandler.getOngoingRequestsDescription(serviceName, deviceName, tsdMetrics);
         
         assertEquals(descriptions.size(), 1);
         MitigationRequestDescriptionWithLocations descriptionWithLocations = descriptions.get(0);

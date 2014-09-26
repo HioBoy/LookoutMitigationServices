@@ -239,7 +239,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * @return a List of MitigationRequestDescription, where each MitigationRequestDescription instance describes a mitigation that is currently being worked on (whose WorkflowStatus is RUNNING).
      */
     @Override
-    public List<MitigationRequestDescriptionWithLocations> getInProgressRequestsDescription(@Nonnull String serviceName, @Nonnull String deviceName, @Nonnull TSDMetrics tsdMetrics) {
+    public List<MitigationRequestDescriptionWithLocations> getOngoingRequestsDescription(@Nonnull String serviceName, @Nonnull String deviceName, @Nonnull TSDMetrics tsdMetrics) {
         Validate.notEmpty(serviceName);
         Validate.notEmpty(deviceName);
         Validate.notNull(tsdMetrics);
@@ -257,15 +257,10 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
             Condition runningWorkflowCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ)
                                                                 .withAttributeValueList(new AttributeValue(WorkflowStatus.RUNNING));
             queryFilter.put(WORKFLOW_STATUS_KEY, runningWorkflowCondition);
-
+ 
             Condition serviceNameCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ)
                                                             .withAttributeValueList(new AttributeValue(serviceName));
             queryFilter.put(SERVICE_NAME_KEY, serviceNameCondition);
-            
-            // Exclude delete requests.
-            Condition deleteRequestCondition = new Condition().withComparisonOperator(ComparisonOperator.NE)
-                                                              .withAttributeValueList(new AttributeValue(RequestType.DeleteRequest.name()));
-            queryFilter.put(REQUEST_TYPE_KEY, deleteRequestCondition);
             
             Map<String, AttributeValue> lastEvaluatedKey = null;
             Set<String> attributes = new HashSet<>(MitigationRequestsModel.getAttributeNamesForRequestTable());
@@ -346,7 +341,10 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         }
         mitigationDescription.setMitigationActionMetadata(mitigationActionMetadata);
 
-        MitigationDefinition mitigationDefinition = jsonDataConverter.fromData(keyValues.get(MITIGATION_DEFINITION_KEY).getS(), MitigationDefinition.class);
+        MitigationDefinition mitigationDefinition = new MitigationDefinition();
+        if (keyValues.containsKey(MITIGATION_DEFINITION_KEY) && !StringUtils.isEmpty(keyValues.get(MITIGATION_DEFINITION_KEY).getS())) {
+            mitigationDefinition = jsonDataConverter.fromData(keyValues.get(MITIGATION_DEFINITION_KEY).getS(), MitigationDefinition.class);
+        }
         mitigationDescription.setMitigationDefinition(mitigationDefinition);
         
         mitigationDescription.setMitigationTemplate(keyValues.get(MITIGATION_TEMPLATE_KEY).getS());

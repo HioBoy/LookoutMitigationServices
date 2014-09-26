@@ -1,7 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.validator;
 
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -24,6 +23,7 @@ import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.google.common.collect.Lists;
@@ -465,22 +465,13 @@ public class RequestValidatorTest {
         ListActiveMitigationsForServiceRequest request = new ListActiveMitigationsForServiceRequest();
         RequestValidator validator = new RequestValidator();
         
-        // deviceName and locations are optional
+        // locations is optional
         request.setServiceName(serviceName);
+        request.setDeviceName(DeviceName.POP_ROUTER.name());
         validator.validateListActiveMitigationsForServiceRequest(request);
         
-        // devicename may not be empty
-        request.setDeviceName("");
-        Throwable caughtException = null;
-        try {
-            validator.validateListActiveMitigationsForServiceRequest(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-        
         // deviceName may not be a random name.
-        caughtException = null;
+        Throwable caughtException = null;
         request.setDeviceName("arbit");
         try {
             validator.validateListActiveMitigationsForServiceRequest(request);
