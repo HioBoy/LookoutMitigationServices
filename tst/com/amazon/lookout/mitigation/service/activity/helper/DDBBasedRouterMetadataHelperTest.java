@@ -21,11 +21,14 @@ import org.junit.Test;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.lookout.mitigation.router.model.RouterFilterInfoWithMetadata;
+import com.amazon.lookout.mitigation.service.ActionType;
 import com.amazon.lookout.mitigation.service.CompositeAndConstraint;
 import com.amazon.lookout.mitigation.service.CompositeOrConstraint;
 import com.amazon.lookout.mitigation.service.Constraint;
+import com.amazon.lookout.mitigation.service.CountAction;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithStatuses;
+import com.amazon.lookout.mitigation.service.RateLimitAction;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.ListActiveMitigationsForServiceActivity;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
@@ -323,5 +326,58 @@ public class DDBBasedRouterMetadataHelperTest {
         assertEquals(mitigationDrivenByRouterMitUI.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
         assertTrue(mitigationDrivenByRouterMitUI.getInstancesStatusMap().containsKey("TST4"));
         assertEquals(mitigationDrivenByRouterMitUI.getInstancesStatusMap().get("TST4").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+    }
+    
+    @Test
+    public void testMergeMitigationsWithSameNameDiffDefinitions() throws JsonParseException, JsonMappingException, IOException {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher);
+        
+        String filterInfoAsJSONBase = "{\"filterName\":\"Testing1\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                                      "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"%s\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
+                                      "\"enabled\":true,\"jobId\":5,\"lastDatePushedToRouter\":\"Fri Sep 22 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                                      "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                                      "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                                      "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        String filterInfoAsJSON = String.format(filterInfoAsJSONBase, "COUNT");
+        MitigationRequestDescriptionWithStatuses route53Mitigation1Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst1-en-tra-r1");
+        
+        List<MitigationRequestDescriptionWithStatuses> routerMitigations = Lists.newArrayList(route53Mitigation1Desc);
+        
+        filterInfoAsJSON = String.format(filterInfoAsJSONBase, "RATE_LIMIT");
+        MitigationRequestDescriptionWithStatuses route53MitigationInMitSvc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst1-en-tra-r1");
+        
+        Map<String, List<MitigationRequestDescriptionWithStatuses>> activeMitigationsFromMitSvc = new HashMap<>();
+        activeMitigationsFromMitSvc.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(route53MitigationInMitSvc), Lists.newArrayList(route53MitigationInMitSvc));
+        
+        List<MitigationRequestDescriptionWithStatuses> mergedMitigations = helper.mergeMitigations(activeMitigationsFromMitSvc, routerMitigations, "Route53");
+        assertEquals(mergedMitigations.size(), 2);
+        
+        MitigationRequestDescriptionWithStatuses mitigationDrivenByMitSvc = null;
+        MitigationRequestDescriptionWithStatuses mitigationDrivenByRouterMitUI = null;
+        for (MitigationRequestDescriptionWithStatuses mitigation : mergedMitigations) {
+            if (mitigation.getMitigationRequestDescription().getMitigationDefinition().getAction() instanceof RateLimitAction) {
+                mitigationDrivenByMitSvc = mitigation;
+            } else {
+                mitigationDrivenByRouterMitUI = mitigation;
+            }
+        }
+        
+        assertEquals(mitigationDrivenByMitSvc.getMitigationRequestDescription(), route53MitigationInMitSvc.getMitigationRequestDescription());
+        assertEquals(mitigationDrivenByMitSvc.getInstancesStatusMap().size(), 1);
+        assertTrue(mitigationDrivenByMitSvc.getInstancesStatusMap().containsKey("TST1"));
+        assertEquals(mitigationDrivenByMitSvc.getInstancesStatusMap().get("TST1").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+        
+        assertEquals(mitigationDrivenByRouterMitUI.getMitigationRequestDescription().getMitigationTemplate(), DDBBasedRouterMetadataHelper.ROUTER_MITIGATION_DEFAULT_TEMPLATE);
+        assertEquals(mitigationDrivenByRouterMitUI.getMitigationRequestDescription().getMitigationVersion(), 1);
+        assertEquals(mitigationDrivenByRouterMitUI.getMitigationRequestDescription().getNumPostDeployChecks(), 0);
+        assertEquals(mitigationDrivenByRouterMitUI.getMitigationRequestDescription().getNumPreDeployChecks(), 0);
+        
+        assertEquals(mitigationDrivenByRouterMitUI.getInstancesStatusMap().size(), 1);
+        assertTrue(mitigationDrivenByRouterMitUI.getInstancesStatusMap().containsKey("TST1"));
+        assertEquals(mitigationDrivenByRouterMitUI.getInstancesStatusMap().get("TST1").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
     }
 }

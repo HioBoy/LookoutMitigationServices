@@ -235,7 +235,7 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
                 }
             }
             
-            // If the mitigation from routerMetadata matches a currentlyActiveMitigations mitigation, then as per Step 2.1 defined above, the locations must have already been update, so do nothing more.
+            // If the mitigation from routerMetadata matches a currentlyActiveMitigations mitigation, then as per Step 2.1 defined above, the locations must have already been updated, so do nothing more.
             if (matchingMitigationFound) {
                 continue;
             }
@@ -268,7 +268,11 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
                 routerMitigationDescription.setRequestStatus(WorkflowStatus.SUCCEEDED);
                 routerMitigationDescription.setRequestType(RequestType.CreateRequest.name());
                 
-                currentlyActiveMitigations.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(routerMitigation), Lists.newArrayList(routerMitigation));
+                if (currentlyActiveMitigations.containsKey(routerMitigationKey)) {
+                    currentlyActiveMitigations.get(routerMitigationKey).add(routerMitigation);
+                } else {
+                    currentlyActiveMitigations.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(routerMitigation), Lists.newArrayList(routerMitigation));
+                }
             }
         }
         
