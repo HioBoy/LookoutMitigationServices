@@ -167,7 +167,12 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
             MitigationInstanceStatus instanceStatus = new MitigationInstanceStatus();
             String location = RouterToPopName.getPopNameFromRouterName(routerName);
             instanceStatus.setLocation(location);
-            instanceStatus.setMitigationStatus(MitigationStatus.DEPLOY_SUCCEEDED);
+            
+            if (filterInfo.isEnabled()) {
+                instanceStatus.setMitigationStatus(MitigationStatus.DEPLOY_SUCCEEDED);
+            } else {
+                instanceStatus.setMitigationStatus(MitigationStatus.DISABLED);
+            }
             
             Map<String, MitigationInstanceStatus> instancesStatus = new HashMap<>();
             instancesStatus.put(location, instanceStatus);
