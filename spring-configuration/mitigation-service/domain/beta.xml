@@ -19,4 +19,13 @@
         <value>G-SEA19</value>
     </util:set>
     
+    <bean id="beta.mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.mws.mitigationservice.beta"/>
+    </bean>
+    
+    <!-- Currently (Oct 2014) there is no beta for BW, setting it to Test for making the spring configs happy. -->
+    <bean id="beta.blackwatchMWSMetricDataset" class="java.lang.String">
+        <constructor-arg value="Test"/>
+    </bean>
+    
 </beans>

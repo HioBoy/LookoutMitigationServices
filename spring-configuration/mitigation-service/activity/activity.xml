@@ -92,9 +92,17 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
     
+    <bean id="monitoringQueryClientProvider" class="com.amazon.lookout.mitigation.service.workflow.helper.MonitoringQueryClientProvider">
+        <constructor-arg name="odinAWSCredsProvider" ref="${domain}.mwsCredentialsProvider"/>
+    </bean>
+    
     <bean id="bwLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.BlackwatchLocationsHelper">
         <constructor-arg name="ldapProvider" ref="ldapProvider"/>
         <constructor-arg name="overrideGammaBWPOPAsNonBW" value="true"/> <!-- Toggle this value accordingly if we want the Gamma BW POP to be considered as a non-BW POP instead -->
+        <constructor-arg name="mwsClientProvider" ref="monitoringQueryClientProvider"/>
+        <constructor-arg name="mwsMetricDataset" ref="${domain}.blackwatchMWSMetricDataset"/>
+        <constructor-arg name="blackwatchMWSMetricName" value="Total_Mitigated_Packets_RX"/>
+        <constructor-arg name="blackwatchInlineThreshold" value="30000"/>
     </bean>
     
     <bean id="ldapProvider" class="com.amazon.ldaputils.DefaultLdapProvider"/>

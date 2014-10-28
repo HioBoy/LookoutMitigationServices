@@ -52,6 +52,8 @@ package.LookoutMitigationService = {
 
             LookoutMitigationServiceExplorer = 1.0;
             LookoutRouterMitigationCommons = 1.0;
+            
+            LookoutMWSClientJava = 1.0;
         };
     };
     

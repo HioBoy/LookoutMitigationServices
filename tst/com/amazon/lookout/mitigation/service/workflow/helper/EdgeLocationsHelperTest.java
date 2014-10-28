@@ -17,8 +17,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import amazon.mws.data.Datapoint;
+import amazon.mws.data.StatisticSeries;
+import amazon.mws.query.MonitoringQueryClient;
+import amazon.mws.request.MWSRequest;
+import amazon.mws.response.GetMetricDataResponse;
+import amazon.odin.awsauth.OdinAWSCredentialsProvider;
 
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.coral.metrics.NullMetricsFactory;
@@ -31,6 +40,8 @@ import com.amazon.edge.service.EdgeOperatorServiceClient;
 import com.amazon.edge.service.GetPOPsResult;
 import com.amazon.edge.service.impl.GetPOPsCall;
 import com.amazon.ldaputils.LdapProvider;
+import com.amazon.lookout.mitigation.service.workflow.helper.BlackwatchLocationsHelperTest.MockMonitoringQueryClientProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -42,8 +53,34 @@ public class EdgeLocationsHelperTest {
         TestUtils.configure();
     }
     
+    private MonitoringQueryClientProvider getMonitoringQueryClientProviderForBWPOP() throws Exception {
+        MonitoringQueryClient mockMonitoringQueryClient = mock(MonitoringQueryClient.class);
+        
+        GetMetricDataResponse response = new GetMetricDataResponse();
+        StatisticSeries series = new StatisticSeries();
+        
+        DateTime now = new DateTime(DateTimeZone.UTC);
+        amazon.query.types.DateTime queryDateTime = new amazon.query.types.DateTime(now.minusMinutes(3).getMillis());
+        series.addDatapoint(new Datapoint(queryDateTime, 60.0));
+        
+        queryDateTime = new amazon.query.types.DateTime(now.minusMinutes(2).getMillis());
+        series.addDatapoint(new Datapoint(queryDateTime, 60.0));
+        
+        response.setNumberOfAvailable(2);
+        response.setNumberOfReturned(2);
+        response.addStatisticSeries(series);
+        
+        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenReturn(response);
+        
+        OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
+        when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
+        
+        MonitoringQueryClientProvider monitoringQueryClientProvider = new MockMonitoringQueryClientProvider(odinCredsProvider, mockMonitoringQueryClient);
+        return monitoringQueryClientProvider;
+    }
+    
     @Test
-    public void testHappyCase() {
+    public void testHappyCase() throws Exception {
         EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
         GetPOPsCall edgeServicesGetPOPsCall = mock(GetPOPsCall.class);
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
@@ -69,7 +106,7 @@ public class EdgeLocationsHelperTest {
         when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
         
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false, getMonitoringQueryClientProviderForBWPOP(), "Prod", "Total_Mitigated_Packets_RX", 5);
         Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
         List<Object> hosts = new ArrayList<>();
         hosts.add("POP5");
@@ -94,7 +131,7 @@ public class EdgeLocationsHelperTest {
     }
     
     @Test
-    public void testCloudFrontCustomerAPIFailureCase() {
+    public void testCloudFrontCustomerAPIFailureCase() throws Exception {
         EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
         GetPOPsCall edgeServicesGetPOPsCall = mock(GetPOPsCall.class);
         when(edgeServicesGetPOPsCall.call()).thenThrow(new RuntimeException());
@@ -107,7 +144,7 @@ public class EdgeLocationsHelperTest {
         when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
         
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false, getMonitoringQueryClientProviderForBWPOP(), "Prod", "Total_Mitigated_Packets_RX", 5);
         Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
         List<Object> hosts = new ArrayList<>();
         hosts.add("POP5");
@@ -129,7 +166,7 @@ public class EdgeLocationsHelperTest {
     }
     
     @Test
-    public void testRoute53CustomerAPIFailureCase() {
+    public void testRoute53CustomerAPIFailureCase() throws Exception {
         EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
         GetPOPsCall edgeServicesGetPOPsCall = mock(GetPOPsCall.class);
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
@@ -145,7 +182,7 @@ public class EdgeLocationsHelperTest {
         when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
         
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false, getMonitoringQueryClientProviderForBWPOP(), "Prod", "Total_Mitigated_Packets_RX", 5);
         Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
         List<Object> hosts = new ArrayList<>();
         hosts.add("POP5");
@@ -168,7 +205,7 @@ public class EdgeLocationsHelperTest {
     }
     
     @Test
-    public void testBlackwatchRefreshFailureCase() {
+    public void testBlackwatchRefreshFailureCase() throws Exception {
         EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
         GetPOPsCall edgeServicesGetPOPsCall = mock(GetPOPsCall.class);
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
@@ -183,8 +220,17 @@ public class EdgeLocationsHelperTest {
         when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
         
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false);
         when(provider.search(anyString(), anyString(), anyInt(), anyList())).thenThrow(new RuntimeException());
+        
+        MonitoringQueryClient mockMonitoringQueryClient = mock(MonitoringQueryClient.class);
+        
+        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenThrow(new RuntimeException());
+        
+        OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
+        when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
+        
+        MonitoringQueryClientProvider monitoringQueryClientProvider = new MockMonitoringQueryClientProvider(odinCredsProvider, mockMonitoringQueryClient);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false, monitoringQueryClientProvider, "Prod", "Total_Mitigated_Packets_RX", 5);
         
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
         
@@ -199,7 +245,7 @@ public class EdgeLocationsHelperTest {
     }
     
     @Test
-    public void testInitialSuccessButSomeRefreshFailuresLater() {
+    public void testInitialSuccessButSomeRefreshFailuresLater() throws Exception {
         EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
         GetPOPsCall edgeServicesGetPOPsCall = mock(GetPOPsCall.class);
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
@@ -225,7 +271,7 @@ public class EdgeLocationsHelperTest {
         when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
         
         LdapProvider provider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false, getMonitoringQueryClientProviderForBWPOP(), "Prod", "Total_Mitigated_Packets_RX", 5);
         Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
         List<Object> hosts = new ArrayList<>();
         hosts.add("POP5");

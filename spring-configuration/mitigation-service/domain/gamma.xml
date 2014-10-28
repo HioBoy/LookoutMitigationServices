@@ -18,4 +18,13 @@
         <value>G-SEA19</value>
     </util:set>
     
+    <bean id="gamma.mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.mws.mitigationservice.gamma"/>
+    </bean>
+    
+    <!-- Currently (Oct 2014) there is no gamma for BW, setting it to Test:Prod for now, may change once we have BW back in Gamma. -->
+    <bean id="gamma.blackwatchMWSMetricDataset" class="java.lang.String">
+        <constructor-arg value="Test:Prod"/>
+    </bean>
+    
 </beans>

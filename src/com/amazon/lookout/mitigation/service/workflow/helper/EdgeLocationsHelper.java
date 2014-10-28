@@ -166,7 +166,7 @@ public class EdgeLocationsHelper implements Runnable {
             boolean allPOPsCheckedForBlackwatch = true;
             for (String popName : allPOPs) {
                 try {
-                    if (bwLocationsHelper.isBlackwatchPOP(popName)) {
+                    if (bwLocationsHelper.isBlackwatchPOP(popName, metrics)) {
                         refreshedBWPOPs.add(popName);
                     }
                 } catch (Exception ex) {

@@ -19,4 +19,12 @@
         <value>EWR2</value>
         <value>HKG1</value>
     </util:set>
+    
+    <bean id="prod.mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.mws.mitigationservice.prod"/>
+    </bean>
+    
+    <bean id="prod.blackwatchMWSMetricDataset" class="java.lang.String">
+        <constructor-arg value="Prod"/>
+    </bean>
 </beans>
