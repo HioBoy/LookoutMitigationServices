@@ -45,7 +45,7 @@ public class BlackwatchLocationsHelper {
     private static final int MAX_QUERY_ATTEMPTS = 3;
     private static final int SLEEP_BETWEEN_ATTEMPTS_IN_MILLIS = 500;
     
-    private static final String GAMMA_IAD_POP_NAME = "G-IAD5";
+    private static final String GAMMA_IAD_POP_NAME = "G-IAD";
     
     private final LdapProvider ldapProvider;
     // This flag exists solely to be used in gamma - to indicate that this helper should treat Gamma BW POP as a non-BW POP.
@@ -112,7 +112,7 @@ public class BlackwatchLocationsHelper {
             Validate.notEmpty(popName);
             
             // Check if we need to force the gamma IAD POP to return as a non-BW POP.
-            if (popName.toUpperCase().equals(GAMMA_IAD_POP_NAME) && overrideGammaBWPOPAsNonBW) {
+            if (popName.toUpperCase().startsWith(GAMMA_IAD_POP_NAME) && overrideGammaBWPOPAsNonBW) {
                 return false;
             }
             
