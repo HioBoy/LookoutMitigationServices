@@ -13,6 +13,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,9 +29,12 @@ import amazon.mws.data.StatisticSeries;
 import amazon.mws.query.MonitoringQueryClient;
 import amazon.mws.request.MWSRequest;
 import amazon.mws.response.GetMetricDataResponse;
+import amazon.mws.response.Response;
+import amazon.mws.response.ResponseException;
 import amazon.odin.awsauth.OdinAWSCredentialsProvider;
 
 import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.ldaputils.DefaultLdapProvider;
 import com.amazon.ldaputils.LdapProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 
@@ -278,6 +282,54 @@ public class BlackwatchLocationsHelperTest {
         assertTrue(isBlackwatchPOP);
         verify(provider, times(1)).search(anyString(), anyString(), anyInt(), anyList());
         verify(mockMonitoringQueryClient, times(2)).requestResponse(any(MWSRequest.class));
+    }
+    
+    @Test
+    public void testWhenMWSQueryThrowsNoMetricFoundException() throws Exception {
+        LdapProvider provider = mock(LdapProvider.class);
+        Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
+        List<Object> hosts = new ArrayList<>();
+        hosts.add(BLACKWATCH_POP);
+        hostclassSearchResult.put(BLACKWATCH_POP, hosts);
+        
+        List<Map<String, List<Object>>> result = new ArrayList<>();
+        result.add(hostclassSearchResult);
+        when(provider.search(anyString(), anyString(), anyInt(), anyList())).thenReturn(result);
+        
+        MonitoringQueryClient mockMonitoringQueryClient = mock(MonitoringQueryClient.class);
+        DateTime now = new DateTime(DateTimeZone.UTC);
+        
+        GetMetricDataResponse response = new GetMetricDataResponse();
+        StatisticSeries series = new StatisticSeries();
+        response.addStatisticSeries(series);
+        
+        amazon.query.types.DateTime queryDateTime = new amazon.query.types.DateTime(now.minusMinutes(3).getMillis());
+        series.addDatapoint(new Datapoint(queryDateTime, 60.0));
+        
+        queryDateTime = new amazon.query.types.DateTime(now.minusMinutes(2).getMillis());
+        series.addDatapoint(new Datapoint(queryDateTime, 60.0));
+        
+        response.setNumberOfAvailable(2);
+        response.setNumberOfReturned(2);
+        response.addStatisticSeries(series);
+        
+        Response mwsResponse = new Response();
+        HttpURLConnection requestConn = mock(HttpURLConnection.class);
+        when(requestConn.getResponseCode()).thenReturn(400);
+        when(requestConn.getResponseMessage()).thenReturn(BlackwatchLocationsHelper.METRIC_NOT_FOUND_EXCEPTION_MESSAGE);
+        ResponseException exception = new ResponseException(requestConn, response);
+        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenThrow(exception);
+        
+        OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
+        when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
+        
+        MonitoringQueryClientProvider monitoringQueryClientProvider = new MockMonitoringQueryClientProvider(odinCredsProvider, mockMonitoringQueryClient);
+        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider, true, monitoringQueryClientProvider, "Prod", "Total_Mitigated_Packets_RX", 5);
+        
+        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
+        assertFalse(isBlackwatchPOP);
+        verify(provider, times(1)).search(anyString(), anyString(), anyInt(), anyList());
+        verify(mockMonitoringQueryClient, times(1)).requestResponse(any(MWSRequest.class));
     }
     
     /**

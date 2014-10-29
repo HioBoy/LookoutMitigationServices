@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import java.beans.ConstructorProperties;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import amazon.mws.data.StringTimeRange;
 import amazon.mws.query.MonitoringQueryClient;
 import amazon.mws.request.GetMetricDataRequest;
 import amazon.mws.response.GetMetricDataResponse;
+import amazon.mws.response.ResponseException;
 import amazon.mws.types.Stat;
 import amazon.mws.types.StatPeriod;
 
@@ -72,6 +74,8 @@ public class BlackwatchLocationsHelper {
     public static final String METRIC_QUERY_END = "now";
     
     private static final String NUM_ATTEMPTS_METRIC_KEY = "NumAttempts";
+    
+    public static final String METRIC_NOT_FOUND_EXCEPTION_MESSAGE = "MetricNotFound: No metrics matched your request parameters";
     
     private final long blackwatchInlineThreshold;
     private final MonitoringQueryClient mwsQueryClient;
@@ -168,23 +172,31 @@ public class BlackwatchLocationsHelper {
         try {
             Validate.notEmpty(popName);
             
+            Map<String, String> dimensions = new HashMap<>(mwsMetricBaseDimensions);
+            dimensions.put(MARKETPLACE_KEY, popName.toUpperCase());
+            MetricSchema schema = new MetricSchema(SERVICE_METRIC_SCHEMA_KEY, dimensions);
+            Statistic statistic = new Statistic(schema, StatPeriod.OneMinute, Stat.sum);
+            
+            StringTimeRange timeRange = new StringTimeRange(METRIC_QUERY_START, METRIC_QUERY_END);
+            GetMetricDataRequest getMetricDataRequest = new GetMetricDataRequest(statistic, timeRange);
+            
             Exception lastException = null;
             while (numAttempts < MAX_QUERY_ATTEMPTS) {
                 ++numAttempts;
                 try {
-                    Map<String, String> dimensions = new HashMap<>(mwsMetricBaseDimensions);
-                    dimensions.put(MARKETPLACE_KEY, popName.toUpperCase());
-                    MetricSchema schema = new MetricSchema(SERVICE_METRIC_SCHEMA_KEY, dimensions);
-                    Statistic statistic = new Statistic(schema, StatPeriod.OneMinute, Stat.sum);
-                    
-                    StringTimeRange timeRange = new StringTimeRange(METRIC_QUERY_START, METRIC_QUERY_END);
-                    GetMetricDataRequest getMetricDataRequest = new GetMetricDataRequest(statistic, timeRange);
-                    
                     GetMetricDataResponse response = (GetMetricDataResponse) mwsQueryClient.requestResponse(getMetricDataRequest);
                     return hasDataAboveThreshold(response);
                 } catch (Exception ex) {
+                    // If the exception is for the metric not being found, then that either implies that BW never published metrics for this POP or it has stopped for a long time (typically 30 days).
+                    // In both case, we would return false since BW isn't actively running.
+                    if ((ex instanceof ResponseException) && ((ResponseException) ex).getResponseMessage().contains(METRIC_NOT_FOUND_EXCEPTION_MESSAGE)) {
+                        LOG.info("Caught a ResponseException stating that the metric was not found for dimensions: " + 
+                                 dimensions + " for POP: " + popName + ", hence returning false.", ex);
+                        return false;
+                    }
+                    
                     lastException = ex;
-                    LOG.warn("Unable to query MWS for metric:" + mwsMetricBaseDimensions + " for POP: " + popName + ", numAttempts: " + numAttempts, ex);
+                    LOG.warn("Unable to query MWS for metric dimensions:" + dimensions + " for POP: " + popName + ", numAttempts: " + numAttempts, ex);
                     
                     if (numAttempts < MAX_QUERY_ATTEMPTS) {
                         try {
@@ -193,9 +205,13 @@ public class BlackwatchLocationsHelper {
                     }
                 }
             }
-            String msg = "Unable to query MWS for metric:" + mwsMetricBaseDimensions + " for POP: " + popName + " after: " + numAttempts + " number of attempts";
-            LOG.error(msg, lastException);
+            String msg = "Unable to query MWS for metric dimensions:" + dimensions + " for POP: " + popName + " after: " + numAttempts + " number of attempts";
+            LOG.warn(msg, lastException);
             throw new RuntimeException(msg, lastException);
+        } catch (URISyntaxException ex) {
+            String msg = "Unable to construct the URI to use for calling MWS to querying metric base dimensions: " + mwsMetricBaseDimensions + " for POP: " + popName;
+            LOG.error(msg);
+            throw new RuntimeException(msg, ex);
         } finally {
             subMetrics.addCount(NUM_ATTEMPTS_METRIC_KEY, numAttempts);
             subMetrics.end();
