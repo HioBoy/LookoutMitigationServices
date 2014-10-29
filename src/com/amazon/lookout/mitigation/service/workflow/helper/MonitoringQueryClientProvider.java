@@ -2,6 +2,9 @@ package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import java.beans.ConstructorProperties;
 
+import org.apache.commons.lang.Validate;
+
+import lombok.NonNull;
 import amazon.mws.query.MonitoringQueryClient;
 import amazon.odin.awsauth.OdinAWSCredentialsProvider;
 
@@ -12,9 +15,10 @@ import amazon.odin.awsauth.OdinAWSCredentialsProvider;
 public class MonitoringQueryClientProvider {
     private final MonitoringQueryClient monitoringQueryClient;
     
-    @ConstructorProperties({"odinAWSCredsProvider"})
-    public MonitoringQueryClientProvider(OdinAWSCredentialsProvider credsProvider) {
-        monitoringQueryClient = new MonitoringQueryClient(credsProvider);
+    @ConstructorProperties({"odinAWSCredsProvider", "regionName"})
+    public MonitoringQueryClientProvider(@NonNull OdinAWSCredentialsProvider credsProvider, @NonNull String regionName) {
+        Validate.notEmpty(regionName);
+        monitoringQueryClient = new MonitoringQueryClient(credsProvider, regionName);
     }
     
     public MonitoringQueryClient getClient() {

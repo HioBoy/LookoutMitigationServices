@@ -47,7 +47,7 @@ public class BlackwatchLocationsHelperTest {
         private final MonitoringQueryClient mockMonitoringQueryClient;
         
         public MockMonitoringQueryClientProvider(OdinAWSCredentialsProvider credsProvider, MonitoringQueryClient mockMonitoringQueryClient) {
-            super(credsProvider);
+            super(credsProvider, "us-east-1");
             this.mockMonitoringQueryClient = mockMonitoringQueryClient;
         }
         

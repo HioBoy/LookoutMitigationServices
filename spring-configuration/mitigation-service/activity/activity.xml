@@ -94,6 +94,7 @@
     
     <bean id="monitoringQueryClientProvider" class="com.amazon.lookout.mitigation.service.workflow.helper.MonitoringQueryClientProvider">
         <constructor-arg name="odinAWSCredsProvider" ref="${domain}.mwsCredentialsProvider"/>
+        <constructor-arg name="regionName" value="${realm}"/>
     </bean>
     
     <bean id="bwLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.BlackwatchLocationsHelper">
