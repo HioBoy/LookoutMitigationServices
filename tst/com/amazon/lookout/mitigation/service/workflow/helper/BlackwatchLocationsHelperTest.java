@@ -28,13 +28,12 @@ import amazon.mws.data.Datapoint;
 import amazon.mws.data.StatisticSeries;
 import amazon.mws.query.MonitoringQueryClient;
 import amazon.mws.request.MWSRequest;
+import amazon.mws.response.Error;
 import amazon.mws.response.GetMetricDataResponse;
-import amazon.mws.response.Response;
 import amazon.mws.response.ResponseException;
 import amazon.odin.awsauth.OdinAWSCredentialsProvider;
 
 import com.amazon.aws158.commons.tst.TestUtils;
-import com.amazon.ldaputils.DefaultLdapProvider;
 import com.amazon.ldaputils.LdapProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 
@@ -313,10 +312,11 @@ public class BlackwatchLocationsHelperTest {
         response.setNumberOfReturned(2);
         response.addStatisticSeries(series);
         
-        Response mwsResponse = new Response();
         HttpURLConnection requestConn = mock(HttpURLConnection.class);
-        when(requestConn.getResponseCode()).thenReturn(400);
-        when(requestConn.getResponseMessage()).thenReturn(BlackwatchLocationsHelper.METRIC_NOT_FOUND_EXCEPTION_MESSAGE);
+        Error error = new Error();
+        error.setCode("MetricNotFound");
+        error.setMessage("No metrics matched your request parameters");
+        response.addError(error);
         ResponseException exception = new ResponseException(requestConn, response);
         when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenThrow(exception);
         

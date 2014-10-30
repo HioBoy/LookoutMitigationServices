@@ -1,7 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import java.beans.ConstructorProperties;
-import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -115,11 +114,6 @@ public class BlackwatchLocationsHelper {
         try (TSDMetrics subMetrics = metrics.newSubMetrics("isBlackwatchPOP")) {
             Validate.notEmpty(popName);
             
-            // Check if we need to force the gamma IAD POP to return as a non-BW POP.
-            if (popName.toUpperCase().startsWith(GAMMA_IAD_POP_NAME) && overrideGammaBWPOPAsNonBW) {
-                return false;
-            }
-            
             String hostclass = createBWHostclassForPOP(popName);
             
             int numAttempts = 0;
@@ -156,7 +150,14 @@ public class BlackwatchLocationsHelper {
                 ldapQueryMetrics.end();
             }
             
-            return hasRecentDataForBWMetric(popName, metrics);
+            boolean hasRecentDataForBWMetric = hasRecentDataForBWMetric(popName, metrics);
+            
+            // Check if we need to force the gamma IAD POP to return as a non-BW POP.
+            if (popName.toUpperCase().startsWith(GAMMA_IAD_POP_NAME) && overrideGammaBWPOPAsNonBW) {
+                return false;
+            } else {
+                return hasRecentDataForBWMetric;
+            }
         }
     }
     
@@ -178,18 +179,18 @@ public class BlackwatchLocationsHelper {
             Statistic statistic = new Statistic(schema, StatPeriod.OneMinute, Stat.sum);
             
             StringTimeRange timeRange = new StringTimeRange(METRIC_QUERY_START, METRIC_QUERY_END);
-            GetMetricDataRequest getMetricDataRequest = new GetMetricDataRequest(statistic, timeRange);
             
             Exception lastException = null;
             while (numAttempts < MAX_QUERY_ATTEMPTS) {
                 ++numAttempts;
                 try {
+                    GetMetricDataRequest getMetricDataRequest = new GetMetricDataRequest(statistic, timeRange);
                     GetMetricDataResponse response = (GetMetricDataResponse) mwsQueryClient.requestResponse(getMetricDataRequest);
                     return hasDataAboveThreshold(response);
                 } catch (Exception ex) {
                     // If the exception is for the metric not being found, then that either implies that BW never published metrics for this POP or it has stopped for a long time (typically 30 days).
                     // In both case, we would return false since BW isn't actively running.
-                    if ((ex instanceof ResponseException) && ((ResponseException) ex).getResponseMessage().contains(METRIC_NOT_FOUND_EXCEPTION_MESSAGE)) {
+                    if ((ex instanceof ResponseException) && ((ResponseException) ex).getMessage().contains(METRIC_NOT_FOUND_EXCEPTION_MESSAGE)) {
                         LOG.info("Caught a ResponseException stating that the metric was not found for dimensions: " + 
                                  dimensions + " for POP: " + popName + ", hence returning false.", ex);
                         return false;
@@ -208,10 +209,6 @@ public class BlackwatchLocationsHelper {
             String msg = "Unable to query MWS for metric dimensions:" + dimensions + " for POP: " + popName + " after: " + numAttempts + " number of attempts";
             LOG.warn(msg, lastException);
             throw new RuntimeException(msg, lastException);
-        } catch (URISyntaxException ex) {
-            String msg = "Unable to construct the URI to use for calling MWS to querying metric base dimensions: " + mwsMetricBaseDimensions + " for POP: " + popName;
-            LOG.error(msg);
-            throw new RuntimeException(msg, ex);
         } finally {
             subMetrics.addCount(NUM_ATTEMPTS_METRIC_KEY, numAttempts);
             subMetrics.end();
