@@ -135,7 +135,14 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
             for (Pair<String, String> filterInfoAndRouterName : filterInfoAndRouterNameList) {
                 String filterInfoAsJSON = Pair.get1(filterInfoAndRouterName);
                 String routerName = Pair.get2(filterInfoAndRouterName);
-                mitigationDescriptions.add(convertToMitigationRequestDescription(filterInfoAsJSON, routerName));
+                MitigationRequestDescriptionWithStatuses requestDescriptionWithStatuses = convertToMitigationRequestDescription(filterInfoAsJSON, routerName);
+                
+                // If this mitigation was created by the mitigation service tool, then skip adding this mitigation from the router mitigation metadata.
+                if (requestDescriptionWithStatuses.getMitigationRequestDescription().getJobId() > 0) {
+                    continue;
+                }
+                
+                mitigationDescriptions.add(requestDescriptionWithStatuses);
             }
         } while (lastEvaluatedKey != null);
         

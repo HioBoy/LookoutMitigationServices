@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -18,14 +19,13 @@ import org.joda.time.format.DateTimeFormatter;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.amazon.aws158.commons.dynamo.RouterMetadataConstants;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.lookout.mitigation.router.model.RouterFilterInfoWithMetadata;
-import com.amazon.lookout.mitigation.service.ActionType;
 import com.amazon.lookout.mitigation.service.CompositeAndConstraint;
 import com.amazon.lookout.mitigation.service.CompositeOrConstraint;
 import com.amazon.lookout.mitigation.service.Constraint;
-import com.amazon.lookout.mitigation.service.CountAction;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithStatuses;
 import com.amazon.lookout.mitigation.service.RateLimitAction;
@@ -38,6 +38,9 @@ import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.router.helper.RouterFilterInfoDeserializer;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ScanRequest;
+import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -326,6 +329,35 @@ public class DDBBasedRouterMetadataHelperTest {
         assertEquals(mitigationDrivenByRouterMitUI.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
         assertTrue(mitigationDrivenByRouterMitUI.getInstancesStatusMap().containsKey("TST4"));
         assertEquals(mitigationDrivenByRouterMitUI.getInstancesStatusMap().get("TST4").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+    }
+    
+    /**
+     * Test the case where the router mitigation metadata returns a mitigation with non-0 jobId - which implies it is a mitigation created by the MitigationService and 
+     * hence we should ignore the metadata maintained by the router mitigation tool.
+     */
+    @Test
+    public void testSkipMitSvcMitigationsFromRouterMetadata() throws Exception {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
+        
+        Map<String, AttributeValue> item = new HashMap<>();
+        item.put(RouterMetadataConstants.ROUTER_KEY, new AttributeValue("tst-en-tra-r1"));
+        
+        String filterInfoAsJSON = "{\"filterName\":\"Testing1\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                                  "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
+                                  "\"enabled\":true,\"jobId\":5,\"lastDatePushedToRouter\":\"Fri Sep 22 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                                  "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                                  "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                                  "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        item.put(RouterMetadataConstants.FILTER_JSON_DESCRIPTION, new AttributeValue(filterInfoAsJSON));
+        ScanResult result = new ScanResult().withItems(item);
+        when(dynamoDBClient.scan(any(ScanRequest.class))).thenReturn(result);
+        
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher);
+        List<MitigationRequestDescriptionWithStatuses> returnedMitigations = helper.call();
+        assertEquals(returnedMitigations.size(), 0);
     }
     
     @Test
