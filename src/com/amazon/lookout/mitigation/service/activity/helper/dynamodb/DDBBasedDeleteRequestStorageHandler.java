@@ -97,8 +97,8 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
             // Get the max workflowId for existing mitigations, increment it by 1 and store it in the DDB. Return back the new workflowId
             // if successful, else end the loop and throw back an exception.
             while (numAttempts++ < DDB_ACTIVITY_MAX_ATTEMPTS) {
-            	prevMaxWorkflowId = currMaxWorkflowId;
-            	
+                prevMaxWorkflowId = currMaxWorkflowId;
+                
                 // First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
                 currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName, deviceScope, prevMaxWorkflowId, subMetrics);
                 
@@ -276,10 +276,17 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                 
                 // If we notice an existing delete request for the same mitigationName and version, then throw back an exception.
                 if (existingRequestType.equals(RequestType.DeleteRequest.name())) {
-                    String msg = "Found an existing delete request with jobId: " + existingMitigationWorkflowId + "for mitigation: " + mitigationNameToDelete + " when requesting delete for version: " + 
-                                 versionToDelete + " for device: " + deviceName + " in deviceScope: " + deviceScope + " corresponding to template: " + templateForMitigationToDelete;
-                    LOG.warn(msg);
-                    throw new DuplicateRequestException400(msg);
+                    String existingRequestWorkflowStatus = item.get(WORKFLOW_STATUS_KEY).getS();
+                    if (existingRequestWorkflowStatus.equals(WorkflowStatus.PARTIAL_SUCCESS) || existingRequestWorkflowStatus.equals(WorkflowStatus.INDETERMINATE)) {
+                        LOG.info("Found an existing delete request with jobId: " + existingMitigationWorkflowId + "for mitigation: " + mitigationNameToDelete + " for device: " + 
+                                 deviceName + " in deviceScope: " + deviceScope + " corresponding to template: " + templateForMitigationToDelete + " whose status is: " + 
+                                 existingRequestWorkflowStatus + ". Hence not considering this existing delete request as a duplicate.");
+                    } else {
+                        String msg = "Found an existing delete request with jobId: " + existingMitigationWorkflowId + "for mitigation: " + mitigationNameToDelete + " when requesting delete for version: " + 
+                                     versionToDelete + " for device: " + deviceName + " in deviceScope: " + deviceScope + " corresponding to template: " + templateForMitigationToDelete;
+                        LOG.warn(msg);
+                        throw new DuplicateRequestException400(msg);
+                    }
                 }
                 
                 foundMitigationToDelete = true;

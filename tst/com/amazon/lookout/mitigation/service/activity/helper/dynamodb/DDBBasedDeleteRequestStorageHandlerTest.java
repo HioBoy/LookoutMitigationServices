@@ -239,6 +239,41 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     }
     
     /**
+     * Test the case where there already exists a delete request for deleting the same mitigation as the current request, but is in a PartialSuccess state.
+     * We should not throw back any exceptions in this case.
+     */
+    @Test
+    public void testDuplicatePartialSuccessDeleteRequest() {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
+        
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        DDBItemBuilder itemBuilder1 = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
+                                                          .withNumericAttribute(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, request.getMitigationVersion())
+                                                          .withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, request.getMitigationTemplate())
+                                                          .withStringAttribute(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, deviceNameAndScope.getDeviceScope().name())
+                                                          .withStringAttribute(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, WorkflowStatus.PARTIAL_SUCCESS)
+                                                          .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 2)
+                                                          .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.DeleteRequest.name());
+        
+        DDBItemBuilder itemBuilder2 = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
+                                                          .withNumericAttribute(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, 1)
+                                                          .withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, request.getMitigationTemplate())
+                                                          .withStringAttribute(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, deviceNameAndScope.getDeviceScope().name())
+                                                          .withStringAttribute(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, WorkflowStatus.SUCCEEDED)
+                                                          .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 20)
+                                                          .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.CreateRequest.name());
+        
+        QueryResult queryResult = new QueryResult().withCount(2).withItems(itemBuilder1.build(), itemBuilder2.build());
+        
+        boolean foundMitigationToDelete = storageHandler.evaluateActiveMitigationsForDDBQueryResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
+                                                                                                    request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), tsdMetrics);
+        assertTrue(foundMitigationToDelete);
+    }
+    
+    /**
      * Test the case where we find an active version of the mitigation to be deleted, but with a higher version number than the one passed in the delete request.
      * We should expect an IllegalArgumentException to be thrown back.
      */
