@@ -16,6 +16,9 @@
     
     <util:set id="gamma.popsWithCiscoRouter">
         <value>G-SEA19</value>
+        <!-- HACK ALERT: G-IAD5 is out for rebuild, and requests to the router
+             are currently (2014/12/16) failing slowly. Marking it as CISCO temporarily to avoid talking to that router -->
+        <value>G-IAD5</value>
     </util:set>
     
     <bean id="gamma.mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
