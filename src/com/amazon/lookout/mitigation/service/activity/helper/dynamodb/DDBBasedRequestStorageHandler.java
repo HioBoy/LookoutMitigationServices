@@ -9,6 +9,8 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import lombok.NonNull;
+
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -39,6 +41,7 @@ import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 import com.amazonaws.services.dynamodbv2.model.GetItemResult;
+import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.simpleworkflow.flow.DataConverter;
@@ -141,11 +144,12 @@ public abstract class DDBBasedRequestStorageHandler {
         int numAttempts = 0;
         try {
             Map<String, AttributeValue> attributeValuesInItem = generateAttributesToStore(request, locations, deviceNameAndScope, workflowId, requestType, mitigationVersion);
+            Map<String, ExpectedAttributeValue> expectedConditions = generateExpectedConditions(deviceNameAndScope, workflowId);
             
             // Try for a fixed number of times to store the item into DDB. If we succeed, we simply return, else we exit the loop and throw back an exception.
             while (numAttempts++ < DDB_PUT_ITEM_MAX_ATTEMPTS) {
                 try {
-                    putItemInDDB(attributeValuesInItem, subMetrics);
+                    putItemInDDB(attributeValuesInItem, expectedConditions, subMetrics);
                     return;
                 } catch (Exception ex) {
                     String msg = "Caught exception when inserting item: " + attributeValuesInItem + " into table: " + mitigationRequestsTableName + 
@@ -179,10 +183,12 @@ public abstract class DDBBasedRequestStorageHandler {
      * @param attributeValues AttributeValues to store.
      * @param metrics
      */
-    protected void putItemInDDB(Map<String, AttributeValue> attributeValues, TSDMetrics metrics) {
+    protected void putItemInDDB(Map<String, AttributeValue> attributeValues, Map<String, ExpectedAttributeValue> expectedConditions, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHandler.putItemInDDB");
         try {
-            DynamoDBHelper.putItemAttributesToTable(dynamoDBClient, mitigationRequestsTableName, attributeValues, false);
+            PutItemRequest putItemRequest = new PutItemRequest(mitigationRequestsTableName, attributeValues);
+            putItemRequest.setExpected(expectedConditions);
+            dynamoDBClient.putItem(putItemRequest);
         } finally {
             subMetrics.end();
         }
@@ -302,6 +308,23 @@ public abstract class DDBBasedRequestStorageHandler {
         attributesInItemToStore.put(UPDATE_WORKFLOW_ID_KEY, attributeValue);
         
         return attributesInItemToStore;
+    }
+    
+    /**
+     * Helper method to create the expected conditions when inserting record into the MitigationRequests table.
+     * The conditions to check for is to ensure we don't already have a record with the same hashKey (deviceName) and rangeKey (workflowId).
+     * @param deviceNameAndScope DeviceNameAndScope enum, used to obtain the deviceName for the expectation condition.
+     * @param workflowId WorkflowId to be used in the expectation condition.
+     * @return Map of String (attribute name) to ExpectedAttributeValue to represent the requirement of non-existence of the keys of this map.
+     */
+    protected Map<String, ExpectedAttributeValue> generateExpectedConditions(@NonNull DeviceNameAndScope deviceNameAndScope, long workflowId) {
+        Map<String, ExpectedAttributeValue> expectedCondition = new HashMap<>();
+        
+        ExpectedAttributeValue notExistsCondition = new ExpectedAttributeValue(false);
+        expectedCondition.put(DEVICE_NAME_KEY, notExistsCondition);
+        expectedCondition.put(WORKFLOW_ID_KEY, notExistsCondition);
+        
+        return expectedCondition;
     }
     
     /**
