@@ -14,6 +14,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.ActionType;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
@@ -282,6 +283,9 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
         condition = new Condition().withComparisonOperator(ComparisonOperator.NE);
         condition.setAttributeValueList(Arrays.asList(attrVal));
         queryFilters.put(REQUEST_TYPE_KEY, condition);
+        
+        condition = new Condition().withComparisonOperator(ComparisonOperator.NULL);
+        queryFilters.put(MitigationRequestsModel.DEFUNCT_DATE, condition);
         
         return queryFilters;
     }
