@@ -18,7 +18,6 @@ import org.joda.time.format.DateTimeFormatter;
 import com.amazon.aws158.commons.dynamo.RouterMetadataConstants;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.lookout.mitigation.router.model.RouterFilterInfoWithMetadata;
-import com.amazon.lookout.mitigation.router.model.RouterToPopName;
 import com.amazon.lookout.mitigation.service.CompositeAndConstraint;
 import com.amazon.lookout.mitigation.service.Constraint;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
@@ -32,6 +31,7 @@ import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.router.helper.RouterFilterInfoDeserializer;
+import com.amazon.lookout.mitigation.utilities.POPLocationToRouterNameHelper;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -63,12 +63,15 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
     private final String routerMetadataTableName;
     private final AmazonDynamoDBClient dynamoDBClient;
     private final ServiceSubnetsMatcher serviceSubnetsMatcher;
+    private final POPLocationToRouterNameHelper locationToRouterNameHelper;
     
-    @ConstructorProperties({"dynamoDBClient", "domain", "serviceSubnetsMatcher"})
-    public DDBBasedRouterMetadataHelper(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull String domain, @NonNull ServiceSubnetsMatcher serviceSubnetsMatcher) {
+    @ConstructorProperties({"dynamoDBClient", "domain", "serviceSubnetsMatcher", "locationRouterMapper"})
+    public DDBBasedRouterMetadataHelper(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull String domain, 
+    		                            @NonNull ServiceSubnetsMatcher serviceSubnetsMatcher, @NonNull POPLocationToRouterNameHelper locationToRouterNameHelper) {
         this.dynamoDBClient = dynamoDBClient;
         this.serviceSubnetsMatcher = serviceSubnetsMatcher;
         this.routerMetadataTableName = RouterMetadataConstants.DYNAMO_DB_TABLE_PREFIX + domain.toUpperCase();
+        this.locationToRouterNameHelper = locationToRouterNameHelper;
     }
     
     /**
@@ -172,7 +175,7 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
             
             // Now create an instance of MitigationInstanceStatus, defaulting the mitigation status to DEPLOY_SUCCEEDED.
             MitigationInstanceStatus instanceStatus = new MitigationInstanceStatus();
-            String location = RouterToPopName.getPopNameFromRouterName(routerName);
+            String location = locationToRouterNameHelper.getLocationFromRouterName(routerName);
             instanceStatus.setLocation(location);
             
             if (filterInfo.isEnabled()) {

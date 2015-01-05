@@ -36,6 +36,7 @@ import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.router.helper.RouterFilterInfoDeserializer;
+import com.amazon.lookout.mitigation.utilities.POPLocationToRouterNameHelper;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -65,7 +66,7 @@ public class DDBBasedRouterMetadataHelperTest {
         
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher);
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
         
         List<String> destSubnets = helper.getDestSubnetsFromRouterMitigationConstraint(constraint);
         assertEquals(destSubnets.size(), 3);
@@ -82,7 +83,7 @@ public class DDBBasedRouterMetadataHelperTest {
         
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher);
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
         
         List<String> destSubnets = helper.getDestSubnetsFromRouterMitigationConstraint(constraint);
         assertEquals(destSubnets.size(), 0);
@@ -110,7 +111,7 @@ public class DDBBasedRouterMetadataHelperTest {
         
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher);
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
         
         List<String> destSubnets = helper.getDestSubnetsFromRouterMitigationConstraint(constraint1);
         assertEquals(destSubnets.size(), 3);
@@ -149,7 +150,7 @@ public class DDBBasedRouterMetadataHelperTest {
         
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher);
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
         
         List<String> destSubnets = helper.getDestSubnetsFromRouterMitigationConstraint(constraint1);
         assertEquals(destSubnets.size(), 0);
@@ -177,7 +178,7 @@ public class DDBBasedRouterMetadataHelperTest {
         
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher);
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
         
         List<String> destSubnets = helper.getDestSubnetsFromRouterMitigationConstraint(constraint1);
         assertEquals(destSubnets.size(), 3);
@@ -189,7 +190,7 @@ public class DDBBasedRouterMetadataHelperTest {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
         when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
-        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher);
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
         
         String filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
                                     "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
@@ -232,7 +233,7 @@ public class DDBBasedRouterMetadataHelperTest {
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
         when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
         when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
-        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher);
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
         
         String filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
                                     "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
@@ -355,7 +356,7 @@ public class DDBBasedRouterMetadataHelperTest {
         ScanResult result = new ScanResult().withItems(item);
         when(dynamoDBClient.scan(any(ScanRequest.class))).thenReturn(result);
         
-        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher);
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
         List<MitigationRequestDescriptionWithStatuses> returnedMitigations = helper.call();
         assertEquals(returnedMitigations.size(), 0);
     }
@@ -366,7 +367,7 @@ public class DDBBasedRouterMetadataHelperTest {
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
         when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
         when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
-        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher);
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
         
         String filterInfoAsJSONBase = "{\"filterName\":\"Testing1\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
                                       "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"%s\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
