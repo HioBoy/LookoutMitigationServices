@@ -142,7 +142,7 @@
         <constructor-arg name="locationRouterMapper" ref="popLocationToRouterNameHelper"/>
     </bean>
     
-    <bean id="popLocationToRouterNameHelper" class="com.amazon.lookout.mitigation.activities.helper.POPLocationToRouterNameHelper">
+    <bean id="popLocationToRouterNameHelper" class="com.amazon.lookout.mitigation.utilities.POPLocationToRouterNameHelper">
         <constructor-arg name="popLocationtoRoutersOverridesMap">
             <map>
                 <entry key="G-IAD5" value="iad5-gm-tra-r1"/>
