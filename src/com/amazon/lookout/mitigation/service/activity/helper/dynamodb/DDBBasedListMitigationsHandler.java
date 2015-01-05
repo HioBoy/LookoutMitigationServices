@@ -173,6 +173,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
             // Generate query filters to use when querying.
             Map<String, Condition> queryFilter = new HashMap<>();
             queryFilter.put(DELETION_DATE_KEY, new Condition().withComparisonOperator(ComparisonOperator.NULL));
+            queryFilter.put(DEFUNCT_DATE_KEY, new Condition().withComparisonOperator(ComparisonOperator.NULL));
             
             // If we have locations, then add locations as a query filter.
             if (!CollectionUtils.isEmpty(locations)) {
