@@ -72,7 +72,6 @@ public class ActiveMitigationsFetcher implements Callable<List<MitigationRequest
                     
                     String successStatus = MitigationInstanceStatusHelper.getOperationSuccessfulStatus(RequestType.valueOf(mitigationDescription.getRequestType()));
                     instanceStatus.setMitigationStatus(successStatus);
-                    //instanceStatus.set
                     
                     Map<String, MitigationInstanceStatus> instancesStatus = new HashMap<>();
                     instancesStatus.put(location, instanceStatus);
