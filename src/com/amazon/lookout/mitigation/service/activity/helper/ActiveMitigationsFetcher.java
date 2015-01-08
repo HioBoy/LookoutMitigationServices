@@ -57,6 +57,7 @@ public class ActiveMitigationsFetcher implements Callable<List<MitigationRequest
                 long jobId = activeMitigationDetails.getJobId();
                 String location = activeMitigationDetails.getLocation();
                 String key = deviceName + KEY_SEPARATOR + jobId;
+                long lastDeployDate = activeMitigationDetails.getLastDeployDate();
                 
                 if (!descriptionsWithLocationsMap.containsKey(key)) {
                     MitigationRequestDescription mitigationDescription = requestInfoHandler.getMitigationRequestDescription(deviceName, jobId, tsdMetrics);
@@ -67,9 +68,11 @@ public class ActiveMitigationsFetcher implements Callable<List<MitigationRequest
                     // Since this location was identified in the ActiveMitigations table, we set its status to indicate that it was successfully created.
                     MitigationInstanceStatus instanceStatus = new MitigationInstanceStatus();
                     instanceStatus.setLocation(location);
+                    instanceStatus.setDeployDate(lastDeployDate);
                     
                     String successStatus = MitigationInstanceStatusHelper.getOperationSuccessfulStatus(RequestType.valueOf(mitigationDescription.getRequestType()));
                     instanceStatus.setMitigationStatus(successStatus);
+                    //instanceStatus.set
                     
                     Map<String, MitigationInstanceStatus> instancesStatus = new HashMap<>();
                     instancesStatus.put(location, instanceStatus);

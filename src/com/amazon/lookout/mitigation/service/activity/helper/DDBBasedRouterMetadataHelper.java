@@ -20,6 +20,7 @@ import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.lookout.mitigation.router.model.RouterFilterInfoWithMetadata;
 import com.amazon.lookout.mitigation.service.CompositeAndConstraint;
 import com.amazon.lookout.mitigation.service.Constraint;
+import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
@@ -67,7 +68,7 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
     
     @ConstructorProperties({"dynamoDBClient", "domain", "serviceSubnetsMatcher", "locationRouterMapper"})
     public DDBBasedRouterMetadataHelper(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull String domain, 
-    		                            @NonNull ServiceSubnetsMatcher serviceSubnetsMatcher, @NonNull POPLocationToRouterNameHelper locationToRouterNameHelper) {
+                                        @NonNull ServiceSubnetsMatcher serviceSubnetsMatcher, @NonNull POPLocationToRouterNameHelper locationToRouterNameHelper) {
         this.dynamoDBClient = dynamoDBClient;
         this.serviceSubnetsMatcher = serviceSubnetsMatcher;
         this.routerMetadataTableName = RouterMetadataConstants.DYNAMO_DB_TABLE_PREFIX + domain.toUpperCase();
@@ -177,6 +178,7 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
             MitigationInstanceStatus instanceStatus = new MitigationInstanceStatus();
             String location = locationToRouterNameHelper.getLocationFromRouterName(routerName);
             instanceStatus.setLocation(location);
+            instanceStatus.setDeployDate(formatter.parseDateTime(filterInfo.getLastDatePushedToRouter()).getMillis());
             
             if (filterInfo.isEnabled()) {
                 instanceStatus.setMitigationStatus(MitigationStatus.DEPLOY_SUCCEEDED);
@@ -240,9 +242,25 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
                     MitigationDefinition routerMitigationDefinition = routerMitigationDescription.getMitigationDefinition();
                     MitigationDefinition mitServiceMitigationDefinition = mitServiceMitigation.getMitigationRequestDescription().getMitigationDefinition();
                     
+                    // Each MitigationRequestDescriptionWithStatuses router mitigation instance represents the instance for a single location.
+                    if (routerMitigation.getInstancesStatusMap().size() > 1) {
+                        LOG.error("Expected just 1 instance per entry, instead found more than 1 instances of router mitigation metadata: " + routerMitigation);
+                        throw new InternalServerError500("Internal server error when merging mitigations from the router config metadata and mitigation service tables");
+                    }
+                    String location = routerMitigation.getInstancesStatusMap().keySet().iterator().next();
+                    
                     if (routerMitigationDefinition.equals(mitServiceMitigationDefinition)) {
-                        // Update the instanceStatus map in the mergedMitigation to ensure this location is included in list of locations for this mitigation.
-                        mitServiceMitigation.getInstancesStatusMap().putAll(routerMitigation.getInstancesStatusMap());
+                        long routerFilterMetadataDeployDate = routerMitigation.getInstancesStatusMap().get(location).getDeployDate();
+                        
+                        long mitServiceFilterDeployDate = 0;
+                        if (mitServiceMitigation.getInstancesStatusMap().containsKey(location)) {
+                            mitServiceFilterDeployDate = mitServiceMitigation.getInstancesStatusMap().get(location).getDeployDate();
+                        }
+                        
+                        if (mitServiceFilterDeployDate < routerFilterMetadataDeployDate) {
+                            // Update the instanceStatus map in the mergedMitigation to ensure this location is included in list of locations for this mitigation.
+                            mitServiceMitigation.getInstancesStatusMap().putAll(routerMitigation.getInstancesStatusMap());
+                        }
                         
                         matchingMitigationFound = true;
                         break;
