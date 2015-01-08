@@ -44,10 +44,6 @@ import com.google.common.collect.Sets;
 public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandler implements RequestInfoHandler, ActiveMitigationInfoHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedListMitigationsHandler.class);
     
-    //public static final String LOCATION_KEY = "Location";
-    //public static final String JOB_ID_KEY = "JobId";
-    //public static final String DEVICE_NAME_INDEX = "DeviceName-index";
-    
     // Num Attempts + Retry Sleep Configs.
     public static final int DDB_ACTIVITY_MAX_ATTEMPTS = 3;
     private static final int DDB_ACTIVITY_RETRY_SLEEP_MILLIS_MULTIPLIER = 100;

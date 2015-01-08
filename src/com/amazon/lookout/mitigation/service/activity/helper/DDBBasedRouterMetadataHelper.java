@@ -248,7 +248,9 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
                         throw new InternalServerError500("Internal server error when merging mitigations from the router config metadata and mitigation service tables");
                     }
                     String location = routerMitigation.getInstancesStatusMap().keySet().iterator().next();
-                    
+
+                    // Check if the mitigation definitions are the same, if they are, then check if the mitigation in the metadata store has a newer last deploy date.
+                    // Only if the metadata store has a newer last deploy date do we use the instance status from the metadata store, else we don't update this currently active mitigation.
                     if (routerMitigationDefinition.equals(mitServiceMitigationDefinition)) {
                         long routerFilterMetadataDeployDate = routerMitigation.getInstancesStatusMap().get(location).getDeployDate();
                         
