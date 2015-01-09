@@ -21,7 +21,6 @@ import com.amazon.lookout.mitigation.router.model.RouterFilterInfoWithMetadata;
 import com.amazon.lookout.mitigation.service.CompositeAndConstraint;
 import com.amazon.lookout.mitigation.service.Constraint;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
-import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithStatuses;
@@ -230,52 +229,45 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
             String routerMitigationKey = ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(routerMitigation);
             
             // Flag to indicate if we found a matching mitigation from the mitigations driven through the mitigation service.
-            boolean matchingMitigationFound = false;
+            boolean skipRouterMitigation = false;
             
-            // Flag to indicate if this current router mitigation needs to be added to the final response of MitigationRequestDescriptionWithStatuses instances.
-            boolean addRouterMitigationToReturnValues = false;
+            List<MitigationRequestDescriptionWithStatuses> currentActiveMitigationsToReplace = new ArrayList<>();
             
             // Check if the request from the router mitigation metadata store has the same key in the currentlyActiveMitigations Map.
             if (currentlyActiveMitigations.containsKey(routerMitigationKey)) {
                 // Perform a deeper check to see if the mitigation definitions match any of the currentlyActiveMitigations descriptions.
                 for (MitigationRequestDescriptionWithStatuses mitServiceMitigation : currentlyActiveMitigations.get(routerMitigationKey)) {
-                    MitigationDefinition routerMitigationDefinition = routerMitigationDescription.getMitigationDefinition();
-                    MitigationDefinition mitServiceMitigationDefinition = mitServiceMitigation.getMitigationRequestDescription().getMitigationDefinition();
-                    
                     // Each MitigationRequestDescriptionWithStatuses router mitigation instance represents the instance for a single location.
                     if (routerMitigation.getInstancesStatusMap().size() > 1) {
                         LOG.error("Expected just 1 instance per entry, instead found more than 1 instances of router mitigation metadata: " + routerMitigation);
                         throw new InternalServerError500("Internal server error when merging mitigations from the router config metadata and mitigation service tables");
                     }
                     String location = routerMitigation.getInstancesStatusMap().keySet().iterator().next();
-
-                    // Check if the mitigation definitions are the same, if they are, then check if the mitigation in the metadata store has a newer last deploy date.
-                    // Only if the metadata store has a newer last deploy date do we use the instance status from the metadata store, else we don't update this currently active mitigation.
-                    if (routerMitigationDefinition.equals(mitServiceMitigationDefinition)) {
-                        long routerFilterMetadataDeployDate = routerMitigation.getInstancesStatusMap().get(location).getDeployDate();
-                        
-                        long mitServiceFilterDeployDate = 0;
-                        if (mitServiceMitigation.getInstancesStatusMap().containsKey(location)) {
-                            mitServiceFilterDeployDate = mitServiceMitigation.getInstancesStatusMap().get(location).getDeployDate();
-                        }
-                        
-                        if (mitServiceFilterDeployDate < routerFilterMetadataDeployDate) {
-                            // Update the instanceStatus map in the mergedMitigation to ensure this location is included in list of locations for this mitigation.
-                            mitServiceMitigation.getInstancesStatusMap().putAll(routerMitigation.getInstancesStatusMap());
-                        }
-                        
-                        matchingMitigationFound = true;
-                        break;
+                    
+                    long routerFilterMetadataDeployDate = routerMitigation.getInstancesStatusMap().get(location).getDeployDate();
+                    
+                    long mitServiceFilterDeployDate = 0;
+                    if (mitServiceMitigation.getInstancesStatusMap().containsKey(location)) {
+                        mitServiceFilterDeployDate = mitServiceMitigation.getInstancesStatusMap().get(location).getDeployDate();
+                    }
+                    
+                    if ((mitServiceFilterDeployDate > 0) && (mitServiceFilterDeployDate < routerFilterMetadataDeployDate)) {
+                        currentActiveMitigationsToReplace.add(mitServiceMitigation);
+                    } else {
+                        skipRouterMitigation = true;
                     }
                 }
             }
             
             // If the mitigation from routerMetadata matches a currentlyActiveMitigations mitigation, then as per Step 2.1 defined above, the locations must have already been updated, so do nothing more.
-            if (matchingMitigationFound) {
+            if (skipRouterMitigation) {
                 continue;
             }
             
             // This router mitigation wasn't found in the currentlyActiveMitigations. So now we execute the steps 3.1 - 3.4 listed above.
+            
+            // Flag to indicate if this current router mitigation needs to be added to the final response of MitigationRequestDescriptionWithStatuses instances.
+            boolean addRouterMitigationToReturnValues = false;
             
             List<String> destSubnets = getDestSubnetsFromRouterMitigationConstraint(routerMitigationDescription.getMitigationDefinition().getConstraint());
             
@@ -304,6 +296,9 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
                 routerMitigationDescription.setRequestType(RequestType.CreateRequest.name());
                 
                 if (currentlyActiveMitigations.containsKey(routerMitigationKey)) {
+                    for (MitigationRequestDescriptionWithStatuses desc : currentActiveMitigationsToReplace) {
+                        currentlyActiveMitigations.get(routerMitigationKey).remove(desc);
+                    }
                     currentlyActiveMitigations.get(routerMitigationKey).add(routerMitigation);
                 } else {
                     currentlyActiveMitigations.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(routerMitigation), Lists.newArrayList(routerMitigation));
