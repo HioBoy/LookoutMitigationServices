@@ -26,9 +26,9 @@ import com.amazon.lookout.mitigation.router.model.RouterFilterInfoWithMetadata;
 import com.amazon.lookout.mitigation.service.CompositeAndConstraint;
 import com.amazon.lookout.mitigation.service.CompositeOrConstraint;
 import com.amazon.lookout.mitigation.service.Constraint;
+import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithStatuses;
-import com.amazon.lookout.mitigation.service.RateLimitAction;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.ListActiveMitigationsForServiceActivity;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
@@ -237,7 +237,7 @@ public class DDBBasedRouterMetadataHelperTest {
         
         String filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
                                     "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
-                                    "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                                    "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
                                     "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
                                     "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
                                     "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
@@ -270,7 +270,7 @@ public class DDBBasedRouterMetadataHelperTest {
         
         filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
                            "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
-                           "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                           "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
                            "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
                            "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
                            "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
@@ -358,6 +358,737 @@ public class DDBBasedRouterMetadataHelperTest {
         assertEquals(mitigationNTPAmplification.getInstancesStatusMap().get("TST5").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
     }
     
+    @Test
+    public void testMergeMitigationsNoIntersections() throws JsonParseException, JsonMappingException, IOException {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
+        
+        String filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                                    "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                                    "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                                    "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                                    "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                                    "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        
+        MitigationRequestDescriptionWithStatuses route53Mitigation1Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        List<MitigationRequestDescriptionWithStatuses> routerMitigations = Lists.newArrayList(route53Mitigation1Desc);
+        
+        filterInfoAsJSON = "{\"filterName\":\"Testing1\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                   "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
+                   "\"enabled\":true,\"jobId\":5,\"lastDatePushedToRouter\":\"Fri Sep 22 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                   "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                   "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                   "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53MitigationInMitSvcTesting1 = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        MitigationInstanceStatus tst3Status = new MitigationInstanceStatus();
+        tst3Status.setDeployDate(1234);
+        tst3Status.setMitigationStatus(MitigationStatus.DEPLOY_SUCCEEDED);
+        tst3Status.setLocation("TST3");
+        route53MitigationInMitSvcTesting1.getInstancesStatusMap().put("TST3", tst3Status);
+        
+        Map<String, List<MitigationRequestDescriptionWithStatuses>> activeMitigationsFromMitSvc = new HashMap<>();
+        activeMitigationsFromMitSvc.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(route53MitigationInMitSvcTesting1), Lists.newArrayList(route53MitigationInMitSvcTesting1));
+        
+        List<MitigationRequestDescriptionWithStatuses> mergedMitigations = helper.mergeMitigations(activeMitigationsFromMitSvc, routerMitigations, "Route53");
+        assertEquals(mergedMitigations.size(), 2);
+        
+        MitigationRequestDescriptionWithStatuses mitigationTesting1 = null;
+        MitigationRequestDescriptionWithStatuses mitigationNTPAmplification = null;
+        for (MitigationRequestDescriptionWithStatuses mitigation : mergedMitigations) {
+            if (mitigation.getMitigationRequestDescription().getMitigationName().equals("Testing1")) {
+                mitigationTesting1 = mitigation;
+            }
+            
+            if (mitigation.getMitigationRequestDescription().getMitigationName().equals("NTP Amplification Drop")) {
+                mitigationNTPAmplification = mitigation;
+            }
+        }
+        
+        assertEquals(mitigationTesting1.getMitigationRequestDescription(), route53MitigationInMitSvcTesting1.getMitigationRequestDescription());
+        assertEquals(mitigationTesting1.getInstancesStatusMap().size(), 2);
+        assertTrue(mitigationTesting1.getInstancesStatusMap().containsKey("TST2"));
+        assertEquals(mitigationTesting1.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+        assertTrue(mitigationTesting1.getInstancesStatusMap().containsKey("TST3"));
+        assertEquals(mitigationTesting1.getInstancesStatusMap().get("TST3").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+        
+        long requestDateInMillis = formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2014");
+        assertEquals(mitigationNTPAmplification.getMitigationRequestDescription().getRequestDate(), requestDateInMillis);
+        assertEquals(mitigationNTPAmplification.getMitigationRequestDescription().getRequestStatus(), WorkflowStatus.SUCCEEDED);
+        assertEquals(mitigationNTPAmplification.getMitigationRequestDescription().getRequestType(), RequestType.CreateRequest.name());
+        assertEquals(mitigationNTPAmplification.getMitigationRequestDescription().getServiceName(), "Route53");
+        assertEquals(mitigationNTPAmplification.getMitigationRequestDescription().getUpdateJobId(), 0);
+        
+        route53Mitigation1Desc.getMitigationRequestDescription().setServiceName("Route53");
+        route53Mitigation1Desc.getMitigationRequestDescription().setMitigationTemplate("None");
+        route53Mitigation1Desc.getMitigationRequestDescription().setMitigationVersion(1);
+        route53Mitigation1Desc.getMitigationRequestDescription().setUpdateJobId(0);
+        route53Mitigation1Desc.getMitigationRequestDescription().setNumPreDeployChecks(0);
+        route53Mitigation1Desc.getMitigationRequestDescription().setNumPostDeployChecks(0);
+        route53Mitigation1Desc.getMitigationRequestDescription().setRequestStatus(WorkflowStatus.SUCCEEDED);
+        route53Mitigation1Desc.getMitigationRequestDescription().setRequestType(RequestType.CreateRequest.name());
+        
+        assertEquals(mitigationNTPAmplification.getMitigationRequestDescription(), route53Mitigation1Desc.getMitigationRequestDescription());
+        
+        assertEquals(mitigationNTPAmplification.getInstancesStatusMap().size(), 1);
+        assertTrue(mitigationNTPAmplification.getInstancesStatusMap().containsKey("TST2"));
+        assertEquals(mitigationNTPAmplification.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+    }
+    
+    @Test
+    public void testMergeMitigationsMitSvcHasNewerMitigationSameDefinition() throws JsonParseException, JsonMappingException, IOException {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
+        
+        String filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                                    "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                                    "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                                    "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                                    "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                                    "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        
+        MitigationRequestDescriptionWithStatuses route53Mitigation1Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"216.137.51.0/24\"]," +
+                           "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                           "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                           "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                           "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                           "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses cloudFrontMitigationDesc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        List<MitigationRequestDescriptionWithStatuses> routerMitigations = Lists.newArrayList(route53Mitigation1Desc, cloudFrontMitigationDesc);
+        
+        Map<String, List<MitigationRequestDescriptionWithStatuses>> activeMitigationsFromMitSvc = new HashMap<>();
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 22 11:21:09 PDT 2015\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53MitigationInMitSvcNTP = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        MitigationInstanceStatus tst2Status = new MitigationInstanceStatus();
+        tst2Status.setDeployDate(formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2015"));
+        tst2Status.setMitigationStatus(MitigationStatus.DEPLOY_FAILED);
+        tst2Status.setLocation("TST2");
+        route53MitigationInMitSvcNTP.getInstancesStatusMap().put("TST2", tst2Status);
+        activeMitigationsFromMitSvc.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(route53MitigationInMitSvcNTP), Lists.newArrayList(route53MitigationInMitSvcNTP));
+        
+        List<MitigationRequestDescriptionWithStatuses> mergedMitigations = helper.mergeMitigations(activeMitigationsFromMitSvc, routerMitigations, "Route53");
+        assertEquals(mergedMitigations.size(), 1);
+        
+        MitigationRequestDescriptionWithStatuses mitigationNTPAmplification = null;
+        for (MitigationRequestDescriptionWithStatuses mitigation : mergedMitigations) {
+            if (mitigation.getMitigationRequestDescription().getMitigationName().equals("NTP Amplification Drop")) {
+                mitigationNTPAmplification = mitigation;
+            }
+        }
+        
+        assertEquals(mitigationNTPAmplification.getMitigationRequestDescription(), route53MitigationInMitSvcNTP.getMitigationRequestDescription());
+        assertEquals(mitigationNTPAmplification.getInstancesStatusMap().size(), 1);
+        assertTrue(mitigationNTPAmplification.getInstancesStatusMap().containsKey("TST2"));
+        assertEquals(mitigationNTPAmplification.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_FAILED);
+    }
+    
+    @Test
+    public void testMergeMitigationsMitSvcHasNewerMitigationDiffDefinition() throws JsonParseException, JsonMappingException, IOException {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.1", "205.251.200.2"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
+        
+        String filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.1\",\"205.251.200.2\"]," +
+                                    "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                                    "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                                    "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                                    "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                                    "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        
+        MitigationRequestDescriptionWithStatuses route53Mitigation1Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"216.137.51.0/24\"]," +
+                           "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                           "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                           "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                           "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                           "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses cloudFrontMitigationDesc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        List<MitigationRequestDescriptionWithStatuses> routerMitigations = Lists.newArrayList(route53Mitigation1Desc, cloudFrontMitigationDesc);
+        
+        Map<String, List<MitigationRequestDescriptionWithStatuses>> activeMitigationsFromMitSvc = new HashMap<>();
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 22 11:21:09 PDT 2015\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53MitigationInMitSvcNTP = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        MitigationInstanceStatus tst2Status = new MitigationInstanceStatus();
+        tst2Status.setDeployDate(formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2015"));
+        tst2Status.setMitigationStatus(MitigationStatus.DEPLOY_FAILED);
+        tst2Status.setLocation("TST2");
+        route53MitigationInMitSvcNTP.getInstancesStatusMap().put("TST2", tst2Status);
+        activeMitigationsFromMitSvc.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(route53MitigationInMitSvcNTP), Lists.newArrayList(route53MitigationInMitSvcNTP));
+        
+        List<MitigationRequestDescriptionWithStatuses> mergedMitigations = helper.mergeMitigations(activeMitigationsFromMitSvc, routerMitigations, "Route53");
+        assertEquals(mergedMitigations.size(), 1);
+        
+        MitigationRequestDescriptionWithStatuses mitigationNTPAmplification = null;
+        for (MitigationRequestDescriptionWithStatuses mitigation : mergedMitigations) {
+            if (mitigation.getMitigationRequestDescription().getMitigationName().equals("NTP Amplification Drop")) {
+                mitigationNTPAmplification = mitigation;
+            }
+        }
+        
+        assertEquals(mitigationNTPAmplification.getMitigationRequestDescription(), route53MitigationInMitSvcNTP.getMitigationRequestDescription());
+        assertEquals(mitigationNTPAmplification.getInstancesStatusMap().size(), 1);
+        assertTrue(mitigationNTPAmplification.getInstancesStatusMap().containsKey("TST2"));
+        assertEquals(mitigationNTPAmplification.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_FAILED);
+    }
+    
+    @Test
+    public void testMergeMitigationsMetadataHasNewLocationSameDefinition() throws JsonParseException, JsonMappingException, IOException {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
+        
+        String filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                                    "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                                    "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                                    "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                                    "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                                    "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation1Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"216.137.51.0/24\"]," +
+                           "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                           "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                           "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                           "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                           "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses cloudFrontMitigationDesc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation2Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        List<MitigationRequestDescriptionWithStatuses> routerMitigations = Lists.newArrayList(route53Mitigation1Desc, cloudFrontMitigationDesc, route53Mitigation2Desc);
+        
+        Map<String, List<MitigationRequestDescriptionWithStatuses>> activeMitigationsFromMitSvc = new HashMap<>();
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 22 11:21:09 PDT 2015\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53MitigationInMitSvcNTP = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        MitigationInstanceStatus tst2Status = new MitigationInstanceStatus();
+        tst2Status.setDeployDate(formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2015"));
+        tst2Status.setMitigationStatus(MitigationStatus.DEPLOY_FAILED);
+        tst2Status.setLocation("TST2");
+        route53MitigationInMitSvcNTP.getInstancesStatusMap().put("TST2", tst2Status);
+        activeMitigationsFromMitSvc.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(route53MitigationInMitSvcNTP), Lists.newArrayList(route53MitigationInMitSvcNTP));
+        
+        List<MitigationRequestDescriptionWithStatuses> mergedMitigations = helper.mergeMitigations(activeMitigationsFromMitSvc, routerMitigations, "Route53");
+        assertEquals(mergedMitigations.size(), 1);
+        
+        MitigationRequestDescriptionWithStatuses mitigationNTPAmplification = null;
+        for (MitigationRequestDescriptionWithStatuses mitigation : mergedMitigations) {
+            if (mitigation.getMitigationRequestDescription().getMitigationName().equals("NTP Amplification Drop")) {
+                mitigationNTPAmplification = mitigation;
+            }
+        }
+        
+        assertEquals(mitigationNTPAmplification.getMitigationRequestDescription(), route53MitigationInMitSvcNTP.getMitigationRequestDescription());
+        assertEquals(mitigationNTPAmplification.getInstancesStatusMap().size(), 2);
+        assertTrue(mitigationNTPAmplification.getInstancesStatusMap().containsKey("TST2"));
+        assertEquals(mitigationNTPAmplification.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_FAILED);
+        assertTrue(mitigationNTPAmplification.getInstancesStatusMap().containsKey("TST3"));
+        assertEquals(mitigationNTPAmplification.getInstancesStatusMap().get("TST3").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+    }
+    
+    @Test
+    public void testMergeMitigationsMetadataHasNewLocationDiffDefinition() throws JsonParseException, JsonMappingException, IOException {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.1", "205.251.200.2"))).thenReturn(Sets.newHashSet("Route53"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
+        
+        String filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                                    "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                                    "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                                    "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                                    "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                                    "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation1Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"216.137.51.0/24\"]," +
+                           "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                           "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                           "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                           "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                           "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses cloudFrontMitigationDesc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation2Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.1\",\"205.251.200.2\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation3Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst4-en-tra-r1");
+        
+        List<MitigationRequestDescriptionWithStatuses> routerMitigations = Lists.newArrayList(route53Mitigation1Desc, cloudFrontMitigationDesc, route53Mitigation2Desc, route53Mitigation3Desc);
+        
+        Map<String, List<MitigationRequestDescriptionWithStatuses>> activeMitigationsFromMitSvc = new HashMap<>();
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 22 11:21:09 PDT 2015\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53MitigationInMitSvcNTP = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        MitigationInstanceStatus tst2Status = new MitigationInstanceStatus();
+        tst2Status.setDeployDate(formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2015"));
+        tst2Status.setMitigationStatus(MitigationStatus.DEPLOY_FAILED);
+        tst2Status.setLocation("TST2");
+        route53MitigationInMitSvcNTP.getInstancesStatusMap().put("TST2", tst2Status);
+        activeMitigationsFromMitSvc.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(route53MitigationInMitSvcNTP), Lists.newArrayList(route53MitigationInMitSvcNTP));
+        
+        List<MitigationRequestDescriptionWithStatuses> mergedMitigations = helper.mergeMitigations(activeMitigationsFromMitSvc, routerMitigations, "Route53");
+        assertEquals(mergedMitigations.size(), 2);
+        
+        MitigationRequestDescriptionWithStatuses mitigationSvcNTPAmplification = null;
+        MitigationRequestDescriptionWithStatuses routerMetadataNTPAmplification = null;
+        for (MitigationRequestDescriptionWithStatuses mitigation : mergedMitigations) {
+            if (mitigation.getMitigationRequestDescription().getJobId() == 6) {
+                mitigationSvcNTPAmplification = mitigation;
+            } else {
+                routerMetadataNTPAmplification = mitigation;
+            }
+        }
+        
+        assertEquals(mitigationSvcNTPAmplification.getMitigationRequestDescription(), route53MitigationInMitSvcNTP.getMitigationRequestDescription());
+        assertEquals(mitigationSvcNTPAmplification.getInstancesStatusMap().size(), 2);
+        assertTrue(mitigationSvcNTPAmplification.getInstancesStatusMap().containsKey("TST2"));
+        assertEquals(mitigationSvcNTPAmplification.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_FAILED);
+        assertTrue(mitigationSvcNTPAmplification.getInstancesStatusMap().containsKey("TST3"));
+        assertEquals(mitigationSvcNTPAmplification.getInstancesStatusMap().get("TST3").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+        
+        long requestDateInMillis = formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2014");
+        assertEquals(routerMetadataNTPAmplification.getMitigationRequestDescription().getRequestDate(), requestDateInMillis);
+        assertEquals(routerMetadataNTPAmplification.getMitigationRequestDescription().getRequestStatus(), WorkflowStatus.SUCCEEDED);
+        assertEquals(routerMetadataNTPAmplification.getMitigationRequestDescription().getRequestType(), RequestType.CreateRequest.name());
+        assertEquals(routerMetadataNTPAmplification.getMitigationRequestDescription().getServiceName(), "Route53");
+        assertEquals(routerMetadataNTPAmplification.getMitigationRequestDescription().getUpdateJobId(), 0);
+        
+        route53Mitigation3Desc.getMitigationRequestDescription().setServiceName("Route53");
+        route53Mitigation3Desc.getMitigationRequestDescription().setMitigationTemplate("None");
+        route53Mitigation3Desc.getMitigationRequestDescription().setMitigationVersion(1);
+        route53Mitigation3Desc.getMitigationRequestDescription().setUpdateJobId(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setNumPreDeployChecks(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setNumPostDeployChecks(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setRequestStatus(WorkflowStatus.SUCCEEDED);
+        route53Mitigation3Desc.getMitigationRequestDescription().setRequestType(RequestType.CreateRequest.name());
+        
+        assertEquals(routerMetadataNTPAmplification.getMitigationRequestDescription(), route53Mitigation3Desc.getMitigationRequestDescription());
+        
+        assertEquals(routerMetadataNTPAmplification.getInstancesStatusMap().size(), 1);
+        assertTrue(routerMetadataNTPAmplification.getInstancesStatusMap().containsKey("TST4"));
+        assertEquals(routerMetadataNTPAmplification.getInstancesStatusMap().get("TST4").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+    }
+    
+    @Test
+    public void testMergeMitigationsMetadataHasNewerStatusSameDefinition() throws JsonParseException, JsonMappingException, IOException {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.1", "205.251.200.2"))).thenReturn(Sets.newHashSet("Route53"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
+        
+        String filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                                    "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                                    "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2015\",\"lastUserToPush\":\"testUser\"," +
+                                    "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                                    "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                                    "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation1Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"216.137.51.0/24\"]," +
+                           "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                           "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2016\",\"lastUserToPush\":\"testUser\"," +
+                           "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                           "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                           "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses cloudFrontMitigationDesc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation2Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.1\",\"205.251.200.2\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation3Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst4-en-tra-r1");
+        
+        List<MitigationRequestDescriptionWithStatuses> routerMitigations = Lists.newArrayList(route53Mitigation1Desc, cloudFrontMitigationDesc, route53Mitigation2Desc, route53Mitigation3Desc);
+        
+        Map<String, List<MitigationRequestDescriptionWithStatuses>> activeMitigationsFromMitSvc = new HashMap<>();
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 22 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53MitigationInMitSvcNTP = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        MitigationInstanceStatus tst2Status = new MitigationInstanceStatus();
+        tst2Status.setDeployDate(formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2014"));
+        tst2Status.setMitigationStatus(MitigationStatus.DEPLOY_FAILED);
+        tst2Status.setLocation("TST2");
+        route53MitigationInMitSvcNTP.getInstancesStatusMap().put("TST2", tst2Status);
+        activeMitigationsFromMitSvc.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(route53MitigationInMitSvcNTP), Lists.newArrayList(route53MitigationInMitSvcNTP));
+        
+        List<MitigationRequestDescriptionWithStatuses> mergedMitigations = helper.mergeMitigations(activeMitigationsFromMitSvc, routerMitigations, "Route53");
+        assertEquals(mergedMitigations.size(), 3);
+        
+        long requestDateInMillis = formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2014");
+        
+        MitigationRequestDescriptionWithStatuses mitigationSvcNTPAmplificationTST3 = null;
+        MitigationRequestDescriptionWithStatuses routerMetadataNTPAmplification1 = null;
+        MitigationRequestDescriptionWithStatuses routerMetadataNTPAmplification2 = null;
+        for (MitigationRequestDescriptionWithStatuses mitigation : mergedMitigations) {
+            if (mitigation.getMitigationRequestDescription().getJobId() == 6) {
+                mitigationSvcNTPAmplificationTST3 = mitigation;
+            } else {
+                if (mitigation.getMitigationRequestDescription().getRequestDate() == requestDateInMillis) {
+                    routerMetadataNTPAmplification2 = mitigation;
+                } else {
+                    routerMetadataNTPAmplification1 = mitigation;
+                }
+            }
+        }
+        
+        route53Mitigation2Desc.getMitigationRequestDescription().setServiceName("Route53");
+        route53Mitigation2Desc.getMitigationRequestDescription().setMitigationTemplate("None");
+        route53Mitigation2Desc.getMitigationRequestDescription().setMitigationVersion(1);
+        route53Mitigation2Desc.getMitigationRequestDescription().setUpdateJobId(0);
+        route53Mitigation2Desc.getMitigationRequestDescription().setNumPreDeployChecks(0);
+        route53Mitigation2Desc.getMitigationRequestDescription().setNumPostDeployChecks(0);
+        route53Mitigation2Desc.getMitigationRequestDescription().setRequestStatus(WorkflowStatus.SUCCEEDED);
+        route53Mitigation2Desc.getMitigationRequestDescription().setRequestType(RequestType.CreateRequest.name());
+        
+        assertEquals(mitigationSvcNTPAmplificationTST3.getMitigationRequestDescription(), route53Mitigation2Desc.getMitigationRequestDescription());
+        assertEquals(mitigationSvcNTPAmplificationTST3.getInstancesStatusMap().size(), 1);
+        assertTrue(mitigationSvcNTPAmplificationTST3.getInstancesStatusMap().containsKey("TST3"));
+        assertEquals(mitigationSvcNTPAmplificationTST3.getInstancesStatusMap().get("TST3").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+        
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription().getRequestDate(), requestDateInMillis);
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription().getRequestStatus(), WorkflowStatus.SUCCEEDED);
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription().getRequestType(), RequestType.CreateRequest.name());
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription().getServiceName(), "Route53");
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription().getUpdateJobId(), 0);
+        
+        route53Mitigation3Desc.getMitigationRequestDescription().setServiceName("Route53");
+        route53Mitigation3Desc.getMitigationRequestDescription().setMitigationTemplate("None");
+        route53Mitigation3Desc.getMitigationRequestDescription().setMitigationVersion(1);
+        route53Mitigation3Desc.getMitigationRequestDescription().setUpdateJobId(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setNumPreDeployChecks(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setNumPostDeployChecks(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setRequestStatus(WorkflowStatus.SUCCEEDED);
+        route53Mitigation3Desc.getMitigationRequestDescription().setRequestType(RequestType.CreateRequest.name());
+        
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription(), route53Mitigation3Desc.getMitigationRequestDescription());
+        
+        assertEquals(routerMetadataNTPAmplification2.getInstancesStatusMap().size(), 1);
+        assertTrue(routerMetadataNTPAmplification2.getInstancesStatusMap().containsKey("TST4"));
+        assertEquals(routerMetadataNTPAmplification2.getInstancesStatusMap().get("TST4").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+        
+        requestDateInMillis = formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2015");
+        assertEquals(routerMetadataNTPAmplification1.getMitigationRequestDescription().getRequestDate(), requestDateInMillis);
+        assertEquals(routerMetadataNTPAmplification1.getMitigationRequestDescription().getRequestStatus(), WorkflowStatus.SUCCEEDED);
+        assertEquals(routerMetadataNTPAmplification1.getMitigationRequestDescription().getRequestType(), RequestType.CreateRequest.name());
+        assertEquals(routerMetadataNTPAmplification1.getMitigationRequestDescription().getServiceName(), "Route53");
+        assertEquals(routerMetadataNTPAmplification1.getMitigationRequestDescription().getUpdateJobId(), 0);
+        
+        route53Mitigation1Desc.getMitigationRequestDescription().setServiceName("Route53");
+        route53Mitigation1Desc.getMitigationRequestDescription().setMitigationTemplate("None");
+        route53Mitigation1Desc.getMitigationRequestDescription().setMitigationVersion(1);
+        route53Mitigation1Desc.getMitigationRequestDescription().setUpdateJobId(0);
+        route53Mitigation1Desc.getMitigationRequestDescription().setNumPreDeployChecks(0);
+        route53Mitigation1Desc.getMitigationRequestDescription().setNumPostDeployChecks(0);
+        route53Mitigation1Desc.getMitigationRequestDescription().setRequestStatus(WorkflowStatus.SUCCEEDED);
+        route53Mitigation1Desc.getMitigationRequestDescription().setRequestType(RequestType.CreateRequest.name());
+        
+        assertEquals(routerMetadataNTPAmplification1.getMitigationRequestDescription(), route53Mitigation1Desc.getMitigationRequestDescription());
+        
+        assertEquals(routerMetadataNTPAmplification1.getInstancesStatusMap().size(), 1);
+        assertTrue(routerMetadataNTPAmplification1.getInstancesStatusMap().containsKey("TST2"));
+        assertEquals(routerMetadataNTPAmplification1.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+    }
+    
+    @Test
+    public void testMergeMetadataHasNewerStatusSameDefinitionSameJobId() throws JsonParseException, JsonMappingException, IOException {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.1", "205.251.200.2"))).thenReturn(Sets.newHashSet("Route53"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
+        
+        String filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                                    "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                                    "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2015\",\"lastUserToPush\":\"testUser\"," +
+                                    "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                                    "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                                    "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation1Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"216.137.51.0/24\"]," +
+                           "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                           "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2016\",\"lastUserToPush\":\"testUser\"," +
+                           "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                           "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                           "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses cloudFrontMitigationDesc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2015\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation2Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.1\",\"205.251.200.2\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation3Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst4-en-tra-r1");
+        
+        List<MitigationRequestDescriptionWithStatuses> routerMitigations = Lists.newArrayList(route53Mitigation1Desc, cloudFrontMitigationDesc, route53Mitigation2Desc, route53Mitigation3Desc);
+        
+        Map<String, List<MitigationRequestDescriptionWithStatuses>> activeMitigationsFromMitSvc = new HashMap<>();
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 22 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53MitigationInMitSvcNTP = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        MitigationInstanceStatus tst2Status = new MitigationInstanceStatus();
+        tst2Status.setDeployDate(formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2014"));
+        tst2Status.setMitigationStatus(MitigationStatus.DEPLOY_FAILED);
+        tst2Status.setLocation("TST2");
+        route53MitigationInMitSvcNTP.getInstancesStatusMap().put("TST2", tst2Status);
+        activeMitigationsFromMitSvc.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(route53MitigationInMitSvcNTP), Lists.newArrayList(route53MitigationInMitSvcNTP));
+        
+        List<MitigationRequestDescriptionWithStatuses> mergedMitigations = helper.mergeMitigations(activeMitigationsFromMitSvc, routerMitigations, "Route53");
+        assertEquals(mergedMitigations.size(), 2);
+        
+        long requestDateInMillis = formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2014");
+        
+        MitigationRequestDescriptionWithStatuses mitigationSvcNTPAmplificationTST3 = null;
+        MitigationRequestDescriptionWithStatuses routerMetadataNTPAmplification2 = null;
+        for (MitigationRequestDescriptionWithStatuses mitigation : mergedMitigations) {
+            if (mitigation.getMitigationRequestDescription().getJobId() == 6) {
+                mitigationSvcNTPAmplificationTST3 = mitigation;
+            } else {
+                routerMetadataNTPAmplification2 = mitigation;
+            }
+        }
+        
+        tst2Status = new MitigationInstanceStatus();
+        tst2Status.setDeployDate(formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2015"));
+        tst2Status.setMitigationStatus(MitigationStatus.DEPLOY_SUCCEEDED);
+        tst2Status.setLocation("TST2");
+        route53MitigationInMitSvcNTP.getInstancesStatusMap().put("TST2", tst2Status);
+        MitigationInstanceStatus tst3Status = new MitigationInstanceStatus();
+        tst3Status.setDeployDate(formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2015"));
+        tst3Status.setMitigationStatus(MitigationStatus.DEPLOY_SUCCEEDED);
+        tst3Status.setLocation("TST3");
+        route53MitigationInMitSvcNTP.getInstancesStatusMap().put("TST3", tst3Status);
+        
+        assertEquals(mitigationSvcNTPAmplificationTST3.getMitigationRequestDescription(), route53MitigationInMitSvcNTP.getMitigationRequestDescription());
+        assertEquals(mitigationSvcNTPAmplificationTST3.getInstancesStatusMap().size(), 2);
+        assertTrue(mitigationSvcNTPAmplificationTST3.getInstancesStatusMap().containsKey("TST2"));
+        assertEquals(mitigationSvcNTPAmplificationTST3.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+        assertTrue(mitigationSvcNTPAmplificationTST3.getInstancesStatusMap().containsKey("TST3"));
+        assertEquals(mitigationSvcNTPAmplificationTST3.getInstancesStatusMap().get("TST3").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+        
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription().getRequestDate(), requestDateInMillis);
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription().getRequestStatus(), WorkflowStatus.SUCCEEDED);
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription().getRequestType(), RequestType.CreateRequest.name());
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription().getServiceName(), "Route53");
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription().getUpdateJobId(), 0);
+        
+        route53Mitigation3Desc.getMitigationRequestDescription().setServiceName("Route53");
+        route53Mitigation3Desc.getMitigationRequestDescription().setMitigationTemplate("None");
+        route53Mitigation3Desc.getMitigationRequestDescription().setMitigationVersion(1);
+        route53Mitigation3Desc.getMitigationRequestDescription().setUpdateJobId(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setNumPreDeployChecks(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setNumPostDeployChecks(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setRequestStatus(WorkflowStatus.SUCCEEDED);
+        route53Mitigation3Desc.getMitigationRequestDescription().setRequestType(RequestType.CreateRequest.name());
+        
+        assertEquals(routerMetadataNTPAmplification2.getMitigationRequestDescription(), route53Mitigation3Desc.getMitigationRequestDescription());
+        
+        assertEquals(routerMetadataNTPAmplification2.getInstancesStatusMap().size(), 1);
+        assertTrue(routerMetadataNTPAmplification2.getInstancesStatusMap().containsKey("TST4"));
+        assertEquals(routerMetadataNTPAmplification2.getInstancesStatusMap().get("TST4").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+    }
+    
+    @Test
+    public void testMergeMitigationsMetadataHasNewerStatusDiffDefinition() throws JsonParseException, JsonMappingException, IOException {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.1", "205.251.200.2"))).thenReturn(Sets.newHashSet("Route53"));
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
+        
+        String filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.1\",\"205.251.200.2\"]," +
+                                    "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                                    "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2016\",\"lastUserToPush\":\"testUser\"," +
+                                    "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                                    "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                                    "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation1Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"216.137.51.0/24\"]," +
+                           "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                           "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2016\",\"lastUserToPush\":\"testUser\"," +
+                           "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                           "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                           "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses cloudFrontMitigationDesc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation2Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst3-en-tra-r1");
+        
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.1\",\"205.251.200.2\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":1300,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":0,\"lastDatePushedToRouter\":\"Fri Sep 21 11:21:09 PDT 2016\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53Mitigation3Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst4-en-tra-r1");
+        
+        List<MitigationRequestDescriptionWithStatuses> routerMitigations = Lists.newArrayList(route53Mitigation1Desc, cloudFrontMitigationDesc, route53Mitigation2Desc, route53Mitigation3Desc);
+        
+        Map<String, List<MitigationRequestDescriptionWithStatuses>> activeMitigationsFromMitSvc = new HashMap<>();
+        filterInfoAsJSON = "{\"filterName\":\"NTP Amplification Drop\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
+                "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"RATE_LIMIT\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
+                "\"enabled\":true,\"jobId\":6,\"lastDatePushedToRouter\":\"Fri Sep 22 11:21:09 PDT 2015\",\"lastUserToPush\":\"testUser\"," +
+                "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
+                "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
+                "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
+        MitigationRequestDescriptionWithStatuses route53MitigationInMitSvcNTP = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst2-en-tra-r1");
+        
+        MitigationInstanceStatus tst2Status = new MitigationInstanceStatus();
+        tst2Status.setDeployDate(formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2015"));
+        tst2Status.setMitigationStatus(MitigationStatus.DEPLOY_FAILED);
+        tst2Status.setLocation("TST2");
+        route53MitigationInMitSvcNTP.getInstancesStatusMap().put("TST2", tst2Status);
+        activeMitigationsFromMitSvc.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(route53MitigationInMitSvcNTP), Lists.newArrayList(route53MitigationInMitSvcNTP));
+        
+        List<MitigationRequestDescriptionWithStatuses> mergedMitigations = helper.mergeMitigations(activeMitigationsFromMitSvc, routerMitigations, "Route53");
+        assertEquals(mergedMitigations.size(), 2);
+        
+        MitigationRequestDescriptionWithStatuses mitigationSvcNTPAmplification = null;
+        MitigationRequestDescriptionWithStatuses routerMetadataNTPAmplificationTST2 = null;
+        for (MitigationRequestDescriptionWithStatuses mitigation : mergedMitigations) {
+            if (mitigation.getMitigationRequestDescription().getJobId() == 6) {
+                mitigationSvcNTPAmplification = mitigation;
+            } else {
+                routerMetadataNTPAmplificationTST2 = mitigation;
+            }
+        }
+        
+        route53Mitigation2Desc.getMitigationRequestDescription().setServiceName("Route53");
+        route53Mitigation2Desc.getMitigationRequestDescription().setMitigationTemplate("None");
+        route53Mitigation2Desc.getMitigationRequestDescription().setMitigationVersion(1);
+        route53Mitigation2Desc.getMitigationRequestDescription().setUpdateJobId(0);
+        route53Mitigation2Desc.getMitigationRequestDescription().setNumPreDeployChecks(0);
+        route53Mitigation2Desc.getMitigationRequestDescription().setNumPostDeployChecks(0);
+        route53Mitigation2Desc.getMitigationRequestDescription().setRequestStatus(WorkflowStatus.SUCCEEDED);
+        route53Mitigation2Desc.getMitigationRequestDescription().setRequestType(RequestType.CreateRequest.name());
+        
+        assertEquals(mitigationSvcNTPAmplification.getMitigationRequestDescription(), route53Mitigation2Desc.getMitigationRequestDescription());
+        assertEquals(mitigationSvcNTPAmplification.getInstancesStatusMap().size(), 1);
+        assertTrue(mitigationSvcNTPAmplification.getInstancesStatusMap().containsKey("TST3"));
+        assertEquals(mitigationSvcNTPAmplification.getInstancesStatusMap().get("TST3").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+        
+        long requestDateInMillis = formatter.parseMillis("Fri Sep 21 11:21:09 PDT 2016");
+        assertEquals(routerMetadataNTPAmplificationTST2.getMitigationRequestDescription().getRequestDate(), requestDateInMillis);
+        assertEquals(routerMetadataNTPAmplificationTST2.getMitigationRequestDescription().getRequestStatus(), WorkflowStatus.SUCCEEDED);
+        assertEquals(routerMetadataNTPAmplificationTST2.getMitigationRequestDescription().getRequestType(), RequestType.CreateRequest.name());
+        assertEquals(routerMetadataNTPAmplificationTST2.getMitigationRequestDescription().getServiceName(), "Route53");
+        assertEquals(routerMetadataNTPAmplificationTST2.getMitigationRequestDescription().getUpdateJobId(), 0);
+        
+        route53Mitigation3Desc.getMitigationRequestDescription().setServiceName("Route53");
+        route53Mitigation3Desc.getMitigationRequestDescription().setMitigationTemplate("None");
+        route53Mitigation3Desc.getMitigationRequestDescription().setMitigationVersion(1);
+        route53Mitigation3Desc.getMitigationRequestDescription().setUpdateJobId(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setNumPreDeployChecks(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setNumPostDeployChecks(0);
+        route53Mitigation3Desc.getMitigationRequestDescription().setRequestStatus(WorkflowStatus.SUCCEEDED);
+        route53Mitigation3Desc.getMitigationRequestDescription().setRequestType(RequestType.CreateRequest.name());
+        
+        assertEquals(routerMetadataNTPAmplificationTST2.getMitigationRequestDescription(), route53Mitigation3Desc.getMitigationRequestDescription());
+        
+        assertEquals(routerMetadataNTPAmplificationTST2.getInstancesStatusMap().size(), 2);
+        assertTrue(routerMetadataNTPAmplificationTST2.getInstancesStatusMap().containsKey("TST2"));
+        assertEquals(routerMetadataNTPAmplificationTST2.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+        assertTrue(routerMetadataNTPAmplificationTST2.getInstancesStatusMap().containsKey("TST4"));
+        assertEquals(routerMetadataNTPAmplificationTST2.getInstancesStatusMap().get("TST4").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
+    }
+    
     /**
      * Test the case where the router mitigation metadata returns a mitigation with non-0 jobId - which implies it is a mitigation created by the MitigationService and 
      * hence we should ignore the metadata maintained by the router mitigation tool.
@@ -385,58 +1116,5 @@ public class DDBBasedRouterMetadataHelperTest {
         DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
         List<MitigationRequestDescriptionWithStatuses> returnedMitigations = helper.call();
         assertEquals(returnedMitigations.size(), 0);
-    }
-    
-    @Test
-    public void testMergeMitigationsWithSameNameDiffDefinitions() throws JsonParseException, JsonMappingException, IOException {
-        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("205.251.200.5", "205.251.200.7"))).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
-        when(serviceSubnetsMatcher.getAllServicesForSubnets(Lists.newArrayList("216.137.51.0/24"))).thenReturn(Sets.newHashSet("CloudFront"));
-        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
-        
-        String filterInfoAsJSONBase = "{\"filterName\":\"Testing1\",\"description\":\"Test filter\",\"srcIps\":[],\"destIps\":[\"205.251.200.5\",\"205.251.200.7\"]," +
-                                      "\"srcASNs\":[],\"srcCountryCodes\":[],\"protocols\":[17],\"synOnly\":false,\"action\":\"%s\",\"bandwidthKBps\":500,\"burstSizeK\":15," +
-                                      "\"enabled\":true,\"jobId\":5,\"lastDatePushedToRouter\":\"Fri Sep 22 11:21:09 PDT 2014\",\"lastUserToPush\":\"testUser\"," +
-                                      "\"customerRateLimit\":{\"customer\":\"Route53\",\"rateLimitInKiloBytesPerSecond\":1300,\"estimatedRPS\":20000,\"averageRequestSize\":65}," +
-                                      "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"new\":true,\"policerBandwidthValueLocked\":false,\"sourcePort\":[\"53\"]," +
-                                      "\"destinationPort\":[],\"packetLength\":[],\"ttl\":[]}";
-        String filterInfoAsJSON = String.format(filterInfoAsJSONBase, "COUNT");
-        MitigationRequestDescriptionWithStatuses route53Mitigation1Desc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst1-en-tra-r1");
-        
-        List<MitigationRequestDescriptionWithStatuses> routerMitigations = Lists.newArrayList(route53Mitigation1Desc);
-        
-        filterInfoAsJSON = String.format(filterInfoAsJSONBase, "RATE_LIMIT");
-        MitigationRequestDescriptionWithStatuses route53MitigationInMitSvc = helper.convertToMitigationRequestDescription(filterInfoAsJSON, "tst1-en-tra-r1");
-        
-        Map<String, List<MitigationRequestDescriptionWithStatuses>> activeMitigationsFromMitSvc = new HashMap<>();
-        activeMitigationsFromMitSvc.put(ListActiveMitigationsForServiceActivity.createDeviceAndMitigationNameKey(route53MitigationInMitSvc), Lists.newArrayList(route53MitigationInMitSvc));
-        
-        List<MitigationRequestDescriptionWithStatuses> mergedMitigations = helper.mergeMitigations(activeMitigationsFromMitSvc, routerMitigations, "Route53");
-        assertEquals(mergedMitigations.size(), 2);
-        
-        MitigationRequestDescriptionWithStatuses mitigationDrivenByMitSvc = null;
-        MitigationRequestDescriptionWithStatuses mitigationDrivenByRouterMitUI = null;
-        for (MitigationRequestDescriptionWithStatuses mitigation : mergedMitigations) {
-            if (mitigation.getMitigationRequestDescription().getMitigationDefinition().getAction() instanceof RateLimitAction) {
-                mitigationDrivenByMitSvc = mitigation;
-            } else {
-                mitigationDrivenByRouterMitUI = mitigation;
-            }
-        }
-        
-        assertEquals(mitigationDrivenByMitSvc.getMitigationRequestDescription(), route53MitigationInMitSvc.getMitigationRequestDescription());
-        assertEquals(mitigationDrivenByMitSvc.getInstancesStatusMap().size(), 1);
-        assertTrue(mitigationDrivenByMitSvc.getInstancesStatusMap().containsKey("TST1"));
-        assertEquals(mitigationDrivenByMitSvc.getInstancesStatusMap().get("TST1").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
-        
-        assertEquals(mitigationDrivenByRouterMitUI.getMitigationRequestDescription().getMitigationTemplate(), DDBBasedRouterMetadataHelper.ROUTER_MITIGATION_DEFAULT_TEMPLATE);
-        assertEquals(mitigationDrivenByRouterMitUI.getMitigationRequestDescription().getMitigationVersion(), 1);
-        assertEquals(mitigationDrivenByRouterMitUI.getMitigationRequestDescription().getNumPostDeployChecks(), 0);
-        assertEquals(mitigationDrivenByRouterMitUI.getMitigationRequestDescription().getNumPreDeployChecks(), 0);
-        
-        assertEquals(mitigationDrivenByRouterMitUI.getInstancesStatusMap().size(), 1);
-        assertTrue(mitigationDrivenByRouterMitUI.getInstancesStatusMap().containsKey("TST1"));
-        assertEquals(mitigationDrivenByRouterMitUI.getInstancesStatusMap().get("TST1").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
     }
 }
