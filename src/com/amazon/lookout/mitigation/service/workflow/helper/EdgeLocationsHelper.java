@@ -6,8 +6,9 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
+
+import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
@@ -53,24 +54,21 @@ public class EdgeLocationsHelper implements Runnable {
     private final DaasControlAPIServiceV20100701Client daasClient;
     private final BlackwatchLocationsHelper bwLocationsHelper;
     private final int sleepBetweenRetriesInMillis;
+    private final Set<String> defaultPOPs;
     private final MetricsFactory metricsFactory;
 
-    @ConstructorProperties({"cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries", "metricsFactory"})
-    public EdgeLocationsHelper(@Nonnull EdgeOperatorServiceClient cloudfrontClient, @Nonnull DaasControlAPIServiceV20100701Client daasClient,
-                               @Nonnull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, @Nonnull MetricsFactory metricsFactory) {
-        Validate.notNull(cloudfrontClient);
+    @ConstructorProperties({"cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries", "defaultPOPs", "metricsFactory"})
+    public EdgeLocationsHelper(@NonNull EdgeOperatorServiceClient cloudfrontClient, @NonNull DaasControlAPIServiceV20100701Client daasClient,
+                               @NonNull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, @NonNull Set<String> defaultPOPs, 
+                               @NonNull MetricsFactory metricsFactory) {
         this.cloudfrontClient = cloudfrontClient;
-        
-        Validate.notNull(daasClient);
         this.daasClient = daasClient;
-        
-        Validate.notNull(bwLocationsHelper);
         this.bwLocationsHelper = bwLocationsHelper;
         
         Validate.isTrue(sleepBetweenRetriesInMillis > 0);
         this.sleepBetweenRetriesInMillis = sleepBetweenRetriesInMillis;
         
-        Validate.notNull(metricsFactory);
+        this.defaultPOPs = defaultPOPs;
         this.metricsFactory = metricsFactory;
         
         refreshPOPLocations();
@@ -152,6 +150,8 @@ public class EdgeLocationsHelper implements Runnable {
                 String msg = "Caught exception when getting back Route53POPs, not updating any Route53POPs at this point";
                 LOG.warn(msg, ex);
             }
+            
+            refreshedPOPsList.addAll(defaultPOPs);
             
             boolean popsUpdated = false;
             

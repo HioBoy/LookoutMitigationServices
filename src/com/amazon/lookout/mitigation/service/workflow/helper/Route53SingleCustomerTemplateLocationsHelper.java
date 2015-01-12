@@ -7,13 +7,18 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 
 import org.apache.commons.lang.Validate;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
+import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 
 /**
  * Locations helper for route53 single customer templates.
  */
 public class Route53SingleCustomerTemplateLocationsHelper implements TemplateBasedLocationsHelper {
+    private static final Log LOG = LogFactory.getLog(Route53SingleCustomerTemplateLocationsHelper.class);
     
     private final EdgeLocationsHelper locationsHelper;
     private final Set<String> popsWithCiscoRouter;
@@ -40,6 +45,13 @@ public class Route53SingleCustomerTemplateLocationsHelper implements TemplateBas
                 locationsToDeploy.add(location);
             }
         }
+        
+        if (locationsToDeploy.isEmpty()) {
+            String msg = "Got no locations to deploy to for mitigation: " + request.getMitigationName() + " for service: " + request.getServiceName();
+            LOG.info(msg + " request: " + ReflectionToStringBuilder.toString(request));
+            throw new InternalServerError500(msg);
+        }
+        
         return locationsToDeploy;
     }
 

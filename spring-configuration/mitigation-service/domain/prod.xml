@@ -27,4 +27,6 @@
     <bean id="prod.blackwatchMWSMetricDataset" class="java.lang.String">
         <constructor-arg value="Prod"/>
     </bean>
+    
+    <util:set id="prod.defaultPOPsForEdgeLocationsHelper"/>
 </beans>

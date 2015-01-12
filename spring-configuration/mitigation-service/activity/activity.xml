@@ -89,6 +89,7 @@
         <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>
         <constructor-arg name="bwLocationsHelper" ref="bwLocationsHelper"/>
         <constructor-arg name="millisToSleepBetweenRetries" value="500"/>
+        <constructor-arg name="defaultPOPs" ref="${domain}.defaultPOPsForEdgeLocationsHelper"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
     
