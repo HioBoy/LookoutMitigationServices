@@ -32,7 +32,21 @@
                 <prop key="log4j.appender.WIRE.Encoding">UTF8</prop>
                 <prop key="log4j.appender.WIRE.File">${root}/var/output/logs/wire_service.log</prop>
                 <prop key="log4j.appender.WIRE.Threshold">ALL</prop>
-
+                
+                 <!-- 
+                 This appender is specifically for the request logs, and uses a 
+                 different layout format; since request log messages are JSON objects 
+                 with plenty of useful information, we'll just log the message only. 
+                 -->
+                 <prop key="log4j.appender.REQUESTLOG">com.amazon.coral.logging.DailyRollingFileAppender</prop>
+                 <prop key="log4j.appender.REQUESTLOG.layout">org.apache.log4j.PatternLayout</prop>
+                 <prop key="log4j.appender.REQUESTLOG.layout.ConversionPattern">%m%n</prop>
+                 <prop key="log4j.appender.REQUESTLOG.Append">true</prop>
+                 <prop key="log4j.appender.REQUESTLOG.DatePattern">&apos;.&apos;yyyy-MM-dd-HH</prop>
+                 <prop key="log4j.appender.REQUESTLOG.Encoding">UTF8</prop>
+                 <prop key="log4j.appender.REQUESTLOG.File">${root}/var/output/logs/requests.log</prop>
+                 <prop key="log4j.appender.REQUESTLOG.Threshold">TRACE</prop>
+                 
                 <!-- Swap the rootLogger in -->
                 <prop key="log4j.rootLogger">INFO, APPLICATION</prop>
 
@@ -46,10 +60,13 @@
                 <prop key="log4j.logger.com.amazon.lookout">${apollo.OCF.Log4j.logSeverityLevel}</prop>
                 <prop key="log4j.logger.com.amazon.aws158">${apollo.OCF.Log4j.logSeverityLevel}</prop>
                 
+                <!-- Configure the request logger to use our custom appender. The request 
+                logger only outputs at the TRACE level. -->
+                <prop key="log4j.logger.com.amazon.coral.service.RequestLoggingInterceptor">TRACE, REQUESTLOG</prop>                
             </props>
         </property>
     </bean>
-
+       
     <!--
     The MetricsFactory is an aide that will help you configure Querylog
     support for your application.
