@@ -128,6 +128,7 @@ public class BlackwatchLocationsHelper {
                         
                         // If we don't have any BW hosts build for this POP, return false.
                         if (serversList.isEmpty()) {
+                            LOG.info("No BW hosts built for pop: " + popName + ", hence marking this POP as a non-BW POP.");
                             return false;
                         }
                         
@@ -154,8 +155,10 @@ public class BlackwatchLocationsHelper {
             
             // Check if we need to force the gamma IAD POP to return as a non-BW POP.
             if (popName.toUpperCase().startsWith(GAMMA_IAD_POP_NAME) && overrideGammaBWPOPAsNonBW) {
+                LOG.info("Overridding the BW status for pop: " + popName + " to be a non-BW POP by default.");
                 return false;
             } else {
+                LOG.info("Returning the BW status for pop: " + popName + " to be: " + hasRecentDataForBWMetric);
                 return hasRecentDataForBWMetric;
             }
         }

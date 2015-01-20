@@ -6,8 +6,9 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
+
+import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
@@ -56,21 +57,15 @@ public class EdgeLocationsHelper implements Runnable {
     private final MetricsFactory metricsFactory;
 
     @ConstructorProperties({"cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries", "metricsFactory"})
-    public EdgeLocationsHelper(@Nonnull EdgeOperatorServiceClient cloudfrontClient, @Nonnull DaasControlAPIServiceV20100701Client daasClient,
-                               @Nonnull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, @Nonnull MetricsFactory metricsFactory) {
-        Validate.notNull(cloudfrontClient);
+    public EdgeLocationsHelper(@NonNull EdgeOperatorServiceClient cloudfrontClient, @NonNull DaasControlAPIServiceV20100701Client daasClient,
+                               @NonNull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, @NonNull MetricsFactory metricsFactory) {
         this.cloudfrontClient = cloudfrontClient;
-        
-        Validate.notNull(daasClient);
         this.daasClient = daasClient;
-        
-        Validate.notNull(bwLocationsHelper);
         this.bwLocationsHelper = bwLocationsHelper;
         
         Validate.isTrue(sleepBetweenRetriesInMillis > 0);
         this.sleepBetweenRetriesInMillis = sleepBetweenRetriesInMillis;
         
-        Validate.notNull(metricsFactory);
         this.metricsFactory = metricsFactory;
         
         refreshPOPLocations();
@@ -153,21 +148,23 @@ public class EdgeLocationsHelper implements Runnable {
                 LOG.warn(msg, ex);
             }
             
-            boolean popsUpdated = false;
-            
             // If the list of all pops has changed, then update.
             if (!refreshedPOPsList.equals(allPOPs)) {
                 allPOPs.addAll(refreshedPOPsList);
-                popsUpdated = true;
             }
             
             // Also refresh the list of BW POPs here.
-            Set<String> refreshedBWPOPs = new HashSet<>();
             boolean allPOPsCheckedForBlackwatch = true;
             for (String popName : allPOPs) {
                 try {
                     if (bwLocationsHelper.isBlackwatchPOP(popName, metrics)) {
-                        refreshedBWPOPs.add(popName);
+                        LOG.info("Adding POP: " + popName + " as a BW POP.");
+                        blackwatchPOPs.add(popName);
+                    } else {
+                        if (blackwatchPOPs.contains(popName)) {
+                            LOG.info("Marking POP: " + popName + " as non-BW, though it was previously marked as a BW POP.");
+                            blackwatchPOPs.remove(popName);
+                        }
                     }
                 } catch (Exception ex) {
                     allActionsSuccessful = false;
@@ -183,12 +180,6 @@ public class EdgeLocationsHelper implements Runnable {
                 metrics.addCount(BLACKWATCH_POP_CHECK_METRIC, 1);
             } else {
                 metrics.addCount(BLACKWATCH_POP_CHECK_METRIC, 0);
-            }
-            
-            // If the list of Blackwatch pops has changed, then update.
-            if (!refreshedBWPOPs.equals(blackwatchPOPs)) {
-                blackwatchPOPs.addAll(refreshedBWPOPs);
-                popsUpdated = true;
             }
             
             if (allActionsSuccessful) {
