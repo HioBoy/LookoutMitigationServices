@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -121,13 +122,13 @@ public class EdgeLocationsHelperTest {
         expectedAllPOPs.addAll(daasPOPs);
         
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
-        Set<String> allPOPs = locationsHelper.getAllPOPs();
+        Set<String> allPOPs = locationsHelper.getAllClassicPOPs();
         assertEquals(allPOPs, expectedAllPOPs);
         
-        Set<String> blackwatchPOPs = locationsHelper.getBlackwatchPOPs();
+        Set<String> blackwatchPOPs = locationsHelper.getBlackwatchClassicPOPs();
         assertEquals(blackwatchPOPs, Sets.newHashSet("POP5"));
         
-        Set<String> nonBlackwatchPOPs = locationsHelper.getAllNonBlackwatchPOPs();
+        Set<String> nonBlackwatchPOPs = locationsHelper.getAllNonBlackwatchClassicPOPs();
         expectedAllPOPs.remove("POP5");
         assertEquals(nonBlackwatchPOPs, expectedAllPOPs);
     }
@@ -157,13 +158,13 @@ public class EdgeLocationsHelperTest {
         
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
         
-        Set<String> pops = locationsHelper.getAllPOPs();
+        Set<String> pops = locationsHelper.getAllClassicPOPs();
         assertEquals(pops.size(), 0);
         
-        pops = locationsHelper.getBlackwatchPOPs();
+        pops = locationsHelper.getBlackwatchClassicPOPs();
         assertEquals(pops.size(), 0);
         
-        pops = locationsHelper.getAllNonBlackwatchPOPs();
+        pops = locationsHelper.getAllNonBlackwatchClassicPOPs();
         assertEquals(pops.size(), 0);
     }
     
@@ -195,14 +196,14 @@ public class EdgeLocationsHelperTest {
         
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
         
-        Set<String> pops = locationsHelper.getAllPOPs();
+        Set<String> pops = locationsHelper.getAllClassicPOPs();
         assertEquals(pops.size(), 3);
         assertEquals(pops, Sets.newHashSet(edgeServicesPOPs));
         
-        pops = locationsHelper.getBlackwatchPOPs();
+        pops = locationsHelper.getBlackwatchClassicPOPs();
         assertEquals(pops.size(), 1);
         
-        pops = locationsHelper.getAllNonBlackwatchPOPs();
+        pops = locationsHelper.getAllNonBlackwatchClassicPOPs();
         assertEquals(pops.size(), 2);
     }
     
@@ -236,13 +237,13 @@ public class EdgeLocationsHelperTest {
         
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
         
-        Set<String> pops = locationsHelper.getAllPOPs();
+        Set<String> pops = locationsHelper.getAllClassicPOPs();
         assertEquals(pops.size(), 3);
         
-        pops = locationsHelper.getBlackwatchPOPs();
+        pops = locationsHelper.getBlackwatchClassicPOPs();
         assertEquals(pops.size(), 0);
         
-        pops = locationsHelper.getAllNonBlackwatchPOPs();
+        pops = locationsHelper.getAllNonBlackwatchClassicPOPs();
         assertEquals(pops.size(), 3);
     }
     
@@ -286,20 +287,20 @@ public class EdgeLocationsHelperTest {
         expectedAllPOPs.addAll(daasPOPs);
         
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
-        Set<String> allPOPs = locationsHelper.getAllPOPs();
+        Set<String> allPOPs = locationsHelper.getAllClassicPOPs();
         assertEquals(allPOPs, expectedAllPOPs);
         
-        Set<String> blackwatchPOPs = locationsHelper.getBlackwatchPOPs();
+        Set<String> blackwatchPOPs = locationsHelper.getBlackwatchClassicPOPs();
         assertEquals(blackwatchPOPs, Sets.newHashSet("POP5"));
         
-        Set<String> nonBlackwatchPOPs = locationsHelper.getAllNonBlackwatchPOPs();
+        Set<String> nonBlackwatchPOPs = locationsHelper.getAllNonBlackwatchClassicPOPs();
         Set<String> expectedNonBlackwatchPOPs = new HashSet<String>(expectedAllPOPs);
         expectedNonBlackwatchPOPs.remove("POP5");
         assertEquals(nonBlackwatchPOPs, expectedNonBlackwatchPOPs);
         
         // Force refresh.
         locationsHelper.run();
-        allPOPs = locationsHelper.getAllPOPs();
+        allPOPs = locationsHelper.getAllClassicPOPs();
         assertEquals(allPOPs, expectedAllPOPs);
         verify(edgeServicesClient, times(2)).newGetPOPsCall();
     }
@@ -366,22 +367,51 @@ public class EdgeLocationsHelperTest {
         expectedAllPOPs.addAll(daasPOPs);
         
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
-        Set<String> allPOPs = locationsHelper.getAllPOPs();
+        Set<String> allPOPs = locationsHelper.getAllClassicPOPs();
         assertEquals(allPOPs, expectedAllPOPs);
         
-        Set<String> blackwatchPOPs = locationsHelper.getBlackwatchPOPs();
+        Set<String> blackwatchPOPs = locationsHelper.getBlackwatchClassicPOPs();
         assertEquals(blackwatchPOPs, Sets.newHashSet("POP5"));
         
-        Set<String> nonBlackwatchPOPs = locationsHelper.getAllNonBlackwatchPOPs();
+        Set<String> nonBlackwatchPOPs = locationsHelper.getAllNonBlackwatchClassicPOPs();
         expectedAllPOPs.remove("POP5");
         assertEquals(nonBlackwatchPOPs, expectedAllPOPs);
         
         // On refresh, the pop POP5 should now get marked as a non-BW POP
         locationsHelper.run();
-        blackwatchPOPs = locationsHelper.getBlackwatchPOPs();
+        blackwatchPOPs = locationsHelper.getBlackwatchClassicPOPs();
         assertTrue(blackwatchPOPs.isEmpty());
         
-        nonBlackwatchPOPs = locationsHelper.getAllNonBlackwatchPOPs();
+        nonBlackwatchPOPs = locationsHelper.getAllNonBlackwatchClassicPOPs();
         assertTrue(nonBlackwatchPOPs.containsAll(Lists.newArrayList("POP1", "POP2", "POP3", "POP4", "POP5")));
+    }
+    
+    @Test
+    public void testFilteringOutMetroCFPOPs() throws Exception {
+    	LdapProvider ldapProvider = mock(LdapProvider.class);
+    	BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(ldapProvider, false, getMonitoringQueryClientProviderForBWPOP(), "Prod", "Total_Mitigated_Packets_RX", 5);
+    	
+    	EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
+        GetPOPsCall edgeServicesGetPOPsCall = mock(GetPOPsCall.class);
+        GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
+        List<String> edgeServicesPOPs = Lists.newArrayList("POP1", "POP2", "POP5", "SFO5", "SFO5-M1", "SFO50-M3", "SFO20-M2", "LHR51-M2");
+        edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
+        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult);
+        when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
+        
+        DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
+        ListDNSServersCall dnsServersCall = mock(ListDNSServersCall.class);
+        ListDNSServersResponse dnsServersResponse = new ListDNSServersResponse();
+        List<String> daasPOPs = Lists.newArrayList("POP1");
+        DNSServer serverPOP1 = new DNSServer();
+        serverPOP1.setPOP(daasPOPs.get(0));
+        dnsServersResponse.setResults(Lists.newArrayList(serverPOP1));
+        when(dnsServersCall.call(any(ListDNSServersRequest.class))).thenReturn(dnsServersResponse);
+        when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
+        
+    	EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
+    	Set<String> cfClassicPOPs = locationsHelper.getCloudFrontClassicPOPs();
+    	assertNotNull(cfClassicPOPs);
+    	assertEquals(Sets.newHashSet("POP1", "POP2", "POP5", "SFO5"), cfClassicPOPs);
     }
 }

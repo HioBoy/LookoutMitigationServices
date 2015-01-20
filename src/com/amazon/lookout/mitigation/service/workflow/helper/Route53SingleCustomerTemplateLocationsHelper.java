@@ -35,7 +35,7 @@ public class Route53SingleCustomerTemplateLocationsHelper implements TemplateBas
     @Override
     public Set<String> getLocationsForDeployment(MitigationModificationRequest request) {
         Set<String> locationsToDeploy = new HashSet<String>();
-        for (String location : locationsHelper.getAllNonBlackwatchPOPs() ) {
+        for (String location : locationsHelper.getAllNonBlackwatchClassicPOPs() ) {
             if (!popsWithCiscoRouter.contains(location.toUpperCase())) {
                 locationsToDeploy.add(location);
             }

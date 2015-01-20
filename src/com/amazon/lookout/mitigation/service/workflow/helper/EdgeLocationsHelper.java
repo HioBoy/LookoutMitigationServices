@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -27,7 +29,7 @@ import com.amazon.edge.service.impl.GetPOPsCall;
 import com.google.common.collect.Sets;
 
 /**
- * Helper that helps in identifying the POP locations for deployment.
+ * Helper that helps in identifying the POP locations for deployment. Currently (01/2015) this locations helper only exposes classic (non-Metro) POPs.
  *
  */
 @ThreadSafe
@@ -41,14 +43,18 @@ public class EdgeLocationsHelper implements Runnable {
     private static final String CLOUDFRONT_POP_NAMES_REFRESH_METRIC = "EdgeServicesRefresh";
     private static final String BLACKWATCH_POP_CHECK_METRIC = "BlackwatchCheck";
     
+    // If any CF POP has a -M<some number> in its name, then it is a metro POP. Examples of class POP: SFO5, DFW3. Examples of metro POPs: SFO5-M1, SFO20-M2.
+    // Pattern is thread-safe and hence using a static final instance.
+    private static final Pattern CF_METRO_POP_PATTERN = Pattern.compile("^[A-Z0-9]+-M[1-9]+$");
+    
     // Maintain a flag that indicates that the refresh of POP names and the checks if they are Blackwatch capable have been completed at least once.
     private final AtomicBoolean locationsRefreshAtleastOnce = new AtomicBoolean(false);
     
-    // Maintain a copy of all POPs known to this locations helper.
-    private final CopyOnWriteArraySet<String> allPOPs = new CopyOnWriteArraySet<>();
+    // Maintain a copy of all classic (non-Metro) POPs known to this locations helper.
+    private final CopyOnWriteArraySet<String> allClassicPOPs = new CopyOnWriteArraySet<>();
     
-    // Maintain a copy of all POPs known to this locations helper which have Blackwatch hosts installed.
-    private final CopyOnWriteArraySet<String> blackwatchPOPs = new CopyOnWriteArraySet<>();
+    // Maintain a copy of all classic POPs known to this locations helper which have Blackwatch hosts installed.
+    private final CopyOnWriteArraySet<String> blackwatchClassicPOPs = new CopyOnWriteArraySet<>();
     
     private final EdgeOperatorServiceClient cloudfrontClient;
     private final DaasControlAPIServiceV20100701Client daasClient;
@@ -71,34 +77,34 @@ public class EdgeLocationsHelper implements Runnable {
         refreshPOPLocations();
     }
     
-    public Set<String> getAllPOPs() {
+    public Set<String> getAllClassicPOPs() {
         if (!locationsRefreshAtleastOnce.get()) {
             refreshPOPLocations();
         }
 
-        // Return allPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
+        // Return allClassicPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
         // (from either of the edge service calls succeeding) hence, there is no need to fail the create request. Users will have visibility into the instances being worked upon.
-        return allPOPs;
+        return allClassicPOPs;
     }
     
-    public Set<String> getBlackwatchPOPs() {
+    public Set<String> getBlackwatchClassicPOPs() {
         if (!locationsRefreshAtleastOnce.get()) {
             refreshPOPLocations();
         }
 
-        // Return allPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
+        // Return blackwatchClassicPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
         // (from either of the edge service calls succeeding) hence, there is no need to fail the create request. Users will have visibility into the instances being worked upon.
-        return blackwatchPOPs;
+        return blackwatchClassicPOPs;
     }
     
-    public Set<String> getAllNonBlackwatchPOPs() {
+    public Set<String> getAllNonBlackwatchClassicPOPs() {
         if (!locationsRefreshAtleastOnce.get()) {
             refreshPOPLocations();
         }
         
-        // Return allPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
+        // Return the different of allClassicPOPs and blackwatchClassicPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
         // (from either of the edge service calls succeeding) hence, there is no need to fail the create request. Users will have visibility into the instances being worked upon.
-        return (Sets.difference(allPOPs, blackwatchPOPs));
+        return (Sets.difference(allClassicPOPs, blackwatchClassicPOPs));
     }
     
     public void run() {
@@ -106,7 +112,7 @@ public class EdgeLocationsHelper implements Runnable {
     }
     
     /**
-     * Refreshes the list of all pops and pops with/without blackwatch.
+     * Refreshes the list of all pops and pops with/without blackwatch. Currently (01/2015) skipping all the non-classic POPs and only keeping track of the classic (non-metro) POPs.
      * 
      * We also add a counter for CloudFront/Route53 with a value of 1 if the API calls to their respective customer API for refreshing the POP names succeed, 
      * else we populate a 0 - this will help us to see the trend of how often we fail/succeed the refresh the POP names from these services.
@@ -124,7 +130,7 @@ public class EdgeLocationsHelper implements Runnable {
             // We do so to err on the side of us trying to deploy mitigation to a location that no longer exists than to miss out on a valid POP due to some bug in
             // the edge customer APIs.
             try {
-                refreshedPOPsList.addAll(getCloudFrontPOPs());
+                refreshedPOPsList.addAll(getCloudFrontClassicPOPs());
                 metrics.addCount(CLOUDFRONT_POP_NAMES_REFRESH_METRIC, 1);
             } catch (Exception ex) {
                 allActionsSuccessful = false;
@@ -149,21 +155,21 @@ public class EdgeLocationsHelper implements Runnable {
             }
             
             // If the list of all pops has changed, then update.
-            if (!refreshedPOPsList.equals(allPOPs)) {
-                allPOPs.addAll(refreshedPOPsList);
+            if (!refreshedPOPsList.equals(allClassicPOPs)) {
+                allClassicPOPs.addAll(refreshedPOPsList);
             }
             
             // Also refresh the list of BW POPs here.
             boolean allPOPsCheckedForBlackwatch = true;
-            for (String popName : allPOPs) {
+            for (String popName : allClassicPOPs) {
                 try {
                     if (bwLocationsHelper.isBlackwatchPOP(popName, metrics)) {
                         LOG.info("Adding POP: " + popName + " as a BW POP.");
-                        blackwatchPOPs.add(popName);
+                        blackwatchClassicPOPs.add(popName);
                     } else {
-                        if (blackwatchPOPs.contains(popName)) {
+                        if (blackwatchClassicPOPs.contains(popName)) {
                             LOG.info("Marking POP: " + popName + " as non-BW, though it was previously marked as a BW POP.");
-                            blackwatchPOPs.remove(popName);
+                            blackwatchClassicPOPs.remove(popName);
                         }
                     }
                 } catch (Exception ex) {
@@ -171,7 +177,7 @@ public class EdgeLocationsHelper implements Runnable {
                     allPOPsCheckedForBlackwatch = false;
                     
                     String msg = "Caught exception when checking if pop: " + popName + " is Blackwatch capable, continuing checking the other POPs now." +
-                                 " Current status for this POP having Blackwatch: " + blackwatchPOPs.contains(popName) + ". Leaving this status as is.";
+                                 " Current status for this POP having Blackwatch: " + blackwatchClassicPOPs.contains(popName) + ". Leaving this status as is.";
                     LOG.warn(msg, ex);
                 }
             }
@@ -191,10 +197,10 @@ public class EdgeLocationsHelper implements Runnable {
     }
     
     /**
-     * Helper to get the current set of POPs known to the EdgeOperatorService.
+     * Helper to get the current set of POPs known to the EdgeOperatorService. Protected for unit-tests.
      * @return Set<String> representing POP names known to the EdgeOperatorService.
      */
-    private Set<String> getCloudFrontPOPs() {
+    protected Set<String> getCloudFrontClassicPOPs() {
         Set<String> cloudfrontPOPs = new HashSet<>();
         
         GetPOPsCall getPOPsCall = cloudfrontClient.newGetPOPsCall();
@@ -203,10 +209,16 @@ public class EdgeLocationsHelper implements Runnable {
         while (numAttempts++ < MAX_POP_NAMES_REFRESH_ATTEMPTS) {
             try {
                 GetPOPsResult cfGetPOPsResult = getPOPsCall.call();
-                LOG.debug("List of CloudFront POPs received: " + cfGetPOPsResult.getPOPList() + " after refreshing with EdgeOperatorService.");
+                LOG.info("List of CloudFront POPs received: " + cfGetPOPsResult.getPOPList() + " after refreshing with EdgeOperatorService.");
                 
                 for (String popName : cfGetPOPsResult.getPOPList()) {
-                    cloudfrontPOPs.add(popName.toUpperCase());
+                    String popNameUpperCase = popName.toUpperCase().trim();
+                    Matcher matcher = CF_METRO_POP_PATTERN.matcher(popNameUpperCase);
+                    if (matcher.matches()) {
+                        LOG.info("Skipping the pop: " + popName + " whose name represents a metro-POP satisfying the pattern: " + CF_METRO_POP_PATTERN.pattern());
+                        continue;
+                    }
+                    cloudfrontPOPs.add(popNameUpperCase);
                 }
                 break;
             } catch (Exception ex) {
@@ -243,7 +255,7 @@ public class EdgeLocationsHelper implements Runnable {
                 ListDNSServersResponse listDNSServersResponse = listDNSServersCall.call(listDNSServersRequest);
                 for (DNSServer dnsServer : listDNSServersResponse.getResults()) {
                     route53POPs.add(dnsServer.getPOP().toUpperCase());
-                    LOG.debug("Received of Route53 POP: " + dnsServer.getPOP() + " after refreshing the listDNSServers with DaasControlAPIService.");
+                    LOG.info("Received of Route53 POP: " + dnsServer.getPOP() + " after refreshing the listDNSServers with DaasControlAPIService.");
                 }
                 break;
             } catch (Exception ex) {

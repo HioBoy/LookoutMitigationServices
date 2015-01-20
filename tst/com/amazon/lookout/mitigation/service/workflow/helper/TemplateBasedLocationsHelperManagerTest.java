@@ -32,7 +32,7 @@ public class TemplateBasedLocationsHelperManagerTest {
         Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, new HashSet<String>());
         TemplateBasedLocationsManager manager = new TemplateBasedLocationsManager(helper);
         
-        when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
+        when(locationsHelper.getAllNonBlackwatchClassicPOPs()).thenReturn(nonBWLocations);
         
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");
@@ -50,7 +50,7 @@ public class TemplateBasedLocationsHelperManagerTest {
         Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, nonBWLocations);
         TemplateBasedLocationsManager manager = new TemplateBasedLocationsManager(helper);
         
-        when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
+        when(locationsHelper.getAllNonBlackwatchClassicPOPs()).thenReturn(nonBWLocations);
         
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");

@@ -30,7 +30,7 @@ public class Route53SingleCustomerTemplateLocationsHelperTest {
         Set<String> ciscoLocations = Sets.newHashSet("POP1");
         Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
         Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, ciscoLocations);
-        when(locationsHelper.getAllNonBlackwatchPOPs()).thenReturn(nonBWLocations);
+        when(locationsHelper.getAllNonBlackwatchClassicPOPs()).thenReturn(nonBWLocations);
         
         // RateLimit MitigationTemplate
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
