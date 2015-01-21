@@ -73,6 +73,10 @@ public class BlackwatchLocationsHelper {
     public static final String METRIC_QUERY_END = "now";
     
     private static final String NUM_ATTEMPTS_METRIC_KEY = "NumAttempts";
+    private static final String LDAP_LOOKUP_SUCCESS_METRIC_KEY = "BWHostLDAPLookupSuccess";
+    private static final String LDAP_LOOKUP_FAILED_METRIC_KEY = "BWHostLDAPLookupFailed";
+    private static final String MWS_QUERY_SUCCESS_METRIC_KEY = "BWInlineMWSQuerySuccess";
+    private static final String MWS_QUERY_FAILED_METRIC_KEY = "BWInlineMWSQueryFailed";
     
     public static final String METRIC_NOT_FOUND_EXCEPTION_MESSAGE = "MetricNotFound: No metrics matched your request parameters";
     
@@ -114,6 +118,11 @@ public class BlackwatchLocationsHelper {
         try (TSDMetrics subMetrics = metrics.newSubMetrics("isBlackwatchPOP")) {
             Validate.notEmpty(popName);
             
+            subMetrics.addZero(LDAP_LOOKUP_SUCCESS_METRIC_KEY);
+            subMetrics.addZero(LDAP_LOOKUP_FAILED_METRIC_KEY);
+            subMetrics.addZero(MWS_QUERY_SUCCESS_METRIC_KEY);
+            subMetrics.addZero(MWS_QUERY_FAILED_METRIC_KEY);
+            
             String hostclass = createBWHostclassForPOP(popName);
             
             int numAttempts = 0;
@@ -125,6 +134,7 @@ public class BlackwatchLocationsHelper {
                         List<Map<String, List<Object>>> ldapResult = ldapProvider.search(BASE_DISTINGUISHED_NAME, "(" + HOSTCLASS_LDAP_NAME + "=" + hostclass + 
                                                                                          ")", Integer.MAX_VALUE, ImmutableList.of("cn"));
                         List<String> serversList = ldapProvider.toSimpleList(ldapResult, "cn");
+                        subMetrics.addOne(LDAP_LOOKUP_SUCCESS_METRIC_KEY);
                         
                         // If we don't have any BW hosts build for this POP, return false.
                         if (serversList.isEmpty()) {
@@ -141,6 +151,7 @@ public class BlackwatchLocationsHelper {
                                 Thread.sleep(SLEEP_BETWEEN_ATTEMPTS_IN_MILLIS);
                             } catch (InterruptedException ignored) {}
                         } else {
+                            subMetrics.addOne(LDAP_LOOKUP_FAILED_METRIC_KEY);
                             LOG.warn("Unable to poll LDAP to find if Blackwatch has hosts built in pop: " + popName + " after: " + numAttempts + 
                                      " number of attempts. Giving up checking with LDAP and now checking BW's MWS metricfor this pop.");
                         }
@@ -174,6 +185,9 @@ public class BlackwatchLocationsHelper {
         int numAttempts = 0;
         TSDMetrics subMetrics = metrics.newSubMetrics("isBlackwatchPOP.hasRecentDataForBWMetric");
         try {
+            subMetrics.addZero(MWS_QUERY_SUCCESS_METRIC_KEY);
+            subMetrics.addZero(MWS_QUERY_FAILED_METRIC_KEY);
+            
             Validate.notEmpty(popName);
             
             Map<String, String> dimensions = new HashMap<>(mwsMetricBaseDimensions);
@@ -189,6 +203,8 @@ public class BlackwatchLocationsHelper {
                 try {
                     GetMetricDataRequest getMetricDataRequest = new GetMetricDataRequest(statistic, timeRange);
                     GetMetricDataResponse response = (GetMetricDataResponse) mwsQueryClient.requestResponse(getMetricDataRequest);
+                    
+                    subMetrics.addOne(MWS_QUERY_SUCCESS_METRIC_KEY);
                     return hasDataAboveThreshold(response);
                 } catch (Exception ex) {
                     // If the exception is for the metric not being found, then that either implies that BW never published metrics for this POP or it has stopped for a long time (typically 30 days).
@@ -209,6 +225,7 @@ public class BlackwatchLocationsHelper {
                     }
                 }
             }
+            subMetrics.addOne(MWS_QUERY_FAILED_METRIC_KEY);
             String msg = "Unable to query MWS for metric dimensions:" + dimensions + " for POP: " + popName + " after: " + numAttempts + " number of attempts";
             LOG.warn(msg, lastException);
             throw new RuntimeException(msg, lastException);

@@ -53,8 +53,11 @@ public class EdgeLocationsHelper implements Runnable {
     private static final int MAX_POP_NAMES_REFRESH_ATTEMPTS = 3;
 
     private static final String ROUTE53_POP_NAMES_REFRESH_METRIC = "Route53Refresh";
+    private static final String ROUTE53_POP_NAMES_REFRESH_FAILED_METRIC = "Route53RefreshFailed";
     private static final String CLOUDFRONT_POP_NAMES_REFRESH_METRIC = "EdgeServicesRefresh";
+    private static final String CLOUDFRONT_POP_NAMES_REFRESH_FAILED_METRIC = "EdgeServicesRefreshFailed";
     private static final String BLACKWATCH_POP_CHECK_METRIC = "BlackwatchCheck";
+    private static final String BLACKWATCH_POP_CHECK_FAILED_METRIC = "BlackwatchCheckFailed";
     
     // If any CF POP has a -M<some number> in its name, then it is a metro POP. Examples of class POP: SFO5, DFW3. Examples of metro POPs: SFO5-M1, SFO20-M2.
     // Pattern is thread-safe and hence using a static final instance.
@@ -159,10 +162,12 @@ public class EdgeLocationsHelper implements Runnable {
             // the edge customer APIs.
             try {
                 refreshedPOPsList.addAll(getCloudFrontClassicPOPs());
-                metrics.addCount(CLOUDFRONT_POP_NAMES_REFRESH_METRIC, 1);
+                metrics.addOne(CLOUDFRONT_POP_NAMES_REFRESH_METRIC);
+                metrics.addZero(CLOUDFRONT_POP_NAMES_REFRESH_FAILED_METRIC);
             } catch (Exception ex) {
                 allActionsSuccessful = false;
-                metrics.addCount(CLOUDFRONT_POP_NAMES_REFRESH_METRIC, 0);
+                metrics.addZero(CLOUDFRONT_POP_NAMES_REFRESH_METRIC);
+                metrics.addOne(CLOUDFRONT_POP_NAMES_REFRESH_FAILED_METRIC);
                 
                 String msg = "Caught exception when getting back CloudFrontPOPs, not updating any CloudFrontPOPs at this point";
                 LOG.warn(msg, ex);
@@ -173,10 +178,12 @@ public class EdgeLocationsHelper implements Runnable {
             // on a valid POP due to some bug in the edge customer APIs. 
             try {
                 refreshedPOPsList.addAll(getRoute53POPs());
-                metrics.addCount(ROUTE53_POP_NAMES_REFRESH_METRIC, 1);
+                metrics.addOne(ROUTE53_POP_NAMES_REFRESH_METRIC);
+                metrics.addZero(ROUTE53_POP_NAMES_REFRESH_FAILED_METRIC);
             } catch (Exception ex) {
                 allActionsSuccessful = false;
-                metrics.addCount(ROUTE53_POP_NAMES_REFRESH_METRIC, 0);
+                metrics.addZero(ROUTE53_POP_NAMES_REFRESH_METRIC);
+                metrics.addOne(ROUTE53_POP_NAMES_REFRESH_FAILED_METRIC);
                 
                 String msg = "Caught exception when getting back Route53POPs, not updating any Route53POPs at this point";
                 LOG.warn(msg, ex);
@@ -185,6 +192,12 @@ public class EdgeLocationsHelper implements Runnable {
             // If the list of all pops has changed, then update.
             if (!refreshedPOPsList.equals(allClassicPOPs)) {
                 allClassicPOPs.addAll(refreshedPOPsList);
+                
+                // If all actions are successful above, then we have a complete list of POPs from Route53 and CloudFront, hence we only retain the list of 
+                // POPs obtained from the respective calls, removing all other POPs which might not be relevant to either services anymore.
+                if (allActionsSuccessful) {
+                    allClassicPOPs.retainAll(refreshedPOPsList);
+                }
             }
             
             // Also refresh the list of BW POPs here.
@@ -211,9 +224,11 @@ public class EdgeLocationsHelper implements Runnable {
             }
             
             if (allPOPsCheckedForBlackwatch) {
-                metrics.addCount(BLACKWATCH_POP_CHECK_METRIC, 1);
+                metrics.addOne(BLACKWATCH_POP_CHECK_METRIC);
+                metrics.addZero(BLACKWATCH_POP_CHECK_FAILED_METRIC);
             } else {
-                metrics.addCount(BLACKWATCH_POP_CHECK_METRIC, 0);
+                metrics.addZero(BLACKWATCH_POP_CHECK_METRIC);
+                metrics.addOne(BLACKWATCH_POP_CHECK_FAILED_METRIC);
             }
             
             if (allActionsSuccessful) {
