@@ -1,0 +1,9 @@
+# File containing the test list of POPs.
+ARN1,true
+BOM2, false
+SFO5, true
+GIG50, true
+MAA3, true
+SEA19, true, extra fields
+DFW3
+MIA50,false

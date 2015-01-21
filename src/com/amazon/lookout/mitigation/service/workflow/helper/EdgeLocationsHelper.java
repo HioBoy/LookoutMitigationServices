@@ -1,13 +1,21 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import java.beans.ConstructorProperties;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.PreDestroy;
 import javax.annotation.concurrent.ThreadSafe;
 
 import lombok.NonNull;
@@ -16,6 +24,7 @@ import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.amazon.aws158.commons.io.FileUtils;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.daas.control.DNSServer;
@@ -30,7 +39,11 @@ import com.google.common.collect.Sets;
 
 /**
  * Helper that helps in identifying the POP locations for deployment. Currently (01/2015) this locations helper only exposes classic (non-Metro) POPs.
- *
+ * 
+ * This class also reads the list of POPs and their corresponding BW/non-BW flag from disk on startup, to accommodate for any failures to communicate
+ * with any Route53/EdgeOperatorService APIs - allowing the MitigationService to continue working with the last known list of POPs.
+ * In accordance with this, this helper also flushes the current list of POPs and their BW/non-BW status to disk when it is about to shutdown.
+ * 
  */
 @ThreadSafe
 public class EdgeLocationsHelper implements Runnable {
@@ -47,6 +60,15 @@ public class EdgeLocationsHelper implements Runnable {
     // Pattern is thread-safe and hence using a static final instance.
     private static final Pattern CF_METRO_POP_PATTERN = Pattern.compile("^[A-Z0-9]+-M[1-9]+$");
     
+    public static final String POPS_LIST_FILE_NAME = "popsList";
+    private static final String FILE_NEW_SUFFIX = ".new";
+    public static final String POPS_LIST_FILE_FIELDS_DELIMITER = ",";
+    public static final String POPS_LIST_FILE_COMMENTS_KEY = "#";
+    public static final String POPS_LIST_FILE_CHARSET = "UTF-8";
+    
+    private static final String POPS_LIST_READ_SUCCESSFULLY_KEY = "PopsListReadSuccessfully";
+    private static final String POPS_LIST_FLUSHED_SUCCESSFULLY_KEY = "PopsListFlushedSuccessfully";
+    
     // Maintain a flag that indicates that the refresh of POP names and the checks if they are Blackwatch capable have been completed at least once.
     private final AtomicBoolean locationsRefreshAtleastOnce = new AtomicBoolean(false);
     
@@ -60,11 +82,13 @@ public class EdgeLocationsHelper implements Runnable {
     private final DaasControlAPIServiceV20100701Client daasClient;
     private final BlackwatchLocationsHelper bwLocationsHelper;
     private final int sleepBetweenRetriesInMillis;
+    private final String popsListDiskCacheDirName;
     private final MetricsFactory metricsFactory;
 
-    @ConstructorProperties({"cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries", "metricsFactory"})
+    @ConstructorProperties({"cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries", "popsListDir", "metricsFactory"})
     public EdgeLocationsHelper(@NonNull EdgeOperatorServiceClient cloudfrontClient, @NonNull DaasControlAPIServiceV20100701Client daasClient,
-                               @NonNull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, @NonNull MetricsFactory metricsFactory) {
+                               @NonNull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, 
+                               @NonNull String popsListDiskCacheDirName, @NonNull MetricsFactory metricsFactory) {
         this.cloudfrontClient = cloudfrontClient;
         this.daasClient = daasClient;
         this.bwLocationsHelper = bwLocationsHelper;
@@ -72,8 +96,12 @@ public class EdgeLocationsHelper implements Runnable {
         Validate.isTrue(sleepBetweenRetriesInMillis > 0);
         this.sleepBetweenRetriesInMillis = sleepBetweenRetriesInMillis;
         
+        Validate.notEmpty(popsListDiskCacheDirName);
+        this.popsListDiskCacheDirName = popsListDiskCacheDirName;
+        
         this.metricsFactory = metricsFactory;
         
+        loadPOPsFromDiskOnStartup(popsListDiskCacheDirName);
         refreshPOPLocations();
     }
     
@@ -274,6 +302,115 @@ public class EdgeLocationsHelper implements Runnable {
         }
         
         return route53POPs;
+    }
+    
+    /**
+     * Helper to read the list of POPs and their isBW/non-BW status from a file on disk.
+     * The file is expected to have each line define the POP name and a comma separated value of true/false indicating whether the POP has BW or not. (Eg line: ARN1,true)
+     * The file could also have comments if the line starts with the POPS_LIST_FILE_COMMENTS_KEY character.
+     * @param popsListDiskCacheDir Directory name which contains the POPS_LIST_FILE_NAME file containing the list of POPs and their isBW/non-BW status.
+     */
+    protected void loadPOPsFromDiskOnStartup(@NonNull String popsListDiskCacheDir) {
+        try (TSDMetrics tsdMetrics = new TSDMetrics(metricsFactory, "loadPOPsFromDiskOnStartup")) {
+            tsdMetrics.addZero(POPS_LIST_READ_SUCCESSFULLY_KEY);
+            String pathToListOfPopsOnDisk = popsListDiskCacheDir + "/" + POPS_LIST_FILE_NAME;
+            
+            File popsListFile = new File(pathToListOfPopsOnDisk);
+            if (!popsListFile.exists()) {
+                LOG.warn("File " + pathToListOfPopsOnDisk + " for list of POPs doesn't exists on disk.");
+                return;
+            }
+            
+            LOG.info("Loading list of POPs from file " + pathToListOfPopsOnDisk);
+            
+            Set<String> popsReadFromFile = new HashSet<>();
+            Set<String> bwPOPsReadFromFile = new HashSet<>();
+            
+            List<List<String>> lines = null;
+            try {
+                lines = FileUtils.readFile(pathToListOfPopsOnDisk, POPS_LIST_FILE_FIELDS_DELIMITER, POPS_LIST_FILE_COMMENTS_KEY, POPS_LIST_FILE_CHARSET);
+            } catch (IOException ex) {
+                LOG.error("Unable to read the file: " + pathToListOfPopsOnDisk + " containing list of POPs on disk.", ex);
+                return;
+            }
+            
+            for (List<String> line : lines) {
+                if (line.size() < 2) {
+                    LOG.error("[UNEXPECTED_POPS_LIST_FILE_ENTRY] Found a line with less than 2 entries. " +
+                            "Expected each non-comment line to have the format: \"<POPName>,<isBW true/false>. Hence skipping line: " + line);
+                    continue;
+                }
+                
+                String popName = line.get(0).trim();
+                boolean isBWPOP = Boolean.valueOf(line.get(1).trim());
+                
+                popsReadFromFile.add(popName);
+                if (isBWPOP) {
+                    bwPOPsReadFromFile.add(popName);
+                }
+            }
+            
+            allClassicPOPs.addAll(popsReadFromFile);
+            blackwatchClassicPOPs.addAll(bwPOPsReadFromFile);
+            tsdMetrics.addOne(POPS_LIST_READ_SUCCESSFULLY_KEY);
+        }
+    }
+    
+    /**
+     * Flushes the current set of BW POPs this helper knows about, along with their BW/non-BW status to a file on disk.
+     * The file is will have each line define the POP name and a comma separated value of true/false indicating whether the POP has BW or not. (Eg line: ARN1,true)
+     */
+    @PreDestroy
+    public void flushCurrentListOfPOPsToDisk() {
+        try (TSDMetrics tsdMetrics = new TSDMetrics(metricsFactory, "flushCurrentListOfPOPsToDisk")) {
+            tsdMetrics.addZero(POPS_LIST_FLUSHED_SUCCESSFULLY_KEY);
+            LOG.info("Saving list of POPs: " + allClassicPOPs + " to disk, along with their BW/non-BW status.");
+    
+            File popsListDiskCacheDir = new File(popsListDiskCacheDirName);
+            if (!popsListDiskCacheDir.exists() && !popsListDiskCacheDir.mkdirs()) {
+                LOG.warn("Unable to make new directory for storing current list of pops at: " + popsListDiskCacheDir.getAbsolutePath());
+                return;
+            }
+            
+            // If there is already a .new file, delete it and create a new one
+            File newFile = new File(popsListDiskCacheDir, POPS_LIST_FILE_NAME + FILE_NEW_SUFFIX);
+            if (newFile.exists()) {
+                newFile.delete();
+                try {
+                    newFile.createNewFile();
+                } catch (IOException e) {
+                    LOG.error("Unable to create new file for storing current list of pops at: " + newFile.getAbsolutePath());
+                    return;
+                }
+            }
+    
+            BufferedWriter writer = null;
+            try {
+                writer = new BufferedWriter(new FileWriter(newFile));
+                for (String popName : allClassicPOPs) {
+                    String isBWFlag = Boolean.toString(blackwatchClassicPOPs.contains(popName)); 
+                    writer.write(popName + "," + isBWFlag + "\n");
+                }
+            } catch (IOException e) {
+                LOG.error("Unable to write file for pops list ids at: " + newFile.getAbsolutePath(), e);
+                return;
+            } finally {
+                if (writer != null) {
+                    try {
+                        writer.close();
+                    } catch (IOException ignored) {}
+                }
+            }
+    
+            // move with replace current file
+            File currentFile = new File(popsListDiskCacheDir, POPS_LIST_FILE_NAME);
+            try {
+                Files.move(newFile.toPath(), currentFile.toPath(), StandardCopyOption.ATOMIC_MOVE);
+                tsdMetrics.addOne(POPS_LIST_FLUSHED_SUCCESSFULLY_KEY);
+            } catch (IOException ex) {
+                LOG.warn("Failed renaming pops list file " + newFile.getAbsolutePath() + " to file " + currentFile.getAbsolutePath(), ex);
+            }
+        }
     }
     
 }

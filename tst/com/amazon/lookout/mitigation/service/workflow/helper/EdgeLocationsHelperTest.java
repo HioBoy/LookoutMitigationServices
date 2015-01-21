@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
@@ -12,6 +13,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,6 +34,7 @@ import amazon.mws.response.GetMetricDataResponse;
 import amazon.mws.response.ResponseException;
 import amazon.odin.awsauth.OdinAWSCredentialsProvider;
 
+import com.amazon.aws158.commons.io.FileUtils;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.coral.metrics.NullMetricsFactory;
 import com.amazon.daas.control.DNSServer;
@@ -121,7 +124,7 @@ public class EdgeLocationsHelperTest {
         Set<String> expectedAllPOPs = new HashSet<>(edgeServicesPOPs);
         expectedAllPOPs.addAll(daasPOPs);
         
-        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
+        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, "dir", new NullMetricsFactory());
         Set<String> allPOPs = locationsHelper.getAllClassicPOPs();
         assertEquals(allPOPs, expectedAllPOPs);
         
@@ -156,7 +159,7 @@ public class EdgeLocationsHelperTest {
         result.add(hostclassSearchResult);
         when(provider.search("ou=systems,ou=infrastructure,o=amazon.com", "(amznDiscoHostClass=AWS-EDGE-POP5-BW)", Integer.MAX_VALUE, ImmutableList.of("cn"))).thenReturn(result);
         
-        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
+        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, "dir", new NullMetricsFactory());
         
         Set<String> pops = locationsHelper.getAllClassicPOPs();
         assertEquals(pops.size(), 0);
@@ -194,7 +197,7 @@ public class EdgeLocationsHelperTest {
         result.add(hostclassSearchResult);
         when(provider.search("ou=systems,ou=infrastructure,o=amazon.com", "(amznDiscoHostClass=AWS-EDGE-POP5-BW)", Integer.MAX_VALUE, ImmutableList.of("cn"))).thenReturn(result);
         
-        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
+        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, "dir", new NullMetricsFactory());
         
         Set<String> pops = locationsHelper.getAllClassicPOPs();
         assertEquals(pops.size(), 3);
@@ -235,7 +238,7 @@ public class EdgeLocationsHelperTest {
         MonitoringQueryClientProvider monitoringQueryClientProvider = new MockMonitoringQueryClientProvider(odinCredsProvider, mockMonitoringQueryClient);
         BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false, monitoringQueryClientProvider, "Prod", "Total_Mitigated_Packets_RX", 5);
         
-        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
+        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, "dir", new NullMetricsFactory());
         
         Set<String> pops = locationsHelper.getAllClassicPOPs();
         assertEquals(pops.size(), 3);
@@ -286,7 +289,7 @@ public class EdgeLocationsHelperTest {
         Set<String> expectedAllPOPs = new HashSet<>(edgeServicesPOPs);
         expectedAllPOPs.addAll(daasPOPs);
         
-        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
+        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, "dir", new NullMetricsFactory());
         Set<String> allPOPs = locationsHelper.getAllClassicPOPs();
         assertEquals(allPOPs, expectedAllPOPs);
         
@@ -366,7 +369,7 @@ public class EdgeLocationsHelperTest {
         Set<String> expectedAllPOPs = new HashSet<>(edgeServicesPOPs);
         expectedAllPOPs.addAll(daasPOPs);
         
-        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
+        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, "dir", new NullMetricsFactory());
         Set<String> allPOPs = locationsHelper.getAllClassicPOPs();
         assertEquals(allPOPs, expectedAllPOPs);
         
@@ -388,10 +391,10 @@ public class EdgeLocationsHelperTest {
     
     @Test
     public void testFilteringOutMetroCFPOPs() throws Exception {
-    	LdapProvider ldapProvider = mock(LdapProvider.class);
-    	BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(ldapProvider, false, getMonitoringQueryClientProviderForBWPOP(), "Prod", "Total_Mitigated_Packets_RX", 5);
-    	
-    	EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
+        LdapProvider ldapProvider = mock(LdapProvider.class);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(ldapProvider, false, getMonitoringQueryClientProviderForBWPOP(), "Prod", "Total_Mitigated_Packets_RX", 5);
+        
+        EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
         GetPOPsCall edgeServicesGetPOPsCall = mock(GetPOPsCall.class);
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
         List<String> edgeServicesPOPs = Lists.newArrayList("POP1", "POP2", "POP5", "SFO5", "SFO5-M1", "SFO50-M3", "SFO20-M2", "LHR51-M2");
@@ -409,9 +412,101 @@ public class EdgeLocationsHelperTest {
         when(dnsServersCall.call(any(ListDNSServersRequest.class))).thenReturn(dnsServersResponse);
         when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
         
-    	EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, new NullMetricsFactory());
-    	Set<String> cfClassicPOPs = locationsHelper.getCloudFrontClassicPOPs();
-    	assertNotNull(cfClassicPOPs);
-    	assertEquals(Sets.newHashSet("POP1", "POP2", "POP5", "SFO5"), cfClassicPOPs);
+        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, "dir", new NullMetricsFactory());
+        Set<String> cfClassicPOPs = locationsHelper.getCloudFrontClassicPOPs();
+        assertNotNull(cfClassicPOPs);
+        assertEquals(Sets.newHashSet("POP1", "POP2", "POP5", "SFO5"), cfClassicPOPs);
+    }
+    
+    @Test
+    public void testLoadPOPsFromDiskOnStartup() throws Exception {
+        LdapProvider ldapProvider = mock(LdapProvider.class);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(ldapProvider, false, getMonitoringQueryClientProviderForBWPOP(), "Prod", "Total_Mitigated_Packets_RX", 5);
+        
+        EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
+        GetPOPsCall edgeServicesGetPOPsCall = mock(GetPOPsCall.class);
+        GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
+        List<String> edgeServicesPOPs = Lists.newArrayList("POP1");
+        edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
+        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult);
+        when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
+        
+        DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
+        ListDNSServersCall dnsServersCall = mock(ListDNSServersCall.class);
+        ListDNSServersResponse dnsServersResponse = new ListDNSServersResponse();
+        List<String> daasPOPs = Lists.newArrayList("POP1");
+        DNSServer serverPOP1 = new DNSServer();
+        serverPOP1.setPOP(daasPOPs.get(0));
+        dnsServersResponse.setResults(Lists.newArrayList(serverPOP1));
+        when(dnsServersCall.call(any(ListDNSServersRequest.class))).thenReturn(dnsServersResponse);
+        when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
+        
+        Set<String> validPopsInTestFile = Sets.newHashSet("ARN1", "BOM2", "SFO5", "GIG50", "MAA3", "SEA19", "MIA50");
+        Set<String> expectedPOPs = Sets.newHashSet("POP1");
+        expectedPOPs.addAll(validPopsInTestFile);
+        
+        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, TestUtils.getTstDataPath(EdgeLocationsHelper.class), new NullMetricsFactory());
+        Set<String> allClassicPOPs = locationsHelper.getAllClassicPOPs();
+        assertNotNull(allClassicPOPs);
+        assertEquals(expectedPOPs, allClassicPOPs);
+    }
+    
+    @Test
+    public void testFlushPOPsFromDisk() throws Exception {
+        EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
+        GetPOPsCall edgeServicesGetPOPsCall = mock(GetPOPsCall.class);
+        GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
+        List<String> edgeServicesPOPs = Lists.newArrayList("POP1");
+        edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
+        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult);
+        when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
+        
+        DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
+        ListDNSServersCall dnsServersCall = mock(ListDNSServersCall.class);
+        ListDNSServersResponse dnsServersResponse = new ListDNSServersResponse();
+        List<String> daasPOPs = Lists.newArrayList("POP1", "POP5");
+        DNSServer serverPOP1 = new DNSServer();
+        serverPOP1.setPOP(daasPOPs.get(0));
+        DNSServer serverPOP2 = new DNSServer();
+        serverPOP2.setPOP(daasPOPs.get(1));
+        dnsServersResponse.setResults(Lists.newArrayList(serverPOP1, serverPOP2));
+        when(dnsServersCall.call(any(ListDNSServersRequest.class))).thenReturn(dnsServersResponse);
+        when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
+        
+        LdapProvider provider = mock(LdapProvider.class);
+        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false, getMonitoringQueryClientProviderForBWPOP(), "Prod", "Total_Mitigated_Packets_RX", 5);
+        Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
+        List<Object> hosts = new ArrayList<>();
+        hosts.add("POP5");
+        hostclassSearchResult.put("POP5", hosts);
+        List<Map<String, List<Object>>> result = new ArrayList<>();
+        result.add(hostclassSearchResult);
+        when(provider.search("ou=systems,ou=infrastructure,o=amazon.com", "(amznDiscoHostClass=AWS-EDGE-POP5-BW)", Integer.MAX_VALUE, ImmutableList.of("cn"))).thenReturn(result);
+        
+        Set<String> expectedPOPs = Sets.newHashSet("POP1", "POP5");
+        
+        String tempDir = TestUtils.getTempDataPath(EdgeLocationsHelper.class);
+        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, tempDir, new NullMetricsFactory());
+        Set<String> allClassicPOPs = locationsHelper.getAllClassicPOPs();
+        assertEquals(expectedPOPs, allClassicPOPs);
+        
+        locationsHelper.flushCurrentListOfPOPsToDisk();
+        
+        File flushedFile = new File(tempDir, EdgeLocationsHelper.POPS_LIST_FILE_NAME);
+        assertTrue(flushedFile.exists());
+        
+        List<List<String>> lines = FileUtils.readFile(flushedFile.getAbsolutePath(), EdgeLocationsHelper.POPS_LIST_FILE_FIELDS_DELIMITER, 
+                                                      EdgeLocationsHelper.POPS_LIST_FILE_COMMENTS_KEY, EdgeLocationsHelper.POPS_LIST_FILE_CHARSET);
+        assertNotNull(lines);
+        
+        assertEquals(lines.size(), 2);
+        
+        List<String> line1 = lines.get(0);
+        List<String> line2 = lines.get(1);
+        assertTrue((line1.get(0).equals("POP1") && line2.get(0).equals("POP5")) || (line1.get(0).equals("POP5") && line2.get(0).equals("POP1")));
+        boolean isPOP1BW = (line1.get(0).equals("POP1") ? Boolean.valueOf(line1.get(1)) : Boolean.valueOf(line2.get(1)));
+        boolean isPOP5BW = (line1.get(0).equals("POP5") ? Boolean.valueOf(line1.get(1)) : Boolean.valueOf(line2.get(1)));
+        assertFalse(isPOP1BW);
+        assertTrue(isPOP5BW);
     }
 }
