@@ -14,11 +14,10 @@
         <constructor-arg>
             <ref bean="chain"/>
         </constructor-arg>
-        <!-- 
-        waiting for 5 minutes for coral framework to clean up its thread. 
-        More detail can be found here: https://issues.amazon.com/SF-1578 
-        -->
-        <constructor-arg value="300000"/> 
+        <!-- Waiting for 2 minutes for coral framework to clean up its threads. (Some context here: https://issues.amazon.com/SF-1578)
+             Note: This timeout HAS to be smaller then the shutdownTimeout for the ProcessManager (currently 01/2015 configured to be 200s) to be meaningful, 
+                   else the process manager will simply kill the process, without letting spring shutdown the beans it has created. -->
+        <constructor-arg value="120000"/> 
     </bean>
 
     <!-- Configure the Chain which contains the list of Handlers to apply -->
