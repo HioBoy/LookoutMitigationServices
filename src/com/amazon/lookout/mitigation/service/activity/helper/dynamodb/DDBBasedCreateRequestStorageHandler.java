@@ -1,7 +1,9 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -274,12 +276,18 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
     private Map<String, Condition> createQueryFiltersToCheckForDuplicates() {
         Map<String, Condition> queryFilters = new HashMap<>();
         
-        AttributeValue attrVal = new AttributeValue(WorkflowStatus.FAILED);
-        Condition condition = new Condition().withComparisonOperator(ComparisonOperator.NE);
-        condition.setAttributeValueList(Arrays.asList(attrVal));
+        String[] workflowStatuses = WorkflowStatus.values();
+        List<AttributeValue> attrValues = new ArrayList<>(workflowStatuses.length - 2);
+        for (String workflowStatus : workflowStatuses) {
+            if (!workflowStatus.equals(WorkflowStatus.FAILED) && !workflowStatus.equals(WorkflowStatus.INDETERMINATE)) {
+                attrValues.add(new AttributeValue(workflowStatus));       
+            }
+        }
+        Condition condition = new Condition().withComparisonOperator(ComparisonOperator.IN).withAttributeValueList(attrValues);
+        
         queryFilters.put(WORKFLOW_STATUS_KEY, condition);
         
-        attrVal = new AttributeValue(RequestType.DeleteRequest.name());
+        AttributeValue attrVal = new AttributeValue(RequestType.DeleteRequest.name());
         condition = new Condition().withComparisonOperator(ComparisonOperator.NE);
         condition.setAttributeValueList(Arrays.asList(attrVal));
         queryFilters.put(REQUEST_TYPE_KEY, condition);

@@ -434,7 +434,7 @@ public class RequestsReaperTest {
         when(reaper.getUnsuccessfulUnreapedRequests(anyString(), anyMap())).thenReturn(result1).thenReturn(result2).thenReturn(null);
         
         List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
-        assertEquals(requestsToReap.size(), 3);
+        assertEquals(3, requestsToReap.size());
         
         RequestToReap request3 = requestsToReap.get(0);
         assertEquals(request3.getWorkflowIdStr(), item3.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN());

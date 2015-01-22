@@ -68,6 +68,9 @@ public class RequestsReaper implements Runnable {
     // Number of seconds to allow workflow to perform DDB updates once the workflow has completed.
     private static final int SECONDS_TO_ALLOW_WORKFLOW_DDB_UPDATES = 60;
     
+    // Number of seconds to attempt to reap request
+    private static final int SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION = 60 * 60 * 24 * 7;//7 days.
+    
     private static final int MAX_SWF_QUERY_ATTEMPTS = 3;
     private static final int SWF_RETRY_SLEEP_MILLIS_MULTIPLER = 100;
     
@@ -245,6 +248,15 @@ public class RequestsReaper implements Runnable {
                                                 " at locations: " + locations + " with RequestDate: " + requestDateTime + " doesn't show as CLOSED in SWF, hence skipping any reaping activity.");
                                     continue;
                                 }
+                            }
+                            
+                            // If the request has a creation time before SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION, we stop attempting to reap it.
+                            DateTime now = new DateTime(DateTimeZone.UTC);
+                            if (now.minusSeconds(SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION).isAfter(requestDateInMillis)) {
+                                LOG.error("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
+                                          " at locations: " + locations + " has not being successfully reaped  within the last: " + SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION + 
+                                          " number of seconds, stop attempting to reap. Workflow RequestDate: " + requestDateTime);
+                                continue;
                             }
                             
                             // Get instances for the workflow corresponding to the request being evaluated.

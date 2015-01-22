@@ -43,14 +43,14 @@
                 <bean class="com.amazon.coral.validate.ValidationHandler"/>
                 
                 <!-- This always comes last.-->
-                <bean class="com.amazon.coral.spring.SpringActivityHandler"/>
-                <property name="globalInterceptorClassNames">
-                    <list>
-                        <!-- Log request/reply. See https://w.amazon.com/index.php/Coral/Manual/Logging/RequestLogging -->
-                        <value>com.amazon.coral.service.RequestLoggingInterceptor</value>
-                    </list>
-                </property>
-            </bean>
+                <bean class="com.amazon.coral.spring.SpringActivityHandler">
+                    <property name="globalInterceptorClassNames">
+                        <list>
+                            <!-- Log request/reply. See https://w.amazon.com/index.php/Coral/Manual/Logging/RequestLogging -->
+                            <value>com.amazon.coral.service.RequestLoggingInterceptor</value>
+                        </list>
+                    </property>
+                </bean>
             </list>
         </property>
     </bean>
@@ -62,7 +62,7 @@
         -->
         <property name="logInput"><value>true</value></property>
         <property name="logOutput"><value>true</value></property>
-        <property name="logOnlyOnError"><value>true</value></property>    
+        <property name="logOnlyOnError"><value>false</value></property>    
     </bean>
     
     <bean id="AuthenticationHandler" class="com.amazon.coral.service.ARSAuthenticationHelper" depends-on="appConfigHelper">
