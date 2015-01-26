@@ -217,15 +217,23 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
-        DDBItemBuilder itemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
-                                                         .withNumericAttribute(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, request.getMitigationVersion())
-                                                         .withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, request.getMitigationTemplate())
-                                                         .withStringAttribute(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, deviceNameAndScope.getDeviceScope().name())
-                                                         .withStringAttribute(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, WorkflowStatus.SUCCEEDED)
-                                                         .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 2)
-                                                         .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.DeleteRequest.name());
+        DDBItemBuilder deleteItemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
+                                                               .withNumericAttribute(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, request.getMitigationVersion())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, request.getMitigationTemplate())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, deviceNameAndScope.getDeviceScope().name())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, WorkflowStatus.SUCCEEDED)
+                                                               .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 2)
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.DeleteRequest.name());
         
-        QueryResult queryResult = new QueryResult().withCount(1).withItems(itemBuilder.build());
+        DDBItemBuilder createItemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
+                                                               .withNumericAttribute(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, request.getMitigationVersion())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, request.getMitigationTemplate())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, deviceNameAndScope.getDeviceScope().name())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, WorkflowStatus.SUCCEEDED)
+                                                               .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 1)
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.CreateRequest.name());
+        
+        QueryResult queryResult = new QueryResult().withCount(2).withItems(deleteItemBuilder.build(), createItemBuilder.build());
         
         Throwable caughtException = null;
         try {
@@ -236,6 +244,50 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof DuplicateRequestException400);
+    }
+    
+    /**
+     * Test the case where there already exists a successful request for deleting the same mitigation as the current request. However, the mitigation instance
+     * deleted by this existing request was an old one. Since there is a newer create request after the previously successful delete request, the 
+     * current delete request should be allowed.
+     */
+    @Test
+    public void testCaseWhereDeleteRequestExistsButForAnOldCreateRequest() {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        DDBBasedDeleteRequestStorageHandler storageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
+        
+        DeleteMitigationFromAllLocationsRequest request = createDeleteMitigationRequest();
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        DDBItemBuilder deleteItemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
+                                                               .withNumericAttribute(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, request.getMitigationVersion())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, request.getMitigationTemplate())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, deviceNameAndScope.getDeviceScope().name())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, WorkflowStatus.SUCCEEDED)
+                                                               .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 2)
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.DeleteRequest.name());
+        
+        DDBItemBuilder create1ItemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
+                                                               .withNumericAttribute(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, request.getMitigationVersion())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, request.getMitigationTemplate())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, deviceNameAndScope.getDeviceScope().name())
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, WorkflowStatus.SUCCEEDED)
+                                                               .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 1)
+                                                               .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.CreateRequest.name());
+        
+        DDBItemBuilder create2ItemBuilder = new DDBItemBuilder().withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, request.getMitigationName())
+                                                                   .withNumericAttribute(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, request.getMitigationVersion())
+                                                                   .withStringAttribute(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, request.getMitigationTemplate())
+                                                                   .withStringAttribute(DDBBasedRequestStorageHandler.DEVICE_SCOPE_KEY, deviceNameAndScope.getDeviceScope().name())
+                                                                   .withStringAttribute(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, WorkflowStatus.SUCCEEDED)
+                                                                   .withNumericAttribute(DDBBasedRequestStorageHandler.WORKFLOW_ID_KEY, 3)
+                                                                   .withStringAttribute(DDBBasedRequestStorageHandler.REQUEST_TYPE_KEY, RequestType.CreateRequest.name());
+        
+        QueryResult queryResult = new QueryResult().withCount(3).withItems(create1ItemBuilder.build(), deleteItemBuilder.build(), create2ItemBuilder.build());
+        
+        boolean foundMitigationToDelete = storageHandler.evaluateActiveMitigationsForDDBQueryResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
+                                                                                                      request.getMitigationName(), request.getMitigationTemplate(), request.getMitigationVersion(), tsdMetrics);
+        assertTrue(foundMitigationToDelete);
     }
     
     /**

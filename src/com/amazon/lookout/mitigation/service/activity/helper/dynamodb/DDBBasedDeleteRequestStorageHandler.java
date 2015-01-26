@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
 
 import javax.annotation.Nonnull;
 
@@ -28,6 +29,7 @@ import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 
 /**
  * DDBBasedDeleteRequestStorageHandler is responsible for persisting delete requests into DDB.
@@ -252,6 +254,12 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
         try {
             boolean foundMitigationToDelete = false;
             
+            // Keep a track of the DDB Items which might be potential duplicate delete requests.
+            List<Map<String, AttributeValue>> potentialDuplicateDeletes = Lists.newArrayList();
+            
+            // Keep a track of the previous (create/edit) request that resulted in this mitigation's existance, which the current delete request will be deleting.
+            long requestBeingDeleted = -1;
+
             for (Map<String, AttributeValue> item : result.getItems()) {
                 long existingMitigationWorkflowId = Long.parseLong(item.get(WORKFLOW_ID_KEY).getN());
                 int existingMitigationVersion = Integer.parseInt(item.get(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY).getN());
@@ -273,25 +281,48 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                     LOG.warn(msg);
                     throw new IllegalArgumentException(msg);
                 }
-                
+
                 // If we notice an existing delete request for the same mitigationName and version, then throw back an exception.
                 if (existingRequestType.equals(RequestType.DeleteRequest.name())) {
-                    String existingRequestWorkflowStatus = item.get(WORKFLOW_STATUS_KEY).getS();
+                   String existingRequestWorkflowStatus = item.get(WORKFLOW_STATUS_KEY).getS();
                     if (existingRequestWorkflowStatus.equals(WorkflowStatus.PARTIAL_SUCCESS) || existingRequestWorkflowStatus.equals(WorkflowStatus.INDETERMINATE)) {
-                        LOG.info("Found an existing delete request with jobId: " + existingMitigationWorkflowId + "for mitigation: " + mitigationNameToDelete + " for device: " + 
-                                 deviceName + " in deviceScope: " + deviceScope + " corresponding to template: " + templateForMitigationToDelete + " whose status is: " + 
+                        LOG.info("Found an existing delete request with jobId: " + existingMitigationWorkflowId + "for mitigation: " + mitigationNameToDelete + " for device: " +
+                                 deviceName + " in deviceScope: " + deviceScope + " corresponding to template: " + templateForMitigationToDelete + " whose status is: " +
                                  existingRequestWorkflowStatus + ". Hence not considering this existing delete request as a duplicate.");
-                    } else {
-                        String msg = "Found an existing delete request with jobId: " + existingMitigationWorkflowId + "for mitigation: " + mitigationNameToDelete + " when requesting delete for version: " + 
-                                     versionToDelete + " for device: " + deviceName + " in deviceScope: " + deviceScope + " corresponding to template: " + templateForMitigationToDelete;
-                        LOG.warn(msg);
-                        throw new DuplicateRequestException400(msg);
                     }
+                    potentialDuplicateDeletes.add(item);
+                    continue;
                 }
                 
-                foundMitigationToDelete = true;
+                LOG.error("Found more than 1 instance of the mitigation: " + mitigationNameToDelete + " for deviceName: " + deviceName + " and deviceScope: " + deviceScope +
+                          " and template: " + templateForMitigationToDelete + " to be deleted by this request. Previous request: " + 
+                          requestBeingDeleted + ", found other request: " + existingMitigationWorkflowId + ". Continuing anyway by considering the latest workflowId as the request being deleted.");
+
+                // Track the latest request which caused this mitigation to exist, which will be deleted by this delete request.
+                if (requestBeingDeleted < existingMitigationWorkflowId) {
+                    requestBeingDeleted = existingMitigationWorkflowId;
+                    foundMitigationToDelete = true;
+                }
             }
-            return foundMitigationToDelete;
+
+            // If no mitigation is found that needs to be deleted, return false right here.
+            if (!foundMitigationToDelete) {
+                return false;
+            }
+
+            // Go through the potential delete requests prior to the current one and check if any of them have a workflowId greater than the workflowId which corresponds to the creation
+            // of the mitigation that needs to be deleted. For example: Delete#1 has Id 1, Create#1 has Id 2, Delete#2 has Id 3. In this case, the requestBeingDeleted is Id 2.
+            // The Delete#1 has a lower Id than the requestBeingDeleted and hence not considered a duplicate. But Delete#2 has Id 3 > requestBeingDeleted and hence is considered as a duplicate.
+            for (Map<String, AttributeValue> item : potentialDuplicateDeletes) {
+                long previousDeleteWorkflowId = Long.parseLong(item.get(WORKFLOW_ID_KEY).getN());
+                if (previousDeleteWorkflowId > requestBeingDeleted) {
+                    String msg = "Found an existing delete request with jobId: " + previousDeleteWorkflowId + "for mitigation: " + mitigationNameToDelete + " when requesting delete for " +
+                                 "version: " + versionToDelete + " for device: " + deviceName + " in deviceScope: " + deviceScope + " corresponding to template: " + templateForMitigationToDelete;
+                    LOG.warn(msg);
+                    throw new DuplicateRequestException400(msg);
+                }
+            }
+            return true;
         } finally {
             subMetrics.end();
         }
