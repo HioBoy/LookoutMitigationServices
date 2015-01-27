@@ -294,9 +294,11 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                     continue;
                 }
                 
-                LOG.error("Found more than 1 instance of the mitigation: " + mitigationNameToDelete + " for deviceName: " + deviceName + " and deviceScope: " + deviceScope +
-                          " and template: " + templateForMitigationToDelete + " to be deleted by this request. Previous request: " + 
-                          requestBeingDeleted + ", found other request: " + existingMitigationWorkflowId + ". Continuing anyway by considering the latest workflowId as the request being deleted.");
+                if (requestBeingDeleted > -1) {
+                    LOG.error("Found more than 1 instance of the mitigation: " + mitigationNameToDelete + " for deviceName: " + deviceName + " and deviceScope: " + deviceScope +
+                              " and template: " + templateForMitigationToDelete + " to be deleted by this request. Previous request: " + 
+                              requestBeingDeleted + ", found other request: " + existingMitigationWorkflowId + ". Continuing anyway by considering the latest workflowId as the request being deleted.");
+                }
 
                 // Track the latest request which caused this mitigation to exist, which will be deleted by this delete request.
                 if (requestBeingDeleted < existingMitigationWorkflowId) {
