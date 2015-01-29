@@ -1,11 +1,14 @@
 package com.amazon.lookout.mitigation.service.activity.helper;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.junit.BeforeClass;
@@ -44,12 +47,12 @@ public class ActiveMitigationsFetcherTest {
         RequestInfoHandler requestInfoHandler = mock(RequestInfoHandler.class);
         
         List<ActiveMitigationDetails> activeMitigationDetails = new ArrayList<>();
-        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation1", 1, "TST1", deviceName, 1));
-        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation3", 3, "TST3", deviceName, 1));
-        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation1", 1, "TST2", deviceName, 1));
-        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation2", 2, "TST1", deviceName, 2));
-        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation2", 2, "TST2", deviceName, 2));
-        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation1", 1, "TST3", deviceName, 1));
+        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation1", 1, "TST1", deviceName, 1, new Date().getTime()));
+        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation3", 3, "TST3", deviceName, 1, new Date().getTime()));
+        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation1", 1, "TST2", deviceName, 1, new Date().getTime()));
+        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation2", 2, "TST1", deviceName, 2, new Date().getTime()));
+        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation2", 2, "TST2", deviceName, 2, new Date().getTime()));
+        activeMitigationDetails.add(new ActiveMitigationDetails("Mitigation1", 1, "TST3", deviceName, 1, new Date().getTime()));
         
         when(activeMitigationInfoHandler.getActiveMitigationsForService(serviceName, deviceName, locations, tsdMetrics)).thenReturn(activeMitigationDetails);
         

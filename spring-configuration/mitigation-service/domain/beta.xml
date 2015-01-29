@@ -28,4 +28,6 @@
         <constructor-arg value="Test"/>
     </bean>
     
+    <util:set id="beta.defaultPOPsForEdgeLocationsHelper"/>
+    
 </beans>

@@ -91,6 +91,7 @@ public abstract class DDBBasedRequestStorageHandler {
     
     // Below is a list of relevant keys from the Active Mitigations table.
     public static final String DELETION_DATE_KEY = "DeletionDate";
+    public static final String DEFUNCT_DATE_KEY = "DefunctDate";
     
     // Keys for TSDMetrics.
     private static final String NUM_DDB_PUT_ITEM_ATTEMPTS_KEY = "NumPutAttempts";

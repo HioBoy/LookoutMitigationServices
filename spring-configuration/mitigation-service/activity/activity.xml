@@ -144,6 +144,16 @@
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
         <constructor-arg name="serviceSubnetsMatcher" ref="serviceSubnetsMatcher"/>
+        <constructor-arg name="locationRouterMapper" ref="popLocationToRouterNameHelper"/>
+    </bean>
+    
+    <bean id="popLocationToRouterNameHelper" class="com.amazon.lookout.mitigation.utilities.POPLocationToRouterNameHelper">
+        <constructor-arg name="popLocationtoRoutersOverridesMap">
+            <map>
+                <entry key="G-IAD5" value="iad5-gm-tra-r1"/>
+                <entry key="G-SFO5" value="sfo5-gm-tra-r1"/>
+            </map>
+        </constructor-arg>
     </bean>
 </beans>
 

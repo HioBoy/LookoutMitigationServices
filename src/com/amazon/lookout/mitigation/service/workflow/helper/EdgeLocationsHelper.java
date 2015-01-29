@@ -189,6 +189,8 @@ public class EdgeLocationsHelper implements Runnable {
                 LOG.warn(msg, ex);
             }
             
+            refreshedPOPsList.addAll(defaultPOPs);
+            
             // If the list of all pops has changed, then update.
             if (!refreshedPOPsList.equals(allClassicPOPs)) {
                 allClassicPOPs.addAll(refreshedPOPsList);

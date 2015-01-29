@@ -30,4 +30,8 @@
         <constructor-arg value="Test:Prod"/>
     </bean>
     
+    <util:set id="gamma.defaultPOPsForEdgeLocationsHelper">
+        <value>G-SFO5</value>
+    </util:set>
+    
 </beans>

@@ -19,6 +19,7 @@ import org.springframework.util.CollectionUtils;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.activities.model.ActiveMitigationDetails;
 import com.amazon.lookout.activities.model.MitigationNameAndRequestStatus;
+import com.amazon.lookout.ddb.model.ActiveMitigationsModel;
 import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
@@ -42,10 +43,6 @@ import com.google.common.collect.Sets;
 
 public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandler implements RequestInfoHandler, ActiveMitigationInfoHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedListMitigationsHandler.class);
-    
-    public static final String LOCATION_KEY = "Location";
-    public static final String JOB_ID_KEY = "JobId";
-    public static final String DEVICE_NAME_INDEX = "DeviceName-index";
     
     // Num Attempts + Retry Sleep Configs.
     public static final int DDB_ACTIVITY_MAX_ATTEMPTS = 3;
@@ -165,14 +162,15 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         final TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getActiveMitigationsForService");
         try {
             String tableName = activeMitigationsTableName;
-            String indexToUse = DEVICE_NAME_INDEX;
+            String indexToUse = ActiveMitigationsModel.DEVICE_NAME_INDEX;
             
             // Generate key condition to use when querying.
             Map<String, Condition> keyConditions = generateKeyConditionsForServiceAndDevice(serviceName, deviceName);
             
             // Generate query filters to use when querying.
             Map<String, Condition> queryFilter = new HashMap<>();
-            queryFilter.put(DELETION_DATE_KEY, new Condition().withComparisonOperator(ComparisonOperator.NULL));
+            queryFilter.put(ActiveMitigationsModel.DELETION_DATE_KEY, new Condition().withComparisonOperator(ComparisonOperator.NULL));
+            queryFilter.put(ActiveMitigationsModel.DEFUNCT_DATE_KEY, new Condition().withComparisonOperator(ComparisonOperator.NULL));
             
             // If we have locations, then add locations as a query filter.
             if (!CollectionUtils.isEmpty(locations)) {
@@ -180,7 +178,8 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
             }
             
             Map<String, AttributeValue> lastEvaluatedKey = null;
-            Set<String> attributes = Sets.newHashSet(MITIGATION_NAME_KEY, LOCATION_KEY, JOB_ID_KEY, DEVICE_NAME_KEY, MITIGATION_VERSION_KEY);
+            Set<String> attributes = Sets.newHashSet(ActiveMitigationsModel.MITIGATION_NAME_KEY, ActiveMitigationsModel.LOCATION_KEY, ActiveMitigationsModel.JOB_ID_KEY, 
+                                                     ActiveMitigationsModel.DEVICE_NAME_KEY, ActiveMitigationsModel.MITIGATION_VERSION_KEY, ActiveMitigationsModel.LAST_DEPLOY_DATE);
             QueryRequest queryRequest = generateQueryRequest(attributes, keyConditions, queryFilter, tableName, true, indexToUse, lastEvaluatedKey);
             
             // Populate the items fetched after each query succeeds.
@@ -494,14 +493,19 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     private List<ActiveMitigationDetails> activeMitigationsListConverter(List<Map<String, AttributeValue>> listOfKeyValues){ 
         List<ActiveMitigationDetails> convertedList = new ArrayList<>(); 
         for (Map<String, AttributeValue> keyValues : listOfKeyValues) {
-            String location = keyValues.get(LOCATION_KEY).getS();
-            long jobId = Long.valueOf(keyValues.get(JOB_ID_KEY).getN());
-            String mitigationName = keyValues.get(MITIGATION_NAME_KEY).getS();
-            String deviceName = keyValues.get(DEVICE_NAME_KEY).getS();
-            int mitigationVersion = Integer.valueOf(keyValues.get(MITIGATION_VERSION_KEY).getN());
+            String location = keyValues.get(ActiveMitigationsModel.LOCATION_KEY).getS();
+            long jobId = Long.valueOf(keyValues.get(ActiveMitigationsModel.JOB_ID_KEY).getN());
+            String mitigationName = keyValues.get(ActiveMitigationsModel.MITIGATION_NAME_KEY).getS();
+            String deviceName = keyValues.get(ActiveMitigationsModel.DEVICE_NAME_KEY).getS();
+            int mitigationVersion = Integer.valueOf(keyValues.get(ActiveMitigationsModel.MITIGATION_VERSION_KEY).getN());
             
-            ActiveMitigationDetails activeMitigationDetails = new ActiveMitigationDetails(mitigationName, jobId,
-                    location, deviceName, mitigationVersion);
+            long lastDeployDate = 0;
+            if (keyValues.containsKey(ActiveMitigationsModel.LAST_DEPLOY_DATE)) {
+                lastDeployDate = Long.valueOf(keyValues.get(ActiveMitigationsModel.LAST_DEPLOY_DATE).getN());
+            }
+            
+            ActiveMitigationDetails activeMitigationDetails = new ActiveMitigationDetails(mitigationName, jobId, location, 
+                                                                                          deviceName, mitigationVersion, lastDeployDate);
             
             convertedList.add(activeMitigationDetails);
         }
