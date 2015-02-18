@@ -332,6 +332,55 @@ public class BlackwatchLocationsHelperTest {
         verify(mockMonitoringQueryClient, times(1)).requestResponse(any(MWSRequest.class));
     }
     
+    @Test
+    public void testWhenMWSQueryThrowsNoDataFoundException() throws Exception {
+        LdapProvider provider = mock(LdapProvider.class);
+        Map<String, List<Object>> hostclassSearchResult = new HashMap<>();
+        List<Object> hosts = new ArrayList<>();
+        hosts.add(BLACKWATCH_POP);
+        hostclassSearchResult.put(BLACKWATCH_POP, hosts);
+        
+        List<Map<String, List<Object>>> result = new ArrayList<>();
+        result.add(hostclassSearchResult);
+        when(provider.search(anyString(), anyString(), anyInt(), anyList())).thenReturn(result);
+        
+        MonitoringQueryClient mockMonitoringQueryClient = mock(MonitoringQueryClient.class);
+        DateTime now = new DateTime(DateTimeZone.UTC);
+        
+        GetMetricDataResponse response = new GetMetricDataResponse();
+        StatisticSeries series = new StatisticSeries();
+        response.addStatisticSeries(series);
+        
+        amazon.query.types.DateTime queryDateTime = new amazon.query.types.DateTime(now.minusMinutes(3).getMillis());
+        series.addDatapoint(new Datapoint(queryDateTime, 60.0));
+        
+        queryDateTime = new amazon.query.types.DateTime(now.minusMinutes(2).getMillis());
+        series.addDatapoint(new Datapoint(queryDateTime, 60.0));
+        
+        response.setNumberOfAvailable(2);
+        response.setNumberOfReturned(2);
+        response.addStatisticSeries(series);
+        
+        HttpURLConnection requestConn = mock(HttpURLConnection.class);
+        Error error = new Error();
+        error.setCode("NoData");
+        error.setMessage("No data was found for the specified time range and schema.");
+        response.addError(error);
+        ResponseException exception = new ResponseException(requestConn, response);
+        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenThrow(exception);
+        
+        OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
+        when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
+        
+        MonitoringQueryClientProvider monitoringQueryClientProvider = new MockMonitoringQueryClientProvider(odinCredsProvider, mockMonitoringQueryClient);
+        BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider, true, monitoringQueryClientProvider, "Prod", "Total_Mitigated_Packets_RX", 5);
+        
+        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
+        assertFalse(isBlackwatchPOP);
+        verify(provider, times(1)).search(anyString(), anyString(), anyInt(), anyList());
+        verify(mockMonitoringQueryClient, times(1)).requestResponse(any(MWSRequest.class));
+    }
+    
     /**
      * Test to ensure we throw an exception when we fail to query MWS for BW metric data.
      * @throws Exception

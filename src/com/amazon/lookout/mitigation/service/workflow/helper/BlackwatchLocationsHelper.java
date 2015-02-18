@@ -79,6 +79,7 @@ public class BlackwatchLocationsHelper {
     private static final String MWS_QUERY_FAILED_METRIC_KEY = "BWInlineMWSQueryFailed";
     
     public static final String METRIC_NOT_FOUND_EXCEPTION_MESSAGE = "MetricNotFound: No metrics matched your request parameters";
+    public static final String DATA_NOT_FOUND_EXCEPTION_MESSAGE = "NoData: No data was found for the specified time range and schema.";
     
     private final long blackwatchInlineThreshold;
     private final MonitoringQueryClient mwsQueryClient;
@@ -209,8 +210,8 @@ public class BlackwatchLocationsHelper {
                 } catch (Exception ex) {
                     // If the exception is for the metric not being found, then that either implies that BW never published metrics for this POP or it has stopped for a long time (typically 30 days).
                     // In both case, we would return false since BW isn't actively running.
-                    if ((ex instanceof ResponseException) && ((ResponseException) ex).getMessage().contains(METRIC_NOT_FOUND_EXCEPTION_MESSAGE)) {
-                        LOG.info("Caught a ResponseException stating that the metric was not found for dimensions: " + 
+                    if ((ex instanceof ResponseException) && isQueryResponseExceptionForNoData((ResponseException) ex)) {
+                        LOG.info("Caught a ResponseException stating that the metric/data was not found for dimensions: " +  
                                  dimensions + " for POP: " + popName + ", hence returning false.", ex);
                         return false;
                     }
@@ -233,6 +234,16 @@ public class BlackwatchLocationsHelper {
             subMetrics.addCount(NUM_ATTEMPTS_METRIC_KEY, numAttempts);
             subMetrics.end();
         }
+    }
+    
+    protected boolean isQueryResponseExceptionForNoData(@NonNull ResponseException responseException) {
+        String responseExceptionMessage = responseException.getMessage();
+        if (responseExceptionMessage == null) {
+            LOG.warn("Found ResponseException with null message: " + responseException);
+            return false;
+        }
+        
+        return (responseExceptionMessage.contains(METRIC_NOT_FOUND_EXCEPTION_MESSAGE) || responseExceptionMessage.contains(DATA_NOT_FOUND_EXCEPTION_MESSAGE));
     }
     
     /**
