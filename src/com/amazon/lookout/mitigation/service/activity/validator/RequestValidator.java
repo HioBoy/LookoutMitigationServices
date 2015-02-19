@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -293,13 +292,6 @@ public class RequestValidator {
             if (isInvalidFreeFormText(ticket, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
                 String msg = "Invalid ticket reference found! A valid ticket must contain either just the ticket number (eg: 0043589677) or links " +
                              "to the ticket (eg: tt/0043589677 or https://tt.amazon.com/0043589677)";
-                LOG.info(msg);
-                throw new IllegalArgumentException(msg);
-            }
-            
-            if (!TICKETS_PATTERN.matcher(ticket).matches()) {
-                String msg = "Invalid ticket reference found! Found value: " + ticket + ", but a valid ticket must contain either just the ticket number " +
-                             "(eg: 0043589677) or links to the ticket of the form: tt/0043589677 or https://tt.amazon.com/0043589677";
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
             }
