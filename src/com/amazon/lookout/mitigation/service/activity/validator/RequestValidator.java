@@ -1,16 +1,16 @@
 package com.amazon.lookout.mitigation.service.activity.validator;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
+import lombok.AllArgsConstructor;
+import lombok.NonNull;
+
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.Validate;
-import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
@@ -22,6 +22,7 @@ import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
@@ -34,6 +35,7 @@ import com.google.common.collect.Sets;
  * is responsible for such checks.  
  *
  */
+@AllArgsConstructor
 @ThreadSafe
 public class RequestValidator {
     private static final Log LOG = LogFactory.getLog(RequestValidator.class);
@@ -44,14 +46,18 @@ public class RequestValidator {
     // Maintain a Set of the supported serviceNames, making it easier to search if a single serviceName is part of the set of defined serviceNames.
     private final Set<String> serviceNames = Sets.newHashSet(ServiceName.values());
     
+    private static final int DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS = 100;
+    private static final int MAX_LENGTH_MITIGATION_DESCRIPTION = 500;
+    
+    @NonNull private final ServiceLocationsHelper serviceLocationsHelper;
+    
     /**
      * Validates if the request object passed to the CreateMitigationAPI is valid.
      * @param request MitigationModificationRequest representing the input to the CreateMitigationAPI.
      * @return void. Doesn't return any values. Will throw back an IllegalArgumentException if any of the input parameters aren't considered valid.
      */
-    public void validateCreateRequest(@Nonnull CreateMitigationRequest request) {
-        Validate.notNull(request);
-        validateCommonRequestParameters(request);
+    public void validateCreateRequest(@NonNull CreateMitigationRequest request) {
+        validateCommonModificationRequestParameters(request);
         
         if (request.getMitigationDefinition() == null) {
             String msg = "No mitigation definition found.";
@@ -73,9 +79,8 @@ public class RequestValidator {
      * @param request Instance of DeleteMitigationFromAllLocationsRequest representing the input to the DeleteMitigationAPI.
      * @return void. Doesn't return any values. Will throw back an IllegalArgumentException if any of the input parameters aren't considered valid.
      */
-    public void validateDeleteRequest(@Nonnull DeleteMitigationFromAllLocationsRequest request) {
-        Validate.notNull(request);
-        validateCommonRequestParameters(request);
+    public void validateDeleteRequest(@NonNull DeleteMitigationFromAllLocationsRequest request) {
+        validateCommonModificationRequestParameters(request);
         
         if (request.getMitigationVersion() < 1) {
             String msg = "Version of the mitigation to be deleted should be set to >=1, instead found: " + request.getMitigationVersion();
@@ -89,56 +94,16 @@ public class RequestValidator {
      * @param A GetRequestStatusRequest object representing the input to the GetRequestStatus API
      * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
      */
-    public void validateGetRequestStatusRequest(@Nonnull GetRequestStatusRequest request) {
-        Validate.notNull(request);
-        
+    public void validateGetRequestStatusRequest(@NonNull GetRequestStatusRequest request) {
         if (request.getJobId() < 1) {
             String msg = "Job IDs should be >= 1, instead found: " + request.getJobId();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
-        String deviceName = request.getDeviceName();
-        if (StringUtils.isEmpty(deviceName)) {
-            String msg = "Null or empty device name found in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // This will throw an exception if the deviceName is not defined within the DeviceName enum.
-        try {
-            DeviceName.valueOf(deviceName);
-        } catch (Exception ex) {
-            String msg = "The device name that was provided, " + deviceName + ", is not a valid name.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        String serviceName = request.getServiceName();
-        if (StringUtils.isEmpty(serviceName)) {
-            String msg = "Null or empty service name found in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // This will throw an exception if the serviceName is not defined within the ServiceName enum.
-        if(!serviceNames.contains(serviceName)) {
-            String msg = "The service name that was provided, " + serviceName + ", is not a valid name";
-            throw new IllegalArgumentException(msg);
-        }
-        
-        String mitigationTemplate = request.getMitigationTemplate();
-        if (StringUtils.isEmpty(mitigationTemplate)) {
-            String msg = "Null or empty mitigationTemplate found in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // This will throw an exception if the mitigationTemplate is not defined within the MitigationTemplate enum.
-        if(!Arrays.asList(MitigationTemplate.values()).contains(mitigationTemplate)) {
-            String msg = "The mitigationTemplate that was provided, " + mitigationTemplate + ", is not a valid mitigationTemplate";
-            throw new IllegalArgumentException(msg);
-        }
+        validateDeviceName(request.getDeviceName());
+        validateServiceName(request.getServiceName());
+        validateMitigationTemplate(request.getMitigationTemplate());
     }
     
     /**
@@ -146,63 +111,11 @@ public class RequestValidator {
      * @param An instance of GetMitigationInfoRequest representing the input to the GetMitigationInfo API
      * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
      */
-    public void validateGetMitigationInfoRequest(@Nonnull GetMitigationInfoRequest request) {
-        Validate.notNull(request);
-        
-        // Validate service name.
-        String serviceName = request.getServiceName();
-        if (StringUtils.isEmpty(serviceName)) {
-            String msg = "Null or empty service name found in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // This will throw an exception if the serviceName is not defined within the ServiceName enum.
-        if(!serviceNames.contains(serviceName)) {
-            String msg = "The service name that was provided, " + serviceName + ", is not a valid name";
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // Validate device name.
-        String deviceName = request.getDeviceName();
-        if (StringUtils.isEmpty(deviceName)) {
-            String msg = "Null or empty device name found in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // This will throw an exception if the deviceName is not defined within the DeviceName enum.
-        try {
-            DeviceName.valueOf(deviceName);
-        } catch (Exception ex) {
-            String msg = "The device name that was provided, " + deviceName + ", is not a valid name.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // Validate device scope.
-        String deviceScope = request.getDeviceScope();
-        if (StringUtils.isEmpty(deviceScope)) {
-            String msg = "Null or empty device scope found in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // This will throw an exception if the deviceScope is not defined within the DeviceScope enum.
-        try {
-            DeviceScope.valueOf(deviceScope);
-        } catch (Exception ex) {
-            String msg = "The device scope that was provided, " + deviceScope + ", is not valid.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        String mitigationName = request.getMitigationName();
-        if (StringUtils.isEmpty(mitigationName)) {
-            String msg = "Null or empty mitigationName found in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
+    public void validateGetMitigationInfoRequest(@NonNull GetMitigationInfoRequest request) {
+        validateServiceName(request.getServiceName());
+        validateDeviceName(request.getDeviceName());
+        validateDeviceScope(request.getDeviceScope());
+        validateMitigationName(request.getMitigationName());
     }
     
     /**
@@ -210,52 +123,11 @@ public class RequestValidator {
      * @param A ListActiveMitigationsForServiceRequest object representing the input to the ListActiveMitigationsForService API
      * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
      */
-    public void validateListActiveMitigationsForServiceRequest(@Nonnull ListActiveMitigationsForServiceRequest request) {
-        Validate.notNull(request);
-        
-        List<String> locations = request.getLocations();
-        if (locations != null && CollectionUtils.isEmpty(request.getLocations())) {
-            String msg = "Empty list of locations found in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        if (locations != null && locations.contains("")) {
-            String msg = "Empty String found in the List of locations in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        String deviceName = request.getDeviceName();
-        if (StringUtils.isBlank(deviceName)) {
-            String msg = "Null or empty device name found in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        if (deviceName != null) {       
-            // This will throw an exception if the deviceName is not defined within the DeviceName enum.
-            try {
-                DeviceName.valueOf(deviceName);  
-            } catch (Exception ex) {
-                String msg = "The device name that was provided, " + deviceName + ", is not a valid name.";
-                LOG.info(msg);
-                throw new IllegalArgumentException(msg);
-            }
-        }
-        
+    public void validateListActiveMitigationsForServiceRequest(@NonNull ListActiveMitigationsForServiceRequest request) {
         String serviceName = request.getServiceName();
-        if (StringUtils.isBlank(serviceName)) {
-            String msg = "Null or empty service name found in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // This will throw an exception if the serviceName is not defined within the ServiceName enum.
-        if(!Arrays.asList(ServiceName.values()).contains(serviceName)) {
-            String msg = "The service name that was provided, " + serviceName + ", is not a valid name.";
-            throw new IllegalArgumentException(msg);
-        }
+        validateServiceName(serviceName);
+        validateListOfLocations(request.getLocations(), serviceName);
+        validateDeviceName(request.getDeviceName());
     }
     
     /**
@@ -265,75 +137,177 @@ public class RequestValidator {
      * @param serviceName Service corresponding to the mitigation in the request by the client.
      * @param actionMetadata Instance of MitigationActionMetadata specifying some of the metadata related to this action.
      */
-    private void validateCommonRequestParameters(MitigationModificationRequest request) {
-        String mitigationName = request.getMitigationName();
-        if (StringUtils.isEmpty(mitigationName)) {
-            String msg = "Null or empty mitigation name found in request: " + ReflectionToStringBuilder.toString(request);
+    private void validateCommonModificationRequestParameters(@NonNull MitigationModificationRequest request) {
+        validateMitigationName(request.getMitigationName());
+        
+        validateMitigationTemplate(request.getMitigationTemplate());
+        
+        validateServiceName(request.getServiceName());
+        
+        MitigationActionMetadata actionMetadata = request.getMitigationActionMetadata();
+        if (actionMetadata == null) {
+            String msg = "No MitigationActionMetadata found! Passing the MitigationActionMetadata is mandatory for performing any actions using the MitigationService.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
-        String mitigationTemplate = request.getMitigationTemplate();
-        if (StringUtils.isEmpty(mitigationTemplate)) {
-            String msg = "Null or empty mitigation template found in request: " + ReflectionToStringBuilder.toString(request);
+        validateUserName(actionMetadata.getUser());
+        validateToolName(actionMetadata.getToolName());
+        validateMitigationDescription(actionMetadata.getDescription());
+        
+        if (actionMetadata.getRelatedTickets() != null) {
+            validateRelatedTickets(actionMetadata.getRelatedTickets());
+        }
+    }
+    
+    private void validateDeviceName(String deviceName) {
+        if (isInvalidFreeFormText(deviceName, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "Invalid device name found! Valid device names: " + DeviceName.values();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
-        if (!mitigationTemplates.contains(mitigationTemplate)) {
-            String msg = "Invalid mitigation template found in request: " + ReflectionToStringBuilder.toString(request) +
-                         ". Valid mitigation templates are: " + mitigationTemplates;
+        // This will throw an exception if the deviceName is not defined within the DeviceName enum.
+        try {
+            DeviceName.valueOf(deviceName);
+        } catch (Exception ex) {
+            String msg = "The device name that was provided, " + deviceName + ", is not a valid name. Valid deviceNames: " + DeviceName.values();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
-        
-        String serviceName = request.getServiceName();
-        if (StringUtils.isEmpty(serviceName)) {
-            String msg = "Null or empty service name found in request: " + ReflectionToStringBuilder.toString(request);
+    }
+    
+    private void validateServiceName(String serviceName) {
+        if (isInvalidFreeFormText(serviceName, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "Invalid service name found: " + serviceName + ". Valid service names are: " + serviceNames;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
         if (!serviceNames.contains(serviceName)) {
-            String msg = "Invalid service name found in request: " + ReflectionToStringBuilder.toString(request) +
-                         " Valid service names are: " + serviceNames;
+            String msg = "Invalid service name found: " + serviceName + ". Valid service names are: " + serviceNames;
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private void validateDeviceScope(String deviceScope) {
+        if (isInvalidFreeFormText(deviceScope, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "Invalid device scope found! Valid device scopes: " + DeviceScope.values();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
-        MitigationActionMetadata actionMetadata = request.getMitigationActionMetadata();
-        if (actionMetadata == null) {
-            String msg = "No MitigationActionMetadata found in request: " + ReflectionToStringBuilder.toString(request);
+        // This will throw an exception if the deviceScope is not defined within the DeviceScope enum.
+        try {
+            DeviceScope.valueOf(deviceScope);
+        } catch (Exception ex) {
+            String msg = "The device scope that was provided, " + deviceScope + ", is not valid. Valid device scopes: " + DeviceScope.values();
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private void validateMitigationName(String mitigationName) {
+        if (isInvalidFreeFormText(mitigationName, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "Invalid mitigation name found! A valid mitigation name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private void validateMitigationTemplate(String mitigationTemplate) {
+        if (isInvalidFreeFormText(mitigationTemplate, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "Invalid mitigation template found! Valid mitigation templates are: " + mitigationTemplates;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
-        if ((actionMetadata.getUser() == null) || (actionMetadata.getUser().isEmpty())) {
-            String msg = "No user defined in the mitigation action metadata in request: " + ReflectionToStringBuilder.toString(request);
+        if (!mitigationTemplates.contains(mitigationTemplate)) {
+            String msg = "Invalid mitigation template found: " + mitigationTemplate + ". Valid mitigation templates are: " + mitigationTemplates;
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private void validateUserName(String userName) {
+        if (isInvalidFreeFormText(userName, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "Invalid user name found! A valid user name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private void validateToolName(String toolName) {
+        if (isInvalidFreeFormText(toolName, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "Invalid tool name found! A valid tool name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private void validateMitigationDescription(String mitigationDescription) {
+        if (isInvalidFreeFormText(mitigationDescription, MAX_LENGTH_MITIGATION_DESCRIPTION)) {
+            String msg = "Invalid description found! A valid description must contain more than 0 and less than: " + MAX_LENGTH_MITIGATION_DESCRIPTION + " ascii-printable characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private void validateRelatedTickets(List<String> relatedTickets) {
+        Set<String> setOfRelatedTickets = new HashSet<String>(relatedTickets);
+        if (setOfRelatedTickets.size() != relatedTickets.size()) {
+            String msg = "Duplicate related tickets found in actionMetadata: " + relatedTickets;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
-        if (StringUtils.isEmpty(actionMetadata.getToolName())) {
-            String msg = "No tool specified in the mitigation action metadata in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        if (StringUtils.isEmpty(actionMetadata.getDescription())) {
-            String msg = "No description specified in the mitigation action metadata in request: " + ReflectionToStringBuilder.toString(request);
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        if (actionMetadata.getRelatedTickets() != null) {
-            Set<String> setOfRelatedTickets = new HashSet<String>(actionMetadata.getRelatedTickets());
-            if (setOfRelatedTickets.size() != actionMetadata.getRelatedTickets().size()) {
-                String msg = "Duplicate related tickets found in actionMetadata in the request: " + ReflectionToStringBuilder.toString(request);
+        // We currently (02/2015) don't constraint the user of how they want to input the tickets, either as just ids (0043589677) or 
+        // abbreviated link: tt/0043589677 or the entire link: https://tt.amazon.com/0043589677. Hence simply checking to just ensure we have all valid characters for each of those.
+        for (String ticket : relatedTickets) {
+            if (isInvalidFreeFormText(ticket, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+                String msg = "Invalid ticket reference found! A valid ticket must contain either just the ticket number (eg: 0043589677) or links " +
+                             "to the ticket (eg: tt/0043589677 or https://tt.amazon.com/0043589677)";
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
             }
         }
     }
     
+    private void validateListOfLocations(List<String> locations, String serviceName) {
+        if ((locations != null) && CollectionUtils.isEmpty(locations)) {
+            String msg = "Empty list of locations found! Either the locations should be null or must contain valid values.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        if (locations != null) {
+            Set<String> validLocationsForService = serviceLocationsHelper.getLocationsForService(serviceName).orNull();
+            List<String> invalidLocationsInRequest = new ArrayList<>();
+            for (String location : locations) {
+                if (isInvalidFreeFormText(location, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+                    String msg = "Invalid location name found! A valid location name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
+                    LOG.info(msg);
+                    throw new IllegalArgumentException(msg);
+                }
+                
+                if ((validLocationsForService != null) && !validLocationsForService.contains(location)) {
+                    invalidLocationsInRequest.add(location);
+                }
+            }
+            
+            if (!invalidLocationsInRequest.isEmpty()) {
+                String msg = "Invalid location name found! Locations: " + invalidLocationsInRequest + " aren't valid for service: " + serviceName;
+                LOG.info(msg);
+                throw new IllegalArgumentException(msg);
+            }
+        }
+    }
+    
+    protected boolean isInvalidFreeFormText(String stringToCheck, int maxLength) {
+        boolean isBlank = StringUtils.isBlank(stringToCheck);
+        boolean containsOnlyPrintableCharacters = StringUtils.isAsciiPrintable(stringToCheck);
+        boolean exceedsDefaultLength = ((stringToCheck != null) ? (stringToCheck.length() > maxLength) : false);
+        return (isBlank || !containsOnlyPrintableCharacters || exceedsDefaultLength);
+    }
 }

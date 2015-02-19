@@ -1,6 +1,5 @@
 package com.amazon.lookout.mitigation.service.activity;
 
-import java.beans.ConstructorProperties;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -13,6 +12,7 @@ import java.util.concurrent.Future;
 import javax.annotation.Nonnull;
 import javax.jms.IllegalStateException;
 
+import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
@@ -49,6 +49,7 @@ import com.amazon.lookout.model.RequestType;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+@AllArgsConstructor
 @ThreadSafe
 @Service("LookoutMitigationService")
 public class ListActiveMitigationsForServiceActivity extends Activity {
@@ -64,26 +65,14 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
     private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(Sets.newHashSet(ListActiveMitigationsExceptions.BadRequest.name(),
                                                                                                       ListActiveMitigationsExceptions.InternalError.name()));
     
-    private final RequestValidator requestValidator;
-    private final ActiveMitigationInfoHandler activeMitigationInfoHandler;
-    private final RequestInfoHandler requestInfoHandler;
-    private final MitigationInstanceInfoHandler mitigationInstanceHandler;
-    private final DDBBasedRouterMetadataHelper routerMetadataHelper;
-    private final ExecutorService threadPool;
+    @NonNull private final RequestValidator requestValidator;
+    @NonNull private final ActiveMitigationInfoHandler activeMitigationInfoHandler;
+    @NonNull private final RequestInfoHandler requestInfoHandler;
+    @NonNull private final MitigationInstanceInfoHandler mitigationInstanceHandler;
+    @NonNull private final DDBBasedRouterMetadataHelper routerMetadataHelper;
+    @NonNull private final ExecutorService threadPool;
     
     public static final String KEY_SEPARATOR = "#";
-    
-    @ConstructorProperties({"requestValidator", "activeMitigationInfoHandler", "requestInfoHandler", "mitigationInstanceHandler", "routerMetadataHelper", "threadPool"})
-    public ListActiveMitigationsForServiceActivity(@NonNull RequestValidator requestValidator, @NonNull ActiveMitigationInfoHandler activeMitigationInfoHandler,
-                                                   @NonNull RequestInfoHandler requestInfoHandler, @NonNull MitigationInstanceInfoHandler mitigationInstanceHandler,
-                                                   @NonNull DDBBasedRouterMetadataHelper routerMetadataHelper, @NonNull ExecutorService threadPool) {
-        this.requestValidator = requestValidator;
-        this.activeMitigationInfoHandler = activeMitigationInfoHandler;
-        this.requestInfoHandler = requestInfoHandler;
-        this.mitigationInstanceHandler = mitigationInstanceHandler;
-        this.routerMetadataHelper = routerMetadataHelper;
-        this.threadPool = threadPool;
-    }
     
     @Validated
     @Operation("ListActiveMitigationsForService")
@@ -141,7 +130,7 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
                         if (routerMitigation.getInstancesStatusMap().keySet().size() > 1) {
                             String msg = "RouterMetadataHelper is expected to return a single instance of MitigationRequestDescriptionWithStatuses per location, " +
                                          "instead found: " + routerMitigation.getInstancesStatusMap().keySet().size() + " for mitigation: " + routerMitigation +
-                                           " in the List API for service: " + serviceName + ", device: " + deviceName + " and locations: " + locations;
+                                         " in the List API for service: " + serviceName + ", device: " + deviceName + " and locations: " + locations;
                             LOG.error(msg);
                             throw new IllegalStateException(msg);
                         }
@@ -169,8 +158,7 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
                                        " for request: " + ReflectionToStringBuilder.toString(request));
             LOG.warn(msg, ex);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ListActiveMitigationsExceptions.BadRequest.name(), 1);
-            throw new BadRequest400("Received BadRequest for list mitigations: " + " for service: " + request.getServiceName() + " on device: " + request.getDeviceName() + 
-                                    ". Detailed message: " + ex.getMessage());
+            throw new BadRequest400(msg, ex);
         } catch (Exception internalError) {
             String msg = String.format("Internal error while fulfilling request for ListActiveMitigationsForServiceActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(request));
             LOG.error(msg, internalError);

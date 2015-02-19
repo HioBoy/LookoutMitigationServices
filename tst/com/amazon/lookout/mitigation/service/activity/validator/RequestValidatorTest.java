@@ -22,11 +22,14 @@ import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequ
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
+import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 public class RequestValidatorTest {
     
@@ -74,7 +77,7 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
                 
         validator.validateCreateRequest(request);
         
@@ -107,14 +110,14 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
             validator.validateCreateRequest(request);
         } catch (IllegalArgumentException ex) {
             caughtException = ex;
-            assertTrue(ex.getMessage().startsWith("Null or empty mitigation name"));
+            assertTrue(ex.getMessage().startsWith("Invalid mitigation name"));
         }
         assertNotNull(caughtException);
         
@@ -125,7 +128,93 @@ public class RequestValidatorTest {
             validator.validateCreateRequest(request);
         } catch (IllegalArgumentException ex) {
             caughtException = ex;
-            assertTrue(ex.getMessage().startsWith("Null or empty mitigation name"));
+            assertTrue(ex.getMessage().startsWith("Invalid mitigation name"));
+        }
+        assertNotNull(caughtException);
+    }
+    
+    /**
+     * Test the case where the request has invalid mitigationNames (empty, only spaces, special characters (non-printable ascii). 
+     * We expect an exception to be thrown in this case.
+     */
+    @Test
+    public void testInvalidMitigationNames() {
+        CreateMitigationRequest request = new CreateMitigationRequest();
+        request.setMitigationName("");
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setServiceName(serviceName);
+        
+        MitigationActionMetadata metadata = new MitigationActionMetadata();
+        metadata.setUser(userName);
+        metadata.setToolName(toolName);
+        metadata.setDescription(description);
+        request.setMitigationActionMetadata(metadata);
+        
+        SimpleConstraint constraint = new SimpleConstraint();
+        constraint.setAttributeName(PacketAttributesEnumMapping.DESTINATION_IP.name());
+        constraint.setAttributeValues(Lists.newArrayList("1.2.3.4"));
+        MitigationDefinition definition = new MitigationDefinition();
+        definition.setConstraint(constraint);
+        request.setMitigationDefinition(definition);
+        
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
+        
+        Throwable caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Invalid mitigation name"));
+        }
+        assertNotNull(caughtException);
+        
+        // Check mitigationNames with all spaces
+        request.setMitigationName("   ");
+        caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Invalid mitigation name"));
+        }
+        assertNotNull(caughtException);
+        
+        // Check mitigationNames with non-printable ascii characters.
+        char invalidChar = 0x00;
+        request.setMitigationName("Some name with invalid char: " + String.valueOf(invalidChar));
+        caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Invalid mitigation name"));
+        }
+        assertNotNull(caughtException);
+        
+        // Check mitigationNames with delete non-printable ascii character.
+        invalidChar = 0x7F;
+        request.setMitigationName("Some name with delete char: " + String.valueOf(invalidChar));
+        caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Invalid mitigation name"));
+        }
+        assertNotNull(caughtException);
+        
+        // Check extra long mitigationNames.
+        StringBuffer buffer = new StringBuffer();
+        for (int index=0; index < 500; ++index) {
+            buffer.append("a");
+        }
+        request.setMitigationName(buffer.toString());
+        caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Invalid mitigation name"));
         }
         assertNotNull(caughtException);
     }
@@ -135,7 +224,7 @@ public class RequestValidatorTest {
      * We expect an exception to be thrown in this case.
      */
     @Test
-    public void testMissingOrInvalidrateLimitMitigationTemplate() {
+    public void testMissingOrInvalidRateLimitMitigationTemplate() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setServiceName(serviceName);
@@ -153,7 +242,7 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -162,7 +251,7 @@ public class RequestValidatorTest {
             caughtException = ex;
         }
         assertNotNull(caughtException);
-        assertTrue(caughtException.getMessage().startsWith("Null or empty mitigation template"));
+        assertTrue(caughtException.getMessage().startsWith("Invalid mitigation template found"));
         
         request.setMitigationTemplate("BadTemplate");
         caughtException = null;
@@ -174,6 +263,18 @@ public class RequestValidatorTest {
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
         assertTrue(caughtException.getMessage().startsWith("Invalid mitigation template found"));
+        
+        // Check mitigationTemplate with non-printable ascii characters.
+        char invalidChar = 0x00;
+        request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer + String.valueOf(invalidChar));
+        caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Invalid mitigation template"));
+        }
+        assertNotNull(caughtException);
     }
     
     /**
@@ -199,7 +300,7 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -209,7 +310,7 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("Null or empty service name"));
+        assertTrue(caughtException.getMessage().startsWith("Invalid service name found"));
         
         request.setServiceName("BadServiceName");
         caughtException = null;
@@ -221,6 +322,18 @@ public class RequestValidatorTest {
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
         assertTrue(caughtException.getMessage().startsWith("Invalid service name found"));
+        
+        // Check serviceName with non-printable ascii characters.
+        char invalidChar = 0x00;
+        request.setServiceName(ServiceName.Route53 + String.valueOf(invalidChar));
+        caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Invalid service name"));
+        }
+        assertNotNull(caughtException);
     }
     
     /**
@@ -241,7 +354,7 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -277,7 +390,7 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -287,7 +400,19 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("No user defined"));
+        assertTrue(caughtException.getMessage().startsWith("Invalid user name"));
+        
+        // Check userName with non-printable ascii characters.
+        char invalidChar = 0x00;
+        metadata.setUser("Test User: " + String.valueOf(invalidChar));
+        caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Invalid user name"));
+        }
+        assertNotNull(caughtException);
     }
     
     /**
@@ -313,7 +438,7 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -323,7 +448,19 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("No tool specified in the mitigation action metadata"));
+        assertTrue(caughtException.getMessage().startsWith("Invalid tool name"));
+        
+        // Check toolName with non-printable ascii characters.
+        char invalidChar = 0x00;
+        metadata.setToolName("Tool: " + String.valueOf(invalidChar));
+        caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Invalid tool name"));
+        }
+        assertNotNull(caughtException);
     }
     
     /**
@@ -349,7 +486,7 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -359,7 +496,34 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("No description specified in the mitigation action metadata"));
+        assertTrue(caughtException.getMessage().startsWith("Invalid description found"));
+        
+        // Check description with non-printable ascii characters.
+        char invalidChar = 0x00;
+        metadata.setDescription("Description: " + String.valueOf(invalidChar));
+        caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Invalid description found"));
+        }
+        assertNotNull(caughtException);
+        
+        // Check extra long description.
+        StringBuffer buffer = new StringBuffer();
+        for (int index=0; index < 1000; ++index) {
+            buffer.append("a");
+        }
+        metadata.setDescription("Description: " + buffer);
+        caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("Invalid description found"));
+        }
+        assertNotNull(caughtException);
     }
     
     /**
@@ -380,7 +544,7 @@ public class RequestValidatorTest {
         metadata.setDescription("Test description");
         request.setMitigationActionMetadata(metadata);
         
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         validator.validateDeleteRequest(request);
         
@@ -407,7 +571,7 @@ public class RequestValidatorTest {
         metadata.setDescription("Test description");
         request.setMitigationActionMetadata(metadata);
         
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -447,7 +611,7 @@ public class RequestValidatorTest {
         metadata.setRelatedTickets(Lists.newArrayList("Tkt1", "Tkt2", "Tkt2"));
         request.setMitigationActionMetadata(metadata);
         
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -463,7 +627,7 @@ public class RequestValidatorTest {
     @Test
     public void testListActiveMitigationsForService() {        
         ListActiveMitigationsForServiceRequest request = new ListActiveMitigationsForServiceRequest();
-        RequestValidator validator = new RequestValidator();
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         // locations is optional
         request.setServiceName(serviceName);
@@ -491,6 +655,7 @@ public class RequestValidatorTest {
             validator.validateListActiveMitigationsForServiceRequest(request);
         } catch (IllegalArgumentException ex) {
             caughtException = ex;
+            assertTrue(caughtException.getMessage().startsWith("Empty list of locations found"));
         }
         
         // locations may not be empty
@@ -500,9 +665,22 @@ public class RequestValidatorTest {
             validator.validateListActiveMitigationsForServiceRequest(request);
         } catch (IllegalArgumentException ex) {
             caughtException = ex;
+            assertTrue(caughtException.getMessage().startsWith("Invalid location name"));
         }
         
         request.setLocations(Arrays.asList("alocation"));
+        caughtException = null;
+        try {
+            validator.validateListActiveMitigationsForServiceRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(caughtException.getMessage().startsWith("Invalid location name"));
+        }
+        assertNotNull(caughtException);
+        
+        EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
+        when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("alocation", "blocation", "clocations"));
+        validator = new RequestValidator(new ServiceLocationsHelper(edgeLocationsHelper));
         validator.validateListActiveMitigationsForServiceRequest(request);
     }
 }

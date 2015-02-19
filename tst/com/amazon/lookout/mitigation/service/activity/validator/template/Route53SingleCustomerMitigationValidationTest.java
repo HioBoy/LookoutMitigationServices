@@ -326,6 +326,28 @@ public class Route53SingleCustomerMitigationValidationTest {
     }
     
     @Test
+    public void testWhenConstraintAttributeIsNull() {
+        ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
+        
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
+        SimpleConstraint simpleConstraint = new SimpleConstraint();
+        simpleConstraint.setAttributeName(null);
+        request.getMitigationDefinition().setConstraint(simpleConstraint);
+        
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        Throwable caughtException = null;
+        try {
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+    }
+    
+    @Test
     public void testWhenConstraintIsNotOnDestIP() {
         ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
@@ -333,6 +355,52 @@ public class Route53SingleCustomerMitigationValidationTest {
         CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         SimpleConstraint simpleConstraint = new SimpleConstraint();
         simpleConstraint.setAttributeName(PacketAttributesEnumMapping.SOURCE_IP.name());
+        request.getMitigationDefinition().setConstraint(simpleConstraint);
+        
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        Throwable caughtException = null;
+        try {
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+    }
+    
+    @Test
+    public void testWhenConstraintValuesIsNull() {
+        ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
+        
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
+        SimpleConstraint simpleConstraint = new SimpleConstraint();
+        simpleConstraint.setAttributeName(PacketAttributesEnumMapping.DESTINATION_IP.name());
+        simpleConstraint.setAttributeValues(null);
+        request.getMitigationDefinition().setConstraint(simpleConstraint);
+        
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        Throwable caughtException = null;
+        try {
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+    }
+    
+    @Test
+    public void testWhenConstraintValuesIsEmpty() {
+        ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
+        
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
+        SimpleConstraint simpleConstraint = new SimpleConstraint();
+        simpleConstraint.setAttributeName(PacketAttributesEnumMapping.DESTINATION_IP.name());
+        simpleConstraint.setAttributeValues(new ArrayList<String>());
         request.getMitigationDefinition().setConstraint(simpleConstraint);
         
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());

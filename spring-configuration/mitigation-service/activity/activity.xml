@@ -48,7 +48,13 @@
     </bean>
     
     <!-- All the beans required by the activities go here -->
-    <bean id="requestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.RequestValidator"/>
+    <bean id="requestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.RequestValidator">
+        <constructor-arg name="serviceLocationsHelper" ref="serviceLocationsHelper"/>
+    </bean>
+    
+    <bean id="serviceLocationsHelper" class="com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper">
+        <constructor-arg name="edgeLocationsHelper" ref="edgeLocationsHelper"/>
+    </bean>
     
     <bean id="templateBasedRequestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator">
         <constructor-arg ref="serviceSubnetsMatcher"/>

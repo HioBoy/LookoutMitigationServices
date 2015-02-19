@@ -179,7 +179,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         PacketAttributesEnumMapping constraintAttribute = null;
         try {
             constraintAttribute = PacketAttributesEnumMapping.valueOf(simpleConstraint.getAttributeName());
-        } catch (IllegalArgumentException ex) {
+        } catch (Exception ex) {
             String msg = "Caught exception since the attribute in constraint is not recognizable, valid attribute names: " + PacketAttributesEnumMapping.values();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
@@ -194,9 +194,8 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         
         // Step3. We currently (03/27/2014) only allow constraining by DestinationIPs. We thus check to ensure we have atleast 1 but not more than 4 of such destIPs specified.
         List<String> constraintValues = simpleConstraint.getAttributeValues();
-        if (constraintValues.isEmpty() || (constraintValues.size() > 4)) {
-            String msg = "MitigationTemplate: " + mitigationTemplate + " expects at most 4 destIPs to constraint by, instead found: " + constraintValues.size() + 
-                          " number of values - " + constraintValues;
+        if ((constraintValues == null) || constraintValues.isEmpty() || (constraintValues.size() > 4)) {
+            String msg = "MitigationTemplate: " + mitigationTemplate + " expects atleast 1 and atmost 4 destIPs to constraint by, instead found constraints: " + constraintValues;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
