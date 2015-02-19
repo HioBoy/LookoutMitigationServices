@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -48,6 +49,9 @@ public class RequestValidator {
     
     private static final int DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS = 100;
     private static final int MAX_LENGTH_MITIGATION_DESCRIPTION = 500;
+    
+    private static final int MAX_NUMBER_OF_TICKETS = 10;
+    private static final Pattern TICKETS_PATTERN = Pattern.compile("[0-9]{7,10}|tt/[0-9]{7,10}|tt.amazon.com/[0-9]{7,10}|https://tt.amazon.com/[0-9]{7,10}");
     
     @NonNull private final ServiceLocationsHelper serviceLocationsHelper;
     
@@ -255,6 +259,13 @@ public class RequestValidator {
     }
     
     private void validateRelatedTickets(List<String> relatedTickets) {
+        if (relatedTickets.size() > MAX_NUMBER_OF_TICKETS) {
+            String msg = "Exceeded the number of tickets that can be specified for a single mitigation. Max allowed: " + MAX_NUMBER_OF_TICKETS +
+                         ". Instead found: " + relatedTickets.size() + " number of tickets.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
         Set<String> setOfRelatedTickets = new HashSet<String>(relatedTickets);
         if (setOfRelatedTickets.size() != relatedTickets.size()) {
             String msg = "Duplicate related tickets found in actionMetadata: " + relatedTickets;
@@ -268,6 +279,13 @@ public class RequestValidator {
             if (isInvalidFreeFormText(ticket, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
                 String msg = "Invalid ticket reference found! A valid ticket must contain either just the ticket number (eg: 0043589677) or links " +
                              "to the ticket (eg: tt/0043589677 or https://tt.amazon.com/0043589677)";
+                LOG.info(msg);
+                throw new IllegalArgumentException(msg);
+            }
+            
+            if (!TICKETS_PATTERN.matcher(ticket).matches()) {
+                String msg = "Invalid ticket reference found! Found value: " + ticket + ", but a valid ticket must contain either just the ticket number " +
+                             "(eg: 0043589677) or links to the ticket of the form: tt/0043589677 or https://tt.amazon.com/0043589677";
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
             }
