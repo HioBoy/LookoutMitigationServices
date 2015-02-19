@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -50,8 +49,8 @@ public class RequestValidator {
     private static final int DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS = 100;
     private static final int MAX_LENGTH_MITIGATION_DESCRIPTION = 500;
     
+    private static final int MAX_NUMBER_OF_LOCATIONS = 200;
     private static final int MAX_NUMBER_OF_TICKETS = 10;
-    private static final Pattern TICKETS_PATTERN = Pattern.compile("[0-9]{7,10}|tt/[0-9]{7,10}|tt.amazon.com/[0-9]{7,10}|https://tt.amazon.com/[0-9]{7,10}");
     
     @NonNull private final ServiceLocationsHelper serviceLocationsHelper;
     
@@ -282,24 +281,24 @@ public class RequestValidator {
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
             }
-            
-            if (!TICKETS_PATTERN.matcher(ticket).matches()) {
-                String msg = "Invalid ticket reference found! Found value: " + ticket + ", but a valid ticket must contain either just the ticket number " +
-                             "(eg: 0043589677) or links to the ticket of the form: tt/0043589677 or https://tt.amazon.com/0043589677";
-                LOG.info(msg);
-                throw new IllegalArgumentException(msg);
-            }
         }
     }
     
     private void validateListOfLocations(List<String> locations, String serviceName) {
-        if ((locations != null) && CollectionUtils.isEmpty(locations)) {
-            String msg = "Empty list of locations found! Either the locations should be null or must contain valid values.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
         if (locations != null) {
+            if (locations.size() > MAX_NUMBER_OF_LOCATIONS) {
+                String msg = "Exceeded the number of locations that can be specified for a single request. Max allowed: " + MAX_NUMBER_OF_LOCATIONS +
+                             ". Instead found: " + locations.size() + " number of locations.";
+                LOG.info(msg);
+                throw new IllegalArgumentException(msg);
+            }
+            
+            if (CollectionUtils.isEmpty(locations)) {
+                String msg = "Empty list of locations found! Either the locations should be null or must contain valid values.";
+                LOG.info(msg);
+                throw new IllegalArgumentException(msg);
+            }
+            
             Set<String> validLocationsForService = serviceLocationsHelper.getLocationsForService(serviceName).orNull();
             List<String> invalidLocationsInRequest = new ArrayList<>();
             for (String location : locations) {

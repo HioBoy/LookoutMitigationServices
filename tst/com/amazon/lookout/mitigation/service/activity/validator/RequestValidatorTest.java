@@ -1,7 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.validator;
 
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -627,35 +626,7 @@ public class RequestValidatorTest {
     }
     
     /**
-     * Test to ensure the typical ways of entering tickets are accepted.
-     */
-    @Test
-    public void testCreateRequestWithValidRelatedTickets() {
-        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
-        request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
-        request.setServiceName(serviceName);
-        
-        MitigationActionMetadata metadata = new MitigationActionMetadata();
-        metadata.setUser(userName);
-        metadata.setToolName(toolName);
-        metadata.setDescription("Test description");
-        metadata.setRelatedTickets(Lists.newArrayList("0012345678", "tt/0012345678", "https://tt.amazon.com/0012345678"));
-        request.setMitigationActionMetadata(metadata);
-        
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
-        
-        Throwable caughtException = null;
-        try {
-            validator.validateCreateRequest(request);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNull(caughtException);
-    }
-    
-    /**
-     * Test to ensure the typical ways of entering tickets are accepted.
+     * Test to ensure the number of tickets is restricted.
      */
     @Test
     public void testCreateRequestWithInvalidRelatedTickets() {
@@ -673,31 +644,12 @@ public class RequestValidatorTest {
         
         RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
-        Throwable caughtException = null;
-        try {
-            validator.validateCreateRequest(request);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-        assertTrue(caughtException.getMessage().startsWith("Invalid ticket reference found"));
-        
-        metadata.setRelatedTickets(Lists.newArrayList("troubleticket/0012345678"));
-        caughtException = null;
-        try {
-            validator.validateCreateRequest(request);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-        assertTrue(caughtException.getMessage().startsWith("Invalid ticket reference found"));
-        
         List<String> relatedTickets = Lists.newArrayList();
         for (int index=0; index < 200; ++index) {
-        	relatedTickets.add("000001" + index);
+            relatedTickets.add("000001" + index);
         }
         metadata.setRelatedTickets(relatedTickets);
-        caughtException = null;
+        Throwable caughtException = null;
         try {
             validator.validateCreateRequest(request);
         } catch (Exception ex) {
@@ -740,6 +692,7 @@ public class RequestValidatorTest {
             caughtException = ex;
             assertTrue(caughtException.getMessage().startsWith("Empty list of locations found"));
         }
+        assertNotNull(caughtException);
         
         // locations may not be empty
         caughtException = null;
@@ -750,6 +703,23 @@ public class RequestValidatorTest {
             caughtException = ex;
             assertTrue(caughtException.getMessage().startsWith("Invalid location name"));
         }
+        assertNotNull(caughtException);
+        
+        // Test to ensure the number of locations is restricted.
+        List<String> locations = new ArrayList<>();
+        for (int index=0; index < 500; ++index) {
+            locations.add("TST" + index);
+        }
+        request.setLocations(locations);
+        
+        caughtException = null;
+        try {
+            validator.validateListActiveMitigationsForServiceRequest(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(caughtException.getMessage().startsWith("Exceeded the number of locations that can be specified for a single request"));
+        }
+        assertNotNull(caughtException);
         
         request.setLocations(Arrays.asList("alocation"));
         caughtException = null;
