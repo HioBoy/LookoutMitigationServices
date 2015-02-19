@@ -628,8 +628,33 @@ public class RequestValidatorTest {
     }
     
     /**
-     * Test to ensure the number of tickets is restricted.
+     * Test to ensure the typical ways of entering tickets are accepted.
      */
+    @Test
+    public void testCreateRequestWithValidRelatedTickets() {
+        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
+        request.setMitigationName(mitigationName);
+        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setServiceName(serviceName);
+        
+        MitigationActionMetadata metadata = new MitigationActionMetadata();
+        metadata.setUser(userName);
+        metadata.setToolName(toolName);
+        metadata.setDescription("Test description");
+        metadata.setRelatedTickets(Lists.newArrayList("0012345678", "tt/0012345678", "https://tt.amazon.com/0012345678"));
+        request.setMitigationActionMetadata(metadata);
+        
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
+        
+        Throwable caughtException = null;
+        try {
+            validator.validateCreateRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNull(caughtException);
+    }
+    
     @Test
     public void testCreateRequestWithInvalidRelatedTickets() {
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
