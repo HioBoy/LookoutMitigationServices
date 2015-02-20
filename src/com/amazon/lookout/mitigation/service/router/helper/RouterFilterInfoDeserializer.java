@@ -3,6 +3,8 @@ package com.amazon.lookout.mitigation.service.router.helper;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
 
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
@@ -25,6 +27,7 @@ import com.amazon.lookout.mitigation.service.activity.helper.DDBBasedRouterMetad
  *
  */
 public class RouterFilterInfoDeserializer {
+    private static final Log LOG = LogFactory.getLog(RouterFilterInfoDeserializer.class);
     
     /**
      * Helper method to convert an instance of RouterFilterInfoWithMetadata into an instance of MitigationDefinition.
@@ -165,7 +168,8 @@ public class RouterFilterInfoDeserializer {
         }
         
         if (constraints.isEmpty()) {
-            throw new RuntimeException("Got no constraints for filter: " + filterInfo);
+            LOG.info("Got an empty constraint for filterInfo: " + filterInfo + " hence returning an empty SimpleConstraint instead.");
+            return new SimpleConstraint();
         }
         
         if (constraints.size() > 1) {

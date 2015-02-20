@@ -6,7 +6,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -1116,5 +1116,29 @@ public class DDBBasedRouterMetadataHelperTest {
         DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
         List<MitigationRequestDescriptionWithStatuses> returnedMitigations = helper.call();
         assertEquals(returnedMitigations.size(), 0);
+    }
+    
+    @Test
+    public void testEmptyConstraintMitigation() {
+        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
+        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
+        when(serviceSubnetsMatcher.getAllServicesForSubnets(anyList())).thenReturn(Sets.newHashSet("Route53", "CloudFront"));
+        
+        Map<String, AttributeValue> item = new HashMap<>();
+        item.put(RouterMetadataConstants.ROUTER_KEY, new AttributeValue("tst-en-tra-r1"));
+        
+        String filterInfoAsJSON = "{\"filterName\":\"TestEmptyConstraintMit\",\"description\":\"\",\"srcIps\":[],\"destIps\":[],\"srcASNs\":[],\"srcCountryCodes\":[]," +
+                                  "\"protocols\":[],\"synOnly\":false,\"action\":\"COUNT\",\"bandwidthKBps\":12500,\"burstSizeK\":15,\"enabled\":true,\"jobId\":0," +
+                                  "\"lastDatePushedToRouter\":\"Fri Feb 20 01:41:36 UTC 2015\",\"lastUserToPush\":\"mhatre@ANT.AMAZON.COM\",\"customerRateLimit\":null," +
+                                  "\"customerSubnet\":\"\",\"metadata\":{},\"modified\":true,\"mitSvcFilterModified\":false,\"policerBandwidthValueLocked\":false," +
+                                  "\"new\":true,\"packetLength\":[],\"ttl\":[],\"sourcePort\":[],\"destinationPort\":[]}";
+        item.put(RouterMetadataConstants.FILTER_JSON_DESCRIPTION, new AttributeValue(filterInfoAsJSON));
+        ScanResult result = new ScanResult().withItems(item);
+        when(dynamoDBClient.scan(any(ScanRequest.class))).thenReturn(result);
+        
+        DDBBasedRouterMetadataHelper helper = new DDBBasedRouterMetadataHelper(dynamoDBClient, "test", serviceSubnetsMatcher, new POPLocationToRouterNameHelper(new HashMap<String, String>()));
+        List<MitigationRequestDescriptionWithStatuses> returnedMitigations = helper.call();
+        assertEquals(returnedMitigations.size(), 1);
+        assertEquals(returnedMitigations.get(0).getMitigationRequestDescription().getMitigationDefinition().getConstraint(), new SimpleConstraint());
     }
 }
