@@ -31,6 +31,7 @@ import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
+import com.amazon.lookout.mitigation.status.helper.ActiveMitigationsStatusHelper;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -123,7 +124,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetActiveMitigationsForServiceNoActive() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        DDBBasedListMitigationsHandler listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, domain);
+        DDBBasedListMitigationsHandler listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, domain, mock(ActiveMitigationsStatusHelper.class));
         DDBBasedListMitigationsHandler spiedListHandler = spy(listHandler);
         
         doReturn(new QueryResult().withCount(0)).when(spiedListHandler).queryRequestsInDDB(any(QueryRequest.class), any(TSDMetrics.class));
@@ -137,7 +138,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationDescription() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        DDBBasedListMitigationsHandler listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, domain);
+        DDBBasedListMitigationsHandler listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, domain, mock(ActiveMitigationsStatusHelper.class));
         
         String deviceName = "testDevice";
         long workflowId = 5;
@@ -228,7 +229,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationDescriptionsForMitigation() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        DDBBasedListMitigationsHandler listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, domain);
+        DDBBasedListMitigationsHandler listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, domain, mock(ActiveMitigationsStatusHelper.class));
         
         String deviceName = "testDevice";
         long workflowId = 5;
@@ -405,7 +406,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetInProgressRequestsDescription() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        DDBBasedListMitigationsHandler listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, domain);
+        DDBBasedListMitigationsHandler listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, domain, mock(ActiveMitigationsStatusHelper.class));
         
         String deviceName = "testDevice";
         long workflowId = 5;

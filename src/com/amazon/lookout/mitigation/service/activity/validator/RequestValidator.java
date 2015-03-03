@@ -22,11 +22,13 @@ import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 /**
@@ -131,6 +133,18 @@ public class RequestValidator {
         validateServiceName(serviceName);
         validateListOfLocations(request.getLocations(), serviceName);
         validateDeviceName(request.getDeviceName());
+    }
+    
+    /**
+     * Validates if the request object passed to the ReportInactiveLocation API is valid
+     * @param A ReportInactiveLocationRequest object representing the input to the ReportInactiveLocation API
+     * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
+     */
+    public void validateReportInactiveLocation(@NonNull ReportInactiveLocationRequest request) {
+        String serviceName = request.getServiceName();
+        validateServiceName(serviceName);
+        validateDeviceName(request.getDeviceName());
+        validateListOfLocations(Lists.newArrayList(request.getLocation()), serviceName);
     }
     
     /**

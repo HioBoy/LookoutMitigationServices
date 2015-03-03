@@ -22,6 +22,7 @@ import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
@@ -140,6 +141,10 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     private boolean isGetMitigationInfoRequest(final Object request) {
         return (request instanceof GetMitigationInfoRequest);
     }
+    
+    private boolean isReportInactiveLocationRequest(final Object request) {
+        return (request instanceof ReportInactiveLocationRequest);
+    }
         
     /* 
      * Generate Amazon Resource Name (ARN) looking inside the Request, with the following structure
@@ -198,6 +203,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
             mitigationTemplate = null;
             serviceName = getMitigationInfoRequestRequest.getServiceName();
             deviceName = getMitigationInfoRequestRequest.getDeviceName();
+        } else if (isReportInactiveLocationRequest(request)) {
+            ReportInactiveLocationRequest reportInactiveLocationRequest = (ReportInactiveLocationRequest) request;
+            mitigationTemplate = null;
+            serviceName = reportInactiveLocationRequest.getServiceName();
+            deviceName = reportInactiveLocationRequest.getDeviceName();
         } else {
             recognizedRequest = false;
         }

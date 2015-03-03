@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.validator;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -22,6 +23,7 @@ import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsReq
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
+import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
@@ -735,5 +737,59 @@ public class RequestValidatorTest {
         when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("alocation", "blocation", "clocations"));
         validator = new RequestValidator(new ServiceLocationsHelper(edgeLocationsHelper));
         validator.validateListActiveMitigationsForServiceRequest(request);
+    }
+    
+    @Test
+    public void testReportInactiveLocationActivity() {        
+        ReportInactiveLocationRequest request = new ReportInactiveLocationRequest();
+        
+        EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
+        when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("alocation", "blocation", "clocations"));
+        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(edgeLocationsHelper));
+        
+        // locations is optional
+        request.setServiceName(serviceName);
+        request.setDeviceName(DeviceName.POP_ROUTER.name());
+        request.setLocation("alocation");
+        
+        Throwable caughtException = null;
+        try {
+            validator.validateReportInactiveLocation(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNull(caughtException);
+        
+        // invalid device name
+        request.setDeviceName("random");
+        caughtException = null;
+        try {
+            validator.validateReportInactiveLocation(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        
+        // invalid service name
+        request.setDeviceName(DeviceName.POP_ROUTER.name());
+        request.setServiceName("random");
+        caughtException = null;
+        try {
+            validator.validateReportInactiveLocation(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        
+        // invalid location
+        request.setServiceName(serviceName);
+        request.setLocation("random");
+        caughtException = null;
+        try {
+            validator.validateReportInactiveLocation(request);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
     }
 }

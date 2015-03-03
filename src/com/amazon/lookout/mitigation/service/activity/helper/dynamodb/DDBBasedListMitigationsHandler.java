@@ -9,6 +9,8 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import lombok.NonNull;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
@@ -29,14 +31,19 @@ import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLoc
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
+import com.amazon.lookout.mitigation.status.helper.ActiveMitigationsStatusHelper;
 import com.amazon.lookout.model.RequestType;
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazonaws.services.dynamodbv2.model.GetItemResult;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
+import com.amazonaws.services.dynamodbv2.model.UpdateItemResult;
 import com.amazonaws.services.simpleworkflow.flow.DataConverter;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.google.common.collect.Sets;
@@ -57,10 +64,13 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     protected final String mitigationInstancesTableName;
     protected final String mitigationRequestsTableName;
     
+    private final ActiveMitigationsStatusHelper activeMitigationStatusHelper;
+    
     private final DataConverter jsonDataConverter = new JsonDataConverter();
 
-    public DDBBasedListMitigationsHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain) {
+    public DDBBasedListMitigationsHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain, @NonNull ActiveMitigationsStatusHelper activeMitigationStatusHelper) {
         super(dynamoDBClient, domain);
+        this.activeMitigationStatusHelper = activeMitigationStatusHelper;
         
         mitigationInstancesTableName = MitigationInstancesModel.MITIGATION_INSTANCES_TABLE_NAME_PREFIX + domain.toUpperCase();
         mitigationRequestsTableName = MitigationRequestsModel.MITIGATION_REQUESTS_TABLE_NAME_PREFIX + domain.toUpperCase();
@@ -639,5 +649,25 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         }
         
         return descriptions;
+    }
+    
+    /**
+     * 
+     * @param serviceName Service whose mitigation needs to be marked defunct.
+     * @param mitigationName Mitigation which needs to be marked defunct.
+     * @param deviceName Device on which the mitigation to be marked defunct exists.
+     * @param location Location where this mitigation should be marked as defunct.
+     * @param jobId WorkflowId responsible for creating the mitigation which now needs to be marked as defunct.
+     * @param lastDeployDate Last date when this mitigation was modified, required to ensure the mitigation hasn't changed since the caller requested this mitigation to be marked as defunct.
+     * @param tsdMetrics
+     * @return UpdateItemResult as a result of performing DDB update.
+     * @throws ConditionalCheckFailedException
+     * @throws AmazonClientException
+     * @throws AmazonServiceException
+     */
+    @Override
+    public UpdateItemResult markMitigationAsDefunct(@NonNull String serviceName, @NonNull String mitigationName, @NonNull String deviceName, @NonNull String location, 
+                                                    long jobId, long lastDeployDate, @NonNull TSDMetrics tsdMetrics) throws ConditionalCheckFailedException, AmazonClientException, AmazonServiceException {
+        return activeMitigationStatusHelper.markMitigationAsDefunct(serviceName, mitigationName, deviceName, location, jobId, lastDeployDate, tsdMetrics);
     }
 }
