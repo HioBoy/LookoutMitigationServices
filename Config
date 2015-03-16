@@ -103,6 +103,7 @@ package.LookoutMitigationService = {
         1.0 = {
             JakartaCommons-codec = 1;
             log4j = 1.2;
+            Lombok = 1.14.x;
             Mockito = 1.10.x;
             OdinAWSCredentials = 1.3;
             Openssl = 1.0.x;
