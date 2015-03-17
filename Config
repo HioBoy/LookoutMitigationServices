@@ -12,10 +12,10 @@ package.LookoutMitigationService = {
 
     build-tools = {
         1.0 = {
-            JDK = 1.7;
+            JDK8 = 1.0;
             HappierTrails = 3.3;
             # Build logic for spring integration
-            CoralSpringLauncher = 3.1;                       
+            CoralSpringLauncher = 4.0;
             AWSSimpleWorkflowJavaFlowDeciderAPT = 3.2;
         };
     };
@@ -27,7 +27,7 @@ package.LookoutMitigationService = {
     dependencies = {
         1.0 = {
             CoralActivity = 1.0;
-            CoralSpring = 3.1;
+            CoralSpring = 4.0;
             JakartaCommons-logging-api = 1.1;
             JakartaCommons-lang3 = 3.x;
             FindBugsAnnotations = 1.3.7;
@@ -47,7 +47,7 @@ package.LookoutMitigationService = {
             LookoutMitigationServiceModel = 1.0;
             
             JavaAmazonLdapUtils = 1.2;
-            CoralSpringLauncher = 3.1;
+            CoralSpringLauncher = 4.0;
             CoralClientHttp = 1.0;
 
             LookoutMitigationServiceExplorer = 1.0;
@@ -59,7 +59,7 @@ package.LookoutMitigationService = {
     
     runtime-dependencies = {
         1.0 = {
-            JDK = 1.7;
+            JDK8 = 1.0;
             # Runtime dependencies for coral
             JakartaCommons-logging-adapters = 1.1;
             Bobcat = 2.0;
@@ -101,14 +101,17 @@ package.LookoutMitigationService = {
 
     resolves-conflict-dependencies = {
         1.0 = {
+            CoralSpring = 4.0;
+            CoralSpringLauncher = 4.0;
             JakartaCommons-codec = 1;
             log4j = 1.2;
             Lombok = 1.14.x;
             Mockito = 1.10.x;
             OdinAWSCredentials = 1.3;
             Openssl = 1.0.x;
-            SpringBeans = 3.1;
-            SpringCore = 3.1;
+            SpringBeans = 4.0.x;
+            SpringCore = 4.0.x;
+            SpringContext = 4.0.x;
         };
     };
     

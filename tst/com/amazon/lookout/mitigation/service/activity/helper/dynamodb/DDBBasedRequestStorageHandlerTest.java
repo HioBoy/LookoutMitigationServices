@@ -237,7 +237,7 @@ public class DDBBasedRequestStorageHandlerTest {
         
         assertTrue(attributesToStore.containsKey(DDBBasedRequestStorageHandler.LOCATIONS_KEY));
         List<String> locations = attributesToStore.get(DDBBasedRequestStorageHandler.LOCATIONS_KEY).getSS();
-        assertEquals(locations, request.getLocations());
+        assertEquals(Sets.newHashSet(locations), Sets.newHashSet(request.getLocations()));
         
         assertTrue(attributesToStore.containsKey(DDBBasedRequestStorageHandler.MITIGATION_DEFINITION_KEY));
         String newMitigationDefinitionAsJsonStr = attributesToStore.get(DDBBasedRequestStorageHandler.MITIGATION_DEFINITION_KEY).getS();

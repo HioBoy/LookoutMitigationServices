@@ -116,9 +116,9 @@
     <bean id="serviceSubnetsMatcher" class="com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher">
         <constructor-arg>
             <list>
-                <ref local="route53SubnetFetcher"/>
-                <ref local="cloudFrontFMSSubnetsFetcher"/>
-                <ref local="cloudFrontExternalVipsSubnetsFetcher"/>
+                <ref bean="route53SubnetFetcher"/>
+                <ref bean="cloudFrontFMSSubnetsFetcher"/>
+                <ref bean="cloudFrontExternalVipsSubnetsFetcher"/>
             </list>
         </constructor-arg>
     </bean>
