@@ -29,7 +29,7 @@ public class ServiceSubnetsMatcherTest {
         
         ServiceSubnetsMatcher matcher = new ServiceSubnetsMatcher(Lists.newArrayList(subnetsFetcher1, subnetsFetcher2));
 
-        String subnetToCheck = "216.137.51.128/25";
+        String subnetToCheck = "216.137.51.128/26";
         String matchedService = matcher.getServiceForSubnet(subnetToCheck);
         assertNotNull(matchedService);
         assertEquals(matchedService, "CloudFront");

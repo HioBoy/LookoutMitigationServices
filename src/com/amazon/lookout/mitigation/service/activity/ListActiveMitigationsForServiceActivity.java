@@ -154,14 +154,13 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             LOG.info(String.format("ListMitigationsActivity called with RequestId: %s returned: %s.", requestId, ReflectionToStringBuilder.toString(response)));  
             return response;
         } catch (IllegalArgumentException ex) {
-            String msg = String.format("Caught IllegalArgumentException in ListActiveMitigationsForServiceActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
-                                       " for request: " + ReflectionToStringBuilder.toString(request));
-            LOG.warn(msg, ex);
+            String msg = String.format("Caught IllegalArgumentException in ListActiveMitigationsForServiceActivity for requestId: " + requestId + ", reason: " + ex.getMessage());
+            LOG.warn(msg + " for request " + ReflectionToStringBuilder.toString(request), ex);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ListActiveMitigationsExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
         } catch (Exception internalError) {
-            String msg = String.format("Internal error while fulfilling request for ListActiveMitigationsForServiceActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(request));
-            LOG.error(msg, internalError);
+            String msg = String.format("Internal error while fulfilling request for ListActiveMitigationsForServiceActivity for requestId: " + requestId);
+            LOG.error(msg + " for request " + ReflectionToStringBuilder.toString(request), internalError);
             requestSuccessfullyProcessed = false;
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ListActiveMitigationsExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);

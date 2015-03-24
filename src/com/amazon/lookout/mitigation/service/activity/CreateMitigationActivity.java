@@ -162,20 +162,20 @@ public class CreateMitigationActivity extends Activity {
             LOG.warn(String.format("Caught IllegalArgumentException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                    " for request: " + ReflectionToStringBuilder.toString(createRequest)), ex);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.BadRequest.name(), 1);
-            throw new BadRequest400("Received BadRequest when creating new mitigation: " + createRequest.getMitigationName() + " for service: " + createRequest.getServiceName() + 
-                                    " using template: " + createRequest.getMitigationTemplate() + ". Detailed message: " + ex.getMessage());
+            throw new BadRequest400("Received BadRequest for requestId: " + requestId + " when creating new mitigation: " + createRequest.getMitigationName() + " for service: " + 
+                                    createRequest.getServiceName() + " using template: " + createRequest.getMitigationTemplate() + ". Detailed message: " + ex.getMessage());
         } catch (DuplicateRequestException400 ex) {
             String msg = String.format("Caught DuplicateRequestException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.DuplicateRequest.name(), 1);
-            throw ex;
+            throw new DuplicateRequestException400(msg);
         } catch (DuplicateDefinitionException400 ex) {
             String msg = String.format("Caught DuplicateDefinitionException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(createRequest));
             LOG.warn(msg, ex);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.DuplicateDefinition.name(), 1);
-            throw ex;
+            throw new DuplicateDefinitionException400(msg);
         } catch (Exception internalError) {
             String msg = String.format("Internal error while fulfilling request for CreateMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage() + 
                                        " for request: " + ReflectionToStringBuilder.toString(createRequest));
