@@ -50,7 +50,7 @@
     <bean class="com.amazon.lookout.mitigation.service.activity.ReportInactiveLocationActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="activeMitigationInfoHandler" ref="ddbBasedRequestInfoHandler"/>
-        <constructor-arg name="domain" ref="${domain}"/>
+        <constructor-arg name="domain" value="${domain}"/>
     </bean>
     
     <!-- All the beans required by the activities go here -->
@@ -72,9 +72,15 @@
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
     </bean>
     
+    <bean id="activeMitigationsStatusHelper" class="com.amazon.lookout.mitigation.status.helper.ActiveMitigationsStatusHelper">
+        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
+        <constructor-arg name="domain" value="${domain}"/>
+    </bean>
+  
     <bean id="ddbBasedRequestInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedListMitigationsHandler">
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
+        <constructor-arg name="activeMitigationStatusHelper" ref="activeMitigationsStatusHelper"/>
     </bean>
     
     <bean id="ddbBasedInstanceInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedGetMitigationInfoHandler">
