@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 
 import lombok.NonNull;
 
+import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -112,7 +113,7 @@ public class ReportInactiveLocationActivity extends Activity {
             requestValidator.validateReportInactiveLocation(request);
 
             if (domain.equalsIgnoreCase(PROD_DOMAIN)) {
-                String msg = "ReportInactiveLocation is not supported for domain: " + domain + ". Request: " + requestDesc;
+                String msg = "ReportInactiveLocation is not supported for domain: " + domain + ". Request: " + requestDesc + " RequestId: " + requestId;
                 LOG.warn(msg);
                 throw new OperationNotSupportedException400(msg);
             }
@@ -144,17 +145,16 @@ public class ReportInactiveLocationActivity extends Activity {
             response.setServiceName(serviceName);
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
-            String msg = "Caught Illegal" + (ex instanceof IllegalArgumentException ? "Argument" : "State") + "Exception in request for ReportInactiveLocationActivity for requestId: " +
-                         requestId + ", reason: " + ex.getMessage() + " for request: " + requestDesc;
-            LOG.warn(msg, ex);
+            String msg = "Received BadRequest for requestId: " + requestId + " when reporting inactive locations. Detailed message: " + ex.getMessage();
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ReportInactiveLocationExceptions.BadRequest.name(), 1);
-            throw new BadRequest400(msg, ex);
+            throw new BadRequest400(msg);
         } catch (OperationNotSupportedException400 ex) {
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ReportInactiveLocationExceptions.OperationNotSupported.name(), 1);
             throw ex;
         } catch (Exception internalError) {
-            String msg = "Internal error while fulfilling request for ReportInactiveLocationActivity for requestId: " + requestId + " with request: " + requestDesc;
-            LOG.error(msg, internalError);
+            String msg = "Internal error in ReportInactiveLocationActivity for requestId: " + requestId + ", reason: " + internalError.getMessage();
+            LOG.error(msg + " for request: " + ReflectionToStringBuilder.toString(request), internalError);
             requestSuccessfullyProcessed = false;
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ReportInactiveLocationExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);

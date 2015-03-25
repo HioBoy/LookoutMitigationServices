@@ -123,20 +123,18 @@ public class GetMitigationInfoActivity extends Activity {
             response.setMitigationRequestDescriptionsWithStatus(mitigationDescriptionWithStatuses);
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
-            String msg = "Caught " + (ex instanceof IllegalArgumentException ? "Argument" : "State") + "Exception in request for GetMitigationInfoActivity for requestId: " + 
-                         requestId + ", reason: " + ex.getMessage() + " for request: " + ReflectionToStringBuilder.toString(request);
-            LOG.warn(msg, ex);
+        	String msg = "Received BadRequest for requestId: " + requestId + " when getting mitigation info. Detailed message: " + ex.getMessage();
+        	LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationInfoExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
         } catch (MissingMitigationException400 missingMitigationException) {
-            String msg = "Caught MissingMitigationException in request for GetMitigationInfoActivity for requestId: " + requestId + ", reason: " + missingMitigationException.getMessage();
-            LOG.error(msg + ". For request: " + ReflectionToStringBuilder.toString(request), missingMitigationException);
+        	String msg = "Caught MissingMitigationException in GetMitigationInfoActivity for requestId: " + requestId + ", reason: " + missingMitigationException.getMessage();
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), missingMitigationException);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationInfoExceptions.MissingMitigation.name(), 1);
             throw new MissingMitigationException400(msg);
         } catch (Exception internalError) {
-            String msg = "Internal error while fulfilling request for GetRequestStatusActivity for requestId: " + requestId + ", reason: " + internalError.getMessage() + 
-                         " with request: " + ReflectionToStringBuilder.toString(request);
-            LOG.error(msg, internalError);
+            String msg = "Internal error in GetMitigationInfoActivity for requestId: " + requestId + ", reason: " + internalError.getMessage(); 
+            LOG.error(msg + " for request: " + ReflectionToStringBuilder.toString(request), internalError);
             requestSuccessfullyProcessed = false;
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationInfoExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
