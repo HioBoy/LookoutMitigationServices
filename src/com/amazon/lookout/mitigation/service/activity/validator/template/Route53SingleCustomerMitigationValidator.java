@@ -213,12 +213,6 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         
         // Step4. Ensure all the DestinationIPs are /32s
         for (String destIP : constraintValues) {
-            if (!StringUtils.isAsciiPrintable(destIP)) {
-                String msg = "Invalid destIP found! A valid destIP name must conform to the string representation of an IPv4 address.";
-                LOG.info(msg);
-                throw new IllegalArgumentException(msg);
-            }
-            
             if (StringUtils.isBlank(destIP)) {
                 String msg = "MitigationTemplate: " + mitigationTemplate + " expects all destIPs to be /32, instead received one of the destIPs as null/empty";
                 LOG.info(msg);
@@ -226,21 +220,16 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
             }
             
             String[] subnetParts = destIP.split(IPUtils.IP_CIDR_SEPARATOR);
-            if (subnetParts.length > 1) {
-                int maskLength = 0;
-                try {
-                    maskLength = Integer.parseInt(subnetParts[1]);
-                } catch (NumberFormatException ex) {
-                    String msg = "Invalid destIP found! A valid destIP name must conform to the string representation of an IPv4 address.";
-                    LOG.info(msg);
-                    throw new IllegalArgumentException(msg);
-                }
-                
-                if (maskLength != IPUtils.NUM_BITS_IN_IPV4) {
-                    String msg = "MitigationTemplate: " + mitigationTemplate + " expects all destIPs to be /32, instead found: " + constraintValues;
-                    LOG.info(msg);
-                    throw new IllegalArgumentException(msg);
-                }
+            if ((subnetParts.length > 1) && (Integer.parseInt(subnetParts[1]) != IPUtils.NUM_BITS_IN_IPV4)) {
+                String msg = "MitigationTemplate: " + mitigationTemplate + " expects all destIPs to be /32, instead found: " + constraintValues;
+                LOG.info(msg);
+                throw new IllegalArgumentException(msg);
+            }
+            
+            if (!StringUtils.isAsciiPrintable(destIP)) {
+                String msg = "Invalid destIP found! A valid destIP name must conform to the string representation of an IPv4 address.";
+                LOG.info(msg);
+                throw new IllegalArgumentException(msg);
             }
         }
         

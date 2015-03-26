@@ -63,7 +63,7 @@ public class ServiceSubnetsMatcherTest {
         matchedService = matcher.getServiceForSubnet(subnetToCheck);
         assertNull(matchedService);
     }
-    
+
     /**
      * Test when the subnets to check fall outside the range of a service's subnet, but have an overlap in large portions of their subnet.
      */

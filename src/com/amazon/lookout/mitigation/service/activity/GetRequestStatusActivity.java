@@ -97,13 +97,14 @@ public class GetRequestStatusActivity extends Activity{
             
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
-            String msg = "Received BadRequest for requestId: " + requestId + " when getting request status. Detailed message: " + ex.getMessage();
-            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
+            String msg = String.format("Caught Illegal%sException in request for GetRequestStatusActivity for requestId: %s, reason: %s for request: %s", (ex instanceof IllegalArgumentException ? "Argument" : "State"), requestId, ex.getMessage(), ReflectionToStringBuilder.toString(request));
+            LOG.warn(msg, ex);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetRequestStatusExceptions.BadRequest.name(), 1);
-            throw new BadRequest400(msg);
+            throw new BadRequest400(msg, ex);
         } catch (Exception internalError) {
-            String msg = "Internal error in GetRequestStatusActivity for requestId: " + requestId + ", reason: " + internalError.getMessage(); 
-            LOG.error(msg + " for request: " + ReflectionToStringBuilder.toString(request), internalError);
+            String msg = String.format("Internal error while fulfilling request for GetRequestStatusActivity for requestId: " + requestId + 
+                    " with request: " + ReflectionToStringBuilder.toString(request));
+            LOG.error(msg, internalError);
             requestSuccessfullyProcessed = false;
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetRequestStatusExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);

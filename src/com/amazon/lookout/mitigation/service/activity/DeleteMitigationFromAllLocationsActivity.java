@@ -153,24 +153,27 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             
             return mitigationModificationResponse;
         } catch (IllegalArgumentException ex) {
-        	String msg = "Received BadRequest for requestId: " + requestId + " when deleting mitigation: " + deleteRequest.getMitigationName() + " for service: " + 
-                         deleteRequest.getServiceName() + " using template: " + deleteRequest.getMitigationTemplate() + ". Detailed message: " + ex.getMessage();
-            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(deleteRequest), ex);
+            LOG.warn("Caught IllegalArgumentException in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
+                     " for request: " + ReflectionToStringBuilder.toString(deleteRequest), ex);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.BadRequest.name(), 1);
-            throw new BadRequest400(msg);
+            throw new BadRequest400("Received BadRequest for requestId: " + requestId + " when deleting mitigation: " + deleteRequest.getMitigationName() + " for service: " + 
+                                    deleteRequest.getServiceName() + " using template: " + deleteRequest.getMitigationTemplate() + ". Detailed message: " + ex.getMessage());
         } catch (DuplicateRequestException400 ex) {
-            String msg = "Caught DuplicateDefinitionException in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
-            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(deleteRequest), ex);
+            String msg = String.format("Caught DuplicateDefinitionException in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
+                                       " for request: " + ReflectionToStringBuilder.toString(deleteRequest));
+            LOG.warn(msg, ex);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.DuplicateRequest.name(), 1);
             throw new DuplicateRequestException400(msg);
         } catch (MissingMitigationException400 ex) {
-            String msg = "Caught MissingMitigationException in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
-            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(deleteRequest), ex);
+            String msg = String.format("Caught MissingMitigationException in DeleteMitigationActivity for requestId: " + requestId + " with request: " + ", reason: " + ex.getMessage() + 
+                                       " for request: " + ReflectionToStringBuilder.toString(deleteRequest));
+            LOG.warn(msg, ex);
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.MissingMitigation.name(), 1);
             throw new MissingMitigationException400(msg);
         } catch (Exception internalError) {
-            String msg = "Internal error in DeleteMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage();
-            LOG.error(msg + " for request: " + ReflectionToStringBuilder.toString(deleteRequest), internalError);
+            String msg = String.format("Internal error while fulfilling request for DeleteMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage() + 
+                                       " for request: " + ReflectionToStringBuilder.toString(deleteRequest));
+            LOG.error(msg, internalError);
             requestSuccessfullyProcessed = false;
             tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
