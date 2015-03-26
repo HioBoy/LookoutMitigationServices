@@ -1,8 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -10,7 +8,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -18,7 +15,6 @@ import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.net.IPUtils;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
-import com.amazon.coral.google.common.collect.Sets;
 import com.amazon.lookout.mitigation.service.ActionType;
 import com.amazon.lookout.mitigation.service.Constraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
@@ -49,16 +45,9 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         
     private final ServiceSubnetsMatcher serviceSubnetsMatcher;
     
-    private final List<String> validPacketAttributeValues;
-    
     public Route53SingleCustomerMitigationValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher) {
         Validate.notNull(serviceSubnetsMatcher);
         this.serviceSubnetsMatcher = serviceSubnetsMatcher;
-        
-        this.validPacketAttributeValues = new ArrayList<>();
-        for (PacketAttributesEnumMapping packetAttr : PacketAttributesEnumMapping.values()) {
-            validPacketAttributeValues.add(packetAttr.name());
-        }
     }
     
     @Override
@@ -191,7 +180,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         try {
             constraintAttribute = PacketAttributesEnumMapping.valueOf(simpleConstraint.getAttributeName());
         } catch (Exception ex) {
-            String msg = "Caught exception since the attributeName in constraint is not recognizable, valid attribute names: " + validPacketAttributeValues;
+            String msg = "Caught exception since the attribute in constraint is not recognizable, valid attribute names: " + PacketAttributesEnumMapping.values();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
@@ -206,42 +195,22 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         // Step3. We currently (03/27/2014) only allow constraining by DestinationIPs. We thus check to ensure we have atleast 1 but not more than 4 of such destIPs specified.
         List<String> constraintValues = simpleConstraint.getAttributeValues();
         if ((constraintValues == null) || constraintValues.isEmpty() || (constraintValues.size() > 4)) {
-            String msg = "MitigationTemplate: " + mitigationTemplate + " expects at least 1 and at most 4 destIPs in the constraint, instead found: " + constraintValues;
+            String msg = "MitigationTemplate: " + mitigationTemplate + " expects atleast 1 and atmost 4 destIPs to constraint by, instead found constraints: " + constraintValues;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
         // Step4. Ensure all the DestinationIPs are /32s
         for (String destIP : constraintValues) {
-            if (StringUtils.isBlank(destIP)) {
-                String msg = "MitigationTemplate: " + mitigationTemplate + " expects all destIPs to be /32, instead received one of the destIPs as null/empty";
-                LOG.info(msg);
-                throw new IllegalArgumentException(msg);
-            }
-            
             String[] subnetParts = destIP.split(IPUtils.IP_CIDR_SEPARATOR);
             if ((subnetParts.length > 1) && (Integer.parseInt(subnetParts[1]) != IPUtils.NUM_BITS_IN_IPV4)) {
                 String msg = "MitigationTemplate: " + mitigationTemplate + " expects all destIPs to be /32, instead found: " + constraintValues;
-                LOG.info(msg);
-                throw new IllegalArgumentException(msg);
-            }
-            
-            if (!StringUtils.isAsciiPrintable(destIP)) {
-                String msg = "Invalid destIP found! A valid destIP name must conform to the string representation of an IPv4 address.";
-                LOG.info(msg);
-                throw new IllegalArgumentException(msg);
+                   LOG.info(msg);
+                   throw new IllegalArgumentException(msg);
             }
         }
         
-        // Step5. Ensure there are no duplicates in the destIPs.
-        Set<String> destIPs = Sets.newHashSet(constraintValues);
-        if (destIPs.size() != constraintValues.size()) {
-            String msg = "Found one or more duplicate destIPs in constraints: " + constraintValues;
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // Step6. Ensure all the DestinationIPs belong to Route53.
+        // Step5. Ensure all the DestinationIPs belong to Route53.
         String serviceName = serviceSubnetsMatcher.getServiceForSubnets(constraintValues);
         if ((serviceName == null) || !serviceName.equals(ServiceName.Route53)) {
             String msg = "MitigationTemplate: " + mitigationTemplate + " expects all destIPs in the constraint to belong to Route53, instead found: " + constraintValues;

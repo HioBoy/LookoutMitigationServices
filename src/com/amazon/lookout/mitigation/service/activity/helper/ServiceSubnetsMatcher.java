@@ -136,12 +136,6 @@ public class ServiceSubnetsMatcher {
             maskLengthToCheck = Integer.parseInt(subnetParts[1]);
         }
         
-        if (!IPUtils.isValidIPV4Address(ipAddress)) {
-            String msg = "Invalid IPv4 address found: " + subnetToCheck;
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
         int ipAsInt = IPUtils.ipAsInt(ipAddress);
         
         // Get the ipAddress to match as a String representing the bits in the address. We leftPad with 0s to make the length 32 bits.

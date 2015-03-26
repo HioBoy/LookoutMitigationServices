@@ -7,6 +7,7 @@ import java.util.Set;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
 import org.apache.commons.lang.StringUtils;
@@ -36,6 +37,7 @@ import com.google.common.collect.Sets;
  * is responsible for such checks.  
  *
  */
+@AllArgsConstructor
 @ThreadSafe
 public class RequestValidator {
     private static final Log LOG = LogFactory.getLog(RequestValidator.class);
@@ -52,23 +54,7 @@ public class RequestValidator {
     private static final int MAX_NUMBER_OF_LOCATIONS = 200;
     private static final int MAX_NUMBER_OF_TICKETS = 10;
     
-    private final Set<String> deviceNames;
-    private final Set<String> deviceScopes;
-    private final ServiceLocationsHelper serviceLocationsHelper;
-    
-    public RequestValidator(@NonNull ServiceLocationsHelper serviceLocationsHelper) {
-        this.serviceLocationsHelper = serviceLocationsHelper;
-        
-        this.deviceNames = new HashSet<>();
-        for (DeviceName deviceName : DeviceName.values()) {
-            deviceNames.add(deviceName.name());
-        }
-        
-        this.deviceScopes = new HashSet<>();
-        for (DeviceScope deviceScope : DeviceScope.values()) {
-            deviceScopes.add(deviceScope.name());
-        }
-    }
+    @NonNull private final ServiceLocationsHelper serviceLocationsHelper;
     
     /**
      * Validates if the request object passed to the CreateMitigationAPI is valid.
@@ -193,7 +179,7 @@ public class RequestValidator {
     
     private void validateDeviceName(String deviceName) {
         if (isInvalidFreeFormText(deviceName, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
-            String msg = "Invalid device name found! Valid device names: " + deviceNames;
+            String msg = "Invalid device name found! Valid device names: " + DeviceName.values();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
@@ -202,7 +188,7 @@ public class RequestValidator {
         try {
             DeviceName.valueOf(deviceName);
         } catch (Exception ex) {
-            String msg = "The device name that was provided, " + deviceName + ", is not a valid name. Valid deviceNames: " + deviceNames;
+            String msg = "The device name that was provided, " + deviceName + ", is not a valid name. Valid deviceNames: " + DeviceName.values();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
@@ -224,7 +210,7 @@ public class RequestValidator {
     
     private void validateDeviceScope(String deviceScope) {
         if (isInvalidFreeFormText(deviceScope, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
-            String msg = "Invalid device scope found! Valid device scopes: " + deviceScopes;
+            String msg = "Invalid device scope found! Valid device scopes: " + DeviceScope.values();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
@@ -233,7 +219,7 @@ public class RequestValidator {
         try {
             DeviceScope.valueOf(deviceScope);
         } catch (Exception ex) {
-            String msg = "The device scope that was provided, " + deviceScope + ", is not valid. Valid device scopes: " + deviceScopes;
+            String msg = "The device scope that was provided, " + deviceScope + ", is not valid. Valid device scopes: " + DeviceScope.values();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
@@ -287,7 +273,8 @@ public class RequestValidator {
     
     private void validateRelatedTickets(List<String> relatedTickets) {
         if (relatedTickets.size() > MAX_NUMBER_OF_TICKETS) {
-            String msg = "Exceeded the number of tickets that can be specified for a single mitigation. Max allowed: " + MAX_NUMBER_OF_TICKETS + ", but found " + relatedTickets.size() + " tickets.";
+            String msg = "Exceeded the number of tickets that can be specified for a single mitigation. Max allowed: " + MAX_NUMBER_OF_TICKETS +
+                         ". Instead found: " + relatedTickets.size() + " number of tickets.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
@@ -303,7 +290,8 @@ public class RequestValidator {
         // abbreviated link: tt/0043589677 or the entire link: https://tt.amazon.com/0043589677. Hence simply checking to just ensure we have all valid characters for each of those.
         for (String ticket : relatedTickets) {
             if (isInvalidFreeFormText(ticket, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
-                String msg = "Invalid ticket found! A valid ticket must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
+                String msg = "Invalid ticket reference found! A valid ticket must contain either just the ticket number (eg: 0043589677) or links " +
+                             "to the ticket (eg: tt/0043589677 or https://tt.amazon.com/0043589677)";
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
             }
