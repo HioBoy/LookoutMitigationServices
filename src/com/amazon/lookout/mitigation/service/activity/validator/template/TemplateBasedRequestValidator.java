@@ -127,6 +127,14 @@ public class TemplateBasedRequestValidator {
     }
 
     /**
+     * Returns an instance of IPTablesValidator.
+     * @return ServiceTemplateValidator
+     */
+    private ServiceTemplateValidator getIPTablesValidator() {
+        return new IPTablesValidator();
+    }
+
+    /**
      * Returns map of templateName to ServiceTemplateValidator corresponding to the template.
      * @param serviceSubnetsMatcher ServiceSubnetsMatcher that is used by some of the ServiceTemplateValidators.
      * @return ImmutableMap of templateName to ServiceTemplateValidator corresponding to the template.
@@ -140,6 +148,9 @@ public class TemplateBasedRequestValidator {
                 break;
             case MitigationTemplate.Router_CountMode_Route53Customer:
                 serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getRoute53SingleCustomerValidator(serviceSubnetsMatcher));
+                break;
+            case MitigationTemplate.IPTables_Mitigation_EdgeCustomer:
+                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getIPTablesValidator());
                 break;
             default:
                 String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". Each template must be associated with some validation checks.";
