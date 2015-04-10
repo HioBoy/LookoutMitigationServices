@@ -7,7 +7,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.model.RequestType;
 
 /** 
- * RequestStorageManager is responsible for managing storage of requests that come to the mitigationservice.
+ * RequestStorageManager is responsible for managing storage of requests that come to the mitigation service.
  *
  */
 public interface RequestStorageManager {
