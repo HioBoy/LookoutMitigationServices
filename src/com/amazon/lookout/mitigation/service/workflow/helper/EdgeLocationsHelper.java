@@ -286,7 +286,7 @@ public class EdgeLocationsHelper implements Runnable {
      * Helper to get the current set of POPs known to the DaasControlAPIServiceV20100701.
      * @return Set<String> representing POP names known to the DaasControlAPIServiceV20100701.
      */
-    private Set<String> getRoute53POPs() {
+    protected Set<String> getRoute53POPs() {
         Set<String> route53POPs = new HashSet<>();
         
         ListDNSServersCall listDNSServersCall = daasClient.newListDNSServersCall();

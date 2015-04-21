@@ -25,7 +25,7 @@
         <property name="work">
             <set>
                 <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
-                    <property name="runnable" ref="edgeLocationsHelper"/>
+                    <property name="runnable" ref="${domain}.edgeLocationsHelper"/>
                     <property name="period" value="30"/>
                     <property name="timeUnit" ref="minutes"/>
                 </bean>

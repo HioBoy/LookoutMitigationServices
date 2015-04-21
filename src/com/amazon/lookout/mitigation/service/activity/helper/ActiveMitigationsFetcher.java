@@ -6,11 +6,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.activities.model.ActiveMitigationDetails;
+import com.amazon.lookout.mitigation.router.FakeDevice;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithStatuses;
@@ -25,6 +29,7 @@ import com.amazon.lookout.model.RequestType;
 public class ActiveMitigationsFetcher implements Callable<List<MitigationRequestDescriptionWithStatuses>> {
     
     protected static final String KEY_SEPARATOR = "#";
+    private static final Log LOG = LogFactory.getLog(ActiveMitigationsFetcher.class);
     
     @NonNull private final String serviceName;
     @NonNull private final String deviceName;
@@ -69,6 +74,14 @@ public class ActiveMitigationsFetcher implements Callable<List<MitigationRequest
                     MitigationInstanceStatus instanceStatus = new MitigationInstanceStatus();
                     instanceStatus.setLocation(location);
                     instanceStatus.setDeployDate(lastDeployDate);
+
+                    if (mitigationDescription.getRequestType() == null) {
+                        LOG.warn(String
+                                .format("Could not determine request type for mitigation with name %s on device %s. Status cannot be determined",
+                                        mitigationDescription.getMitigationName(),
+                                        mitigationDescription.getDeviceName()));
+                        break;
+                    }
                     
                     String successStatus = MitigationInstanceStatusHelper.getOperationSuccessfulStatus(RequestType.valueOf(mitigationDescription.getRequestType()));
                     instanceStatus.setMitigationStatus(successStatus);

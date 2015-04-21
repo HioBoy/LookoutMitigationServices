@@ -54,6 +54,7 @@ package.LookoutMitigationService = {
             LookoutRouterMitigationCommons = 1.0;
             
             LookoutMWSClientJava = 1.0;
+            LookoutFakeRouterServiceJavaClient = 1.0;
         };
     };
     
@@ -112,6 +113,7 @@ package.LookoutMitigationService = {
             SpringBeans = 4.0.x;
             SpringCore = 4.0.x;
             SpringContext = 4.0.x;
+            junit = 4.12;
         };
     };
     

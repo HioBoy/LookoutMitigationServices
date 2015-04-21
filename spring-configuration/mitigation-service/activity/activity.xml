@@ -59,7 +59,7 @@
     </bean>
     
     <bean id="serviceLocationsHelper" class="com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper">
-        <constructor-arg name="edgeLocationsHelper" ref="edgeLocationsHelper"/>
+        <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
     </bean>
     
     <bean id="templateBasedRequestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator">
@@ -71,12 +71,12 @@
         <constructor-arg name="domain" value="${domain}"/>
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
     </bean>
-    
+
     <bean id="activeMitigationsStatusHelper" class="com.amazon.lookout.mitigation.status.helper.ActiveMitigationsStatusHelper">
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
     </bean>
-  
+
     <bean id="ddbBasedRequestInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedListMitigationsHandler">
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
@@ -102,17 +102,8 @@
     </bean>
     
     <bean id="route53SingleCustomerTemplateLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper">
-        <constructor-arg name="edgeLocationsHelper" ref="edgeLocationsHelper"/>
+        <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
         <constructor-arg name="popsWithCiscoRouter" ref="${domain}.popsWithCiscoRouter"/>
-    </bean>
-    
-    <bean id="edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
-        <constructor-arg name="cloudfrontClient" ref="edgeOperatorServiceClient"/>
-        <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>
-        <constructor-arg name="bwLocationsHelper" ref="bwLocationsHelper"/>
-        <constructor-arg name="millisToSleepBetweenRetries" value="500"/>
-        <constructor-arg name="popsListDir" value="var/state/popsList"/>
-        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
     
     <bean id="monitoringQueryClientProvider" class="com.amazon.lookout.mitigation.service.workflow.helper.MonitoringQueryClientProvider">
