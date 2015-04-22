@@ -33,6 +33,10 @@ import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
+import com.amazonaws.services.dynamodbv2.document.RangeKeyCondition;
+import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.model.AttributeAction;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.AttributeValueUpdate;
@@ -88,6 +92,8 @@ public abstract class DDBBasedRequestStorageHandler {
     public static final String NUM_POST_DEPLOY_CHECKS_KEY = MitigationRequestsModel.NUM_POST_DEPLOY_CHECKS_KEY;
     public static final String POST_DEPLOY_CHECKS_DEFINITION_KEY = "PostDeployChecks";
     public static final String UPDATE_WORKFLOW_ID_KEY = MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY;
+    
+    public static final String MITIGATION_NAME_LSI = MitigationRequestsModel.MITIGATION_NAME_LSI;
     
     // Below is a list of relevant keys from the Active Mitigations table.
     public static final String DELETION_DATE_KEY = "DeletionDate";
@@ -407,6 +413,86 @@ public abstract class DDBBasedRequestStorageHandler {
     }
     
     /**
+     * Get the latest mitigation version for given mitigation on give device and scope
+     * @param deviceName Device corresponding to whom the latest mitigation version needs to be determined.
+     * @param deviceScope Device scope corresponding to whom the latest mitigation version needs to be determined.
+     * @param mitigationName Mitigation Name corresponding to whom the latest mitigation version needs
+     *  to be determined.
+     * @param latestVersionOnLastAttempt latest version from last attempt
+     * @param metrics
+     * @return Long representing the latest mitigation version that currently exist in the DDB tables.
+     */
+    protected Integer getLatestVersionForMitigationOnDevice(String deviceName, String deviceScope, String mitigationName, Integer latestVersionOnLastAttempt, TSDMetrics metrics) {
+        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getLatestVersionForMitigationOnDevice");
+        
+        Map<String, Condition> keyConditions = new HashMap<>();
+        keyConditions.put(DEVICE_NAME_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                .withAttributeValueList(Collections.singleton(new AttributeValue().withS(deviceName))));
+        keyConditions.put(MITIGATION_NAME_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                .withAttributeValueList(Collections.singleton(new AttributeValue().withS(mitigationName))));
+        
+        QueryRequest request = new QueryRequest().withAttributesToGet(Collections.singleton(MITIGATION_VERSION_KEY))
+                .withTableName(mitigationRequestsTableName).withIndexName(MITIGATION_NAME_LSI).withConsistentRead(true).withKeyConditions(keyConditions);
+        
+        // Filter out any records whose DeviceScope isn't the same.
+        request.addQueryFilterEntry(DEVICE_SCOPE_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                .withAttributeValueList(Arrays.asList(new AttributeValue(deviceScope))));
+        
+        if (latestVersionOnLastAttempt != null) {
+            request.addQueryFilterEntry(MITIGATION_VERSION_KEY, new Condition().withComparisonOperator(ComparisonOperator.GE)
+                    .withAttributeValueList(Arrays.asList(new AttributeValue().withN(String.valueOf(latestVersionOnLastAttempt)))));
+        }
+        
+        Integer latestMitigationVersion = null;
+        Map<String, AttributeValue> lastEvaluatedKey = null;
+        do {
+            if (lastEvaluatedKey != null) {
+                request.setExclusiveStartKey(lastEvaluatedKey);
+            }   
+            
+            QueryResult queryResult = null;
+            int numAttempts = 0;
+            // Attempt to query DDB for a fixed number of times. If query was successful, return the QueryResult, else when the loop ends throw back an exception.
+            while (numAttempts++ < DDB_QUERY_MAX_ATTEMPTS) {
+                try {
+                    subMetrics.addOne(NUM_DDB_QUERY_ATTEMPTS_KEY);
+                    queryResult = queryDynamoDB(request, subMetrics);
+                    break;
+                } catch (Exception ex) {
+                    String msg = "Caught Exception when trying to query for mitigation: " + mitigationName + "for device: " + deviceName + " for deviceScope: " + deviceScope + 
+                                 " latestVersionOnLastAttempt: " + latestVersionOnLastAttempt + " with consistentRead and keyConditions: " + keyConditions + ". Attempt so far: " + numAttempts;
+                    LOG.warn(msg, ex);
+                }
+                
+                if (numAttempts < DDB_QUERY_MAX_ATTEMPTS) {
+                    try {
+                        Thread.sleep(DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
+                    } catch (InterruptedException ignored) {}
+                }
+            }
+            
+            if (queryResult == null) {
+                // Actual number of attempts is 1 greater than the current value since we increment numAttempts after the check for the loop above.
+                numAttempts = numAttempts - 1;
+                String msg = "Unable to query DDB for mitigation: " + mitigationName + "for device: " + deviceName + " for deviceScope: " + deviceScope + " latestVersionOnLastAttempt: " + 
+                        latestVersionOnLastAttempt + " with consistentRead and keyConditions: " + keyConditions + ". Total NumAttempts: " + numAttempts;
+                LOG.warn(msg);
+                throw new RuntimeException(msg);
+            }
+            
+            lastEvaluatedKey = queryResult.getLastEvaluatedKey();
+            for (Map<String, AttributeValue> item : queryResult.getItems()) {
+                Integer mitigationVersion = Integer.parseInt(item.get(MITIGATION_VERSION_KEY).getN());
+                if (latestMitigationVersion == null || mitigationVersion > latestMitigationVersion) {
+                    latestMitigationVersion = mitigationVersion;
+                }
+            }
+        } while (lastEvaluatedKey != null);
+        
+        return latestMitigationVersion;
+    }
+    
+    /**
      * Called by the concrete implementations of this StorageHandler to find all the currently active mitigations for a device.
      * @param deviceName Device corresponding to whom all active mitigations need to be determined.
      * @param deviceScope Device scope for the device where all the active mitigations need to be determined.
@@ -424,7 +510,8 @@ public abstract class DDBBasedRequestStorageHandler {
         int numAttempts = 0;
         try {
             // Attempt to query DDB for a fixed number of times. If query was successful, return the QueryResult, else when the loop endsthrow back an exception.
-            while (numAttempts++ < DDB_QUERY_MAX_ATTEMPTS) {
+            while (numAttempts < DDB_QUERY_MAX_ATTEMPTS) {
+                numAttempts++;
                 try {
                     QueryRequest request = new QueryRequest();
                     request.setAttributesToGet(attributesToGet);
@@ -466,9 +553,6 @@ public abstract class DDBBasedRequestStorageHandler {
                 }
             }
             
-            // Actual number of attempts is 1 greater than the current value since we increment numAttempts after the check for the loop above.
-            numAttempts = numAttempts - 1;
-
             String msg = "Unable to query DDB for active mitigations for device: " + deviceName + " attributesToGet " + attributesToGet + 
                          " with consistentRead: " + "and keyConditions: " + keyConditions + ". Total NumAttempts: " + numAttempts;
             LOG.warn(msg);
@@ -612,7 +696,6 @@ public abstract class DDBBasedRequestStorageHandler {
             subMetrics.end();
         }
     }
-    
     
     /**
      * Issues a query against the DDBTable. Delegates the call to DynamoDBHelper for calling the query DDB API.

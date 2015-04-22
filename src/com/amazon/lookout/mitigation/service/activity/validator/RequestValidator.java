@@ -92,6 +92,12 @@ public class RequestValidator {
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
+        
+        if (request.getMitigationVersion() <= 1) {
+            String msg = "Version of the mitigation to be edited should be set to > 1, instead found: " + request.getMitigationVersion();
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
     }
     
     /**
