@@ -446,7 +446,7 @@ public abstract class DDBBasedRequestStorageHandler {
                     // Filter out any records whose DeviceScope isn't the same.
                     AttributeValue deviceScopeAttrVal = new AttributeValue(deviceScope);
                     Condition condition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(Arrays.asList(deviceScopeAttrVal));
-                    request.addQueryFilterEntry(DEVICE_SCOPE_KEY, condition);
+                    request.getQueryFilter().put(DEVICE_SCOPE_KEY, condition);
                     
                     return queryDynamoDB(request, subMetrics);
                     
