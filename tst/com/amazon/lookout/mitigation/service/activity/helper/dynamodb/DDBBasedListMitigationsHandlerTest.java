@@ -283,19 +283,9 @@ public class DDBBasedListMitigationsHandlerTest {
         Condition requestTypeCondition = new Condition().withComparisonOperator(ComparisonOperator.NE).withAttributeValueList(value);
         queryFilter.put(MitigationRequestsModel.REQUEST_TYPE_KEY, requestTypeCondition);
         
-        Set<String> attributes = Sets.newHashSet(MitigationRequestsModel.getAttributeNamesForRequestTable());
-        
         MitigationDefinition mitigationDefinition = DDBBasedCreateRequestStorageHandlerTest.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         String mitigationDefinitionJsonString = jsonDataConverter.toData(mitigationDefinition);
-        
-        QueryRequest queryRequest = new QueryRequest().withAttributesToGet(attributes)
-                                                      .withTableName(MitigationRequestsModel.MITIGATION_REQUESTS_TABLE_NAME_PREFIX + domain.toUpperCase())
-                                                      .withConsistentRead(true)
-                                                      .withKeyConditions(keyConditions)
-                                                      .withQueryFilter(queryFilter)
-                                                      .withExclusiveStartKey(null)
-                                                      .withIndexName(MitigationRequestsModel.MITIGATION_NAME_LSI);
         
         QueryResult queryResult = new QueryResult();
         
@@ -325,7 +315,7 @@ public class DDBBasedListMitigationsHandlerTest {
         listOfItems.add(item);
         queryResult.setItems(listOfItems);
         
-        when(dynamoDBClient.query(queryRequest)).thenReturn(queryResult);
+        when(dynamoDBClient.query(any(QueryRequest.class))).thenReturn(queryResult);
         
         List<MitigationRequestDescription> descriptions = listHandler.getMitigationRequestDescriptionsForMitigation(serviceName, deviceName, deviceScope, mitigationName, tsdMetrics);
         

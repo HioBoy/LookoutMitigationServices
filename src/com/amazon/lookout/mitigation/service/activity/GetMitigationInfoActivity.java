@@ -98,7 +98,7 @@ public class GetMitigationInfoActivity extends Activity {
             
             List<MitigationRequestDescriptionWithStatus> mitigationDescriptionWithStatuses = new ArrayList<>();
             
-            // Step 2. Get list of "active" mitigation requests for this service, device, deviceScope and mitigationName from the requests table.
+            // Step 2. Get list of mitigation requests for this service, device, deviceScope and mitigationName from the requests table.
             List<MitigationRequestDescription> mitigationDescriptions = requestInfoHandler.getMitigationRequestDescriptionsForMitigation(serviceName, deviceName, deviceScope, mitigationName, tsdMetrics);
             if (mitigationDescriptions.isEmpty()) {
                 throw new MissingMitigationException400("Mitigation: " + mitigationName + " for service: " + serviceName + " doesn't exist on device: " + deviceName + " with deviceScope:" + deviceScope);
@@ -106,7 +106,11 @@ public class GetMitigationInfoActivity extends Activity {
             
             // Step 3. For each of the requests fetched above, query the individual instance status and populate a new MitigationRequestDescriptionWithStatus instance to wrap this information.
             for (MitigationRequestDescription description : mitigationDescriptions) {
-                List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler.getMitigationInstanceStatus(deviceName, description.getJobId(), tsdMetrics);
+                long jobIdForInstanceStatus = description.getJobId();
+                if (description.getUpdateJobId() != 0) {
+                    jobIdForInstanceStatus = description.getUpdateJobId();
+                }
+                List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler.getMitigationInstanceStatus(deviceName, jobIdForInstanceStatus, tsdMetrics);
                 
                 MitigationRequestDescriptionWithStatus mitigationDescriptionWithStatus = new MitigationRequestDescriptionWithStatus();
                 mitigationDescriptionWithStatus.setMitigationRequestDescription(description);

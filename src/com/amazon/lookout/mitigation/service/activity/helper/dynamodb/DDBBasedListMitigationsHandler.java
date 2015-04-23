@@ -523,16 +523,14 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     }
     
     /**
-     * Generates a list of MitigationRequestDescription instances, where each instance wraps information about an active mitigation request.
-     * An active mitigation request is one which hasn't yet been updated by another workflow (there might be another workflow currently working on
-     * an update, but if the updating workflow hasn't yet completed, an existing request will be considered as an active request).
+     * Generates a list of MitigationRequestDescription instances, where each instance wraps information about the latest request.
      * 
      * @param serviceName ServiceName for which we need to get the list of active mitigation descriptions.
      * @param deviceName DeviceName from which we need to read the list of active mitigation descriptions.
      * @param deviceScope DeviceScope to constraint the query to get the list of active mitigation descriptions.
      * @param mitigationName MitigationName constraint for the active mitigations.
      * @param tsdMetrics 
-     * @return List of MitigationRequestDescription instances, each instance describes an active request.
+     * @return List of MitigationRequestDescription instances, should contain a single request representing the latest (create/edit) mitigation request for this mitigationName.
      */
     @Override
     public List<MitigationRequestDescription> getMitigationRequestDescriptionsForMitigation(@Nonnull String serviceName, @Nonnull String deviceName, String deviceScope, 
@@ -571,11 +569,6 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
             value = new AttributeValue(deviceScope);
             Condition deviceScopeCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
             queryFilter.put(DEVICE_SCOPE_KEY, deviceScopeCondition);
-            
-            // Restrict results to only requests which are "active" (i.e. there hasn't been a subsequent workflow updating the actions of this workflow)
-            value = new AttributeValue().withN("0");
-            Condition condition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
-            queryFilter.put(UPDATE_WORKFLOW_ID_KEY, condition);
             
             // Ignore the delete requests, since they don't contain any mitigation definitions.
             value = new AttributeValue(RequestType.DeleteRequest.name());
@@ -628,27 +621,42 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                 }
             } while (lastEvaluatedKey != null);
             
-            // Convert the fetched items into a list of ActiveMitigationDetails.
-            return getMitigationDescriptions(fetchedItems);
+            List<MitigationRequestDescription> requestDescriptionsToReturn = new ArrayList<>();
+            
+            // Get the latest MitigationRequestDescription from the list of fetchedItems.
+            if (!fetchedItems.isEmpty()) {
+                MitigationRequestDescription requestDescription = getLatestMitigationDescription(fetchedItems);
+                if (requestDescription != null) {
+                    requestDescriptionsToReturn.add(requestDescription);
+                }
+            }
+            
+            return requestDescriptionsToReturn;
         } finally {
             subMetrics.end();
         }
     }
     
     /**
-     * Helper method to convert a list of items (Map of AttributeName (String) to AttributeValue) fetched from DDB into a List of MitigationRequestDescription instances.
+     * Helper method to convert a list of items (Map of AttributeName (String) to AttributeValue) fetched from DDB into MitigationRequestDescription instances,
+     * returning back the latest MitigationRequestDescription, regardless of whether it is "active" or not (since it might have been deleted).
      * @param items List of Map, where each Map has attributeName (String) as the key and DDB's AttributeValue as the corresponding value.
-     * @return List of MitigationRequestDescription instances, each instance describes a request.
+     * @return MitigationRequestDescription representing the latest MitigationRequestDescription.
      */
-    private List<MitigationRequestDescription> getMitigationDescriptions(@Nonnull List<Map<String, AttributeValue>> items) {
-        List<MitigationRequestDescription> descriptions = new ArrayList<>();
-        
+    private MitigationRequestDescription getLatestMitigationDescription(@Nonnull List<Map<String, AttributeValue>> items) {
+        MitigationRequestDescription latestRequestDescription = null;
         for (Map<String, AttributeValue> item : items) {
             MitigationRequestDescription description = convertToRequestDescription(item);
-            descriptions.add(description);
+            if (latestRequestDescription == null) {
+                latestRequestDescription = description;
+            } else {
+                if (description.getJobId() > latestRequestDescription.getJobId()) {
+                    latestRequestDescription = description;
+                }
+            }
         }
         
-        return descriptions;
+        return latestRequestDescription;
     }
     
     /**
