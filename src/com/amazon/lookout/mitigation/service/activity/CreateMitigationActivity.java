@@ -27,7 +27,7 @@ import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
-import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
+import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -99,20 +99,20 @@ public class CreateMitigationActivity extends Activity {
         boolean requestSuccessfullyProcessed = true;
         try {
             LOG.debug(String.format("CreateMitigationActivity called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(createRequest)));
-            CommonActivityMetricsHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
+            ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
             
             String mitigationTemplate = createRequest.getMitigationTemplate();
-            CommonActivityMetricsHelper.addTemplateNameCountMetrics(mitigationTemplate, tsdMetrics);
+            ActivityHelper.addTemplateNameCountMetrics(mitigationTemplate, tsdMetrics);
             
             DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
             String deviceName = deviceNameAndScope.getDeviceName().name();
-            CommonActivityMetricsHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
+            ActivityHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
             
             String deviceScope = deviceNameAndScope.getDeviceScope().name();
-            CommonActivityMetricsHelper.addDeviceScopeCountMetrics(deviceScope, tsdMetrics);
+            ActivityHelper.addDeviceScopeCountMetrics(deviceScope, tsdMetrics);
             
             String serviceName = createRequest.getServiceName();
-            CommonActivityMetricsHelper.addServiceNameCountMetrics(serviceName, tsdMetrics);
+            ActivityHelper.addServiceNameCountMetrics(serviceName, tsdMetrics);
             
             // Step1. Validate this request.
             requestValidator.validateCreateRequest(createRequest);
@@ -159,29 +159,25 @@ public class CreateMitigationActivity extends Activity {
             
             return mitigationModificationResponse;
         } catch (IllegalArgumentException ex) {
-            LOG.warn(String.format("Caught IllegalArgumentException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
-                                   " for request: " + ReflectionToStringBuilder.toString(createRequest)), ex);
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.BadRequest.name(), 1);
-            throw new BadRequest400("Received BadRequest when creating new mitigation: " + createRequest.getMitigationName() + " for service: " + createRequest.getServiceName() + 
-                                    " using template: " + createRequest.getMitigationTemplate() + ". Detailed message: " + ex.getMessage());
+            String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "CreateMitigationActivity", ex.getMessage());
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(createRequest), ex);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.BadRequest.name(), 1);
+            throw new BadRequest400(msg);
         } catch (DuplicateRequestException400 ex) {
-            String msg = String.format("Caught DuplicateRequestException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
-                                       " for request: " + ReflectionToStringBuilder.toString(createRequest));
-            LOG.warn(msg, ex);
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.DuplicateRequest.name(), 1);
-            throw ex;
+            String msg = "Caught DuplicateRequestException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(createRequest), ex);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.DuplicateRequest.name(), 1);
+            throw new DuplicateRequestException400(msg);
         } catch (DuplicateDefinitionException400 ex) {
-            String msg = String.format("Caught DuplicateDefinitionException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
-                                       " for request: " + ReflectionToStringBuilder.toString(createRequest));
-            LOG.warn(msg, ex);
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.DuplicateDefinition.name(), 1);
-            throw ex;
+            String msg = "Caught DuplicateDefinitionException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(createRequest), ex);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.DuplicateDefinition.name(), 1);
+            throw new DuplicateDefinitionException400(msg);
         } catch (Exception internalError) {
-            String msg = String.format("Internal error while fulfilling request for CreateMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage() + 
-                                       " for request: " + ReflectionToStringBuilder.toString(createRequest));
-            LOG.error(msg, internalError);
+            String msg = "Internal error in CreateMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage(); 
+            LOG.error(msg + " for request: " + ReflectionToStringBuilder.toString(createRequest), internalError);
             requestSuccessfullyProcessed = false;
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.InternalError.name(), 1);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
         } finally {
             if (requestSuccessfullyProcessed) {

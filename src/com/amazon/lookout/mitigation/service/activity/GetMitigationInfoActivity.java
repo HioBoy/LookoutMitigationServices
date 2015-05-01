@@ -27,7 +27,7 @@ import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithStatus;
-import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
+import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -91,14 +91,14 @@ public class GetMitigationInfoActivity extends Activity {
         
         try {            
             LOG.info(String.format("GetMitigationInfoActivity called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
-            CommonActivityMetricsHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
+            ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
             
             // Step 1. Validate this request
             requestValidator.validateGetMitigationInfoRequest(request);
             
             List<MitigationRequestDescriptionWithStatus> mitigationDescriptionWithStatuses = new ArrayList<>();
             
-            // Step 2. Get list of mitigation requests for this service, device, deviceScope and mitigationName from the requests table.
+            // Step 2. Get list of "active" mitigation requests for this service, device, deviceScope and mitigationName from the requests table.
             List<MitigationRequestDescription> mitigationDescriptions = requestInfoHandler.getMitigationRequestDescriptionsForMitigation(serviceName, deviceName, deviceScope, mitigationName, tsdMetrics);
             if (mitigationDescriptions.isEmpty()) {
                 throw new MissingMitigationException400("Mitigation: " + mitigationName + " for service: " + serviceName + " doesn't exist on device: " + deviceName + " with deviceScope:" + deviceScope);
@@ -106,11 +106,7 @@ public class GetMitigationInfoActivity extends Activity {
             
             // Step 3. For each of the requests fetched above, query the individual instance status and populate a new MitigationRequestDescriptionWithStatus instance to wrap this information.
             for (MitigationRequestDescription description : mitigationDescriptions) {
-                long jobIdForInstanceStatus = description.getJobId();
-                if (description.getUpdateJobId() != 0) {
-                    jobIdForInstanceStatus = description.getUpdateJobId();
-                }
-                List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler.getMitigationInstanceStatus(deviceName, jobIdForInstanceStatus, tsdMetrics);
+                List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler.getMitigationInstanceStatus(deviceName, description.getJobId(), tsdMetrics);
                 
                 MitigationRequestDescriptionWithStatus mitigationDescriptionWithStatus = new MitigationRequestDescriptionWithStatus();
                 mitigationDescriptionWithStatus.setMitigationRequestDescription(description);
@@ -127,22 +123,20 @@ public class GetMitigationInfoActivity extends Activity {
             response.setMitigationRequestDescriptionsWithStatus(mitigationDescriptionWithStatuses);
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
-            String msg = "Caught " + (ex instanceof IllegalArgumentException ? "Argument" : "State") + "Exception in request for GetMitigationInfoActivity for requestId: " + 
-                         requestId + ", reason: " + ex.getMessage() + " for request: " + ReflectionToStringBuilder.toString(request);
-            LOG.warn(msg, ex);
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationInfoExceptions.BadRequest.name(), 1);
+            String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "GetMitigationInfoActivity", ex.getMessage());
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationInfoExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
         } catch (MissingMitigationException400 missingMitigationException) {
-            String msg = "Caught MissingMitigationException in request for GetMitigationInfoActivity for requestId: " + requestId + ", reason: " + missingMitigationException.getMessage();
-            LOG.error(msg + ". For request: " + ReflectionToStringBuilder.toString(request), missingMitigationException);
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationInfoExceptions.MissingMitigation.name(), 1);
+            String msg = "Caught MissingMitigationException in GetMitigationInfoActivity for requestId: " + requestId + ", reason: " + missingMitigationException.getMessage();
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), missingMitigationException);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationInfoExceptions.MissingMitigation.name(), 1);
             throw new MissingMitigationException400(msg);
         } catch (Exception internalError) {
-            String msg = "Internal error while fulfilling request for GetRequestStatusActivity for requestId: " + requestId + ", reason: " + internalError.getMessage() + 
-                         " with request: " + ReflectionToStringBuilder.toString(request);
-            LOG.error(msg, internalError);
+            String msg = "Internal error in GetMitigationInfoActivity for requestId: " + requestId + ", reason: " + internalError.getMessage(); 
+            LOG.error(msg + " for request: " + ReflectionToStringBuilder.toString(request), internalError);
             requestSuccessfullyProcessed = false;
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationInfoExceptions.InternalError.name(), 1);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationInfoExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
         } finally {
             tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_SUCCESS, requestSuccessfullyProcessed ? 1 : 0);

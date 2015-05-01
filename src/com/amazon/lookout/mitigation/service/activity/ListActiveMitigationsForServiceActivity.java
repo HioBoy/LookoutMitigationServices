@@ -36,7 +36,7 @@ import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithStatuses;
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationsFetcher;
-import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
+import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.DDBBasedRouterMetadataHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.OngoingRequestsFetcher;
@@ -85,7 +85,7 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
         
         try {            
             LOG.info(String.format("ListActiveMitigationsForServiceActivity called with RequestId: %s and request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
-            CommonActivityMetricsHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
+            ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
             
             // Step 1. Validate your request.
             requestValidator.validateListActiveMitigationsForServiceRequest(request);
@@ -154,16 +154,15 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             LOG.info(String.format("ListMitigationsActivity called with RequestId: %s returned: %s.", requestId, ReflectionToStringBuilder.toString(response)));  
             return response;
         } catch (IllegalArgumentException ex) {
-            String msg = String.format("Caught IllegalArgumentException in ListActiveMitigationsForServiceActivity for requestId: " + requestId + ", reason: " + ex.getMessage() + 
-                                       " for request: " + ReflectionToStringBuilder.toString(request));
-            LOG.warn(msg, ex);
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ListActiveMitigationsExceptions.BadRequest.name(), 1);
-            throw new BadRequest400(msg, ex);
+            String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "ListActiveMitigationsForServiceActivity", ex.getMessage());
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + ListActiveMitigationsExceptions.BadRequest.name(), 1);
+            throw new BadRequest400(msg);
         } catch (Exception internalError) {
-            String msg = String.format("Internal error while fulfilling request for ListActiveMitigationsForServiceActivity for requestId: " + requestId + " with request: " + ReflectionToStringBuilder.toString(request));
-            LOG.error(msg, internalError);
+            String msg = "Internal error in ListActiveMitigationsForServiceActivity for requestId: " + requestId + ", reason: " + internalError.getMessage();
+            LOG.error(msg + " for request " + ReflectionToStringBuilder.toString(request), internalError);
             requestSuccessfullyProcessed = false;
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ListActiveMitigationsExceptions.InternalError.name(), 1);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + ListActiveMitigationsExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
         } finally {
             tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_SUCCESS, requestSuccessfullyProcessed ? 1 : 0);

@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 
 import lombok.NonNull;
 
+import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,7 +29,7 @@ import com.amazon.lookout.mitigation.service.OperationNotSupportedException400;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
-import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
+import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.google.common.collect.Lists;
@@ -107,12 +108,12 @@ public class ReportInactiveLocationActivity extends Activity {
 
         try {
             LOG.info("ReportInactiveLocationActivity called with RequestId: " + requestId + " and Request: " + requestDesc);
-            CommonActivityMetricsHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
+            ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
 
             requestValidator.validateReportInactiveLocation(request);
 
             if (domain.equalsIgnoreCase(PROD_DOMAIN)) {
-                String msg = "ReportInactiveLocation is not supported for domain: " + domain + ". Request: " + requestDesc;
+                String msg = "ReportInactiveLocation is not supported for domain: " + domain + ". Request: " + requestDesc + " RequestId: " + requestId;
                 LOG.warn(msg);
                 throw new OperationNotSupportedException400(msg);
             }
@@ -144,19 +145,18 @@ public class ReportInactiveLocationActivity extends Activity {
             response.setServiceName(serviceName);
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
-            String msg = "Caught Illegal" + (ex instanceof IllegalArgumentException ? "Argument" : "State") + "Exception in request for ReportInactiveLocationActivity for requestId: " +
-                         requestId + ", reason: " + ex.getMessage() + " for request: " + requestDesc;
-            LOG.warn(msg, ex);
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ReportInactiveLocationExceptions.BadRequest.name(), 1);
-            throw new BadRequest400(msg, ex);
+            String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "ReportInactiveLocationActivity", ex.getMessage());
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + ReportInactiveLocationExceptions.BadRequest.name(), 1);
+            throw new BadRequest400(msg);
         } catch (OperationNotSupportedException400 ex) {
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ReportInactiveLocationExceptions.OperationNotSupported.name(), 1);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + ReportInactiveLocationExceptions.OperationNotSupported.name(), 1);
             throw ex;
         } catch (Exception internalError) {
-            String msg = "Internal error while fulfilling request for ReportInactiveLocationActivity for requestId: " + requestId + " with request: " + requestDesc;
-            LOG.error(msg, internalError);
+            String msg = "Internal error in ReportInactiveLocationActivity for requestId: " + requestId + ", reason: " + internalError.getMessage();
+            LOG.error(msg + " for request: " + ReflectionToStringBuilder.toString(request), internalError);
             requestSuccessfullyProcessed = false;
-            tsdMetrics.addCount(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + ReportInactiveLocationExceptions.InternalError.name(), 1);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + ReportInactiveLocationExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
         } finally {
             tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_SUCCESS, requestSuccessfullyProcessed ? 1 : 0);
