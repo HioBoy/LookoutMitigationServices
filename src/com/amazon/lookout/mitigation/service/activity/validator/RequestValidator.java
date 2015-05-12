@@ -92,12 +92,6 @@ public class RequestValidator {
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
-        
-        if (request.getMitigationVersion() <= 1) {
-            String msg = "Version of the mitigation to be edited should be set to > 1, instead found: " + request.getMitigationVersion();
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
     }
     
     /**
@@ -118,6 +112,12 @@ public class RequestValidator {
         // Template-based validations should take care of specific checks related to their template.
         if (request.getMitigationDefinition().getConstraint() == null) {
             String msg = "No constraint found for mitigation definition.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        if (request.getMitigationVersion() <= 1) {
+            String msg = "Version of the mitigation to be edited should be set to > 1, instead found: " + request.getMitigationVersion();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
