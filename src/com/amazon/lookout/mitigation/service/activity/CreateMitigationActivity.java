@@ -118,7 +118,7 @@ public class CreateMitigationActivity extends Activity {
             requestValidator.validateCreateRequest(createRequest);
             
             // Step2. Validate this request based on the template.
-            templateBasedValidator.validateCreateRequestForTemplate(createRequest, tsdMetrics);
+            templateBasedValidator.validateRequestForTemplate(createRequest, tsdMetrics);
             
             // Step3. Get the locations where we need to start running the workflow.
             // In most cases it is provided by the client, but for some templates we might have locations based on the templateName, 
@@ -181,11 +181,11 @@ public class CreateMitigationActivity extends Activity {
             throw new InternalServerError500(msg);
         } finally {
             if (requestSuccessfullyProcessed) {
-                tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_SUCCESS, 1);
-                tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_FAILURE, 0);
+                tsdMetrics.addOne(LookoutMitigationServiceConstants.ENACT_SUCCESS);
+                tsdMetrics.addZero(LookoutMitigationServiceConstants.ENACT_FAILURE);
             } else {
-                tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_SUCCESS, 0);
-                tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_FAILURE, 1);
+                tsdMetrics.addZero(LookoutMitigationServiceConstants.ENACT_SUCCESS);
+                tsdMetrics.addOne(LookoutMitigationServiceConstants.ENACT_FAILURE);
             }
             tsdMetrics.end();
         }

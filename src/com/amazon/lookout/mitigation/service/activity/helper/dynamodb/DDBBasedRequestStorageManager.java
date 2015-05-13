@@ -61,6 +61,9 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
         DDBBasedCreateRequestStorageHandler createStorageHandler = getCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         requestStorageHandlerMap.put(RequestType.CreateRequest, createStorageHandler);
         
+        DDBBasedEditRequestStorageHandler editStorageHandler = getEditRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
+        requestStorageHandlerMap.put(RequestType.EditRequest, editStorageHandler);
+        
         DDBBasedDeleteRequestStorageHandler deleteStorageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         requestStorageHandlerMap.put(RequestType.DeleteRequest, deleteStorageHandler);
         
@@ -102,6 +105,18 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
     private DDBBasedCreateRequestStorageHandler getCreateRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain,
                                                                                TemplateBasedRequestValidator templateBasedValidator) {
         return new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
+    }
+    
+    /**
+     * Helper method to create an instance of DDBBasedEditRequestStorageHandler.
+     * @param dynamoDBClient
+     * @param domain
+     * @param templateBasedValidator
+     * @return
+     */
+    private DDBBasedEditRequestStorageHandler getEditRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain,
+            TemplateBasedRequestValidator templateBasedValidator) {
+        return new DDBBasedEditRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
     }
     
     /**

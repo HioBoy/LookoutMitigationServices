@@ -51,7 +51,7 @@ public class TemplateBasedRequestValidatorTest {
         request.setPreDeploymentChecks(null);
         Throwable caughtException = null;
         try {
-            templateBasedValidator.validateCreateRequestForTemplate(request, tsdMetrics);
+            templateBasedValidator.validateRequestForTemplate(request, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -72,7 +72,7 @@ public class TemplateBasedRequestValidatorTest {
         request.setMitigationTemplate("BadTemplate");
         Throwable caughtException = null;
         try {
-            templateBasedValidator.validateCreateRequestForTemplate(request, tsdMetrics);
+            templateBasedValidator.validateRequestForTemplate(request, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -94,7 +94,7 @@ public class TemplateBasedRequestValidatorTest {
         MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         Throwable caughtException = null;
         try {
-            templateBasedValidator.validateCreateRequestForTemplate(request, tsdMetrics);
+            templateBasedValidator.validateRequestForTemplate(request, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
