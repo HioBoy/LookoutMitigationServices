@@ -133,7 +133,19 @@ public class DDBBasedEditRequestStorageHandler extends DDBBasedRequestStorageHan
                             " have a newer version: " + currLatestMitigationVersion + " than one in request: " + mitigationVersion + ". For request: " + ReflectionToStringBuilder.toString(editMitigationRequest);
                     LOG.info(msg);
                     throw new StaleRequestException400(msg);
-                } 
+                }
+
+                final int expectedMitigationVersion = currLatestMitigationVersion + 1;
+                if (mitigationVersion != expectedMitigationVersion) {
+                    String msg = "Unexpected mitigation version in request for deviceName: " + deviceName +
+                            " and deviceScope: " + deviceScope +
+                            " and mitigationName: " + mitigationName +
+                            " Expected mitigation version: " + expectedMitigationVersion +
+                            " , but mitigation version in request was: " + mitigationVersion +
+                            ". Request: " + ReflectionToStringBuilder.toString(editMitigationRequest);
+                    LOG.info(msg);
+                    throw new IllegalArgumentException();
+                }
               
                 // Increment the maxWorkflowId to use as the newWorkflowId and sanity check to ensure the new workflowId is still within the expected range.
                 newWorkflowId = currMaxWorkflowId + 1;

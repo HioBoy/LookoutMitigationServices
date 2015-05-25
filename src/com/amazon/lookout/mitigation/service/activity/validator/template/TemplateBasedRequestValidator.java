@@ -3,6 +3,7 @@ package com.amazon.lookout.mitigation.service.activity.validator.template;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer.IPTablesJsonValidator;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -10,13 +11,11 @@ import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.google.common.collect.ImmutableMap;
-import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.model.RequestType;
 
 /**
  * TemplateBasedRequestValidator is responsible for performing deep validations based on the template passed as input to the request.
@@ -129,11 +128,11 @@ public class TemplateBasedRequestValidator {
     }
 
     /**
-     * Returns an instance of IPTablesValidator.
+     * Returns an instance of IPTablesEdgeCustomerValidator.
      * @return ServiceTemplateValidator
      */
-    private ServiceTemplateValidator getIPTablesValidator() {
-        return new IPTablesValidator();
+    private ServiceTemplateValidator getIPTablesEdgeCustomerValidator() {
+        return new IPTablesEdgeCustomerValidator(new IPTablesJsonValidator());
     }
 
     /**
@@ -152,7 +151,7 @@ public class TemplateBasedRequestValidator {
                 serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getRoute53SingleCustomerValidator(serviceSubnetsMatcher));
                 break;
             case MitigationTemplate.IPTables_Mitigation_EdgeCustomer:
-                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getIPTablesValidator());
+                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getIPTablesEdgeCustomerValidator());
                 break;
             default:
                 String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". Each template must be associated with some validation checks.";

@@ -30,6 +30,8 @@ public class TemplateBasedLocationsManager {
         // Router_CountMode_Route53Customer is currently used only by external monitors, and
         // it shares the locationHelper with the Router_RateLimit_Route53Customer template
         mapBuilder.put(MitigationTemplate.Router_CountMode_Route53Customer, route53SingleCustomerHelper);
+        mapBuilder.put(MitigationTemplate.IPTables_Mitigation_EdgeCustomer,
+                new IPTablesEdgeCustomerTemplateLocationsHelper());
         
         templateBasedLocationsHelpers = mapBuilder.build();
     }
