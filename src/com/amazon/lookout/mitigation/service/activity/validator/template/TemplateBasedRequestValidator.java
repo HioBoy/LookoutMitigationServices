@@ -3,6 +3,7 @@ package com.amazon.lookout.mitigation.service.activity.validator.template;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer.IPTablesJsonValidator;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -40,25 +41,25 @@ public class TemplateBasedRequestValidator {
     }
     
     /**
-     * Validate request object passed to the CreateMitigationAPI based on the template in the request. 
-     * @param createRequest Request passed to the CreateMitigationAPI.
+     * Validate request object passed to the MitigationAPI based on the template in the request. 
+     * @param request Request passed to the MitigationAPI.
      * @param metrics
      * @return void. Returns nothing, but will propagate any exceptions thrown by the ServiceTemplateValidator whom this validation is delegated to.
      */
-    public void validateCreateRequestForTemplate(@Nonnull MitigationModificationRequest createRequest, @Nonnull TSDMetrics metrics) {
-        Validate.notNull(createRequest);
+    public void validateRequestForTemplate(@Nonnull MitigationModificationRequest request, @Nonnull TSDMetrics metrics) {
+        Validate.notNull(request);
         Validate.notNull(metrics);
         
-        TSDMetrics subMetrics = metrics.newSubMetrics("TemplateBasedRequestValidator.validateCreateRequestForTemplate");
+        TSDMetrics subMetrics = metrics.newSubMetrics("TemplateBasedRequestValidator.validateRequestForTemplate");
         try {
-            String mitigationTemplate = createRequest.getMitigationTemplate();
+            String mitigationTemplate = request.getMitigationTemplate();
             subMetrics.addProperty(MITIGATION_TEMPLATE_KEY, mitigationTemplate);
             
             ServiceTemplateValidator templateBasedValidator = getValidator(mitigationTemplate);
             
             LOG.debug("Calling validator for service: " + templateBasedValidator.getServiceNameToValidate() + " for template: " + mitigationTemplate + " for request: " +
-                      ReflectionToStringBuilder.toString(createRequest));
-            templateBasedValidator.validateRequestForTemplate(createRequest, mitigationTemplate);
+                      ReflectionToStringBuilder.toString(request));
+            templateBasedValidator.validateRequestForTemplate(request, mitigationTemplate);
         } finally {
             subMetrics.end();
         }
@@ -127,6 +128,14 @@ public class TemplateBasedRequestValidator {
     }
 
     /**
+     * Returns an instance of IPTablesEdgeCustomerValidator.
+     * @return ServiceTemplateValidator
+     */
+    private ServiceTemplateValidator getIPTablesEdgeCustomerValidator() {
+        return new IPTablesEdgeCustomerValidator(new IPTablesJsonValidator());
+    }
+
+    /**
      * Returns map of templateName to ServiceTemplateValidator corresponding to the template.
      * @param serviceSubnetsMatcher ServiceSubnetsMatcher that is used by some of the ServiceTemplateValidators.
      * @return ImmutableMap of templateName to ServiceTemplateValidator corresponding to the template.
@@ -140,6 +149,9 @@ public class TemplateBasedRequestValidator {
                 break;
             case MitigationTemplate.Router_CountMode_Route53Customer:
                 serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getRoute53SingleCustomerValidator(serviceSubnetsMatcher));
+                break;
+            case MitigationTemplate.IPTables_Mitigation_EdgeCustomer:
+                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getIPTablesEdgeCustomerValidator());
                 break;
             default:
                 String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". Each template must be associated with some validation checks.";

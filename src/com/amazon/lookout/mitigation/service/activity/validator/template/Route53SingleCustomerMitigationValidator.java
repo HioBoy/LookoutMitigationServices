@@ -10,6 +10,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
@@ -94,6 +95,9 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         MitigationDefinition mitigationDefinition = null;
         List<String> locationsToApplyMitigation = null;
         // Extract mitigationDefinition and locations from Create/Edit Mitigation Requests only.
+        if (request instanceof DeleteMitigationFromAllLocationsRequest) {
+            return;
+        }
         if (request instanceof CreateMitigationRequest) {
             locationsToApplyMitigation = ((CreateMitigationRequest) request).getLocations();
             mitigationDefinition = ((CreateMitigationRequest) request).getMitigationDefinition();

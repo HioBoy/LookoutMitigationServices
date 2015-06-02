@@ -16,6 +16,7 @@ import org.springframework.util.CollectionUtils;
 
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
+import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
@@ -88,6 +89,35 @@ public class RequestValidator {
         // Template-based validations should take care of specific checks related to their template.
         if (request.getMitigationDefinition().getConstraint() == null) {
             String msg = "No constraint found for mitigation definition.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    /**
+     * Validates if the request object passed to the EditMitigationAPI is valid.
+     * @param request MitigationModificationRequest representing the input to the EditMitigationAPI.
+     * @return void. Doesn't return any values. Will throw back an IllegalArgumentException if any of the input parameters aren't considered valid.
+     */
+    public void validateEditRequest(@NonNull EditMitigationRequest request) {
+        validateCommonModificationRequestParameters(request);
+        
+        if (request.getMitigationDefinition() == null) {
+            String msg = "No mitigation definition found.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        // We only check for the constraint and not the action, since for some templates, it is valid for requests to not have any actions.
+        // Template-based validations should take care of specific checks related to their template.
+        if (request.getMitigationDefinition().getConstraint() == null) {
+            String msg = "No constraint found for mitigation definition.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        if (request.getMitigationVersion() <= 1) {
+            String msg = "Version of the mitigation to be edited should be set to > 1, instead found: " + request.getMitigationVersion();
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }

@@ -8,6 +8,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
  *
  */
 public interface ServiceTemplateValidator {
+    
     public void validateRequestForTemplate(MitigationModificationRequest request, String mitigationTemplate);
     
     public void validateCoexistenceForTemplateAndDevice(String templateForNewDefinition, String mitigationNameForNewDefinition, 

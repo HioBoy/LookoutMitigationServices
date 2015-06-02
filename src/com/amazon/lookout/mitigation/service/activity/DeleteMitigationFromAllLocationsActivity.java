@@ -8,6 +8,7 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -61,15 +62,23 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
                                                                                                       DeleteExceptions.InternalError.name())); 
     
     private final RequestValidator requestValidator;
+    private final TemplateBasedRequestValidator templateBasedValidator;
     private final RequestStorageManager requestStorageManager;
     private final SWFWorkflowStarter workflowStarter;
     private final TemplateBasedLocationsManager templateBasedLocationsManager;
 
-    @ConstructorProperties({"requestValidator", "requestStorageManager", "swfWorkflowStarter", "templateBasedLocationsManager"})
-    public DeleteMitigationFromAllLocationsActivity(@Nonnull RequestValidator requestValidator, @Nonnull RequestStorageManager requestStorageManager, 
-                                                    @Nonnull SWFWorkflowStarter workflowStarter, @Nonnull TemplateBasedLocationsManager templateBasedLocationsManager) {
+    @ConstructorProperties({"requestValidator", "templateBasedValidator", "requestStorageManager", "swfWorkflowStarter",
+            "templateBasedLocationsManager"})
+    public DeleteMitigationFromAllLocationsActivity(@Nonnull RequestValidator requestValidator,
+                                                    @Nonnull TemplateBasedRequestValidator templateBasedValidator,
+                                                    @Nonnull RequestStorageManager requestStorageManager,
+                                                    @Nonnull SWFWorkflowStarter workflowStarter,
+                                                    @Nonnull TemplateBasedLocationsManager templateBasedLocationsManager) {
         Validate.notNull(requestValidator);
         this.requestValidator = requestValidator;
+
+        Validate.notNull(templateBasedValidator);
+        this.templateBasedValidator = templateBasedValidator;
         
         Validate.notNull(requestStorageManager);
         this.requestStorageManager = requestStorageManager;
@@ -111,9 +120,8 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             requestValidator.validateDeleteRequest(deleteRequest);
             
             // Step2. Validate this request based on the template.
-            // No-op for now. There isn't anything we check based on the template for the delete requests, hence not invoking the templateBasedValidator here. 
-            // If we ever do have an use-case for it, this would be the place to invoke the template-based request instance validator.
-            
+            templateBasedValidator.validateRequestForTemplate(deleteRequest, tsdMetrics);
+
             // Step3. Get the locations where we need to start running the workflow.
             // In most cases it is provided by the client, but for some templates we might have locations based on the templateName, 
             // hence checking with the templateBasedLocationsHelper and also passing it the original request to have the entire context.
