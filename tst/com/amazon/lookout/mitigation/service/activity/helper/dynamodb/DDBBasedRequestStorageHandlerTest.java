@@ -541,16 +541,93 @@ public class DDBBasedRequestStorageHandlerTest {
 
         Map<String, AttributeValue> item3 = new HashMap<>();
         item3.put(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, new AttributeValue().withN(String.valueOf(latestMitigationVersion - 1)));
-
+        
+        Map<String, Condition> keyConditions = new HashMap<>();
+        keyConditions.put("DeviceName", new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                          .withAttributeValueList(Collections.singleton(new AttributeValue(deviceName))));
+        keyConditions.put("MitigationName", new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                              .withAttributeValueList(Collections.singleton(new AttributeValue(mitigationName))));
+        
+        QueryRequest request = new QueryRequest().withAttributesToGet(Collections.singleton("MitigationVersion"))
+                                                 .withTableName(null)
+                                                 .withIndexName(DDBBasedRequestStorageHandler.MITIGATION_NAME_LSI)
+                                                 .withConsistentRead(true)
+                                                 .withKeyConditions(keyConditions);
+        
+        // Filter out any records whose DeviceScope isn't the same.
+        request.addQueryFilterEntry("DeviceScope", new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                                  .withAttributeValueList(Collections.singleton(new AttributeValue(deviceScope))));
+        
+        // Filter out any records whose status is Failed.
+        request.addQueryFilterEntry("WorkflowStatus", new Condition().withComparisonOperator(ComparisonOperator.NE)
+                                                                     .withAttributeValueList(Collections.singleton(new AttributeValue(WorkflowStatus.FAILED))));
+        
+        TSDMetrics tsdMetrics = mock(TSDMetrics.class);
+        when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
+        
         QueryResult result = new QueryResult().withCount(2).withItems(Lists.newArrayList(item1, item2, item3));
-        when(storageHandler.queryDynamoDB(any(QueryRequest.class), any(TSDMetrics.class))).thenReturn(result);
+        when(storageHandler.queryDynamoDB(request, tsdMetrics)).thenReturn(result);
 
         when(storageHandler.getLatestVersionForMitigationOnDevice(anyString(), anyString(), anyString(), anyInt(), any(TSDMetrics.class))).thenCallRealMethod();
         Integer mitigationVersionToReturn = storageHandler.getLatestVersionForMitigationOnDevice(deviceName, deviceScope, mitigationName, null, tsdMetrics);
 
         assertEquals(latestMitigationVersion, mitigationVersionToReturn);
     }
+    
+    @Test
+    public void testGetLatestVersionWithKnownPreviousVersion() {
+        DDBBasedRequestStorageHandler storageHandler = mock(DDBBasedRequestStorageHandler.class);
+        
+        String deviceName = DeviceName.POP_ROUTER.name();
+        String deviceScope = DeviceScope.GLOBAL.name();
+        String mitigationName = "mitigation name";
+        Integer latestVersionOnLastAttempt = 1;
+        
+        Integer latestMitigationVersion = 3;
 
+        Map<String, AttributeValue> item1 = new HashMap<>();
+        item1.put(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, new AttributeValue().withN(String.valueOf(latestMitigationVersion - 2)));
+        
+        Map<String, AttributeValue> item2 = new HashMap<>();
+        item2.put(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, new AttributeValue().withN(String.valueOf(latestMitigationVersion)));
+
+        Map<String, AttributeValue> item3 = new HashMap<>();
+        item3.put(DDBBasedRequestStorageHandler.MITIGATION_VERSION_KEY, new AttributeValue().withN(String.valueOf(latestMitigationVersion - 1)));
+        
+        Map<String, Condition> keyConditions = new HashMap<>();
+        keyConditions.put("DeviceName", new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                       .withAttributeValueList(Collections.singleton(new AttributeValue(deviceName))));
+        keyConditions.put("MitigationName", new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                           .withAttributeValueList(Collections.singleton(new AttributeValue(mitigationName))));
+        
+        QueryRequest request = new QueryRequest().withAttributesToGet(Collections.singleton("MitigationVersion"))
+                                                 .withTableName(null)
+                                                 .withIndexName(DDBBasedRequestStorageHandler.MITIGATION_NAME_LSI)
+                                                 .withConsistentRead(true)
+                                                 .withKeyConditions(keyConditions);
+        
+        // Filter out any records whose DeviceScope isn't the same.
+        request.addQueryFilterEntry("DeviceScope", new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                                  .withAttributeValueList(Collections.singleton(new AttributeValue(deviceScope))));
+        
+        // Filter out any records whose status is Failed.
+        request.addQueryFilterEntry("WorkflowStatus", new Condition().withComparisonOperator(ComparisonOperator.NE)
+                                                                     .withAttributeValueList(Collections.singleton(new AttributeValue(WorkflowStatus.FAILED))));
+        
+        request.addQueryFilterEntry("MitigationVersion", new Condition().withComparisonOperator(ComparisonOperator.GE)
+                                                                        .withAttributeValueList(Collections.singleton(new AttributeValue().withN(String.valueOf(latestVersionOnLastAttempt)))));
+        
+        TSDMetrics tsdMetrics = mock(TSDMetrics.class);
+        when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
+        
+        QueryResult result = new QueryResult().withCount(2).withItems(Lists.newArrayList(item1, item2, item3));
+        when(storageHandler.queryDynamoDB(request, tsdMetrics)).thenReturn(result);
+
+        when(storageHandler.getLatestVersionForMitigationOnDevice(anyString(), anyString(), anyString(), anyInt(), any(TSDMetrics.class))).thenCallRealMethod();
+        Integer mitigationVersionToReturn = storageHandler.getLatestVersionForMitigationOnDevice(deviceName, deviceScope, mitigationName, latestVersionOnLastAttempt, tsdMetrics);
+
+        assertEquals(latestMitigationVersion, mitigationVersionToReturn);
+    }
 
     /**
      * Test the case of querying for active mitigations on a device.

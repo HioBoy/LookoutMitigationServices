@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
+import com.amazon.lookout.activities.model.ActivityStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -85,6 +86,12 @@ public class ActiveMitigationsFetcher implements Callable<List<MitigationRequest
                     
                     String successStatus = MitigationInstanceStatusHelper.getOperationSuccessfulStatus(RequestType.valueOf(mitigationDescription.getRequestType()));
                     instanceStatus.setMitigationStatus(successStatus);
+                    if (RequestType.EditRequest.name().equals(mitigationDescription.getRequestType()) &&
+                            ActivityStatus.FAILED.name().equals(mitigationDescription.getRequestStatus())) {
+                        String failedStatus = MitigationInstanceStatusHelper.getOperationFailedStatus(
+                                RequestType.valueOf(mitigationDescription.getRequestType()));
+                        instanceStatus.setMitigationStatus(failedStatus);
+                    }
                     
                     Map<String, MitigationInstanceStatus> instancesStatus = new HashMap<>();
                     instancesStatus.put(location, instanceStatus);

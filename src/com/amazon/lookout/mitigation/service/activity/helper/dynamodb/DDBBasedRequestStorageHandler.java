@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nonnull;
 
@@ -33,10 +34,6 @@ import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.document.ItemCollection;
-import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
-import com.amazonaws.services.dynamodbv2.document.RangeKeyCondition;
-import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.model.AttributeAction;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.AttributeValueUpdate;
@@ -50,6 +47,7 @@ import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.simpleworkflow.flow.DataConverter;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * DDBBasedRequestStorageHandler is an abstract class meant to be a helper for concrete request storage handler implementations.
@@ -62,7 +60,7 @@ public abstract class DDBBasedRequestStorageHandler {
     
     // Log prefix to use if the sanity check for workflowId fails - we can use this tag to set logscan alarms on.
     private static final String WORKFLOW_ID_SANITY_CHECK_FAILURE_LOG_PREFIX = "[WORKFLOW_ID_RANGE_CHECK_FAILURE] ";
-    
+
     public static final String MITIGATION_REQUEST_TABLE_NAME_PREFIX = MitigationRequestsModel.MITIGATION_REQUESTS_TABLE_NAME_PREFIX;
     public static final String ACTIVE_MITIGATIONS_TABLE_NAME_PREFIX = "ACTIVE_MITIGATIONS_";
     
@@ -104,6 +102,7 @@ public abstract class DDBBasedRequestStorageHandler {
     private static final String NUM_DDB_QUERY_ATTEMPTS_KEY = "NumDDBQueryAttempts";
     private static final String NUM_DDB_UPDATE_ITEM_ATTEMPTS_KEY = "NumDDBUpdateAttempts";
     private static final String NUM_DDB_GET_ITEM_ATTEMPTS_KEY = "NumDDBGetAttempts";
+    private static final String FAILED_TO_FETCH_LATEST_VERSION_KEY = "FailedToFetchLatestVersion";
     
     // Retry and sleep configs.
     private static final int DDB_QUERY_MAX_ATTEMPTS = 3;
@@ -383,9 +382,7 @@ public abstract class DDBBasedRequestStorageHandler {
                     }
                     
                     if (numAttempts < DDB_QUERY_MAX_ATTEMPTS) {
-                        try {
-                            Thread.sleep(DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
-                        } catch (InterruptedException ignored) {}
+                        Uninterruptibles.sleepUninterruptibly(DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts, TimeUnit.MILLISECONDS);
                     }
                 }
                 
@@ -416,80 +413,89 @@ public abstract class DDBBasedRequestStorageHandler {
      * Get the latest mitigation version for given mitigation on give device and scope
      * @param deviceName Device corresponding to whom the latest mitigation version needs to be determined.
      * @param deviceScope Device scope corresponding to whom the latest mitigation version needs to be determined.
-     * @param mitigationName Mitigation Name corresponding to whom the latest mitigation version needs
-     *  to be determined.
-     * @param latestVersionOnLastAttempt latest version from last attempt
+     * @param mitigationName Mitigation Name corresponding to whom the latest mitigation version needs to be determined.
+     * @param latestVersionOnLastAttempt latest version from last attempt, could be null.
      * @param metrics
      * @return Long representing the latest mitigation version that currently exist in the DDB tables.
      */
-    protected Integer getLatestVersionForMitigationOnDevice(String deviceName, String deviceScope, String mitigationName, Integer latestVersionOnLastAttempt, TSDMetrics metrics) {
-        TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getLatestVersionForMitigationOnDevice");
-        
-        Map<String, Condition> keyConditions = new HashMap<>();
-        keyConditions.put(DEVICE_NAME_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
-                .withAttributeValueList(Collections.singleton(new AttributeValue().withS(deviceName))));
-        keyConditions.put(MITIGATION_NAME_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
-                .withAttributeValueList(Collections.singleton(new AttributeValue().withS(mitigationName))));
-        
-        QueryRequest request = new QueryRequest().withAttributesToGet(Collections.singleton(MITIGATION_VERSION_KEY))
-                .withTableName(mitigationRequestsTableName).withIndexName(MITIGATION_NAME_LSI).withConsistentRead(true).withKeyConditions(keyConditions);
-        
-        // Filter out any records whose DeviceScope isn't the same.
-        request.addQueryFilterEntry(DEVICE_SCOPE_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
-                .withAttributeValueList(Arrays.asList(new AttributeValue(deviceScope))));
-        
-        if (latestVersionOnLastAttempt != null) {
-            request.addQueryFilterEntry(MITIGATION_VERSION_KEY, new Condition().withComparisonOperator(ComparisonOperator.GE)
-                    .withAttributeValueList(Arrays.asList(new AttributeValue().withN(String.valueOf(latestVersionOnLastAttempt)))));
-        }
-        
-        Integer latestMitigationVersion = null;
-        Map<String, AttributeValue> lastEvaluatedKey = null;
-        do {
-            if (lastEvaluatedKey != null) {
-                request.setExclusiveStartKey(lastEvaluatedKey);
-            }   
+    protected Integer getLatestVersionForMitigationOnDevice(@NonNull String deviceName, @NonNull String deviceScope, @NonNull String mitigationName, 
+                                                            Integer latestVersionOnLastAttempt, @NonNull TSDMetrics metrics) {
+        try (TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getLatestVersionForMitigationOnDevice")) {
+            subMetrics.addZero(FAILED_TO_FETCH_LATEST_VERSION_KEY);
             
-            QueryResult queryResult = null;
-            int numAttempts = 0;
-            // Attempt to query DDB for a fixed number of times. If query was successful, return the QueryResult, else when the loop ends throw back an exception.
-            while (numAttempts++ < DDB_QUERY_MAX_ATTEMPTS) {
-                try {
-                    subMetrics.addOne(NUM_DDB_QUERY_ATTEMPTS_KEY);
-                    queryResult = queryDynamoDB(request, subMetrics);
-                    break;
-                } catch (Exception ex) {
-                    String msg = "Caught Exception when trying to query for mitigation: " + mitigationName + "for device: " + deviceName + " for deviceScope: " + deviceScope + 
-                                 " latestVersionOnLastAttempt: " + latestVersionOnLastAttempt + " with consistentRead and keyConditions: " + keyConditions + ". Attempt so far: " + numAttempts;
-                    LOG.warn(msg, ex);
+            Map<String, Condition> keyConditions = new HashMap<>();
+            keyConditions.put(DEVICE_NAME_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                              .withAttributeValueList(Collections.singleton(new AttributeValue(deviceName))));
+            keyConditions.put(MITIGATION_NAME_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                                  .withAttributeValueList(Collections.singleton(new AttributeValue(mitigationName))));
+            
+            QueryRequest request = new QueryRequest().withAttributesToGet(Collections.singleton(MITIGATION_VERSION_KEY))
+                                                     .withTableName(mitigationRequestsTableName)
+                                                     .withIndexName(MITIGATION_NAME_LSI)
+                                                     .withConsistentRead(true)
+                                                     .withKeyConditions(keyConditions);
+            
+            // Filter out any records whose DeviceScope isn't the same.
+            request.addQueryFilterEntry(DEVICE_SCOPE_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                                         .withAttributeValueList(Collections.singleton(new AttributeValue(deviceScope))));
+            
+            // Filter out any records whose status is Failed.
+            request.addQueryFilterEntry(WORKFLOW_STATUS_KEY, new Condition().withComparisonOperator(ComparisonOperator.NE)
+                                                                            .withAttributeValueList(Collections.singleton(new AttributeValue(WorkflowStatus.FAILED))));
+            
+            if (latestVersionOnLastAttempt != null) {
+                request.addQueryFilterEntry(MITIGATION_VERSION_KEY, 
+                                            new Condition().withComparisonOperator(ComparisonOperator.GE)
+                                                           .withAttributeValueList(Collections.singleton(new AttributeValue().withN(String.valueOf(latestVersionOnLastAttempt)))));
+            }
+            
+            Integer latestMitigationVersion = null;
+            Map<String, AttributeValue> lastEvaluatedKey = null;
+            do {
+                if (lastEvaluatedKey != null) {
+                    request.setExclusiveStartKey(lastEvaluatedKey);
+                }   
+                
+                QueryResult queryResult = null;
+                int numAttempts = 0;
+                // Attempt to query DDB for a fixed number of times. If query was successful, return the QueryResult, else when the loop ends throw back an exception.
+                while (numAttempts++ < DDB_QUERY_MAX_ATTEMPTS) {
+                    try {
+                        subMetrics.addOne(NUM_DDB_QUERY_ATTEMPTS_KEY);
+                        queryResult = queryDynamoDB(request, subMetrics);
+                        break;
+                    } catch (Exception ex) {
+                        String msg = "Caught Exception when trying to query for mitigation: " + mitigationName + "for device: " + deviceName + " for deviceScope: " + deviceScope + 
+                                     " latestVersionOnLastAttempt: " + latestVersionOnLastAttempt + " with consistentRead and keyConditions: " + keyConditions + ". Attempt so far: " + numAttempts;
+                        LOG.warn(msg, ex);
+                    }
+                    
+                    if (numAttempts < DDB_QUERY_MAX_ATTEMPTS) {
+                        Uninterruptibles.sleepUninterruptibly(DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts, TimeUnit.MILLISECONDS); 
+                    }
                 }
                 
-                if (numAttempts < DDB_QUERY_MAX_ATTEMPTS) {
-                    try {
-                        Thread.sleep(DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts);
-                    } catch (InterruptedException ignored) {}
+                if (queryResult == null) {
+                    subMetrics.addOne(FAILED_TO_FETCH_LATEST_VERSION_KEY);
+                    // Actual number of attempts is 1 greater than the current value since we increment numAttempts after the check for the loop above.
+                    numAttempts = numAttempts - 1;
+                    String msg = "Unable to query DDB for mitigation: " + mitigationName + "for device: " + deviceName + " for deviceScope: " + deviceScope + " latestVersionOnLastAttempt: " + 
+                                 latestVersionOnLastAttempt + " with consistentRead and keyConditions: " + keyConditions + ". Total NumAttempts: " + numAttempts;
+                    LOG.warn(msg);
+                    throw new RuntimeException(msg);
                 }
-            }
-            
-            if (queryResult == null) {
-                // Actual number of attempts is 1 greater than the current value since we increment numAttempts after the check for the loop above.
-                numAttempts = numAttempts - 1;
-                String msg = "Unable to query DDB for mitigation: " + mitigationName + "for device: " + deviceName + " for deviceScope: " + deviceScope + " latestVersionOnLastAttempt: " + 
-                        latestVersionOnLastAttempt + " with consistentRead and keyConditions: " + keyConditions + ". Total NumAttempts: " + numAttempts;
-                LOG.warn(msg);
-                throw new RuntimeException(msg);
-            }
-            
-            lastEvaluatedKey = queryResult.getLastEvaluatedKey();
-            for (Map<String, AttributeValue> item : queryResult.getItems()) {
-                Integer mitigationVersion = Integer.parseInt(item.get(MITIGATION_VERSION_KEY).getN());
-                if (latestMitigationVersion == null || mitigationVersion > latestMitigationVersion) {
-                    latestMitigationVersion = mitigationVersion;
+                
+                lastEvaluatedKey = queryResult.getLastEvaluatedKey();
+                for (Map<String, AttributeValue> item : queryResult.getItems()) {
+                    Integer mitigationVersion = Integer.parseInt(item.get(MITIGATION_VERSION_KEY).getN());
+                    if ((latestMitigationVersion == null) || (mitigationVersion > latestMitigationVersion)) {
+                        latestMitigationVersion = mitigationVersion;
+                    }
                 }
-            }
-        } while (lastEvaluatedKey != null);
-        
-        return latestMitigationVersion;
+            } while (lastEvaluatedKey != null);
+            
+            return latestMitigationVersion;
+        }
     }
     
     /**
