@@ -50,7 +50,7 @@ import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDevic
  * 
  * We use the following naming convention for action and resource:
  * action: <vendor>:read-<operationname> or <vendor>:write-<operationname>
- * resource: arn:<partition>:<vendor>:<region>:<namespace>:<servicename>-<devicename>
+ * resource: arn:<partition>:<vendor>:<region>:<namespace>:<mitigationtemplate>/<servicename>-<devicename>
  */
 
 @ThreadSafe
