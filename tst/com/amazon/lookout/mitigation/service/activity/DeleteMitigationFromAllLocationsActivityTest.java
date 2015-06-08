@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity;
 
 import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
@@ -15,6 +16,7 @@ import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
+
 import org.apache.log4j.Level;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -45,7 +47,9 @@ public class DeleteMitigationFromAllLocationsActivityTest {
     private DeleteMitigationFromAllLocationsActivity createActivityWithValidators() {
         return new DeleteMitigationFromAllLocationsActivity(
                 new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
-                new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class)),
+                new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
+                        mock(EdgeLocationsHelper.class),
+                        mock(MetricsFactory.class)),
                 mock(RequestStorageManager.class),
                 mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
                 new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));

@@ -25,6 +25,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Matchers;
 
 import amazon.mws.data.Datapoint;
 import amazon.mws.data.StatisticSeries;
@@ -76,7 +77,7 @@ public class EdgeLocationsHelperTest {
         response.setNumberOfReturned(2);
         response.addStatisticSeries(series);
         
-        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenReturn(response);
+        when(mockMonitoringQueryClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenReturn(response);
         
         OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
         when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
@@ -230,7 +231,7 @@ public class EdgeLocationsHelperTest {
         
         MonitoringQueryClient mockMonitoringQueryClient = mock(MonitoringQueryClient.class);
         
-        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenThrow(new RuntimeException());
+        when(mockMonitoringQueryClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenThrow(new RuntimeException());
         
         OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
         when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
@@ -354,7 +355,7 @@ public class EdgeLocationsHelperTest {
         
         ResponseException responseException = mock(ResponseException.class);
         when(responseException.getMessage()).thenReturn("Some message, followed by: MetricNotFound: No metrics matched your request parameters. Followed by some other stuff.");
-        when(mockClient.requestResponse(any(MWSRequest.class))).thenReturn(response).thenThrow(responseException);
+        when(mockClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenReturn(response).thenThrow(responseException);
         
         LdapProvider provider = mock(LdapProvider.class);
         BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(provider, false, mockProvider, "Prod", "Total_Mitigated_Packets_RX", 5);

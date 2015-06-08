@@ -3,6 +3,7 @@ package com.amazon.lookout.mitigation.service.activity;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.coral.google.common.collect.ImmutableList;
+import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.service.ApplyIPTablesRulesAction;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
@@ -24,8 +25,10 @@ import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocati
 import com.amazon.lookout.model.RequestType;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
+
 import org.apache.log4j.Level;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -96,7 +99,9 @@ public class CreateMitigationActivityTest {
     private CreateMitigationActivity createActivityWithValidators() {
         return new CreateMitigationActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
-            new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class)),
+            new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
+                    mock(EdgeLocationsHelper.class),
+                    mock(MetricsFactory.class)),
             mock(RequestStorageManager.class),
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));
@@ -105,7 +110,9 @@ public class CreateMitigationActivityTest {
     private CreateMitigationActivity createActivityWithValidators(RequestStorageManager requestStorageManager) {
         return new CreateMitigationActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
-            new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class)),
+            new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
+                    mock(EdgeLocationsHelper.class),
+                    mock(MetricsFactory.class)),
                 requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));

@@ -31,6 +31,7 @@ import org.mockito.Mockito;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.service.BlastRadiusCheck;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
@@ -53,6 +54,7 @@ import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToFixed
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
+import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -154,7 +156,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     private class MockTemplateBasedRequestValidator extends TemplateBasedRequestValidator {
         private final ServiceTemplateValidator serviceTemplateValidator;
         public MockTemplateBasedRequestValidator(ServiceSubnetsMatcher serviceSubnetsMatcher, ServiceTemplateValidator serviceTemplateValidator) {
-            super(serviceSubnetsMatcher);
+            super(serviceSubnetsMatcher, mock(EdgeLocationsHelper.class), mock(MetricsFactory.class));
             this.serviceTemplateValidator = serviceTemplateValidator;
         }
         
@@ -299,8 +301,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testCheckDuplicateDefinitionForNonCoexistentDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(subnetsMatcher);
+        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
+                mock(EdgeLocationsHelper.class), mock(MetricsFactory.class));
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
@@ -729,8 +731,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
-        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher);
+        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
+                mock(EdgeLocationsHelper.class), mock(MetricsFactory.class));
 
         when(storageHandler.getTemplateBasedValidator()).thenReturn(templateBasedValidator);
         when(storageHandler.getKeysForActiveMitigationsForDevice(anyString())).thenCallRealMethod();

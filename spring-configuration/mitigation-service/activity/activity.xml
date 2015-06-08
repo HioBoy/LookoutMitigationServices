@@ -72,7 +72,9 @@
     </bean>
     
     <bean id="templateBasedRequestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator">
-        <constructor-arg ref="serviceSubnetsMatcher"/>
+        <constructor-arg name="serviceSubnetsMatcher" ref="serviceSubnetsMatcher"/>
+        <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
     
     <bean id="ddbBasedRequestStorageManager" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedRequestStorageManager">

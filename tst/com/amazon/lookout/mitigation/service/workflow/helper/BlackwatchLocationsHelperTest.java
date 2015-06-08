@@ -4,14 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyList;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
@@ -23,6 +16,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Matchers;
 
 import amazon.mws.data.Datapoint;
 import amazon.mws.data.StatisticSeries;
@@ -84,7 +78,7 @@ public class BlackwatchLocationsHelperTest {
         response.setNumberOfReturned(2);
         response.addStatisticSeries(series);
         
-        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenReturn(response);
+        when(mockMonitoringQueryClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenReturn(response);
         
         OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
         when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
@@ -119,7 +113,7 @@ public class BlackwatchLocationsHelperTest {
         StatisticSeries series = new StatisticSeries();
         response.addStatisticSeries(series);
         
-        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenReturn(response);
+        when(mockMonitoringQueryClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenReturn(response);
         
         OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
         when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
@@ -153,7 +147,7 @@ public class BlackwatchLocationsHelperTest {
         StatisticSeries series = new StatisticSeries();
         response.addStatisticSeries(series);
         
-        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenReturn(response);
+        when(mockMonitoringQueryClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenReturn(response);
         
         OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
         when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
@@ -181,7 +175,7 @@ public class BlackwatchLocationsHelperTest {
         StatisticSeries series = new StatisticSeries();
         response.addStatisticSeries(series);
         
-        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenReturn(response);
+        when(mockMonitoringQueryClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenReturn(response);
         
         OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
         when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
@@ -218,7 +212,7 @@ public class BlackwatchLocationsHelperTest {
         response.setNumberOfReturned(2);
         response.addStatisticSeries(series);
         
-        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenThrow(new RuntimeException()).thenReturn(response);
+        when(mockMonitoringQueryClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenThrow(new RuntimeException()).thenReturn(response);
         
         OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
         when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
@@ -269,7 +263,7 @@ public class BlackwatchLocationsHelperTest {
         response.setNumberOfReturned(2);
         response.addStatisticSeries(series);
         
-        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenThrow(new RuntimeException()).thenReturn(response);
+        when(mockMonitoringQueryClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenThrow(new RuntimeException()).thenReturn(response);
         
         OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
         when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
@@ -280,7 +274,7 @@ public class BlackwatchLocationsHelperTest {
         boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
         assertTrue(isBlackwatchPOP);
         verify(provider, times(1)).search(anyString(), anyString(), anyInt(), anyList());
-        verify(mockMonitoringQueryClient, times(2)).requestResponse(any(MWSRequest.class));
+        verify(mockMonitoringQueryClient, times(2)).requestResponse(Matchers.<MWSRequest<Void>>any());
     }
     
     @Test
@@ -318,7 +312,7 @@ public class BlackwatchLocationsHelperTest {
         error.setMessage("No metrics matched your request parameters");
         response.addError(error);
         ResponseException exception = new ResponseException(requestConn, response);
-        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenThrow(exception);
+        when(mockMonitoringQueryClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenThrow(exception);
         
         OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
         when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
@@ -329,7 +323,7 @@ public class BlackwatchLocationsHelperTest {
         boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
         assertFalse(isBlackwatchPOP);
         verify(provider, times(1)).search(anyString(), anyString(), anyInt(), anyList());
-        verify(mockMonitoringQueryClient, times(1)).requestResponse(any(MWSRequest.class));
+        verify(mockMonitoringQueryClient, times(1)).requestResponse(Matchers.<MWSRequest<Void>>any());
     }
     
     @Test
@@ -367,7 +361,7 @@ public class BlackwatchLocationsHelperTest {
         error.setMessage("No data was found for the specified time range and schema.");
         response.addError(error);
         ResponseException exception = new ResponseException(requestConn, response);
-        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenThrow(exception);
+        when(mockMonitoringQueryClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenThrow(exception);
         
         OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
         when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
@@ -378,7 +372,7 @@ public class BlackwatchLocationsHelperTest {
         boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
         assertFalse(isBlackwatchPOP);
         verify(provider, times(1)).search(anyString(), anyString(), anyInt(), anyList());
-        verify(mockMonitoringQueryClient, times(1)).requestResponse(any(MWSRequest.class));
+        verify(mockMonitoringQueryClient, times(1)).requestResponse(Matchers.<MWSRequest<Void>>any());
     }
     
     /**
@@ -391,7 +385,7 @@ public class BlackwatchLocationsHelperTest {
         when(provider.search(anyString(), anyString(), anyInt(), anyList())).thenThrow(new RuntimeException());
         
         MonitoringQueryClient mockMonitoringQueryClient = mock(MonitoringQueryClient.class);
-        when(mockMonitoringQueryClient.requestResponse(any(MWSRequest.class))).thenThrow(new RuntimeException());
+        when(mockMonitoringQueryClient.requestResponse(Matchers.<MWSRequest<Void>>any())).thenThrow(new RuntimeException());
         
         OdinAWSCredentialsProvider odinCredsProvider = mock(OdinAWSCredentialsProvider.class);
         when(odinCredsProvider.getCredentials()).thenReturn(new BasicAWSCredentials("abc", "def"));
@@ -408,6 +402,6 @@ public class BlackwatchLocationsHelperTest {
         assertNotNull(caughtException);
         
         verify(provider, times(3)).search(anyString(), anyString(), anyInt(), anyList());
-        verify(mockMonitoringQueryClient, times(3)).requestResponse(any(MWSRequest.class));
+        verify(mockMonitoringQueryClient, times(3)).requestResponse(Matchers.<MWSRequest<Void>>any());
     }
 }

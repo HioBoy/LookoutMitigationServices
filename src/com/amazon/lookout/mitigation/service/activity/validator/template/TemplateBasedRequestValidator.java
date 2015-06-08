@@ -1,9 +1,12 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
+import java.beans.ConstructorProperties;
+
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer.IPTablesJsonValidator;
+
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -11,11 +14,13 @@ import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.google.common.collect.ImmutableMap;
+import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
+import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 
 /**
  * TemplateBasedRequestValidator is responsible for performing deep validations based on the template passed as input to the request.
@@ -28,6 +33,9 @@ public class TemplateBasedRequestValidator {
     
     private static final String MITIGATION_TEMPLATE_KEY = "MitigationTemplate";
     
+    private final EdgeLocationsHelper edgeLocationsHelper;
+    private final MetricsFactory metricsFactory;
+    
     // Map of templateName -> ServiceTemplateValidator which is responsible for validating this template.
     private final ImmutableMap<String, ServiceTemplateValidator> serviceTemplateValidatorMap;
     
@@ -35,9 +43,16 @@ public class TemplateBasedRequestValidator {
      * @param serviceSubnetsMatcher ServiceSubnetsMatcher is taken as an input in the constructor to allow for the service template specific validators to use
      *                              this matcher, in case they have to perform any subnet specific checks.
      */
-    public TemplateBasedRequestValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher) {
+    @ConstructorProperties({"serviceSubnetsMatcher", "edgeLocationsHelper", "metricsFactory"})
+    public TemplateBasedRequestValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher, @Nonnull EdgeLocationsHelper edgeLocationsHelper,
+            @Nonnull MetricsFactory metricsFactory) {
         Validate.notNull(serviceSubnetsMatcher);
-        serviceTemplateValidatorMap = getServiceTemplateValidatorMap(serviceSubnetsMatcher);
+        Validate.notNull(edgeLocationsHelper);
+        Validate.notNull(metricsFactory);
+        
+        this.serviceTemplateValidatorMap = getServiceTemplateValidatorMap(serviceSubnetsMatcher);
+        this.edgeLocationsHelper = edgeLocationsHelper;
+        this.metricsFactory = metricsFactory;
     }
     
     /**
@@ -134,6 +149,10 @@ public class TemplateBasedRequestValidator {
     private ServiceTemplateValidator getIPTablesEdgeCustomerValidator() {
         return new IPTablesEdgeCustomerValidator(new IPTablesJsonValidator());
     }
+    
+    private ServiceTemplateValidator getBlackWatchEdgeCustomerValidator() {
+    	return new EdgeBlackWatchMitigationTemplateValidator(edgeLocationsHelper, metricsFactory);
+    }
 
     /**
      * Returns map of templateName to ServiceTemplateValidator corresponding to the template.
@@ -153,6 +172,9 @@ public class TemplateBasedRequestValidator {
             case MitigationTemplate.IPTables_Mitigation_EdgeCustomer:
                 serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getIPTablesEdgeCustomerValidator());
                 break;
+            case MitigationTemplate.BlackWatchPOP_EdgeCustomer:
+            	serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchEdgeCustomerValidator());
+            	break;
             default:
                 String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". Each template must be associated with some validation checks.";
                 LOG.error(msg);
