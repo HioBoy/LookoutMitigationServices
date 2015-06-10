@@ -5,6 +5,7 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -36,8 +37,12 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
     
     // Default number of seconds we expect the workflow to complete in. Currently set to 10 minutes to allow enough time for workflow steps to complete.
     // This value is deliberately set to higher than what our usual goal for finishing a workflow - to allow workflows to complete even if they're taking a bit longer.
-    private static final long DEFAULT_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 600;
-    
+    public static final long DEFAULT_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 10 * 60;
+
+    // IPTABLES create/edit activities take long time to finish because of rsync'ing mitigation definitions to a large
+    // number of hosts. Setting workflow timeout to 20 minutes to allow at least 2 activity timeouts.
+    public static final long IPTABLES_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 20 * 60;
+
     // Default timeout for deciders to finish a single decision task. Deciders are meant to be quick and anything taking above 60s would indicate a problem with our logic.
     private static final long DEFAULT_WORKFLOW_DECISION_TASK_TIMEOUT_SECONDS = 60;
     
@@ -123,7 +128,7 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             subMetrics.addProperty(WORKFLOW_TYPE_VERSION_METRIC_PROPERTY_KEY, workflowTypeVersion);
             
             // Get the default configurations for the workflow.
-            StartWorkflowOptions workflowOptions = getDefaultStartWorkflowOptions();
+            StartWorkflowOptions workflowOptions = getStartWorkflowOptions(deviceName);
             
             if (workflowExternalClient instanceof LookoutMitigationWorkflowClientExternal) {
                 // Start running the workflow.
@@ -175,7 +180,7 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             subMetrics.addProperty(WORKFLOW_TYPE_VERSION_METRIC_PROPERTY_KEY, workflowTypeVersion);
             
             // Get the default configurations for the workflow.
-            StartWorkflowOptions workflowOptions = getDefaultStartWorkflowOptions();
+            StartWorkflowOptions workflowOptions = getReaperStartWorkflowOptions();
             
             if (workflowExternalClient instanceof LookoutReaperWorkflowClientExternal) {
                 // Start running the workflow.
@@ -205,11 +210,30 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * Helper to get default configurations to use for this workflow.
      * @return StartWorkflowOptions which represents basic timeout configurations that we want to set for the new workflow.
      */
-    private StartWorkflowOptions getDefaultStartWorkflowOptions() {
+    private StartWorkflowOptions getReaperStartWorkflowOptions() {
         StartWorkflowOptions startWorkflowOptions = new StartWorkflowOptions();
         startWorkflowOptions.setExecutionStartToCloseTimeoutSeconds(DEFAULT_WORKFLOW_COMPLETION_TIMEOUT_SECONDS);
         startWorkflowOptions.setTaskStartToCloseTimeoutSeconds(DEFAULT_WORKFLOW_DECISION_TASK_TIMEOUT_SECONDS);
         return startWorkflowOptions;
     }
-    
+
+    /**
+     * Helper to get configurations to use for this workflow.
+     * @return StartWorkflowOptions which represents basic timeout configurations that we want to set for the new workflow.
+     * @param deviceName logical device for applying mitigation.
+     */
+    private StartWorkflowOptions getStartWorkflowOptions(String deviceName) {
+        StartWorkflowOptions startWorkflowOptions = new StartWorkflowOptions();
+        startWorkflowOptions.setExecutionStartToCloseTimeoutSeconds(
+                getWorkflowExecutionStartToCloseTimeoutSeconds(deviceName));
+        startWorkflowOptions.setTaskStartToCloseTimeoutSeconds(DEFAULT_WORKFLOW_DECISION_TASK_TIMEOUT_SECONDS);
+        return startWorkflowOptions;
+    }
+
+    private long getWorkflowExecutionStartToCloseTimeoutSeconds(String deviceName) {
+        if (DeviceName.POP_HOSTS_IP_TABLES.name().equals(deviceName)) {
+            return IPTABLES_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
+        }
+        return DEFAULT_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
+    }
 }
