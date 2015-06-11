@@ -14,7 +14,6 @@ import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.google.common.collect.ImmutableMap;
-import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
@@ -34,7 +33,6 @@ public class TemplateBasedRequestValidator {
     private static final String MITIGATION_TEMPLATE_KEY = "MitigationTemplate";
     
     private final EdgeLocationsHelper edgeLocationsHelper;
-    private final MetricsFactory metricsFactory;
     
     // Map of templateName -> ServiceTemplateValidator which is responsible for validating this template.
     private final ImmutableMap<String, ServiceTemplateValidator> serviceTemplateValidatorMap;
@@ -43,16 +41,13 @@ public class TemplateBasedRequestValidator {
      * @param serviceSubnetsMatcher ServiceSubnetsMatcher is taken as an input in the constructor to allow for the service template specific validators to use
      *                              this matcher, in case they have to perform any subnet specific checks.
      */
-    @ConstructorProperties({"serviceSubnetsMatcher", "edgeLocationsHelper", "metricsFactory"})
-    public TemplateBasedRequestValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher, @Nonnull EdgeLocationsHelper edgeLocationsHelper,
-            @Nonnull MetricsFactory metricsFactory) {
+    @ConstructorProperties({"serviceSubnetsMatcher", "edgeLocationsHelper"})
+    public TemplateBasedRequestValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher, @Nonnull EdgeLocationsHelper edgeLocationsHelper) {
         Validate.notNull(serviceSubnetsMatcher);
         Validate.notNull(edgeLocationsHelper);
-        Validate.notNull(metricsFactory);
         
-        this.serviceTemplateValidatorMap = getServiceTemplateValidatorMap(serviceSubnetsMatcher);
         this.edgeLocationsHelper = edgeLocationsHelper;
-        this.metricsFactory = metricsFactory;
+        this.serviceTemplateValidatorMap = getServiceTemplateValidatorMap(serviceSubnetsMatcher);
     }
     
     /**
@@ -151,7 +146,7 @@ public class TemplateBasedRequestValidator {
     }
     
     private ServiceTemplateValidator getBlackWatchEdgeCustomerValidator() {
-    	return new EdgeBlackWatchMitigationTemplateValidator(edgeLocationsHelper, metricsFactory);
+    	return new EdgeBlackWatchMitigationTemplateValidator(edgeLocationsHelper);
     }
 
     /**

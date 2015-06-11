@@ -31,7 +31,6 @@ import org.mockito.Mockito;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.aws158.commons.tst.TestUtils;
-import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.service.BlastRadiusCheck;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
@@ -156,7 +155,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     private class MockTemplateBasedRequestValidator extends TemplateBasedRequestValidator {
         private final ServiceTemplateValidator serviceTemplateValidator;
         public MockTemplateBasedRequestValidator(ServiceSubnetsMatcher serviceSubnetsMatcher, ServiceTemplateValidator serviceTemplateValidator) {
-            super(serviceSubnetsMatcher, mock(EdgeLocationsHelper.class), mock(MetricsFactory.class));
+            super(serviceSubnetsMatcher, mock(EdgeLocationsHelper.class));
             this.serviceTemplateValidator = serviceTemplateValidator;
         }
         
@@ -302,7 +301,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public void testCheckDuplicateDefinitionForNonCoexistentDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                mock(EdgeLocationsHelper.class), mock(MetricsFactory.class));
+                mock(EdgeLocationsHelper.class));
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
@@ -732,7 +731,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                mock(EdgeLocationsHelper.class), mock(MetricsFactory.class));
+                mock(EdgeLocationsHelper.class));
 
         when(storageHandler.getTemplateBasedValidator()).thenReturn(templateBasedValidator);
         when(storageHandler.getKeysForActiveMitigationsForDevice(anyString())).thenCallRealMethod();

@@ -13,7 +13,6 @@ import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
-import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
@@ -49,7 +48,7 @@ public class TemplateBasedRequestValidatorTest {
         when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
-                mock(EdgeLocationsHelper.class), mock(MetricsFactory.class));
+                mock(EdgeLocationsHelper.class));
         MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         request.setPreDeploymentChecks(null);
         Throwable caughtException = null;
@@ -71,7 +70,7 @@ public class TemplateBasedRequestValidatorTest {
         when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
-                mock(EdgeLocationsHelper.class), mock(MetricsFactory.class));
+                mock(EdgeLocationsHelper.class));
         MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         request.setMitigationTemplate("BadTemplate");
         Throwable caughtException = null;
@@ -95,7 +94,7 @@ public class TemplateBasedRequestValidatorTest {
         when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(null);
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
-                mock(EdgeLocationsHelper.class), mock(MetricsFactory.class));
+                mock(EdgeLocationsHelper.class));
         MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         Throwable caughtException = null;
         try {
@@ -117,7 +116,7 @@ public class TemplateBasedRequestValidatorTest {
         when(subnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(subnetsMatcher,
-                mock(EdgeLocationsHelper.class), mock(MetricsFactory.class));
+                mock(EdgeLocationsHelper.class));
         
         MitigationDefinition definition1 = DDBBasedCreateRequestStorageHandlerTest.defaultCreateMitigationDefinition();
         

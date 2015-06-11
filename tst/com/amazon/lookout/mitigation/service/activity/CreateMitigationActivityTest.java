@@ -3,7 +3,6 @@ package com.amazon.lookout.mitigation.service.activity;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.coral.google.common.collect.ImmutableList;
-import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.service.ApplyIPTablesRulesAction;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
@@ -100,8 +99,7 @@ public class CreateMitigationActivityTest {
         return new CreateMitigationActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class),
-                    mock(MetricsFactory.class)),
+                    mock(EdgeLocationsHelper.class)),
             mock(RequestStorageManager.class),
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));
@@ -111,8 +109,7 @@ public class CreateMitigationActivityTest {
         return new CreateMitigationActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class),
-                    mock(MetricsFactory.class)),
+                    mock(EdgeLocationsHelper.class)),
                 requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));

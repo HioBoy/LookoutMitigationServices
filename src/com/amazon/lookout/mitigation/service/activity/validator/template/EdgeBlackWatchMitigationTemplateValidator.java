@@ -1,15 +1,11 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import lombok.AllArgsConstructor;
 
-import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.service.AlarmCheck;
 import com.amazon.lookout.mitigation.service.BlackWatchConfigBasedConstraint;
 import com.amazon.lookout.mitigation.service.Constraint;
@@ -33,32 +29,27 @@ import org.apache.commons.logging.LogFactory;
 /**
  * Validate Edge BlackWatch mitigation request.
  * 
- * For pop, we currently only allow 2 kinds of mitigations.
- * 1. global mitigation, which has name as "BLACKWATCH_POP_GLOBAL", which is deployed at all pop locations.
- * 2. pop override mitigation, which has name as "BLACKWATCH_POP_OVERRIDE_<POP>", which only deployed to corresponding pop location
+ * Each pop will have 1 mandatory "BLACKWATCH_POP_GLOBAL_<POP>" mitigation for global configuration, 
+ * and 1 optional "BLACKWATCH_POP_OVERRIDE_<POP>" mitigation for per pop override configuration. 
+ * The global configuration and per pop override configuration are exactly same as the current one in LookoutBlackWatchConfig package.
+ * The the <POP> will be checked against the real edge pop name, and it has to match the locations in the request passed in.
  * 
  * We only support 2 kinds of operations. Delete mitigation is not supported
  * 1. Create mitigation
  * 2. Edit mitigation
  * 
- * For global mitigaiton, if the request does not contains location, 
- * it will be deployed to all the pop locations that has blackwatch up and running.
- * If a location is given, then it will be deployed to a certain set of locations.
- * Each location will be checked against edge pop locations.
- * 
  * @author xingbow
  *
  */
 @AllArgsConstructor
-public class EdgeBlackWatchMitigationTemplateValidator implements
-        DeviceBasedServiceTemplateValidator {
+public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedServiceTemplateValidator {
     private static final Log LOG = LogFactory.getLog(EdgeBlackWatchMitigationTemplateValidator.class);
 
-    private static final Pattern VALID_GLOBAL_MITIGATION_NAME_PATTERN = Pattern.compile("BLACKWATCH_POP_GLOBAL");
-    private static final Pattern VALID_POP_OVERRIDE_MITIGATION_NAME_PATTERN = Pattern.compile("BLACKWATCH_POP_OVERRIDE_([A-Z0-9]+)");
+    private static final String LOCATION_PATTERN = "[-_A-Za-z0-9]+";
+    private static final Pattern VALID_GLOBAL_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_GLOBAL_(%s)", LOCATION_PATTERN));
+    private static final Pattern VALID_POP_OVERRIDE_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_OVERRIDE_(%s)", LOCATION_PATTERN));
     
     private final EdgeLocationsHelper edgeLocationsHelper;
-    private final MetricsFactory metricsFactory;
     
     @Override
     public void validateRequestForTemplate(
@@ -101,55 +92,27 @@ public class EdgeBlackWatchMitigationTemplateValidator implements
     private void validateCreateRequest(CreateMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
+        String location = findLocationFromMitigationName(request.getMitigationName());
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
-        validateLocations(request.getMitigationName(), request.getLocations());
+        validateLocations(location, request.getMitigationName(), request.getLocations());
         validatePostDeploymentChecks(request.getPostDeploymentChecks());
     }   
 
     private void validateEditRequest(EditMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
+        String location = findLocationFromMitigationName(request.getMitigationName());
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
         // TODO fix location to be locations in model in a separate commit
-        validateLocations(request.getMitigationName(), request.getLocation());
+        validateLocations(location, request.getMitigationName(), request.getLocation());
         validatePostDeploymentChecks(request.getPostDeploymentChecks());
     }
         
-    private void validateLocations(String mitigationName, List<String> locations) {
-        boolean isGlobalMitigation = isGlobalMitigation(mitigationName);
-        try (TSDMetrics tsdMetrics = new TSDMetrics(metricsFactory, "EdgeBlackWatchMitigationTemplateValidator.validateLocations")) {
-            // if global mitigation
-            if (isGlobalMitigation) {
-                if (locations == null || locations.isEmpty()) {
-                    locations = new ArrayList<String>();
-                    for (String location : edgeLocationsHelper.getBlackwatchClassicPOPs()) {
-                        locations.add(location);
-                    }
-                    LOG.info(String.format("Found Active BlackWatch in locations %s, deploy the global mitigations to these locations", locations));
-                } else {
-                    Set<String> allEdgeLocations = edgeLocationsHelper.getBlackwatchClassicPOPs();
-                    for (String location : locations) {
-                        Validate.isTrue(allEdgeLocations.contains(location), String.format("location %s is not a valid edge location", location));
-                    }
-                }
-            } else {
-                if (locations == null || locations.size() != 1) {
-                    String msg = String.format("Invalid locations %s for non-global blackwatch mitigation deployment, mitigation name %s.",
-                            locations, mitigationName);
-                    LOG.info(msg);
-                    throw new IllegalArgumentException(msg);
-                } else {
-                    // validate mitigation name and location is consistent
-                    Matcher matcher = VALID_POP_OVERRIDE_MITIGATION_NAME_PATTERN.matcher(mitigationName);
-                    matcher.find();
-                    String location = matcher.group(1);
-                    Validate.isTrue(location.equals(locations.get(0)), 
-                            String.format("location %s does not match mitigation name %s.", locations.get(0), location));
-                    Validate.isTrue(edgeLocationsHelper.getBlackwatchClassicPOPs().contains(location),
-                            String.format("location %s is not a blackwatch pop.", location));
-                }
-            }
-        }
+    private void validateLocations(String location, String mitigationName, List<String> locations) {
+        Validate.notEmpty(locations, String.format("locations %s should not be empty.", locations));
+        Validate.isTrue(locations.size() == 1, String.format("locations %s should only contains 1 location.", locations));
+        Validate.isTrue(location.equals(locations.get(0)), String.format("locations %s should match the location %s found in mitigation name.", locations, location));
+        Validate.isTrue(edgeLocationsHelper.getAllClassicPOPs().contains(location), String.format("location %s is not a valid edge location.", location));
     }
     
     private void validatePostDeploymentChecks(List<MitigationDeploymentCheck> checks) {
@@ -171,18 +134,20 @@ public class EdgeBlackWatchMitigationTemplateValidator implements
         Validate.notEmpty(config.getMd5(), "BlackWatch Config S3 object missing s3 object md5 checksum");
     }
 
-    private boolean isGlobalMitigation(String mitigationName) {
+    private String findLocationFromMitigationName(String mitigationName) {
         Validate.notEmpty(mitigationName, "mitigationName cannot be null or empty.");
 
         Matcher globalMitigationMatcher = VALID_GLOBAL_MITIGATION_NAME_PATTERN.matcher(mitigationName);
         Matcher popOverrideMitigationMatcher = VALID_POP_OVERRIDE_MITIGATION_NAME_PATTERN.matcher(mitigationName);
-        boolean isGlobalMitigation = globalMitigationMatcher.find();
-        if (!isGlobalMitigation && !popOverrideMitigationMatcher.find()) {
-            String message = String.format("Invalid mitigationName %s. Name doesn't match the any mitigation name pattern.", mitigationName);
-            LOG.info(message);
-            throw new IllegalArgumentException(message);
+        if (globalMitigationMatcher.find()) {
+            return globalMitigationMatcher.group(1);
         }
-        return isGlobalMitigation;
+        if (popOverrideMitigationMatcher.find()) {
+            return popOverrideMitigationMatcher.group(1);
+        }
+        String message = String.format("Invalid mitigationName %s. Name doesn't match the any mitigation name pattern.", mitigationName);
+        LOG.info(message);
+        throw new IllegalArgumentException(message);
     }
 
     @Override

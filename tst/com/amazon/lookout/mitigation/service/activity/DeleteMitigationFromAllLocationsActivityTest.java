@@ -1,7 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity;
 
 import com.amazon.aws158.commons.tst.TestUtils;
-import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
@@ -48,8 +47,7 @@ public class DeleteMitigationFromAllLocationsActivityTest {
         return new DeleteMitigationFromAllLocationsActivity(
                 new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
                 new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                        mock(EdgeLocationsHelper.class),
-                        mock(MetricsFactory.class)),
+                        mock(EdgeLocationsHelper.class)),
                 mock(RequestStorageManager.class),
                 mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
                 new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));
