@@ -119,7 +119,16 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
         Validate.notEmpty(checks, "Missing post deployment for blackwatch mitigation deployment");
         
         for (MitigationDeploymentCheck check : checks) {
-            Validate.isInstanceOf(AlarmCheck.class, check, String.format("BlackWatch mitigation post deployment check only support alarm check, but found %s", check));
+            Validate.isInstanceOf(AlarmCheck.class, check, String.format("BlackWatch mitigation post deployment check "
+                    + "only support alarm check, but found %s", check));
+            AlarmCheck alarmCheck = (AlarmCheck) check;
+            Validate.isTrue(alarmCheck.getCheckEveryNSec() > 0, "Alarm check interval must be positive.");
+            Validate.isTrue(alarmCheck.getCheckTotalPeriodSec() > 0, "Alarm check total period time must be positive.");
+            Validate.isTrue(alarmCheck.getDelaySec() >= 0, "Alarm check delay time can not be negative.");
+            Validate.isTrue(alarmCheck.getCheckTotalPeriodSec() > alarmCheck.getCheckEveryNSec(), "Alarm check total time must be larger than alarm check interval.");
+            for (String alarmType : alarmCheck.getAlarms().keySet()) {
+                Validate.notEmpty(alarmCheck.getAlarms().get(alarmType), String.format("Found empty alarm list for alamr type %s.", alarmType));
+            }
         }
     }
  
