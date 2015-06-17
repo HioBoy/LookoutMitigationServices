@@ -61,21 +61,46 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
         doReturn(metrics).when(metrics).newMetrics();
         validator = new EdgeBlackWatchMitigationTemplateValidator(edgeLocationsHelper);
         
-        doReturn(new HashSet<String>(Arrays.asList("AMS1", "AMS50", "NRT54"))).when(edgeLocationsHelper).getAllClassicPOPs();
+        doReturn(new HashSet<String>(Arrays.asList("AMS1", "AMS50", "NRT54", "G-IAD55"))).when(edgeLocationsHelper).getAllClassicPOPs();
     }
 
     /**
-     * Create global mitigation 
+     * Create global mitigation at gamma location
+     */
+    @Test
+    public void testCreateMitigationSuccessGammaLocation() {
+        String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
+        CreateMitigationRequest request = new CreateMitigationRequest();
+        request.setMitigationName("BLACKWATCH_POP_GLOBAL_G-IAD55");
+        request.setMitigationTemplate(mitigationTemplate);
+        request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
+        request.setServiceName(ServiceName.Edge);
+        request.setLocations(Arrays.asList("G-IAD55"));
+        S3Object config = new S3Object();
+        config.setBucket("s3bucket");
+        config.setKey("s3key");
+        config.setMd5("md5");
+        BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
+        constraint.setConfig(config);
+        MitigationDefinition mitigationDefinition = new MitigationDefinition();
+        mitigationDefinition.setConstraint(constraint);
+        request.setMitigationDefinition(mitigationDefinition);
+        validator.validateRequestForTemplate(request, mitigationTemplate);
+        verify(edgeLocationsHelper, times(1)).getAllClassicPOPs();
+    }
+    
+    /**
+     * Create global mitigation at prod location
      */
     @Test
     public void testCreateMitigationSuccess1() {
         String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
         CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationName("BLACKWATCH_POP_GLOBAL_AMS1");
+        request.setMitigationName("BLACKWATCH_POP_GLOBAL_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         request.setServiceName(ServiceName.Edge);
-        request.setLocations(Arrays.asList("AMS1"));
+        request.setLocations(Arrays.asList("E-AMS1"));
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -96,11 +121,11 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
     public void testCreateMitigationSuccess3() {
         String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
         CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationName("BLACKWATCH_POP_OVERRIDE_AMS1");
+        request.setMitigationName("BLACKWATCH_POP_OVERRIDE_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         request.setServiceName(ServiceName.Edge);
-        request.setLocations(Arrays.asList("AMS1"));
+        request.setLocations(Arrays.asList("E-AMS1"));
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -164,7 +189,7 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         request.setServiceName(ServiceName.Edge);
-        request.setLocations(Arrays.asList("AMS1"));
+        request.setLocations(Arrays.asList("E-AMS1"));
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -184,10 +209,10 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
     public void testCreateMitigationFailed5() {
         String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
         CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationName("BLACKWATCH_POP_GLOBAL_AMS50");
+        request.setMitigationName("BLACKWATCH_POP_GLOBAL_E-AMS50");
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(ServiceName.Edge);
-        request.setLocations(Arrays.asList("AMS50"));
+        request.setLocations(Arrays.asList("E-AMS50"));
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -207,10 +232,10 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
     public void testCreateMitigationFailed6() {
         String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
         CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationName("BLACKWATCH_POP_GLOBAL_AMS1");
+        request.setMitigationName("BLACKWATCH_POP_GLOBAL_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
         request.setServiceName(ServiceName.Edge);
-        request.setLocations(Arrays.asList("AMS1"));
+        request.setLocations(Arrays.asList("E-AMS1"));
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
         MitigationDefinition mitigationDefinition = new MitigationDefinition();
@@ -226,7 +251,7 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
     public void testCreateMitigationFailed7() {
         String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
         CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationName("BLACKWATCH_POP_OVERRIDE_AMS1");
+        request.setMitigationName("BLACKWATCH_POP_OVERRIDE_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         request.setServiceName(ServiceName.Edge);
@@ -273,11 +298,11 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
     public void testEditMitigationSuccess2() {
         String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
         EditMitigationRequest request = new EditMitigationRequest();
-        request.setMitigationName("BLACKWATCH_POP_GLOBAL_NRT54");
+        request.setMitigationName("BLACKWATCH_POP_GLOBAL_E-NRT54");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         request.setServiceName(ServiceName.Edge);
-        request.setLocation(Arrays.asList("NRT54"));
+        request.setLocation(Arrays.asList("E-NRT54"));
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -298,11 +323,11 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
     public void testEditMitigationSuccess3() {
         String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
         EditMitigationRequest request = new EditMitigationRequest();
-        request.setMitigationName("BLACKWATCH_POP_OVERRIDE_AMS1");
+        request.setMitigationName("BLACKWATCH_POP_OVERRIDE_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         request.setServiceName(ServiceName.Edge);
-        request.setLocation(Arrays.asList("AMS1"));
+        request.setLocation(Arrays.asList("E-AMS1"));
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -323,7 +348,7 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
     public void testDeleteMitigation() {
         String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
-        request.setMitigationName("BLACKWATCH_POP_OVERRIDE_AMS1");
+        request.setMitigationName("BLACKWATCH_POP_OVERRIDE_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         request.setServiceName(ServiceName.Edge);
