@@ -8,6 +8,7 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -93,7 +94,7 @@ public class EditMitigationActivity extends Activity {
     public @Nonnull MitigationModificationResponse enact(@Nonnull EditMitigationRequest editRequest) {
 
         // Wrap the CoralMetrics for this activity in a TSDMetrics instance.
-        TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "CreateMitigation.enact");
+        TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "EditMitigation.enact");
 
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;
@@ -159,11 +160,10 @@ public class EditMitigationActivity extends Activity {
 
             return mitigationModificationResponse;
         } catch (IllegalArgumentException ex) {
-            LOG.warn(String.format("Caught IllegalArgumentException in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
-                    ReflectionToStringBuilder.toString(editRequest)), ex);
+            String message = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "EditMitigationActivity", ex.getMessage());
+            LOG.warn(message + " for request: " + ReflectionToStringBuilder.toString(editRequest), ex);
             tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.BadRequest.name());
-            throw new BadRequest400(String.format("Received BadRequest when editing mitigation %s for service %s using template %s. Detailed message: %s", 
-                    editRequest.getMitigationName(), editRequest.getServiceName(), editRequest.getMitigationTemplate(), ex.getMessage()));
+            throw new BadRequest400(message);
         } catch (StaleRequestException400 ex) {
             LOG.warn(String.format("Caught StaleRequestException in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
                     ReflectionToStringBuilder.toString(editRequest)), ex);
