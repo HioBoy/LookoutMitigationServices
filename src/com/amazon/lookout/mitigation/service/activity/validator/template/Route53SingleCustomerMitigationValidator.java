@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
@@ -35,6 +36,8 @@ import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazonaws.services.simpleworkflow.flow.DataConverter;
+import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 
 /**
  * Validator for Route53's single customer based mitigation templates.
@@ -51,6 +54,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     private final ServiceSubnetsMatcher serviceSubnetsMatcher;
     
     private final List<String> validPacketAttributeValues;
+    private final DataConverter jsonDataConverter = new JsonDataConverter();
     
     public Route53SingleCustomerMitigationValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher) {
         Validate.notNull(serviceSubnetsMatcher);
@@ -292,9 +296,27 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         }
     }
 
+    /**
+     * We currently check if 2 definitions are exactly identical. There could be cases where 2 definitions are equivalent, but not identical (eg:
+     * when they have the same constraints, but the constraints are in different order) - in those cases we don't treat them as identical for now.
+     * We could do so, by enforcing a particular ordering to the mitigation definitions when we persist the definition - however it might get tricky
+     * to do so for different use-cases, eg: for IPTables maybe the user crafted rules such that they are in a certain order for a specific reason.
+     * We could have a deeper-check based on the template - which checks if 2 mitigations are equivalent, but we don't have a strong use-case for such as of now, 
+     * hence keeping the comparison simple for now.
+     * 
+     * We also first check if the hashcode for definitions matches - which acts as a shortcut to avoid deep inspection of the definitions.
+     */
     private void checkForDuplicateDefinition(@Nonnull String templateForNewDefinition, @Nonnull String nameForNewDefinition, 
                                              @Nonnull MitigationDefinition newDefinition, @Nonnull String templateForExistingDefinition, 
                                              @Nonnull String nameForExistingDefinition, @Nonnull MitigationDefinition existingDefinition) {
+        if ((existingDefinition.hashCode()== newDefinition.hashCode()) && newDefinition.equals(existingDefinition)) {
+            String msg = "Found identical mitigation definition: " + nameForExistingDefinition + " for existingTemplate: " + templateForExistingDefinition +
+                         " with definition: " + jsonDataConverter.toData(existingDefinition) + " for request with MitigationName: " + nameForNewDefinition + 
+                         " and MitigationTemplate: " + templateForNewDefinition + " with definition: " + jsonDataConverter.toData(newDefinition);
+            LOG.info(msg);
+            throw new DuplicateDefinitionException400(msg);
+        }
+        
         if (templateForNewDefinition.equals(templateForExistingDefinition)) {
             String msg = "For MitigationTemplate: " + templateForNewDefinition + " we can have at most 1 mitigation active at a time. Currently mitigation: " + 
                          nameForExistingDefinition + " already exists for this template";

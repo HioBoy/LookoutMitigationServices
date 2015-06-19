@@ -14,7 +14,11 @@ import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazonaws.services.simpleworkflow.flow.DataConverter;
+import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
+
 import lombok.NonNull;
+
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.logging.Log;
@@ -29,6 +33,7 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
     private static final Pattern INVALID_MITIGATION_NAME_PATTERN = Pattern.compile("\n|\r|\u0085|\u2028|\u2029");
 
     private final IPTablesJsonValidator ipTablesJsonValidator;
+    private final DataConverter jsonDataConverter = new JsonDataConverter();
 
     public IPTablesEdgeCustomerValidator(IPTablesJsonValidator ipTablesJsonValidator) {
         this.ipTablesJsonValidator = ipTablesJsonValidator;
@@ -74,6 +79,16 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
         validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope);
     }
 
+    /**
+     * We currently check if 2 definitions are exactly identical. There could be cases where 2 definitions are equivalent, but not identical (eg:
+     * when they have the same constraints, but the constraints are in different order) - in those cases we don't treat them as identical for now.
+     * We could do so, by enforcing a particular ordering to the mitigation definitions when we persist the definition - however it might get tricky
+     * to do so for different use-cases, eg: for IPTables maybe the user crafted rules such that they are in a certain order for a specific reason.
+     * We could have a deeper-check based on the template - which checks if 2 mitigations are equivalent, but we don't have a strong use-case for such as of now, 
+     * hence keeping the comparison simple for now.
+     * 
+     * We also first check if the hashcode for definitions matches - which acts as a shortcut to avoid deep inspection of the definitions.
+     */
     @Override
     public void validateCoexistenceForTemplateAndDevice(
             @NonNull String templateForNewDefinition,
@@ -86,6 +101,14 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
         Validate.notEmpty(mitigationNameForNewDefinition);
         Validate.notEmpty(templateForExistingDefinition);
         Validate.notEmpty(mitigationNameForExistingDefinition);
+        
+        if ((existingDefinition.hashCode()== newDefinition.hashCode()) && newDefinition.equals(existingDefinition)) {
+            String msg = "Found identical mitigation definition: " + mitigationNameForExistingDefinition + " for existingTemplate: " + templateForExistingDefinition +
+                         " with definition: " + jsonDataConverter.toData(existingDefinition) + " for request with MitigationName: " + mitigationNameForNewDefinition + 
+                         " and MitigationTemplate: " + templateForNewDefinition + " with definition: " + jsonDataConverter.toData(newDefinition);
+            LOG.info(msg);
+            throw new DuplicateDefinitionException400(msg);
+        }
 
         if (templateForNewDefinition.equals(MitigationTemplate.IPTables_Mitigation_EdgeCustomer)) {
             checkForDuplicateDefinition(

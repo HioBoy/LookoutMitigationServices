@@ -179,8 +179,6 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         MitigationModificationRequest request = generateCreateRateLimitMitigationRequest();
         MitigationDefinition newDefinition = defaultCreateMitigationDefinition();
-        String newDefinitionJsonString = jsonDataConverter.toData(newDefinition);
-        int newDefinitionHashcode = newDefinitionJsonString.hashCode();
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
         MitigationDefinition existingDefinition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_IP.name(), Lists.newArrayList("1.2.3.4"));
@@ -201,7 +199,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         Throwable caughtException = null;
         try {
             storageHandler.checkForDuplicatesFromDDBResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, 
-                                                           newDefinition, newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
+                                                           newDefinition, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -221,15 +219,13 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         
         MitigationDefinition newDefinition = defaultCreateMitigationDefinition();
-        String newDefinitionJsonString = jsonDataConverter.toData(newDefinition);
-        int newDefinitionHashcode = newDefinitionJsonString.hashCode();
         
         MitigationDefinition existingDefinition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_IP.name(), Lists.newArrayList("1.2.3.4"));
         String existingDefinitionJsonString = jsonDataConverter.toData(existingDefinition);
         
         Throwable caughtException = null;
         try {
-            storageHandler.checkDuplicateDefinition(existingDefinitionJsonString, "ExistingName", "ExistingTemplate", "NewName", "NewTemplate", newDefinition, newDefinitionHashcode, tsdMetrics);
+            storageHandler.checkDuplicateDefinition(existingDefinitionJsonString, "ExistingName", "ExistingTemplate", "NewName", "NewTemplate", newDefinition, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -254,11 +250,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         MitigationDefinition existingDefinition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_IP.name(), Lists.newArrayList("1.2.3.4"));
         String existingDefinitionJsonString = jsonDataConverter.toData(existingDefinition);
         
-        int newDefinitionHashcode = existingDefinitionJsonString.hashCode();
-        
         Throwable caughtException = null;
         try {
-            storageHandler.checkDuplicateDefinition(existingDefinitionJsonString, "ExistingName", "ExistingTemplate", "NewName", "NewTemplate", newDefinition, newDefinitionHashcode, tsdMetrics);
+            storageHandler.checkDuplicateDefinition(existingDefinitionJsonString, "ExistingName", "ExistingTemplate", "NewName", "NewTemplate", newDefinition, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -273,24 +267,23 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testCheckDuplicateDefinitionForDuplicateDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class), mock(EdgeLocationsHelper.class));
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         
         MitigationDefinition newDefinition = defaultCreateMitigationDefinition();
         String newDefinitionJsonString = jsonDataConverter.toData(newDefinition);
-        int newDefinitionHashcode = newDefinitionJsonString.hashCode();
         
         Throwable caughtException = null;
         try {
-            storageHandler.checkDuplicateDefinition(newDefinitionJsonString, "ExistingName", "ExistingTemplate", "NewName", "NewTemplate", newDefinition, newDefinitionHashcode, tsdMetrics);
+            storageHandler.checkDuplicateDefinition(newDefinitionJsonString, "ExistingName", MitigationTemplate.Router_RateLimit_Route53Customer,
+                    "NewName", MitigationTemplate.Router_RateLimit_Route53Customer, newDefinition, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof DuplicateDefinitionException400);
-        verify(templateBasedValidator, times(0)).validateCoexistenceForTemplateAndDevice(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), any(MitigationDefinition.class));
     }
     
     /**
@@ -307,8 +300,6 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         
         MitigationDefinition newDefinition = defaultCreateMitigationDefinition();
-        String newDefinitionJsonString = jsonDataConverter.toData(newDefinition);
-        int newDefinitionHashcode = newDefinitionJsonString.hashCode();
         
         MitigationDefinition existingDefinition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_IP.name(), Lists.newArrayList("1.2.3.4"));
         String existingDefinitionJsonString = jsonDataConverter.toData(existingDefinition);
@@ -316,7 +307,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         Throwable caughtException = null;
         try {
             storageHandler.checkDuplicateDefinition(existingDefinitionJsonString, "ExistingName", MitigationTemplate.Router_RateLimit_Route53Customer, "NewName", 
-                                                    MitigationTemplate.Router_RateLimit_Route53Customer, newDefinition, newDefinitionHashcode, tsdMetrics);
+                                                    MitigationTemplate.Router_RateLimit_Route53Customer, newDefinition, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -439,7 +430,6 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         MitigationDefinition definition = request.getMitigationDefinition();
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         String definitionAsJsonString = jsonDataConverter.toData(definition);
-        int definitionHashcode = definitionAsJsonString.hashCode();
         
         String mitigationName = request.getMitigationName();
         
@@ -456,7 +446,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         lastEvaluatedKey.put("key1", new AttributeValue("value1"));
         QueryResult result1 = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(lastEvaluatedKey);
         
-        String existingMitigationTemplate2 = "RandomTemplate2";
+        String existingMitigationTemplate2 = MitigationTemplate.Router_RateLimit_Route53Customer;
         itemBuilder = new DDBItemBuilder().withStringAttribute("DeviceScope", deviceNameAndScope.getDeviceScope().name()).withNumericAttribute("WorkflowId", 3)
                                           .withStringAttribute("WorkflowStatus", "SCHEDULED").withStringAttribute("MitigationName", "RandomName2")
                                           .withStringAttribute("MitigationTemplate", existingMitigationTemplate2).withStringAttribute("MitigationDefinition", definitionAsJsonString)
@@ -464,10 +454,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         QueryResult result2 = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(null);
                 
         when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class))).thenReturn(result1).thenReturn(result2);
-        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
-                                                                                  anyString(), anyString(), anyLong(), any(TSDMetrics.class));
-        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
-        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyString(), anyString(), any(TSDMetrics.class));
         
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
         
@@ -485,7 +474,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         Throwable caughtException = null;
         try {
-            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, definition, definitionHashcode, mitigationName, 
+            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, definition, mitigationName, 
                                                              existingMitigationTemplate2, null, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
@@ -494,8 +483,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof DuplicateDefinitionException400);
         verify(storageHandler, times(2)).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
-                                                                         anyInt(), anyString(), anyString(), any(TSDMetrics.class));
-        verify(storageHandler, times(2)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+                                                                         anyString(), anyString(), any(TSDMetrics.class));
+        verify(storageHandler, times(2)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
         verify(storageHandler, times(2)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class));
     }
     
@@ -513,7 +502,6 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         
         CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
-        int newDefinitionHashcode = jsonDataConverter.toData(request.getMitigationDefinition()).hashCode();
         
         MitigationDefinition definition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_IP.name(), Lists.newArrayList("1.2.3.4"));
         String definitionAsJsonString = jsonDataConverter.toData(definition);
@@ -530,10 +518,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         QueryResult result = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(null);
                 
         when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class))).thenReturn(result);
-        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
-                                                                                  anyString(), anyString(), anyLong(), any(TSDMetrics.class));
-        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
-        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyString(), anyString(), any(TSDMetrics.class));
         
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
         
@@ -550,14 +537,14 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         Throwable caughtException = null;
         try {
-            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, request.getMitigationDefinition(), newDefinitionHashcode, mitigationName, existingMitigationTemplate, (long) 2, tsdMetrics);
+            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, request.getMitigationDefinition(), mitigationName, existingMitigationTemplate, (long) 2, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
         assertNull(caughtException);
         verify(storageHandler, times(1)).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
-                                                                         anyInt(), anyString(), anyString(), any(TSDMetrics.class));
-        verify(storageHandler, times(1)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+                                                                         anyString(), anyString(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
         verify(storageHandler, times(1)).getKeysForDeviceAndWorkflowId(anyString(), anyLong());
         verify(storageHandler, times(0)).getKeysForActiveMitigationsForDevice(anyString());
     }
@@ -576,7 +563,6 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         
         CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
-        int newDefinitionHashcode = jsonDataConverter.toData(request.getMitigationDefinition()).hashCode();
         
         MitigationDefinition definition = createMitigationDefinition(PacketAttributesEnumMapping.SOURCE_IP.name(), Lists.newArrayList("1.2.3.4"));
         String definitionAsJsonString = jsonDataConverter.toData(definition);
@@ -593,10 +579,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         QueryResult result = new QueryResult().withCount(1).withItems(itemBuilder.build()).withLastEvaluatedKey(null);
                 
         when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class))).thenThrow(new RuntimeException()).thenThrow(new RuntimeException()).thenReturn(result);
-        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
-                                                                                  anyString(), anyString(), anyLong(), any(TSDMetrics.class));
-        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
-        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyString(), anyString(), any(TSDMetrics.class));
         
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
         
@@ -613,14 +598,14 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         Throwable caughtException = null;
         try {
-            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, request.getMitigationDefinition(), newDefinitionHashcode, mitigationName, existingMitigationTemplate, (long) 2, tsdMetrics);
+            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, request.getMitigationDefinition(), mitigationName, existingMitigationTemplate, (long) 2, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
         assertNull(caughtException);
         verify(storageHandler, times(1)).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
-                                                                         anyInt(), anyString(), anyString(), any(TSDMetrics.class));
-        verify(storageHandler, times(1)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+                                                                         anyString(), anyString(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
         verify(storageHandler, times(1)).getKeysForDeviceAndWorkflowId(anyString(), anyLong());
         verify(storageHandler, times(0)).getKeysForActiveMitigationsForDevice(anyString());
         verify(storageHandler, times(3)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class));
@@ -637,20 +622,16 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         String deviceName = DeviceName.POP_ROUTER.name();
         String deviceScope = DeviceScope.GLOBAL.name();
         
-        JsonDataConverter jsonDataConverter = new JsonDataConverter();
-        
         CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
-        int newDefinitionHashcode = jsonDataConverter.toData(request.getMitigationDefinition()).hashCode();
         
         String mitigationName = request.getMitigationName();
         
         String existingMitigationTemplate = "RandomTemplate";
                 
         when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class))).thenThrow(new RuntimeException());
-        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
-                                                                                  anyString(), anyString(), anyLong(), any(TSDMetrics.class));
-        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
-        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyString(), anyString(), any(TSDMetrics.class));
         
         ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
         
@@ -667,15 +648,15 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         Throwable caughtException = null;
         try {
-            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, request.getMitigationDefinition(), newDefinitionHashcode, mitigationName, existingMitigationTemplate, (long) 2, tsdMetrics);
+            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, request.getMitigationDefinition(), mitigationName, existingMitigationTemplate, (long) 2, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof RuntimeException);
         verify(storageHandler, times(0)).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
-                                                                         anyInt(), anyString(), anyString(), any(TSDMetrics.class));
-        verify(storageHandler, times(0)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+                                                                         anyString(), anyString(), any(TSDMetrics.class));
+        verify(storageHandler, times(0)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
         verify(storageHandler, times(1)).getKeysForDeviceAndWorkflowId(anyString(), anyLong());
         verify(storageHandler, times(0)).getKeysForActiveMitigationsForDevice(anyString());
         verify(storageHandler, times(DDBBasedCreateRequestStorageHandler.DDB_ACTIVITY_MAX_ATTEMPTS)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class));
@@ -697,8 +678,6 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         MitigationDefinition definition = request.getMitigationDefinition();
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
-        String definitionAsJsonString = jsonDataConverter.toData(definition);
-        int definitionHashcode = definitionAsJsonString.hashCode();
         
         String mitigationName = request.getMitigationName();
         String mitigationTemplate = request.getMitigationTemplate();
@@ -723,10 +702,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                 
         Long workflowIdToReturn = (long) 3;
         when(storageHandler.getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class))).thenReturn(result1).thenReturn(result2);
-        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyInt(), anyString(), anyString(), any(TSDMetrics.class));
-        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
-        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyInt(), 
-                                                                                  anyString(), anyString(), anyLong(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), anyString(), anyString(), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
+        doCallRealMethod().when(storageHandler).queryAndCheckDuplicateMitigations(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
@@ -740,7 +718,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         Throwable caughtException = null;
         try {
-            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, definition, definitionHashcode, mitigationName, mitigationTemplate, null, tsdMetrics);
+            storageHandler.queryAndCheckDuplicateMitigations(deviceName, deviceScope, definition, mitigationName, mitigationTemplate, null, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -748,8 +726,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof DuplicateDefinitionException400);
         Mockito.verify(storageHandler, times(1)).checkForDuplicatesFromDDBResult(anyString(), anyString(), any(QueryResult.class), any(MitigationDefinition.class), 
-                                                                            anyInt(), anyString(), anyString(), any(TSDMetrics.class));
-        verify(storageHandler, times(1)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), anyInt(), any(TSDMetrics.class));
+                                                                            anyString(), anyString(), any(TSDMetrics.class));
+        verify(storageHandler, times(1)).checkDuplicateDefinition(anyString(), anyString(), anyString(), anyString(), anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
         verify(storageHandler, times(1)).getActiveMitigationsForDevice(anyString(), anyString(), anySet(), anyMap(), anyMap(), anyString(), anyMap(), any(TSDMetrics.class));
         verify(storageHandler, times(0)).getKeysForDeviceAndWorkflowId(deviceName, workflowIdToReturn);
         verify(storageHandler, times(1)).getKeysForActiveMitigationsForDevice(anyString());
@@ -766,9 +744,6 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
         CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
-        MitigationDefinition definition = request.getMitigationDefinition();
-        String mitigationDefinitionAsJsonString = new JsonDataConverter().toData(definition);
-        int newDefinitionHashcode = mitigationDefinitionAsJsonString.hashCode();
         
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
@@ -794,7 +769,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         Throwable caughtException = null;
         try {
             storageHandler.checkForDuplicatesFromDDBResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, request.getMitigationDefinition(), 
-                                                           newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
+                                                           request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -808,13 +783,12 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testCheckDuplicatesForDuplicateDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class), mock(EdgeLocationsHelper.class));
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
         CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         MitigationDefinition definition = request.getMitigationDefinition();
         String mitigationDefinitionAsJsonString = new JsonDataConverter().toData(definition);
-        int newDefinitionHashcode = mitigationDefinitionAsJsonString.hashCode();
         
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
@@ -838,7 +812,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         Throwable caughtException = null;
         try {
             storageHandler.checkForDuplicatesFromDDBResult(deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(), queryResult, request.getMitigationDefinition(), 
-                                                              newDefinitionHashcode, request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
+                                                              request.getMitigationName(), request.getMitigationTemplate(), tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -995,14 +969,11 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         String deviceName = deviceNameAndScope.getDeviceName().name();
         String deviceScope = deviceNameAndScope.getDeviceScope().name();
         MitigationDefinition mitigationDefinition = request.getMitigationDefinition();
-        JsonDataConverter dataConverter = new JsonDataConverter();
-        String mitigationDefinitionAsJSONString = dataConverter.toData(mitigationDefinition);
-        int mitigationDefinitionHash = mitigationDefinitionAsJSONString.hashCode();
         TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedCreateRequestStorageHandler.storeRequestForWorkflow");
         
-        verify(storageHandler, times(1)).queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, mitigationDefinitionHash, request.getMitigationName(), 
+        verify(storageHandler, times(1)).queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, request.getMitigationName(), 
                                                                            request.getMitigationTemplate(), null, subMetrics);
-        verify(storageHandler, times(3)).queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, mitigationDefinitionHash, request.getMitigationName(), 
+        verify(storageHandler, times(3)).queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, request.getMitigationName(), 
                                                                            request.getMitigationTemplate(), maxWorkflowId, subMetrics);
     }
 }

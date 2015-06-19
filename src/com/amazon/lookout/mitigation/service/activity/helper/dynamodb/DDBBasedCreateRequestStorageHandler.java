@@ -19,7 +19,6 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.ActionType;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
-import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
@@ -122,9 +121,6 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 mitigationDefinition.setAction(actionType);
             }
             
-            String mitigationDefinitionAsJSONString = getJSONDataConverter().toData(mitigationDefinition);
-            int mitigationDefinitionHash = mitigationDefinitionAsJSONString.hashCode();
-
             Long prevMaxWorkflowId = null;
             Long currMaxWorkflowId = null;
             
@@ -137,7 +133,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName, deviceScope, prevMaxWorkflowId, subMetrics);
                 
                 // Next, check if we have any duplicate mitigations already in place.
-                queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, mitigationDefinitionHash, 
+                queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, 
                                                   mitigationName, mitigationTemplate, prevMaxWorkflowId, subMetrics);
                 
                 long newWorkflowId = 0;
@@ -184,7 +180,6 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
      * @param deviceName DeviceName for which the new mitigation needs to be created.
      * @param deviceScope DeviceScope for the device where the new mitigation needs to be created.
      * @param mitigationDefinition Mitigation definition for the new create request.
-     * @param mitigationDefinitionHash Hashcode of json representation of the mitigation definition in the new create request.
      * @param mitigationName Name of the new mitigation being created.
      * @param mitigationTemplate Template being used for the new mitigation being created.
      * @param maxWorkflowIdOnLastAttempt If we had queried this DDB before, we could query for mitigations greaterThanOrEqual to this maxWorkflowId
@@ -192,7 +187,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
      * @param metrics
      * @return Max WorkflowId for existing mitigations. Null if no mitigations exist for this deviceName and deviceScope.
      */
-    protected void queryAndCheckDuplicateMitigations(String deviceName, String deviceScope, MitigationDefinition mitigationDefinition, int mitigationDefinitionHash, 
+    protected void queryAndCheckDuplicateMitigations(String deviceName, String deviceScope, MitigationDefinition mitigationDefinition, 
                                                      String mitigationName, String mitigationTemplate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHandler.queryAndCheckDuplicateMitigations");
         try {
@@ -249,7 +244,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                     LOG.warn(msg, lastCaughtException);
                     throw new RuntimeException(msg, lastCaughtException);
                 }
-                checkForDuplicatesFromDDBResult(deviceName, deviceScope, result, mitigationDefinition, mitigationDefinitionHash, mitigationName, mitigationTemplate, subMetrics);
+                checkForDuplicatesFromDDBResult(deviceName, deviceScope, result, mitigationDefinition, mitigationName, mitigationTemplate, subMetrics);
             } while (lastEvaluatedKey != null);
         } finally {
             subMetrics.end();
@@ -305,14 +300,13 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
      * @param deviceScope Scope for the device on which the new mitigation is to be created. 
      * @param result QueryResult from the DDB query issued previously to find the existing mitigations for the device where the new mitigation is to be deployed.
      * @param newDefinition MitigationDefinition for the new mitigation that needs to be applied.
-     * @param newDefinitionHashCode Hashcode for the MitigationDefinition of the new mitigation that needs to be applied.
      * @param newDefinitionName Name of the new mitigation being created.
      * @param newDefinitionTemplate Template used for the new mitigation being created.
      * @param metrics
      * @return Max workflowId for existing mitigations for the same deviceName and deviceScope. Null if there are no such active mitigations.
      */
     protected void checkForDuplicatesFromDDBResult(String deviceName, String deviceScope, QueryResult result, MitigationDefinition newDefinition, 
-                                                   int newDefinitionHashCode, String newDefinitionName, String newDefinitionTemplate, TSDMetrics metrics) {
+                                                   String newDefinitionName, String newDefinitionTemplate, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHelper.checkForDuplicatesFromDDBResult");
         try {
             for (Map<String, AttributeValue> item : result.getItems()) {
@@ -329,7 +323,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 }
 
                 checkDuplicateDefinition(existingDefinitionAsJSONString, existingMitigationName, existingMitigationTemplate, 
-                                         newDefinitionName, newDefinitionTemplate, newDefinition, newDefinitionHashCode, subMetrics);
+                                         newDefinitionName, newDefinitionTemplate, newDefinition, subMetrics);
             }
         } finally {
             subMetrics.end();
@@ -337,15 +331,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
     }
 
     /**
-     * We currently check if 2 definitions are exactly identical. There could be cases where 2 definitions are equivalent, but not identical (eg:
-     * when they have the same constraints, but the constraints are in different order) - in those cases we don't treat them as identical for now.
-     * We could do so, by enforcing a particular ordering to the mitigation definitions when we persist the definition - however it might get tricky
-     * to do so for different use-cases, eg: for IPTables maybe the user crafted rules such that they are in a certain order for a specific reason.
-     * We could have a deeper-check based on the template - which checks if 2 mitigations are equivalent, but we don't have a strong use-case for such as of now, 
-     * hence keeping the comparison simple for now.
-     * 
-     * We also first check if the hashcode for json representation of the definition matches - which acts as a shortcut to avoid deep inspection of the definitions
-     * for non-identical strings.
+     * Delegate this to per template implementation
      *  
      * Protected for unit-testing.
      * @param existingDefinitionAsJSONString MitigationDefinition for an existing mitigation represented as a JSON string.
@@ -354,26 +340,16 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
      * @param newMitigationName MitigationName of the new mitigation to be created.
      * @param newMitigationTemplate Template to be used for generating the new mitigation.
      * @param newDefinition MitigationDefinition object representing definition of the new mitigation to be created. 
-     * @param newDefinitionHash Hashcode of the JSON representation of the new mitigation definition.  
      * @param metrics
      * @return void. Throws an exception if we find a duplicate definition. The TemplateBasedValidator is also invoked to check if there is any template
      *               based checks for verifying if the new mitigation can coexist with the new mitigation being requested.
      */
     protected void checkDuplicateDefinition(String existingDefinitionAsJSONString, String existingMitigationName, String existingMitigationTemplate,  
                                             String newMitigationName, String newMitigationTemplate, MitigationDefinition newDefinition, 
-                                            int newDefinitionHash, TSDMetrics metrics) {
+                                            TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHelper.checkDuplicateDefinition");
         try {
-            int existingMitigationHash = existingDefinitionAsJSONString.hashCode();
-
             MitigationDefinition existingDefinition = getJSONDataConverter().fromData(existingDefinitionAsJSONString, MitigationDefinition.class);
-            if ((existingMitigationHash == newDefinitionHash) && newDefinition.equals(existingDefinition)) {
-                String msg = "Found identical mitigation definition: " + existingMitigationName + " for existingTemplate: " + existingMitigationTemplate +
-                             " with definition: " + existingDefinitionAsJSONString + " for request with MitigationName: " + newMitigationName + 
-                             " and MitigationTemplate: " + newMitigationTemplate;
-                LOG.info(msg);
-                throw new DuplicateDefinitionException400(msg);
-            }
             getTemplateBasedValidator().validateCoexistenceForTemplateAndDevice(newMitigationTemplate, newMitigationName, newDefinition, existingMitigationTemplate, 
                                                                                 existingMitigationName, existingDefinition);
         } finally {
