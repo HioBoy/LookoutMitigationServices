@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -54,7 +55,7 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
         Map<String, Condition> queryFilter = null;
         String indexToUse = null;
         
-        Set<String> attributes = Sets.newHashSet(LOCATION_KEY, MITIGATION_STATUS_KEY);
+        Set<String> attributes = Sets.newHashSet(LOCATION_KEY, MITIGATION_STATUS_KEY, DEPLOYMENT_HISTORY_KEY);
         Map<String, Condition> keyConditions = generateKeyConditionForDeviceWorkflowId(MitigationInstancesModel.getDeviceWorkflowId(deviceName, jobId));
         
         QueryRequest queryRequest = generateQueryRequest(attributes, keyConditions, queryFilter, tableName, true, indexToUse, lastEvaluatedKey);
@@ -112,7 +113,11 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
             MitigationInstanceStatus mitigationInstanceStatus = new MitigationInstanceStatus();
             mitigationInstanceStatus.setLocation(value.get(LOCATION_KEY).getS());
             mitigationInstanceStatus.setMitigationStatus(value.get(MITIGATION_STATUS_KEY).getS());
-            
+            if (value.containsKey(DEPLOYMENT_HISTORY_KEY)) {
+                List<String> deploymentHistory = new ArrayList<>(value.get(DEPLOYMENT_HISTORY_KEY).getSS());
+                Collections.sort(deploymentHistory);
+                mitigationInstanceStatus.setDeploymentHistory(deploymentHistory);
+            }
             listOfMitigationInstanceStatus.add(mitigationInstanceStatus);
         }
         return listOfMitigationInstanceStatus;

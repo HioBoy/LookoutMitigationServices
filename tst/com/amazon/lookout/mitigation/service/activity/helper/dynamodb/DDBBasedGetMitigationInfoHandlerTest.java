@@ -9,6 +9,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -52,6 +53,7 @@ public class DDBBasedGetMitigationInfoHandlerTest {
         Map<String, AttributeValue> keyValues = new HashMap<>();
         keyValues.put(DDBBasedGetMitigationInfoHandler.LOCATION_KEY, new AttributeValue("AMS1"));
         keyValues.put(DDBBasedGetMitigationInfoHandler.MITIGATION_STATUS_KEY, new AttributeValue("DEPLOYED"));
+        keyValues.put(DDBBasedGetMitigationInfoHandler.DEPLOYMENT_HISTORY_KEY, new AttributeValue(Arrays.asList("event1", "event2")));
         
         List<Map<String, AttributeValue>> inputList = new ArrayList<>();
         inputList.add(keyValues);
@@ -62,6 +64,7 @@ public class DDBBasedGetMitigationInfoHandlerTest {
         MitigationInstanceStatus status = new MitigationInstanceStatus();
         status.setLocation("AMS1");
         status.setMitigationStatus("DEPLOYED");
+        status.setDeploymentHistory(Arrays.asList("event1", "event2"));
         expectedResult.add(status);
         
         doReturn(queryResult).when(spiedMitigationInfoHandler).queryMitigationsInDDB(any(QueryRequest.class), any(TSDMetrics.class));

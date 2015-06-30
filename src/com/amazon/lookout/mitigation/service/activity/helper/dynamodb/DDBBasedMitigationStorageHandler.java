@@ -38,6 +38,7 @@ public abstract class DDBBasedMitigationStorageHandler {
     public static final String BLOCKING_DEVICE_WORKFLOW_ID = "BlockingDeviceWorkflowId";
     public static final String STATUS_POST_DEPLOY_CHECK_KEY = "StatusPostDeployCheck-1";
     public static final String STATUS_PRE_DEPLOY_CHECK_KEY_2 = "StatusPreDeployCheck-2";
+    public static final String DEPLOYMENT_HISTORY_KEY = "DeploymentHistory";
     
     // Retry and sleep configs.
     private static final int DDB_QUERY_MAX_ATTEMPTS = 3;
