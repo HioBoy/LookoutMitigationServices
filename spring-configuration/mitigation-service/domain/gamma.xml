@@ -34,6 +34,15 @@
         <value>G-SFO5</value>
     </util:set>
     
+    <util:list id="gamma.fakeBlackWatchClassicLocations">
+        <value>SEALAB-A</value>
+        <value>SEALAB-B</value>
+        <value>SEALAB-C</value>
+        <value>SEALAB-D</value>
+        <value>SEALAB-E</value>
+        <value>SEALAB-F</value>
+    </util:list>
+    
     <bean id="gamma.edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
         <constructor-arg name="cloudfrontClient" ref="edgeOperatorServiceClient"/>
         <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>
@@ -41,6 +50,7 @@
         <constructor-arg name="millisToSleepBetweenRetries" value="500"/>
         <constructor-arg name="popsListDir" value="var/state/popsList"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+        <constructor-arg name="fakeBlackWatchClassicLocations" ref="gamma.fakeBlackWatchClassicLocations"/>
     </bean>
 
 </beans>

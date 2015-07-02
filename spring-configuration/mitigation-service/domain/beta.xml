@@ -27,6 +27,15 @@
     <bean id="beta.blackwatchMWSMetricDataset" class="java.lang.String">
         <constructor-arg value="Test"/>
     </bean>
+ 
+    <util:list id="beta.fakeBlackWatchClassicLocations">
+        <value>SEALAB-A</value>
+        <value>SEALAB-B</value>
+        <value>SEALAB-C</value>
+        <value>SEALAB-D</value>
+        <value>SEALAB-E</value>
+        <value>SEALAB-F</value>
+    </util:list>   
     
     <util:set id="beta.defaultPOPsForEdgeLocationsHelper"/>
 
@@ -37,6 +46,7 @@
         <constructor-arg name="millisToSleepBetweenRetries" value="500"/>
         <constructor-arg name="popsListDir" value="var/state/popsList"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+        <constructor-arg name="fakeBlackWatchClassicLocations" ref="beta.fakeBlackWatchClassicLocations"/>
     </bean>
     
 </beans>

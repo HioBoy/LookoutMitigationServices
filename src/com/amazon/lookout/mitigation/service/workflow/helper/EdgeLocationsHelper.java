@@ -14,6 +14,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.PreDestroy;
 import javax.annotation.concurrent.ThreadSafe;
@@ -87,11 +89,13 @@ public class EdgeLocationsHelper implements Runnable {
     private final int sleepBetweenRetriesInMillis;
     private final String popsListDiskCacheDirName;
     private final MetricsFactory metricsFactory;
+    private final List<String> fakeBlackWatchClassicLocations;
 
-    @ConstructorProperties({"cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries", "popsListDir", "metricsFactory"})
+    @ConstructorProperties({"cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries", "popsListDir", "metricsFactory", "fakeBlackWatchClassicLocations"})
     public EdgeLocationsHelper(@NonNull EdgeOperatorServiceClient cloudfrontClient, @NonNull DaasControlAPIServiceV20100701Client daasClient,
                                @NonNull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, 
-                               @NonNull String popsListDiskCacheDirName, @NonNull MetricsFactory metricsFactory) {
+                               @NonNull String popsListDiskCacheDirName, @NonNull MetricsFactory metricsFactory,
+                               @NonNull List<String> fakeBlackWatchClassicLocations) {
         this.cloudfrontClient = cloudfrontClient;
         this.daasClient = daasClient;
         this.bwLocationsHelper = bwLocationsHelper;
@@ -106,6 +110,8 @@ public class EdgeLocationsHelper implements Runnable {
         
         loadPOPsFromDiskOnStartup(popsListDiskCacheDirName);
         refreshPOPLocations();
+        
+        this.fakeBlackWatchClassicLocations = fakeBlackWatchClassicLocations;
     }
     
     public Set<String> getAllClassicPOPs() {
@@ -115,7 +121,8 @@ public class EdgeLocationsHelper implements Runnable {
 
         // Return allClassicPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
         // (from either of the edge service calls succeeding) hence, there is no need to fail the create request. Users will have visibility into the instances being worked upon.
-        return allClassicPOPs;
+        return Stream.concat(allClassicPOPs.stream(), fakeBlackWatchClassicLocations.stream())
+                .collect(Collectors.toSet());
     }
     
     public Set<String> getBlackwatchClassicPOPs() {
@@ -125,7 +132,8 @@ public class EdgeLocationsHelper implements Runnable {
 
         // Return blackwatchClassicPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
         // (from either of the edge service calls succeeding) hence, there is no need to fail the create request. Users will have visibility into the instances being worked upon.
-        return blackwatchClassicPOPs;
+        return Stream.concat(blackwatchClassicPOPs.stream(), fakeBlackWatchClassicLocations.stream())
+                .collect(Collectors.toSet());
     }
     
     public Set<String> getAllNonBlackwatchClassicPOPs() {

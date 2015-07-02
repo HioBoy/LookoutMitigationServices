@@ -35,12 +35,12 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
 
     
     @ConstructorProperties({ "cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries",
-            "popsListDir", "metricsFactory" })
+            "popsListDir", "metricsFactory", "fakeBlackWatchClassicLocations" })
     public FakeLocationsHelper(@NonNull EdgeOperatorServiceClient cloudfrontClient, @NonNull DaasControlAPIServiceV20100701Client daasClient, 
             @NonNull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, @NonNull String popsListDiskCacheDirName,
-            @NonNull MetricsFactory metricsFactory) {
+            @NonNull MetricsFactory metricsFactory, @NonNull List<String> fakeBlackWatchClassicLocations) {
         super(cloudfrontClient, daasClient, bwLocationsHelper, sleepBetweenRetriesInMillis, popsListDiskCacheDirName,
-                metricsFactory);
+                metricsFactory, fakeBlackWatchClassicLocations);
         refreshFakeRouters();
     }
     @Override
