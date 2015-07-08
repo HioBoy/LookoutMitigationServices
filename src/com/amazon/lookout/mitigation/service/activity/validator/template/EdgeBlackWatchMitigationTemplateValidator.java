@@ -21,6 +21,7 @@ import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
+import static com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl.BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
 
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
@@ -49,8 +50,14 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
     private static final Pattern PROD_LOCATION_PATTERN = Pattern.compile(String.format("E-([A-Z0-9]+)"));
     private static final Pattern VALID_GLOBAL_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_GLOBAL_(%s)", LOCATION_PATTERN));
     private static final Pattern VALID_POP_OVERRIDE_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_OVERRIDE_(%s)", LOCATION_PATTERN));
-    
+    private static final int MAX_ALARM_CHECK_PERIOD_SEC = 1800;
+    private static final int MAX_ALARM_CHECK_DELAY_SEC = 1200;
     private final EdgeLocationsHelper edgeLocationsHelper;
+
+    static {
+        // verify alarm check time is less than the workflow timeout time, and have at least 5 minutes left for other execution
+        assert (MAX_ALARM_CHECK_PERIOD_SEC + MAX_ALARM_CHECK_DELAY_SEC + 300) < BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
+    }
     
     @Override
     public void validateRequestForTemplate(
@@ -132,7 +139,9 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
             AlarmCheck alarmCheck = (AlarmCheck) check;
             Validate.isTrue(alarmCheck.getCheckEveryNSec() > 0, "Alarm check interval must be positive.");
             Validate.isTrue(alarmCheck.getCheckTotalPeriodSec() > 0, "Alarm check total period time must be positive.");
+            Validate.isTrue(alarmCheck.getCheckTotalPeriodSec() <= MAX_ALARM_CHECK_PERIOD_SEC, String.format("Alarm check total period time must be <= %d minutes.", (MAX_ALARM_CHECK_PERIOD_SEC / 60)));
             Validate.isTrue(alarmCheck.getDelaySec() >= 0, "Alarm check delay time can not be negative.");
+            Validate.isTrue(alarmCheck.getDelaySec() <= MAX_ALARM_CHECK_DELAY_SEC, String.format("Alarm check delay time must be <= %d minutes.", (MAX_ALARM_CHECK_DELAY_SEC / 60)));
             Validate.isTrue(alarmCheck.getCheckTotalPeriodSec() > alarmCheck.getCheckEveryNSec(), "Alarm check total time must be larger than alarm check interval.");
             for (String alarmType : alarmCheck.getAlarms().keySet()) {
                 Validate.notEmpty(alarmCheck.getAlarms().get(alarmType), String.format("Found empty alarm list for alamr type %s.", alarmType));

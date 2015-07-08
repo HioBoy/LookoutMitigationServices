@@ -43,9 +43,12 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
     // number of hosts. Setting workflow timeout to 20 minutes to allow at least 2 activity timeouts.
     public static final long IPTABLES_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 20 * 60;
 
+    // BlackWatch need post deployment check on alarms, which can take at most 50 minutes, so override the workflow timeout to be 1 hours
+    public static final long BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 60 * 60;
+
     // Default timeout for deciders to finish a single decision task. Deciders are meant to be quick and anything taking above 60s would indicate a problem with our logic.
     private static final long DEFAULT_WORKFLOW_DECISION_TASK_TIMEOUT_SECONDS = 60;
-    
+
     private final SWFWorkflowClientProvider workflowClientProvider;
     
     @ConstructorProperties({"swfWorkflowProvider"})
@@ -233,6 +236,9 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
     private long getWorkflowExecutionStartToCloseTimeoutSeconds(String deviceName) {
         if (DeviceName.POP_HOSTS_IP_TABLES.name().equals(deviceName)) {
             return IPTABLES_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
+        }
+        if (DeviceName.BLACKWATCH_POP.name().equals(deviceName)) {
+            return BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
         }
         return DEFAULT_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
     }

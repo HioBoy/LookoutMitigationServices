@@ -7,7 +7,7 @@
   <!-- Define HappierTrails property overrides here -->
   <property name="findbugs.failOnError" value="false"/>
   <property name="checkstyle.failOnError" value="false"/>
-  <property name="tests.additional.jvmargs" value=""/>
+  <property name="tests.additional.jvmargs" value="-enableassertions"/>
 
   <ht:import file="coral-launcher.xml" optional="false"/>
 	
