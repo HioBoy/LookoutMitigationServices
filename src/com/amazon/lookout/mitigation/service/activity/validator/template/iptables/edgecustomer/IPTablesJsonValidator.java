@@ -16,6 +16,9 @@ public class IPTablesJsonValidator {
 
     public void validateIPTablesJson(String ipTablesJson) {
         Validate.notEmpty(ipTablesJson, "IPTables JSON cannot be null or empty");
+        Validate.isTrue(ipTablesJson.length() <= 28_000,
+            "IPTables JSON length should be less than or equal to 28,000. Consider removing unused mitigations. " +
+                "Actual length: " + ipTablesJson.length());
 
         JsIPTablesRules ipTablesRules = parseIPTablesJson(ipTablesJson);
 
