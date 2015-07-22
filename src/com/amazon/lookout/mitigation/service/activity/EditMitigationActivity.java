@@ -175,9 +175,9 @@ public class EditMitigationActivity extends Activity {
             tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.DuplicateDefinition.name());
             throw ex;
         } catch (Exception internalError) {
-            String errMsg = String.format("Internal error while fulfilling request for EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, internalError.getMessage(), 
+            String errMsg = String.format("Internal error while fulfilling request for EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, internalError.getMessage(),
                     ReflectionToStringBuilder.toString(editRequest));
-            LOG.error(errMsg, internalError);
+            LOG.error(LookoutMitigationServiceConstants.CRITICAL_ACTIVITY_ERROR_LOG_PREFIX + errMsg, internalError);
             requestSuccessfullyProcessed = false;
             tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.InternalError.name());
             throw new InternalServerError500(errMsg);

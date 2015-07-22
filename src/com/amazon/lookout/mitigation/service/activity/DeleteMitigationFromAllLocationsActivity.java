@@ -177,7 +177,9 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             throw new MissingMitigationException400(msg);
         } catch (Exception internalError) {
             String msg = "Internal error in DeleteMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage();
-            LOG.error(msg + " for request: " + ReflectionToStringBuilder.toString(deleteRequest), internalError);
+            LOG.error(LookoutMitigationServiceConstants.CRITICAL_ACTIVITY_ERROR_LOG_PREFIX + msg +
+                            " for request: " + ReflectionToStringBuilder.toString(deleteRequest),
+                    internalError);
             requestSuccessfullyProcessed = false;
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);

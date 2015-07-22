@@ -175,7 +175,9 @@ public class CreateMitigationActivity extends Activity {
             throw new DuplicateDefinitionException400(msg);
         } catch (Exception internalError) {
             String msg = "Internal error in CreateMitigationActivity: for requestId: " + requestId + ", reason: " + internalError.getMessage(); 
-            LOG.error(msg + " for request: " + ReflectionToStringBuilder.toString(createRequest), internalError);
+            LOG.error(LookoutMitigationServiceConstants.CRITICAL_ACTIVITY_ERROR_LOG_PREFIX + msg +
+                            " for request: " + ReflectionToStringBuilder.toString(createRequest),
+                    internalError);
             requestSuccessfullyProcessed = false;
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
