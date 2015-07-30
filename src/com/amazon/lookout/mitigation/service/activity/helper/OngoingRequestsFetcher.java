@@ -40,46 +40,43 @@ public class OngoingRequestsFetcher implements Callable<List<MitigationRequestDe
             List<MitigationRequestDescriptionWithStatuses> descriptionsWithStatuses = new ArrayList<>();
             
             // Fetch the list of ongoing requests along with the locations involved in each of the request.
-            List<MitigationRequestDescriptionWithLocations> requestDescriptionsWithLocations = requestInfoHandler.getOngoingRequestsDescription(serviceName, deviceName, subMetrics);
+            List<MitigationRequestDescriptionWithLocations> requestDescriptionsWithLocations = 
+                    requestInfoHandler.getOngoingRequestsDescription(serviceName, deviceName, subMetrics);
             for (MitigationRequestDescriptionWithLocations descriptionWithLocation : requestDescriptionsWithLocations) {
-                MitigationRequestDescription description = descriptionWithLocation.getMitigationRequestDescription();
-                
-                // Fetch status for each instance being worked on as part of this ongoing request.
-                List<MitigationInstanceStatus> instancesStatus = mitigationInstanceInfoHandler.getMitigationInstanceStatus(description.getDeviceName(), description.getJobId(), subMetrics);
-                
-                // locationsWithStatus references all locations for whom we know their MitigationStatus. 
-                List<String> locationsWithStatus = new ArrayList<>();
-                for (MitigationInstanceStatus status : instancesStatus) {
-                    locationsWithStatus.add(status.getLocation());
-                }
-                
-                // allLocations references all locations which we should consider in the result. 
-                // This list if all locations where this request is supposed to operate, if no locations constraint was specified, else we simply use the locationsConstraint.
-                List<String> allLocations = new ArrayList<>();
-                if (CollectionUtils.isEmpty(locationsConstraint)) {
-                    allLocations.addAll(descriptionWithLocation.getLocations());
-                } else {
-               	    allLocations.addAll(locationsConstraint);
-                }
-                
-                // If we don't have the MitigationStatus for all locations, then set the missing ones to simply have the status as RUNNING.
-                if (locationsWithStatus.size() != allLocations.size()) {
-                    allLocations.removeAll(locationsWithStatus);
-                    for (String locationWithoutStatus : allLocations) {
-                        MitigationInstanceStatus status = new MitigationInstanceStatus();
-                        status.setLocation(locationWithoutStatus);
-                        status.setMitigationStatus(MitigationStatus.RUNNING);
-                        
-                        instancesStatus.add(status);
+                List<String> locations = new ArrayList<>(descriptionWithLocation.getLocations());
+                if (!CollectionUtils.isEmpty(locationsConstraint)) {
+                    // filter the locations with locationsConstraint, if it is not empty
+                    locations.retainAll(locationsConstraint);
+                    if (locations.isEmpty()) {
+                        // This ongoing request's locations does not include any locations in the filter, so skip this ongoing request
+                        continue;
                     }
+                }
+                 
+                // Fetch status for each instance being worked on as part of this ongoing request.
+                MitigationRequestDescription description = descriptionWithLocation.getMitigationRequestDescription();
+                List<MitigationInstanceStatus> instancesStatus = mitigationInstanceInfoHandler
+                        .getMitigationInstanceStatus(description.getDeviceName(), description.getJobId(), subMetrics);
+                // locationToStatus stores the status of location that has been created in DDB. 
+                // some of the instances might have not been created in DDB, so we will need to set it as RUNNING by default
+                Map<String, MitigationInstanceStatus> locationToStatus = new HashMap<>();
+                for (MitigationInstanceStatus status : instancesStatus) {
+                    locationToStatus.put(status.getLocation(), status);
                 }
                 
                 MitigationRequestDescriptionWithStatuses descriptionWithStatuses = new MitigationRequestDescriptionWithStatuses();
                 descriptionWithStatuses.setMitigationRequestDescription(description);
                 
                 Map<String, MitigationInstanceStatus> instancesStatusMap = new HashMap<>();
-                for (MitigationInstanceStatus status : instancesStatus) {
-                    instancesStatusMap.put(status.getLocation(), status);
+                for (String location : locations) {
+                    MitigationInstanceStatus status = locationToStatus.get(location);
+                    // If we don't have the MitigationStatus for some locations, then simply set the missing ones to be RUNNING.
+                    if (status == null) {
+                        status = new MitigationInstanceStatus();
+                        status.setLocation(location);
+                        status.setMitigationStatus(MitigationStatus.RUNNING);
+                    }
+                    instancesStatusMap.put(location, status);
                 }
                 descriptionWithStatuses.setInstancesStatusMap(instancesStatusMap);
                 
