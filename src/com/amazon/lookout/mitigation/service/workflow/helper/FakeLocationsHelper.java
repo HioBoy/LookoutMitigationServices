@@ -28,7 +28,7 @@ import lombok.NonNull;
  */
 public class FakeLocationsHelper extends EdgeLocationsHelper {
 
-    private static final int POP_LIST_EXPIRATION_SECONDS = 20;
+    private static final int POP_LIST_EXPIRATION_SECONDS = 1;
     private volatile PopLists popLists = null;
     //set time of last update to an expired timestamp
     private volatile DateTime timeOfLastUpdate = new DateTime().minus(POP_LIST_EXPIRATION_SECONDS * 2);
