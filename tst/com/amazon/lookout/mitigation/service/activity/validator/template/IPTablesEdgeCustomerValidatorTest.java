@@ -21,6 +21,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Collections;
+
 import static com.amazon.lookout.mitigation.service.utils.AssertUtils.assertThrows;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
@@ -81,7 +83,7 @@ public class IPTablesEdgeCustomerValidatorTest {
         CreateMitigationRequest request = generateCreateMitigationRequest();
         request.setMitigationName(null);
 
-        NullPointerException actualError = assertValidationThrows(NullPointerException.class, request);
+        IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, request);
 
         assertThat(actualError.getMessage(), containsString("mitigationName"));
     }
@@ -91,7 +93,7 @@ public class IPTablesEdgeCustomerValidatorTest {
         CreateMitigationRequest request = generateCreateMitigationRequest();
         request.setMitigationDefinition(null);
 
-        NullPointerException actualError = assertValidationThrows(NullPointerException.class, request);
+        IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, request);
 
         assertThat(actualError.getMessage(), containsString("mitigationDefinition"));
     }
@@ -108,12 +110,27 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateWhenConstraintIsEmpty() {
+    public void validateRequestForTemplateWhenConstraintAttributeValueIsNull() {
         SimpleConstraint ipTablesConstraint = new SimpleConstraint();
+        ipTablesConstraint.setAttributeName("IP_TABLES_RULES");
+        ipTablesConstraint.setAttributeValues(null);
         CreateMitigationRequest request = generateCreateMitigationRequest();
         request.setMitigationDefinition(generateMitigationDefinition(ipTablesConstraint));
 
-        NullPointerException actualError = assertValidationThrows(NullPointerException.class, request);
+        IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, request);
+
+        assertThat(actualError.getMessage(), containsString("constraint"));
+    }
+
+    @Test
+    public void validateRequestForTemplateWhenConstraintAttributeValueIsEmpty() {
+        SimpleConstraint ipTablesConstraint = new SimpleConstraint();
+        ipTablesConstraint.setAttributeName("IP_TABLES_RULES");
+        ipTablesConstraint.setAttributeValues(Collections.emptyList());
+        CreateMitigationRequest request = generateCreateMitigationRequest();
+        request.setMitigationDefinition(generateMitigationDefinition(ipTablesConstraint));
+
+        IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, request);
 
         assertThat(actualError.getMessage(), containsString("constraint"));
     }

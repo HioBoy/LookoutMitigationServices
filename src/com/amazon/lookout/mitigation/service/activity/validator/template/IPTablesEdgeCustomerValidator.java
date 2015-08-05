@@ -125,6 +125,9 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
     }
 
     private void validateMitigationName(String mitigationName) {
+        if (mitigationName == null) {
+            throw new IllegalArgumentException("mitigationName cannot be null or empty.");
+        }
         Validate.notEmpty(mitigationName, "mitigationName cannot be null or empty.");
 
         Matcher matcher = INVALID_MITIGATION_NAME_PATTERN.matcher(mitigationName);
@@ -138,13 +141,17 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
     }
 
     private void validateCreateRequest(CreateMitigationRequest request) {
-        Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
+        if (request.getMitigationDefinition() == null) {
+            throw new IllegalArgumentException("mitigationDefinition cannot be null.");
+        }
 
         validateIPTablesConstraint(request.getMitigationDefinition().getConstraint());
     }
 
     private void validateEditRequest(EditMitigationRequest request) {
-        Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
+        if (request.getMitigationDefinition() == null) {
+            throw new IllegalArgumentException("mitigationDefinition cannot be null.");
+        }
 
         validateIPTablesConstraint(request.getMitigationDefinition().getConstraint());
     }
@@ -159,6 +166,10 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
     }
 
     private void validateIPTablesConstraintAttributes(SimpleConstraint ipTablesConstraint) {
+        if (ipTablesConstraint.getAttributeValues() == null) {
+            throw new IllegalArgumentException(
+                    "IPTables constraint must contain single attribute value with IPTables JSON.");
+        }
         Validate.notEmpty(ipTablesConstraint.getAttributeValues(),
                 "IPTables constraint must contain single attribute value with IPTables JSON.");
 
