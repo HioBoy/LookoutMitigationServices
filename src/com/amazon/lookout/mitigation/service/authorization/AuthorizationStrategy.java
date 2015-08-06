@@ -11,7 +11,6 @@ import org.apache.commons.logging.LogFactory;
 
 import aws.auth.client.config.Configuration;
 
-import com.amazon.aspen.entity.Policy;
 import com.amazon.coral.security.AccessDeniedException;
 import com.amazon.coral.service.AbstractAwsAuthorizationStrategy;
 import com.amazon.coral.service.AuthorizationInfo;
@@ -119,7 +118,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         // associated with this authorization call
         authorizationInfo.setResourceOwner(context.getIdentity().getAttribute(Identity.AWS_ACCOUNT));
         // Any custom policies to include in the authorization check
-        authorizationInfo.setPolicies(Collections.<Policy>emptyList());
+        authorizationInfo.setPolicies(Collections.emptyList());
 
         authInfoList.add(authorizationInfo);
 

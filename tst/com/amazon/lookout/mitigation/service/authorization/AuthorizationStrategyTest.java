@@ -17,7 +17,6 @@ import org.junit.Test;
 
 import aws.auth.client.config.Configuration;
 
-import com.amazon.aspen.entity.Policy;
 import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.coral.security.AccessDeniedException;
 import com.amazon.coral.service.AuthorizationInfo;
@@ -135,7 +134,7 @@ public class AuthorizationStrategyTest {
         authInfo.setAction(action);
         authInfo.setResource(resource);
         authInfo.setResourceOwner(resourceOwner);
-        authInfo.setPolicies(new LinkedList<Policy>());
+        authInfo.setPolicies(new LinkedList<>());
         return authInfo;
     }
     
