@@ -23,7 +23,7 @@ import org.junit.runner.RunWith;
 
 import java.util.Collections;
 
-import static com.amazon.lookout.mitigation.service.utils.AssertUtils.assertThrows;
+import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -46,7 +46,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateValidatesIPTablesRulesForCreateRequest() {
+    public void validateRequestForTemplateValidatesIPTablesRulesForCreateRequest() throws Exception {
         IllegalArgumentException expectedError = new IllegalArgumentException("expected exception");
         IPTablesJsonValidator ipTablesJsonValidator = mock(IPTablesJsonValidator.class);
         doThrow(expectedError)
@@ -69,7 +69,7 @@ public class IPTablesEdgeCustomerValidatorTest {
             "Some\rName!",
             "Some\r\nName!",
             "Some\u2028Name!"})
-    public void validateRequestForTemplateWithBadMitigationName(String invalidMitigationName) {
+    public void validateRequestForTemplateWithBadMitigationName(String invalidMitigationName) throws Exception {
         CreateMitigationRequest request = generateCreateMitigationRequest();
         request.setMitigationName(invalidMitigationName);
 
@@ -79,7 +79,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateWithNullMitigationName() {
+    public void validateRequestForTemplateWithNullMitigationName() throws Exception {
         CreateMitigationRequest request = generateCreateMitigationRequest();
         request.setMitigationName(null);
 
@@ -89,7 +89,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateWhenMitigationDefinitionIsNull() {
+    public void validateRequestForTemplateWhenMitigationDefinitionIsNull() throws Exception {
         CreateMitigationRequest request = generateCreateMitigationRequest();
         request.setMitigationDefinition(null);
 
@@ -99,7 +99,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateWhenConstraintHasInvalidType() {
+    public void validateRequestForTemplateWhenConstraintHasInvalidType() throws Exception {
         Constraint invalidConstraint = new CompositeAndConstraint();
         CreateMitigationRequest request = generateCreateMitigationRequest();
         request.setMitigationDefinition(generateMitigationDefinition(invalidConstraint));
@@ -110,7 +110,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateWhenConstraintAttributeValueIsNull() {
+    public void validateRequestForTemplateWhenConstraintAttributeValueIsNull() throws Exception {
         SimpleConstraint ipTablesConstraint = new SimpleConstraint();
         ipTablesConstraint.setAttributeName("IP_TABLES_RULES");
         ipTablesConstraint.setAttributeValues(null);
@@ -123,7 +123,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateWhenConstraintAttributeValueIsEmpty() {
+    public void validateRequestForTemplateWhenConstraintAttributeValueIsEmpty() throws Exception {
         SimpleConstraint ipTablesConstraint = new SimpleConstraint();
         ipTablesConstraint.setAttributeName("IP_TABLES_RULES");
         ipTablesConstraint.setAttributeValues(Collections.emptyList());
@@ -136,7 +136,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateWhenIPTablesJsonIsEmpty() {
+    public void validateRequestForTemplateWhenIPTablesJsonIsEmpty() throws Exception {
         String ipTablesJson = "";
 
         IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, ipTablesJson);
@@ -145,7 +145,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateWhenIPTablesJsonIsMalformed() {
+    public void validateRequestForTemplateWhenIPTablesJsonIsMalformed() throws Exception {
         String ipTablesJson = ipTablesMalformedJson();
 
         IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, ipTablesJson);
@@ -154,7 +154,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateWhenIPTablesJsonHasNoNonce() {
+    public void validateRequestForTemplateWhenIPTablesJsonHasNoNonce() throws Exception {
         String ipTablesJson = validIpTablesJson().replace(
                 elementTitle("Nonce"),
                 elementTitle("N-o-n-c-e"));
@@ -165,7 +165,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateWhenIPTablesJsonHasNoCustomers() {
+    public void validateRequestForTemplateWhenIPTablesJsonHasNoCustomers() throws Exception {
         String ipTablesJson = validIpTablesJson().replace(
                 elementTitle("Customers"),
                 elementTitle("C-u-s-t-o-m-e-r-s"));
@@ -176,7 +176,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateRequestForTemplateWhenIPTablesJsonHasNoMitigationDefinitions() {
+    public void validateRequestForTemplateWhenIPTablesJsonHasNoMitigationDefinitions() throws Exception {
         String ipTablesJson = validIpTablesJson().replace(
                 elementTitle("Mitigation-Definitions"),
                 elementTitle("M-itigation-D-efinitions"));
@@ -193,7 +193,9 @@ public class IPTablesEdgeCustomerValidatorTest {
             "CloudFront-DNS",
             "CloudFront-Metro"
     })
-    public void validateRequestForTemplateWhenIPTablesJsonMissingRequiredCustomers(String requiredCustomer) {
+    public void validateRequestForTemplateWhenIPTablesJsonMissingRequiredCustomers(String requiredCustomer)
+        throws Exception {
+
         String ipTablesJson = validIpTablesJson().replace(
                 elementTitle(requiredCustomer),
                 elementTitle("-" + requiredCustomer + "-"));
@@ -204,7 +206,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     }
 
     @Test
-    public void validateCoexistenceForTemplateAndDeviceForSameTemplate() {
+    public void validateCoexistenceForTemplateAndDeviceForSameTemplate() throws Exception {
         IPTablesEdgeCustomerValidator validator = createValidator();
         MitigationDefinition definition1 = generateMitigationDefinition(validIpTablesJson());
         MitigationDefinition definition2 = generateMitigationDefinition(validIpTablesJson());
@@ -227,13 +229,15 @@ public class IPTablesEdgeCustomerValidatorTest {
         return "\"" + elementName + "\":";
     }
 
-    private static <T extends Throwable> T assertValidationThrows(Class<T> expectedException, String ipTablesJson) {
+    private static <T extends Throwable> T assertValidationThrows(Class<T> expectedException, String ipTablesJson)
+        throws Exception {
+
         CreateMitigationRequest request = generateCreateMitigationRequest(ipTablesJson);
         return assertValidationThrows(expectedException, request);
     }
 
     private static <T extends Throwable> T assertValidationThrows(
-            Class<T> expectedException, CreateMitigationRequest request) {
+            Class<T> expectedException, CreateMitigationRequest request) throws Exception {
 
         IPTablesEdgeCustomerValidator validator = createValidator();
         return assertThrows(

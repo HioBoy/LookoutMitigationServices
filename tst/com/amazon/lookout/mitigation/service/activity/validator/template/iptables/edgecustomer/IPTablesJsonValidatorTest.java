@@ -8,14 +8,14 @@ import junitparams.Parameters;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static com.amazon.lookout.mitigation.service.utils.AssertUtils.assertThrows;
+import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThat;
 
 @RunWith(JUnitParamsRunner.class)
 public class IPTablesJsonValidatorTest {
     @Test
-    public void validateCustomerValidatesMitigationGroup() {
+    public void validateCustomerValidatesMitigationGroup() throws Exception {
         IPTablesJsonValidator validator = new IPTablesJsonValidator();
         JsCustomer customer = JsCustomer.builder()
                 .mitigationGroups(
@@ -39,7 +39,7 @@ public class IPTablesJsonValidatorTest {
             "\n",
             "\t"
     })
-    public void validateMitigationGroupWithInvalidDescription(String invalidDescription) {
+    public void validateMitigationGroupWithInvalidDescription(String invalidDescription) throws Exception {
         IPTablesJsonValidator validator = new IPTablesJsonValidator();
         JsMitigationGroup mitigationGroup = validMitigationGroup()
                 .description(invalidDescription)
@@ -53,7 +53,7 @@ public class IPTablesJsonValidatorTest {
     }
 
     @Test
-    public void validateMitigationGroupMissingActive() {
+    public void validateMitigationGroupMissingActive() throws Exception {
         IPTablesJsonValidator validator = new IPTablesJsonValidator();
         JsMitigationGroup mitigationGroup = validMitigationGroup()
                 .active(null)
@@ -67,7 +67,7 @@ public class IPTablesJsonValidatorTest {
     }
 
     @Test
-    public void validateMitigationGroupMissingPOPs() {
+    public void validateMitigationGroupMissingPOPs() throws Exception {
         IPTablesJsonValidator validator = new IPTablesJsonValidator();
         JsMitigationGroup mitigationGroup = validMitigationGroup()
                 .pops(null)
@@ -81,7 +81,7 @@ public class IPTablesJsonValidatorTest {
     }
 
     @Test
-    public void validateMitigationGroupMissingMitigations() {
+    public void validateMitigationGroupMissingMitigations() throws Exception {
         IPTablesJsonValidator validator = new IPTablesJsonValidator();
         JsMitigationGroup mitigationGroup = validMitigationGroup()
                 .mitigations(null)

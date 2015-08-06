@@ -20,7 +20,7 @@ import org.apache.log4j.Level;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static com.amazon.lookout.mitigation.service.utils.AssertUtils.assertThrows;
+import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -33,7 +33,7 @@ public class DeleteMitigationFromAllLocationsActivityTest {
     }
 
     @Test
-    public void enactDeleteNotSupportedForIPTablesEdgeMitigation() {
+    public void enactDeleteNotSupportedForIPTablesEdgeMitigation() throws Exception {
         DeleteMitigationFromAllLocationsActivity activity = createActivityWithValidators();
         DeleteMitigationFromAllLocationsRequest request = sampleDeleteIPTablesMitigationRequest();
 

@@ -98,6 +98,7 @@ package.LookoutMitigationService = {
             JUnitParams = 1.x;
             # For TOD-based approval step in the pipeline
             LookoutMitigationServiceMonitor = 1.0;
+            LookoutTestCommons = 1.0;
         };
     };
 
