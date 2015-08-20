@@ -5,11 +5,16 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazonaws.services.simpleworkflow.model.ListOpenWorkflowExecutionsRequest;
+import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfos;
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -42,7 +47,6 @@ import com.amazonaws.services.simpleworkflow.model.ListClosedWorkflowExecutionsR
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionAlreadyStartedException;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionFilter;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfo;
-import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfos;
 import com.google.common.collect.Lists;
 
 /**
@@ -459,55 +463,12 @@ public class RequestsReaper implements Runnable {
      * @return boolean flag indicating true if the workflow represented by the input parameters is considered Closed by SWF, false otherwise. 
      */
     protected boolean isWorkflowClosedInSWF(@Nonnull String deviceName, @Nonnull String workflowIdStr, long requestDateInMillis, @Nonnull TSDMetrics metrics) {
-        TSDMetrics subMetrics = metrics.newSubMetrics("isWorkflowClosedInSWF");
-        try {
+        try (TSDMetrics subMetrics = metrics.newSubMetrics("isWorkflowClosedInSWF")) {
             DateTime now = new DateTime(DateTimeZone.UTC);
             String swfWorkflowId = deviceName + SWF_WORKFLOW_ID_KEY_SEPARATOR + workflowIdStr;
 
-            List<WorkflowExecutionInfo> openExecutions =
-                    callListOpenWorkflowExecutions(swfWorkflowId, requestDateInMillis);
-            
-            ListClosedWorkflowExecutionsRequest listExecutionsRequest = new ListClosedWorkflowExecutionsRequest();
-            listExecutionsRequest.setDomain(getSWFDomain());
-            
-            WorkflowExecutionFilter executionFilter = new WorkflowExecutionFilter();
-            executionFilter.setWorkflowId(swfWorkflowId);
-            listExecutionsRequest.setExecutionFilter(executionFilter);
-            
-            // We subtract a minute for the oldestStartTime constraint to ensure the SWF start time is definitely after the oldestStartTime.
-            DateTime oldestStartTime = new DateTime(requestDateInMillis).minusMinutes(1);
-            ExecutionTimeFilter executionTime = new ExecutionTimeFilter().withOldestDate(oldestStartTime.toDate());
-            listExecutionsRequest.setStartTimeFilter(executionTime);
-            
-            WorkflowExecutionInfos listClosedWorkflowResult = null;
-            String nextPageToken = null;
-            List<WorkflowExecutionInfo> closedExecutions = new ArrayList<>();
-            int numAttempts = 0;
-            do {
-                while (numAttempts++ < MAX_SWF_QUERY_ATTEMPTS) {
-                    try {
-                        listClosedWorkflowResult = getSWFClient().listClosedWorkflowExecutions(listExecutionsRequest);
-                        if ((listClosedWorkflowResult != null) && (listClosedWorkflowResult.getExecutionInfos() != null) &&
-                            !listClosedWorkflowResult.getExecutionInfos().isEmpty()) {
-                            closedExecutions.addAll(listClosedWorkflowResult.getExecutionInfos());
-                        }
-                        nextPageToken = listClosedWorkflowResult.getNextPageToken();
-                        break;
-                    } catch (Exception ex) {
-                        String msg = "Caught exception when querying status in SWF for workflow: " + workflowIdStr + ", deviceName: " + deviceName;
-                        LOG.warn(msg, ex);
-                        
-                        if (numAttempts < MAX_SWF_QUERY_ATTEMPTS) {
-                            try {
-                                Thread.sleep(SWF_RETRY_SLEEP_MILLIS_MULTIPLER * numAttempts);
-                            } catch (InterruptedException ignored) {}
-                        }
-                    }
-                }
-            } while ((nextPageToken != null) && (numAttempts < MAX_SWF_QUERY_ATTEMPTS));
-            
-            LOG.debug("Got: " + closedExecutions.size() + " results when querying SWF for closed workflows using the listClosedWorkflowExecutions " +
-                      "API with request: " + ReflectionToStringBuilder.toString(listExecutionsRequest));
+            List<WorkflowExecutionInfo> openExecutions = getOpenExecutions(swfWorkflowId, requestDateInMillis);
+            List<WorkflowExecutionInfo> closedExecutions = getClosedExecutions(swfWorkflowId, requestDateInMillis);
             
             if (closedExecutions.isEmpty()) {
                 // If no closed workflows found, then return false if the workflow is still open
@@ -521,52 +482,129 @@ public class RequestsReaper implements Runnable {
                 throw new RuntimeException(msg);
             }
             
-            WorkflowExecutionInfo executionInfo = closedExecutions.get(0);
-            LOG.debug("Got WorkflowExecutionInfo: " + executionInfo + " for querying with request: " + ReflectionToStringBuilder.toString(listExecutionsRequest));
+            WorkflowExecutionInfo closedExecution = closedExecutions.get(0);
+            LOG.debug("Got WorkflowExecutionInfo: " + closedExecution + " when querying status in SWF for workflow: " + workflowIdStr + ", deviceName: " + deviceName +
+                    " WorkflowExecutionInfos found: " + closedExecutions);
             
-            String executionStatus = executionInfo.getExecutionStatus();
+            String executionStatus = closedExecution.getExecutionStatus();
             if (executionStatus.equals(ExecutionStatus.CLOSED.name())) {
                 // If SWF has marked this workflow as being finished, check how long ago did this happen, giving the
                 // deciders some time to perform the appropriate DDB updates.
-                DateTime closeTimestamp = new DateTime(executionInfo.getCloseTimestamp());
+                DateTime closeTimestamp = new DateTime(closedExecution.getCloseTimestamp());
                 if (now.minusSeconds(SECONDS_TO_ALLOW_WORKFLOW_DDB_UPDATES).isAfter(closeTimestamp)) {
                     return true;
                 }
             }
             return false;
-        } finally {
-            subMetrics.end();
         }
     }
 
-    private List<WorkflowExecutionInfo> callListOpenWorkflowExecutions(String swfWorkflowId, long requestDateInMillis) {
-        ListOpenWorkflowExecutionsRequest request = buildListOpenWorkflowExecutionsRequest(swfWorkflowId,
+    private List<WorkflowExecutionInfo> getClosedExecutions(@Nonnull String swfWorkflowId, long requestDateInMillis) {
+        ListClosedWorkflowExecutionsRequest request = buildListClosedWorkflowExecutionsRequest(
+                swfWorkflowId,
                 requestDateInMillis);
+        List<WorkflowExecutionInfo> closedExecutions = getWorkflowExecutions(
+                request,
+                (previousRequest, nextPageToken) -> getSWFClient().listClosedWorkflowExecutions(
+                        previousRequest.withNextPageToken(nextPageToken)));
 
-        WorkflowExecutionInfos openExecutionInfosResult;
-        List<WorkflowExecutionInfo> workflowExecutionInfos = new ArrayList<>();
-        String nextPageToken = null;
+        LOG.debug("Got: " +
+                closedExecutions.size() +
+                " results when querying SWF for closed workflows using the listClosedWorkflowExecutions " +
+                "API with request: " +
+                ReflectionToStringBuilder.toString(request));
+
+        return closedExecutions;
+    }
+
+    private List<WorkflowExecutionInfo> getOpenExecutions(String swfWorkflowId, long requestDateInMillis) {
+        ListOpenWorkflowExecutionsRequest request = buildListOpenWorkflowExecutionsRequest(
+                swfWorkflowId,
+                requestDateInMillis);
+        List<WorkflowExecutionInfo> openExecutions = getWorkflowExecutions(
+                request,
+                (previousRequest, nextPageToken) -> getSWFClient().listOpenWorkflowExecutions(
+                        previousRequest.withNextPageToken(nextPageToken)));
+
+        LOG.debug("Got: " +
+                openExecutions.size() +
+                " results when querying SWF for closed workflows using the listOpenWorkflowExecutions " +
+                "API with request: " +
+                ReflectionToStringBuilder.toString(request));
+
+        return openExecutions;
+    }
+
+    private ListClosedWorkflowExecutionsRequest buildListClosedWorkflowExecutionsRequest(String swfWorkflowId,
+                long requestDateInMillis) {
+        ListClosedWorkflowExecutionsRequest request = new ListClosedWorkflowExecutionsRequest();
+        request.setDomain(getSWFDomain());
+        request.setExecutionFilter(workflowIdExecutionFilter(swfWorkflowId));
+        request.setStartTimeFilter(workflowStartTimeFilter(requestDateInMillis));
+        return request;
+    }
+
+    private ListOpenWorkflowExecutionsRequest buildListOpenWorkflowExecutionsRequest(String swfWorkflowId,
+                long requestDateInMillis) {
+        ListOpenWorkflowExecutionsRequest request = new ListOpenWorkflowExecutionsRequest();
+        request.setDomain(getSWFDomain());
+        request.setExecutionFilter(workflowIdExecutionFilter(swfWorkflowId));
+        request.setStartTimeFilter(workflowStartTimeFilter(requestDateInMillis));
+        return request;
+    }
+
+    private WorkflowExecutionFilter workflowIdExecutionFilter(String swfWorkflowId) {
+        WorkflowExecutionFilter executionFilter = new WorkflowExecutionFilter();
+        executionFilter.setWorkflowId(swfWorkflowId);
+        return executionFilter;
+    }
+
+    private ExecutionTimeFilter workflowStartTimeFilter(long requestDateInMillis) {
+        // We subtract a minute for the oldestStartTime constraint to ensure the SWF start time is definitely after the oldestStartTime.
+        DateTime oldestStartTime = new DateTime(requestDateInMillis).minusMinutes(1);
+        return new ExecutionTimeFilter().withOldestDate(oldestStartTime.toDate());
+    }
+
+    private <TRequest> List<WorkflowExecutionInfo> getWorkflowExecutions(
+            TRequest request,
+            BiFunction<TRequest, String, WorkflowExecutionInfos> call) {
+        return executePaginatedCallWithRetries(
+                request,
+                call,
+                resultPage -> resultPage.getNextPageToken(),
+                resultPage -> resultPage.getExecutionInfos());
+    }
+
+    private <TRequest, TResultPage, TNextPageToken, TResultItem> List<TResultItem> executePaginatedCallWithRetries(
+            TRequest request,
+            BiFunction<TRequest, TNextPageToken, TResultPage> call,
+            Function<TResultPage, TNextPageToken> getNextPageToken,
+            Function<TResultPage, List<TResultItem>> getPageItems) {
+        List<TResultItem> result = new ArrayList<>();
+        TNextPageToken nextPageToken = null;
         int numAttempts = 0;
         do {
             while (numAttempts++ < MAX_SWF_QUERY_ATTEMPTS) {
                 try {
-                    openExecutionInfosResult = getSWFClient().listOpenWorkflowExecutions(request);
-                    if (openExecutionInfosResult != null &&
-                            openExecutionInfosResult.getExecutionInfos() != null &&
-                            !openExecutionInfosResult.getExecutionInfos().isEmpty()) {
-                        workflowExecutionInfos.addAll(openExecutionInfosResult.getExecutionInfos());
+                    TResultPage page = call.apply(request, nextPageToken);
+                    if (page != null) {
+                        List<TResultItem> pageItems = getPageItems.apply(page);
+                        if (pageItems != null) {
+                            result.addAll(pageItems);
+                        }
                     }
 
-                    nextPageToken = openExecutionInfosResult == null ? null : openExecutionInfosResult.getNextPageToken();
-                    break;
+                    nextPageToken = getNextPageToken.apply(page);
+                    break; // break from retry loop
                 } catch (Exception ex) {
-                    String msg = "Caught exception when querying status in SWF for workflow. Request: " + request;
-                    LOG.warn(msg, ex);
+                    String message = "Caught exception when querying status in SWF for workflow. Request: " +
+                            ReflectionToStringBuilder.toString(request);
+                    LOG.warn(message, ex);
 
                     if (numAttempts < MAX_SWF_QUERY_ATTEMPTS) {
-                        try {
-                            Thread.sleep(SWF_RETRY_SLEEP_MILLIS_MULTIPLER * numAttempts);
-                        } catch (InterruptedException ignored) {}
+                        Uninterruptibles.sleepUninterruptibly(
+                                SWF_RETRY_SLEEP_MILLIS_MULTIPLER * numAttempts,
+                                TimeUnit.MILLISECONDS);
                     } else {
                         throw ex;
                     }
@@ -574,24 +612,7 @@ public class RequestsReaper implements Runnable {
             }
         } while ((nextPageToken != null) && (numAttempts < MAX_SWF_QUERY_ATTEMPTS));
 
-        return workflowExecutionInfos;
-    }
-
-    private ListOpenWorkflowExecutionsRequest buildListOpenWorkflowExecutionsRequest(String swfWorkflowId,
-                long requestDateInMillis) {
-        ListOpenWorkflowExecutionsRequest request = new ListOpenWorkflowExecutionsRequest();
-        request.setDomain(getSWFDomain());
-
-        WorkflowExecutionFilter executionFilter = new WorkflowExecutionFilter();
-        executionFilter.setWorkflowId(swfWorkflowId);
-        request.setExecutionFilter(executionFilter);
-
-        // We subtract a minute for the oldestStartTime constraint to ensure the SWF start time is definitely after the oldestStartTime.
-        DateTime oldestStartTime = new DateTime(requestDateInMillis).minusMinutes(1);
-        ExecutionTimeFilter executionTime = new ExecutionTimeFilter().withOldestDate(oldestStartTime.toDate());
-        request.setStartTimeFilter(executionTime);
-
-        return request;
+        return result;
     }
 
     /**
