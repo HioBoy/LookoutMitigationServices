@@ -1,9 +1,12 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
+import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyList;
@@ -17,10 +20,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Level;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.BeforeClass;
@@ -56,7 +61,7 @@ public class RequestsReaperTest {
     
     @BeforeClass
     public static void setup() {
-        TestUtils.configure();
+        TestUtils.configure(Level.OFF);
     }
     
     @Test
@@ -133,6 +138,23 @@ public class RequestsReaperTest {
         boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", 12345, TestUtils.newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
     }
+
+    @Test
+    public void testIsWorkflowClosedForNonExistingWorkflow() {
+        RequestsReaper reaper = mock(RequestsReaper.class);
+        when(reaper.isWorkflowClosedInSWF(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenCallRealMethod();
+        when(reaper.getSWFDomain()).thenReturn("TestDomain");
+
+        AmazonSimpleWorkflowClient swfClient = mock(AmazonSimpleWorkflowClient.class);
+        when(reaper.getSWFClient()).thenReturn(swfClient);
+
+        WorkflowExecutionInfos workflowInfos = new WorkflowExecutionInfos();
+        workflowInfos.setExecutionInfos(Collections.emptyList());
+        when(swfClient.listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class))).thenReturn(workflowInfos);
+
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", 12345, TestUtils.newNopTsdMetrics());
+        assertFalse(isWorkflowClosedInSWF);
+    }
     
     @Test
     public void testIsWorkflowClosedForClosedWorkflow() {
@@ -154,7 +176,56 @@ public class RequestsReaperTest {
         assertTrue(isWorkflowClosedInSWF);
         verify(swfClient, times(2)).listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class));
     }
-    
+
+    @Test
+    public void testIsWorkflowClosedForRecentlyClosedWorkflow() {
+        final int SECONDS_TO_ALLOW_WORKFLOW_DDB_UPDATES = 60;
+
+        RequestsReaper reaper = mock(RequestsReaper.class);
+        when(reaper.isWorkflowClosedInSWF(anyString(), anyString(), anyLong(), any(TSDMetrics.class)))
+                .thenCallRealMethod();
+        when(reaper.getSWFDomain()).thenReturn("TestDomain");
+
+        AmazonSimpleWorkflowClient swfClient = mock(AmazonSimpleWorkflowClient.class);
+        when(reaper.getSWFClient()).thenReturn(swfClient);
+
+        WorkflowExecutionInfos workflowInfos = new WorkflowExecutionInfos();
+        WorkflowExecutionInfo info = new WorkflowExecutionInfo();
+        info.setExecutionStatus(ExecutionStatus.CLOSED.name());
+        info.setCloseTimestamp((new DateTime(DateTimeZone.UTC).minusSeconds(SECONDS_TO_ALLOW_WORKFLOW_DDB_UPDATES - 1))
+                .toDate());
+        workflowInfos.setExecutionInfos(Lists.newArrayList(info));
+        when(swfClient.listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class)))
+                .thenReturn(workflowInfos);
+
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", 12345, TestUtils.newNopTsdMetrics());
+        assertFalse(isWorkflowClosedInSWF);
+    }
+
+    @Test
+    public void testIsWorkflowClosedForMultipleExecutionInfosReturned() throws Exception {
+        RequestsReaper reaper = mock(RequestsReaper.class);
+        when(reaper.isWorkflowClosedInSWF(anyString(), anyString(), anyLong(), any(TSDMetrics.class)))
+                .thenCallRealMethod();
+        when(reaper.getSWFDomain()).thenReturn("TestDomain");
+
+        AmazonSimpleWorkflowClient swfClient = mock(AmazonSimpleWorkflowClient.class);
+        when(reaper.getSWFClient()).thenReturn(swfClient);
+
+        WorkflowExecutionInfos workflowInfos = new WorkflowExecutionInfos();
+        WorkflowExecutionInfo info = new WorkflowExecutionInfo();
+        info.setExecutionStatus(ExecutionStatus.CLOSED.name());
+        info.setCloseTimestamp((new DateTime(DateTimeZone.UTC).minusMinutes(2)).toDate());
+        workflowInfos.setExecutionInfos(Lists.newArrayList(info, info));
+        when(swfClient.listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class)))
+                .thenReturn(workflowInfos);
+
+        RuntimeException actualException = assertThrows(RuntimeException.class, () ->
+                reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", 12345, TestUtils.newNopTsdMetrics()));
+        assertThat(actualException.getMessage(),
+                containsString("Got more than 1 WorkflowExecution when querying status in SWF"));
+    }
+
     @Test
     public void testQueryInstancesForWorkflow() {
         RequestsReaper reaper = mock(RequestsReaper.class);
