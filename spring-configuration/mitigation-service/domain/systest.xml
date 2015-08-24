@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+    
+    <bean id="systest.daasControlAPIServiceURL" class="java.lang.String">
+        <!-- Share with gamma  -->
+        <constructor-arg value="http://daas-control-api-gamma.amazon.com:80"/>
+    </bean>
+    
+    <bean id="systest.edgeOperatorServiceURL" class="java.lang.String">
+        <!-- Share with gamma  -->
+        <constructor-arg value="http://edge-operator-service-gamma.amazon.com:80"/>
+    </bean>
+    
+    <util:set id="systest.popsWithCiscoRouter">
+        <value>G-SEA19</value>
+        <!-- HACK ALERT: G-IAD5 is out for rebuild, and requests to the router
+             are currently (2014/12/16) failing slowly. Marking it as CISCO temporarily to avoid talking to that router -->
+        <value>G-IAD5</value>
+    </util:set>
+    
+    <bean id="systest.mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <!-- Share with Gamma -->
+        <constructor-arg value="com.amazon.lookout.mws.mitigationservice.gamma"/>
+    </bean>
+    
+    <!-- Currently (Oct 2014) there is no systest for BW, setting it to Test:Prod for now, may change once we have BW back in systest. -->
+    <bean id="systest.blackwatchMWSMetricDataset" class="java.lang.String">
+        <constructor-arg value="Test:Prod"/>
+    </bean>
+    
+    <util:set id="systest.defaultPOPsForEdgeLocationsHelper">
+        <value>G-SFO5</value>
+    </util:set>
+    
+    <util:list id="systest.fakeBlackWatchClassicLocations">
+        <value>SEALAB-A</value>
+        <value>SEALAB-B</value>
+        <value>SEALAB-C</value>
+        <value>SEALAB-D</value>
+        <value>SEALAB-E</value>
+        <value>SEALAB-F</value>
+    </util:list>
+    
+    <bean id="systest.edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
+        <constructor-arg name="cloudfrontClient" ref="edgeOperatorServiceClient"/>
+        <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>
+        <constructor-arg name="bwLocationsHelper" ref="bwLocationsHelper"/>
+        <constructor-arg name="millisToSleepBetweenRetries" value="500"/>
+        <constructor-arg name="popsListDir" value="var/state/popsList"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+        <constructor-arg name="fakeBlackWatchClassicLocations" ref="systest.fakeBlackWatchClassicLocations"/>
+    </bean>
+
+</beans>
