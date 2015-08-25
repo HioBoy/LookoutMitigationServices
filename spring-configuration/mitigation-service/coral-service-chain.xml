@@ -134,7 +134,7 @@
     <bean id="ArcConfig" class="aws.auth.client.config.Configuration">
         <!-- Set the qualifier for selecting the coral client config and ARS endpoint (S3 has a dedicated one, -->
         <!-- if your service does not have, simply put "${domain}.${realm}" -->
-        <property name="Qualifier" value="${domain}.${realm}"/>
+        <property name="Qualifier" value="#{ '${domain}' == 'systest' ? 'gamma' : '${domain}' }.${realm}"/>
         <!-- Set vendor name to scope the policies that ARS returns -->
         <property name="Vendor" value="lookout"/>
         <!-- Increase number of retries for failed calls -->
