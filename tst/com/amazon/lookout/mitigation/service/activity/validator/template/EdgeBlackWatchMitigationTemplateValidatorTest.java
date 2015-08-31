@@ -27,6 +27,7 @@ import com.amazon.lookout.mitigation.service.alarm.AlarmType;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
+import com.amazonaws.services.s3.AmazonS3;
 
 public class EdgeBlackWatchMitigationTemplateValidatorTest {
     
@@ -38,6 +39,9 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
     
     @Mock
     protected Metrics metrics;
+    
+    @Mock
+    protected AmazonS3 s3Client;
     
     private EdgeBlackWatchMitigationTemplateValidator validator;
     
@@ -59,7 +63,7 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
         // mock TSDMetric
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
-        validator = new EdgeBlackWatchMitigationTemplateValidator(edgeLocationsHelper);
+        validator = new EdgeBlackWatchMitigationTemplateValidator(edgeLocationsHelper, s3Client);
         
         doReturn(new HashSet<String>(Arrays.asList("AMS1", "AMS50", "NRT54", "G-IAD55"))).when(edgeLocationsHelper).getAllClassicPOPs();
     }

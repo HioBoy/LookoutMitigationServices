@@ -1,5 +1,8 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,10 +20,18 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.S3Object;
+import com.amazon.lookout.mitigation.service.activity.helper.blackwatch.TrafficFilterConfiguration;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.util.IOUtils;
+
 import static com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl.BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
 
 import org.apache.commons.lang3.Validate;
@@ -52,7 +63,9 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
     private static final Pattern VALID_POP_OVERRIDE_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_OVERRIDE_(%s)", LOCATION_PATTERN));
     private static final int MAX_ALARM_CHECK_PERIOD_SEC = 1800;
     private static final int MAX_ALARM_CHECK_DELAY_SEC = 1200;
+    private static final String BLACKWATCH_TRAFFIC_FILTER = "traffic_filter_config";
     private final EdgeLocationsHelper edgeLocationsHelper;
+    private AmazonS3 blackWatchConfigS3Client;
 
     static {
         // verify alarm check time is less than the workflow timeout time, and have at least 5 minutes left for other execution
@@ -153,11 +166,54 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
         Validate.isInstanceOf(BlackWatchConfigBasedConstraint.class, constraint,
                 "BlackWatch mitigationDefinition must contain single constraint of type BlackWatchConfigBasedConstraint.");
         
-        S3Object config = ((BlackWatchConfigBasedConstraint)constraint).getConfig();
+        BlackWatchConfigBasedConstraint blackWatchConfig = (BlackWatchConfigBasedConstraint)constraint;
+        
+        S3Object config = blackWatchConfig.getConfig();
         Validate.notNull(config);
         Validate.notEmpty(config.getBucket(), "BlackWatch Config S3 object missing s3 bucket");
         Validate.notEmpty(config.getKey(), "BlackWatch Config S3 object missing s3 object key");
         Validate.notEmpty(config.getMd5(), "BlackWatch Config S3 object missing s3 object md5 checksum");
+        
+        if (blackWatchConfig.getConfigData() != null) {
+            for (S3Object configData : blackWatchConfig.getConfigData()) {
+                Validate.notEmpty(configData.getBucket(), String.format("BlackWatch Config Data S3 object [%s] missed s3 bucket", configData));
+                Validate.notEmpty(configData.getKey(), String.format("BlackWatch Config Data S3 object [%s] missed s3 object key", configData));
+                Validate.notEmpty(configData.getMd5(), String.format("BlackWatch Config Data S3 object [%s] missed s3 object md5 checksum", configData));
+                
+                if (configData.getKey().contains(BLACKWATCH_TRAFFIC_FILTER)) {
+                    validateBlackWatchTrafficFilterConfig(configData);
+                }
+            }
+        }
+    }
+    
+    private void validateBlackWatchTrafficFilterConfig(S3Object config) {
+        try {
+            // download configuration from s3
+            com.amazonaws.services.s3.model.S3Object s3Object = blackWatchConfigS3Client.getObject(new GetObjectRequest(config.getBucket(), config.getKey()));
+            InputStream objectData = s3Object.getObjectContent();
+            String originConfig = IOUtils.toString(objectData);
+            objectData.close();
+            
+            // process configuration
+            String processedConfig = TrafficFilterConfiguration.processConfiguration(originConfig);
+            
+            // if configuration is different, update it with new value
+            if (!TrafficFilterConfiguration.isSameConfig(originConfig, processedConfig)) {
+                // upload the processed configuration content to s3 as a new object
+                ObjectMetadata metadata = new ObjectMetadata();
+                metadata.setContentLength(processedConfig.length());
+                InputStream objectStream = new ByteArrayInputStream(processedConfig.getBytes());
+                // the config object will be modified to hold the processed configuration s3 object
+                PutObjectRequest request = new PutObjectRequest(config.getBucket(), config.getKey(), objectStream, metadata);
+                PutObjectResult response = blackWatchConfigS3Client.putObject(request);
+                objectStream.close();
+                // md5 checksum
+                config.setMd5(response.getETag());
+            }
+        } catch (IOException io) {
+            throw new IllegalArgumentException(String.format("Failed to fetch traffic filter content from s3. s3 object %s", config), io);
+        }
     }
 
     private String findLocationFromMitigationName(String mitigationName) {

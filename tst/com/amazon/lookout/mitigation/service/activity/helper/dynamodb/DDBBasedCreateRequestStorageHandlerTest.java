@@ -59,6 +59,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
+import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -155,7 +156,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     private class MockTemplateBasedRequestValidator extends TemplateBasedRequestValidator {
         private final ServiceTemplateValidator serviceTemplateValidator;
         public MockTemplateBasedRequestValidator(ServiceSubnetsMatcher serviceSubnetsMatcher, ServiceTemplateValidator serviceTemplateValidator) {
-            super(serviceSubnetsMatcher, mock(EdgeLocationsHelper.class));
+            super(serviceSubnetsMatcher, mock(EdgeLocationsHelper.class), mock(AmazonS3.class));
             this.serviceTemplateValidator = serviceTemplateValidator;
         }
         
@@ -267,7 +268,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testCheckDuplicateDefinitionForDuplicateDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class), mock(EdgeLocationsHelper.class));
+        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
+                mock(EdgeLocationsHelper.class), mock(AmazonS3.class));
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
@@ -294,7 +296,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     public void testCheckDuplicateDefinitionForNonCoexistentDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                mock(EdgeLocationsHelper.class));
+                mock(EdgeLocationsHelper.class), mock(AmazonS3.class));
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
@@ -709,7 +711,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                mock(EdgeLocationsHelper.class));
+                mock(EdgeLocationsHelper.class), mock(AmazonS3.class));
 
         when(storageHandler.getTemplateBasedValidator()).thenReturn(templateBasedValidator);
         when(storageHandler.getKeysForActiveMitigationsForDevice(anyString())).thenCallRealMethod();
@@ -783,7 +785,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testCheckDuplicatesForDuplicateDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class), mock(EdgeLocationsHelper.class));
+        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
+                mock(EdgeLocationsHelper.class), mock(AmazonS3.class));
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
         CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();

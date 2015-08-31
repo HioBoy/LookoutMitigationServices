@@ -71,9 +71,18 @@
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
     </bean>
     
+    <bean id="s3OdinCredential" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.mitigationservice.s3.fullaccess.${realm}.${domain}"/>
+    </bean>
+    
+    <bean id="blackWatchS3Client" class="com.amazonaws.services.s3.AmazonS3Client">
+        <constructor-arg ref="s3OdinCredential"/>
+    </bean>
+    
     <bean id="templateBasedRequestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator">
         <constructor-arg name="serviceSubnetsMatcher" ref="serviceSubnetsMatcher"/>
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
+        <constructor-arg name="blackWatchS3Client" ref="blackWatchS3Client"/>
     </bean>
     
     <bean id="ddbBasedRequestStorageManager" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedRequestStorageManager">

@@ -52,11 +52,11 @@ public class TrafficFilterTest {
         
         TrafficFilter overlapFilter = filterA.findOverlap(filterB);
         
-        assertEquals(attributesA.get(AttributeName.SOURCE_IP), overlapFilter.getAttributes().get(AttributeName.SOURCE_IP));
-        assertEquals(attributesB.get(AttributeName.DEST_PORT), overlapFilter.getAttributes().get(AttributeName.DEST_PORT));
-        assertEquals(PortRange.fromString("2000:10000"), overlapFilter.getAttributes().get(AttributeName.SOURCE_PORT));
-        assertEquals(attributesA.get(AttributeName.L4_PROTOCOL), overlapFilter.getAttributes().get(AttributeName.L4_PROTOCOL));
-        assertEquals(null, overlapFilter.getAttributes().get(AttributeName.DEST_IP));
+        assertEquals(attributesA.get(AttributeName.SOURCE_IP), overlapFilter.getFilterAttributes().get(AttributeName.SOURCE_IP));
+        assertEquals(attributesB.get(AttributeName.DEST_PORT), overlapFilter.getFilterAttributes().get(AttributeName.DEST_PORT));
+        assertEquals(PortRange.fromString("2000:10000"), overlapFilter.getFilterAttributes().get(AttributeName.SOURCE_PORT));
+        assertEquals(attributesA.get(AttributeName.L4_PROTOCOL), overlapFilter.getFilterAttributes().get(AttributeName.L4_PROTOCOL));
+        assertEquals(null, overlapFilter.getFilterAttributes().get(AttributeName.DEST_IP));
         assertEquals(Sets.newHashSet(1,2), overlapFilter.getRelatedOriginFilterIndices());
     }
         

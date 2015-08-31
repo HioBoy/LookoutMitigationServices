@@ -24,7 +24,7 @@ import lombok.Getter;
 @EqualsAndHashCode
 @JsonSerialize(using = PortRangeJsonSerializer.class)
 public class PortRange implements PacketAttribute {
-    public static final Pattern PORT_RANGE_PATTERN = Pattern.compile("\\s*(\\d{1,5})\\s*:\\s*(\\d{1,5})\\s*");
+    public static final Pattern PORT_RANGE_PATTERN = Pattern.compile("\\s*(?:(\\d{1,5})\\s*:\\s*(\\d{1,5})|(\\d{1,5}))\\s*");
     private static final Range<Integer> VALID_PORT_RANGE = Range.closed(0, 65535);
     private final Range<Integer> range;
     
@@ -48,14 +48,20 @@ public class PortRange implements PacketAttribute {
     
     /**
      * construct port range from string.
-     * The string has to been a continuous range.
-     * Example : "0:65535",  "1024:2022"
+     * The string has to been a continuous range, or single value
+     * Example : "80", "0:65535",  "1024:2022"
      * @param portRange : port range string, match pattern 
      * @return
      */
     public static PortRange fromString(String portRange) {
         Matcher m = PORT_RANGE_PATTERN.matcher(portRange);
         Validate.isTrue(m.matches(), String.format("port range value %s does not match input regex %s", portRange, PORT_RANGE_PATTERN));
+        // if single number is matched. then treat it as a single value range 
+        String singleNumberValue = m.group(3);
+        if (singleNumberValue != null) {
+            int singleNumber = Integer.parseInt(singleNumberValue);
+            return new PortRange(singleNumber, singleNumber);
+        }
         return new PortRange(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)));
     }
     

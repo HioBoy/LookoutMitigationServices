@@ -22,6 +22,7 @@ import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper
 import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
+import com.amazonaws.services.s3.AmazonS3;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -99,7 +100,7 @@ public class CreateMitigationActivityTest {
         return new CreateMitigationActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class)),
+                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class)),
             mock(RequestStorageManager.class),
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));
@@ -109,7 +110,7 @@ public class CreateMitigationActivityTest {
         return new CreateMitigationActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class)),
+                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class)),
                 requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));

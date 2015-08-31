@@ -30,7 +30,7 @@ public class NetworkCidr implements PacketAttribute {
     private final int mask;
     @Getter
     private final int depth;
-   
+    
     /**
      * construct NetworkCidr object from network CIDR string.
      * Example : "1.1.1.1/32",   "10.0.0.0/8"

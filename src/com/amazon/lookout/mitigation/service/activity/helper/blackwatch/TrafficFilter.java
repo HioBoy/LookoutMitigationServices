@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.helper.blackwatch;
 
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -7,9 +8,9 @@ import java.util.Set;
 
 import org.apache.commons.lang.Validate;
 
+import com.amazon.aws.authruntimeclient.internal.common.collect.ImmutableMap;
 import com.amazon.aws.authruntimeclient.internal.common.collect.ImmutableSet;
 import com.amazon.aws.authruntimeclient.internal.common.collect.Sets;
-import com.google.common.collect.ImmutableMap;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -23,15 +24,40 @@ import lombok.ToString;
 @ToString
 @EqualsAndHashCode
 public class TrafficFilter {
-    public enum AttributeType {
-        IPv4_CIDR(NetworkCidr.class),
-        PORT(PortRange.class),
-        L4_PROTO(L4Protocol.class);
-        
+    
+    private static interface PacketAttributeCreator {
+        public PacketAttribute createPacketAttribute(String value);
+    }
+    
+    public enum AttributeType implements PacketAttributeCreator {
+        IPv4_CIDR("0.0.0.0/0") {
+            @Override
+            public PacketAttribute createPacketAttribute(String value) {
+                return NetworkCidr.fromString(value);
+            }
+        },
+        PORT("0:65535"){
+            @Override
+            public PacketAttribute createPacketAttribute(String value) {
+                return PortRange.fromString(value);
+            }
+        },
+        L4_PROTO("0/0x00") {
+            @Override
+            public PacketAttribute createPacketAttribute(String value) {
+                return L4Protocol.fromString(value);
+            }
+        };
+
         @Getter
         private Class<?> type;
-        private AttributeType(Class<?> type) {
-            this.type = type;
+        
+        @Getter
+        private PacketAttribute defaultValue;
+        
+        private AttributeType(String value) {
+            this.defaultValue = this.createPacketAttribute(value);
+            this.type = this.defaultValue.getClass();
         }
     }
     
@@ -44,24 +70,45 @@ public class TrafficFilter {
         
         @Getter
         private AttributeType type;
+        
         private AttributeName(AttributeType type) {
             this.type = type;
         }
+        
+        @Override
+        public String toString() {
+            return name().toLowerCase();
+        }
+        
+        static Set<AttributeName> allAttributeNames = 
+                Sets.immutableEnumSet(Arrays.asList(AttributeName.values()));
     }
-    
+   
     @Getter
-    private final Map<AttributeName, PacketAttribute> attributes;
+    private Map<AttributeName, PacketAttribute> filterAttributes;
     
     @Getter
     private Set<Integer> relatedOriginFilterIndices;
+    
+    public void fillMissingAttribute() {
+        ImmutableMap.Builder<AttributeName, PacketAttribute> completeFilterAttributes = new ImmutableMap.Builder<>();
+        completeFilterAttributes.putAll(filterAttributes);
+        
+        Set<AttributeName> missingAttributes = Sets.newEnumSet(AttributeName.allAttributeNames, AttributeName.class);
+        missingAttributes.removeAll(filterAttributes.keySet());
+        for (AttributeName attributeName : missingAttributes) {
+            completeFilterAttributes.put(attributeName, attributeName.getType().getDefaultValue());
+        }
+        this.filterAttributes = completeFilterAttributes.build();
+    }
 
     private TrafficFilter(Map<AttributeName, PacketAttribute> attributes, Set<Integer> relatedOriginFilterIndices) {
-        this.attributes = ImmutableMap.copyOf(attributes);
+        this.filterAttributes = ImmutableMap.copyOf(attributes);
         this.relatedOriginFilterIndices = ImmutableSet.copyOf(relatedOriginFilterIndices);
         
         // Validate attribute name matches attribute
-        for (AttributeName attributeName : this.attributes.keySet()) {
-            PacketAttribute attribute = this.attributes.get(attributeName);
+        for (AttributeName attributeName : this.filterAttributes.keySet()) {
+            PacketAttribute attribute = this.filterAttributes.get(attributeName);
             Validate.isTrue(attributeName.getType().getType().isInstance(attribute),
                     String.format("AttributeName %s and Attribute %s does not match.", attributeName, attribute));
         }
@@ -95,13 +142,13 @@ public class TrafficFilter {
         Map<AttributeName, PacketAttribute> overlapAttributes = new EnumMap<>(AttributeName.class);
         // put attributes from both traffic filter into overlap filter first. Order does not matter.
         // This covers the attributes that is only present in one of the filters.
-        overlapAttributes.putAll(o.attributes);
-        overlapAttributes.putAll(this.attributes);
+        overlapAttributes.putAll(o.filterAttributes);
+        overlapAttributes.putAll(this.filterAttributes);
         // find overlap packet attribute for the one that is shared by both filters.
-        Set<AttributeName> overlapAttributeNameSet = Sets.newHashSet(this.attributes.keySet());
-        overlapAttributeNameSet.retainAll(o.attributes.keySet());
+        Set<AttributeName> overlapAttributeNameSet = Sets.newHashSet(this.filterAttributes.keySet());
+        overlapAttributeNameSet.retainAll(o.filterAttributes.keySet());
         for (AttributeName attributeName : overlapAttributeNameSet) {
-            PacketAttribute overlapAttribute = this.attributes.get(attributeName).findOverlap(o.attributes.get(attributeName));
+            PacketAttribute overlapAttribute = this.filterAttributes.get(attributeName).findOverlap(o.filterAttributes.get(attributeName));
             if (overlapAttribute != null){
                 overlapAttributes.put(attributeName, overlapAttribute);
             } else {
@@ -133,6 +180,7 @@ public class TrafficFilter {
      * @return : true, if same, false if not
      */
     public boolean sameDefAs(TrafficFilter other) {
-        return this.attributes.equals(other.getAttributes());
+        return this.filterAttributes.equals(other.getFilterAttributes());
     }
+
 }

@@ -20,6 +20,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
+import com.amazonaws.services.s3.AmazonS3;
 
 /**
  * TemplateBasedRequestValidator is responsible for performing deep validations based on the template passed as input to the request.
@@ -33,6 +34,7 @@ public class TemplateBasedRequestValidator {
     private static final String MITIGATION_TEMPLATE_KEY = "MitigationTemplate";
     
     private final EdgeLocationsHelper edgeLocationsHelper;
+    private final AmazonS3 blackWatchS3Client;
     
     // Map of templateName -> ServiceTemplateValidator which is responsible for validating this template.
     private final ImmutableMap<String, ServiceTemplateValidator> serviceTemplateValidatorMap;
@@ -41,12 +43,17 @@ public class TemplateBasedRequestValidator {
      * @param serviceSubnetsMatcher ServiceSubnetsMatcher is taken as an input in the constructor to allow for the service template specific validators to use
      *                              this matcher, in case they have to perform any subnet specific checks.
      */
-    @ConstructorProperties({"serviceSubnetsMatcher", "edgeLocationsHelper"})
-    public TemplateBasedRequestValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher, @Nonnull EdgeLocationsHelper edgeLocationsHelper) {
+    @ConstructorProperties({"serviceSubnetsMatcher", "edgeLocationsHelper", "blackWatchS3Client"})
+    public TemplateBasedRequestValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher, 
+            @Nonnull EdgeLocationsHelper edgeLocationsHelper, @Nonnull AmazonS3 blackWatchS3Client) {
         Validate.notNull(serviceSubnetsMatcher);
         Validate.notNull(edgeLocationsHelper);
+        Validate.notNull(blackWatchS3Client);
         
+        this.blackWatchS3Client = blackWatchS3Client;
         this.edgeLocationsHelper = edgeLocationsHelper;
+        
+        // this line should be the last line of constructor, as it might relies on the variable assigned before.
         this.serviceTemplateValidatorMap = getServiceTemplateValidatorMap(serviceSubnetsMatcher);
     }
     
@@ -146,7 +153,7 @@ public class TemplateBasedRequestValidator {
     }
     
     private ServiceTemplateValidator getBlackWatchEdgeCustomerValidator() {
-    	return new EdgeBlackWatchMitigationTemplateValidator(edgeLocationsHelper);
+    	return new EdgeBlackWatchMitigationTemplateValidator(edgeLocationsHelper, blackWatchS3Client);
     }
 
     /**
