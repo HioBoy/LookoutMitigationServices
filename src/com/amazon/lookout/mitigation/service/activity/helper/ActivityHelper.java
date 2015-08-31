@@ -28,6 +28,7 @@ public class ActivityHelper {
     public static final String EXCEPTION_COUNT_METRIC_PREFIX = "Exception:";
     
     public static final String BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT = "Received BadRequest for requestId: %s in activity: %s. Detailed message: %s";
+    public static final String STALE_REQUEST_EXCEPTION_MESSAGE_FORMAT = "Received StaleRequest for requestId: %s in activity: %s. Detailed message: %s";
     
     /**
      * Add metrics to be able to track the template for which a request was made.

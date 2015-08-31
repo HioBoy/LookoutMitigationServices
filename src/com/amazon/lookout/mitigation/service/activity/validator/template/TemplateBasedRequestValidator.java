@@ -155,6 +155,10 @@ public class TemplateBasedRequestValidator {
     private ServiceTemplateValidator getBlackWatchEdgeCustomerValidator() {
     	return new EdgeBlackWatchMitigationTemplateValidator(edgeLocationsHelper, blackWatchS3Client);
     }
+    
+    private ServiceTemplateValidator getBlackholeArborCustomerValidator() {
+        return new BlackholeArborCustomerValidator();
+    }
 
     /**
      * Returns map of templateName to ServiceTemplateValidator corresponding to the template.
@@ -177,6 +181,9 @@ public class TemplateBasedRequestValidator {
             case MitigationTemplate.BlackWatchPOP_EdgeCustomer:
             	serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchEdgeCustomerValidator());
             	break;
+            case MitigationTemplate.Blackhole_Mitigation_ArborCustomer:
+                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackholeArborCustomerValidator());
+                break;
             default:
                 String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". Each template must be associated with some validation checks.";
                 LOG.error(msg);

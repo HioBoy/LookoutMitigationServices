@@ -14,7 +14,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
 
+import com.amazon.lookout.ddb.model.TransitProvider;
+import com.amazon.lookout.mitigation.service.BlackholeDeviceInfo;
+import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
+import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
@@ -23,6 +27,9 @@ import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequ
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
+import com.amazon.lookout.mitigation.service.TransitProviderInfo;
+import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
+import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
@@ -189,6 +196,42 @@ public class RequestValidator {
         validateServiceName(serviceName);
         validateDeviceName(request.getDeviceName());
         validateListOfLocations(Lists.newArrayList(request.getLocation()), serviceName);
+    }
+    
+    public void validateCreateBlackholeDeviceRequest(@NonNull CreateBlackholeDeviceRequest request) {
+        if (request.getBlackholeDeviceInfo() == null) {
+            String msg = "No blackhole device info found.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        validateBlackholeDeviceInfo(request.getBlackholeDeviceInfo());
+    }
+    
+    public void validateUpdateBlackholeDeviceRequest(@NonNull UpdateBlackholeDeviceRequest request) {
+        if (request.getBlackholeDeviceInfo() == null) {
+            String msg = "No blackhole device info found.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        validateBlackholeDeviceInfo(request.getBlackholeDeviceInfo());
+    }
+    
+    public void validateCreateTransitProviderRequest(@NonNull CreateTransitProviderRequest request) {
+        if (request.getTransitProviderInfo() == null) {
+            String msg = "No transit provider info found.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        validateTransitProviderInfo(request.getTransitProviderInfo());
+    }
+    
+    public void validateUpdateTransitProviderRequest(@NonNull UpdateTransitProviderRequest request) {
+        if (request.getTransitProviderInfo() == null) {
+            String msg = "No transit provider info found.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        validateTransitProviderInfo(request.getTransitProviderInfo());
     }
     
     /**
@@ -374,6 +417,60 @@ public class RequestValidator {
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
             }
+        }
+    }
+    
+    private void validateBlackholeDeviceInfo(BlackholeDeviceInfo blackholeDeviceInfo) {
+        if (isInvalidFreeFormText(blackholeDeviceInfo.getDeviceName(), DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "The device name that was provided, " + blackholeDeviceInfo.getDeviceName() + ", is not valid.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        if (isInvalidFreeFormText(blackholeDeviceInfo.getDeviceDescription(), DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "The device descriptioname that was provided, " + blackholeDeviceInfo.getDeviceDescription() + ", is not valid.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        if (blackholeDeviceInfo.getVersion() < 0) {
+            String msg = "The device version that was provided, " + blackholeDeviceInfo.getVersion() + ", is not valid.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private void validateTransitProviderInfo(TransitProviderInfo transitProviderInfo) {
+        if (isInvalidFreeFormText(transitProviderInfo.getId(), DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "The transit provider id that was provided, " + transitProviderInfo.getId() + ", is not valid.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        if (isInvalidFreeFormText(transitProviderInfo.getProviderName(), DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "The transit provider name that was provided, " + transitProviderInfo.getProviderName() + ", is not valid.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        if (isInvalidFreeFormText(transitProviderInfo.getProviderDescription(), DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "The transit provider description that was provided, " + transitProviderInfo.getProviderDescription() + ", is not valid.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        if (!transitProviderInfo.getBlackholeSupported().equals(TransitProvider.BLACKHOLE_MANUAL_SUPPORTED) && 
+                !transitProviderInfo.getBlackholeSupported().equals(TransitProvider.BLACKHOLE_SUPPORTED) && 
+                !transitProviderInfo.getBlackholeSupported().equals(TransitProvider.BLACKHOLE_UNSUPPORTED)) {
+            String msg = "The transit provider blackhole supported that was provided, " + transitProviderInfo.getBlackholeSupported() + ", is not valid.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        if (transitProviderInfo.getVersion() < 0) {
+            String msg = "The transit provider version that was provided, " + transitProviderInfo.getVersion() + ", is not valid.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
         }
     }
     
