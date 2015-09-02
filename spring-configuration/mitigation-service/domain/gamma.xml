@@ -41,6 +41,16 @@
         <value>SEALAB-D</value>
         <value>SEALAB-E</value>
         <value>SEALAB-F</value>
+        <value>DEV-DSK-SAVILLE</value>
+        <value>DEV-DSK-ROMANTON</value>
+        <value>DEV-DSK-BMBENSON</value>
+        <value>DEV-DSK-CHERHARR</value>
+        <value>DEV-DSK-DMARINUS</value>
+        <value>DEV-DSK-CHUCKPHI</value>
+        <value>DEV-DSK-XINGBOW</value>
+        <value>DEV-DSK-YROBOT</value>
+        <value>DEV-DSK-HUZI</value>
+        <value>DEV-DSK-LAVIGNEN</value>
     </util:list>
     
     <bean id="gamma.edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
