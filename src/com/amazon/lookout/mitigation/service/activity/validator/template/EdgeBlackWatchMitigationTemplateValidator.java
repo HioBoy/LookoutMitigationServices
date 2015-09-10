@@ -156,7 +156,11 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
             Validate.isTrue(alarmCheck.getDelaySec() >= 0, "Alarm check delay time can not be negative.");
             Validate.isTrue(alarmCheck.getDelaySec() <= MAX_ALARM_CHECK_DELAY_SEC, String.format("Alarm check delay time must be <= %d minutes.", (MAX_ALARM_CHECK_DELAY_SEC / 60)));
             Validate.isTrue(alarmCheck.getCheckTotalPeriodSec() > alarmCheck.getCheckEveryNSec(), "Alarm check total time must be larger than alarm check interval.");
-            Validate.notNull(alarmCheck.getAlarms(), "Found empty map of alarms");
+
+            if (alarmCheck.getAlarms() == null){
+                throw new IllegalArgumentException(String.format("Found empty map of alarms %s", alarmCheck));
+            }
+
             for (String alarmType : alarmCheck.getAlarms().keySet()) {
                 Validate.notEmpty(alarmCheck.getAlarms().get(alarmType), String.format("Found empty alarm list for alamr type %s.", alarmType));
             }
