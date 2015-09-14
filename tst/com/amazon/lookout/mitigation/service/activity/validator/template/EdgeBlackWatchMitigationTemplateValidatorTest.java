@@ -209,7 +209,7 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
     /**
      * create mitigation without post deployment check
      */
-    @Test(expected = NullPointerException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testCreateMitigationFailed5() {
         String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
         CreateMitigationRequest request = new CreateMitigationRequest();

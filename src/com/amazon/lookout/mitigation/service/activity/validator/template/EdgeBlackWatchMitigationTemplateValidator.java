@@ -1,5 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
+import static com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl.BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,6 +10,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import lombok.AllArgsConstructor;
+
+import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import com.amazon.lookout.mitigation.service.AlarmCheck;
 import com.amazon.lookout.mitigation.service.BlackWatchConfigBasedConstraint;
@@ -31,13 +38,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.util.IOUtils;
-
-import static com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl.BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
-
-import org.apache.commons.lang3.Validate;
-import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 /**
  * Validate Edge BlackWatch mitigation request.
  * 
@@ -144,6 +144,10 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
     }
     
     private void validatePostDeploymentChecks(List<MitigationDeploymentCheck> checks) {
+        if (checks == null ){
+            throw new IllegalArgumentException("Missing post deployment for blackwatch mitigation deployment");
+        }
+
         Validate.notEmpty(checks, "Missing post deployment for blackwatch mitigation deployment");
         
         for (MitigationDeploymentCheck check : checks) {
@@ -157,7 +161,7 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
             Validate.isTrue(alarmCheck.getDelaySec() <= MAX_ALARM_CHECK_DELAY_SEC, String.format("Alarm check delay time must be <= %d minutes.", (MAX_ALARM_CHECK_DELAY_SEC / 60)));
             Validate.isTrue(alarmCheck.getCheckTotalPeriodSec() > alarmCheck.getCheckEveryNSec(), "Alarm check total time must be larger than alarm check interval.");
 
-            if (alarmCheck.getAlarms() == null){
+            if (alarmCheck.getAlarms() == null || alarmCheck.getAlarms().isEmpty()){
                 throw new IllegalArgumentException(String.format("Found empty map of alarms %s", alarmCheck));
             }
 

@@ -140,9 +140,8 @@ public class DDBBasedEditRequestStorageHandler extends DDBBasedRequestStorageHan
                 // If we didn't get any version for the same deviceName, deviceScope and mitigation name, throw IllegalArgumentException.
                 if (currLatestMitigationVersion == null || currMaxWorkflowId == null) {
                     String msg = "No existing mitigation found in DDB for deviceName: " + deviceName + 
-                                 " and deviceScope: " + deviceScope + " and mitigationName: " + mitigationName + 
-                                 ". For request: " + ReflectionToStringBuilder.toString(editMitigationRequest);
-                    LOG.info(msg);
+                                 " and deviceScope: " + deviceScope + " and mitigationName: " + mitigationName + ".";
+                    LOG.info(msg + " For request: " + ReflectionToStringBuilder.toString(editMitigationRequest));
                     throw new IllegalArgumentException(msg);
                 } 
                 
