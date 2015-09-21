@@ -77,6 +77,9 @@ public class CreateBlackholeDeviceActivity extends Activity {
         
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "CreateBlackholeDevice.enact");
         try { 
+            tsdMetrics.addProperty("Name", request.getBlackholeDeviceInfo().getDeviceName());
+            tsdMetrics.addProperty("Enabled", String.valueOf(request.getBlackholeDeviceInfo().isEnabled()));
+            
             LOG.info(String.format("CreateBlackholeDevice called with RequestId: %s and request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
 

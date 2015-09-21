@@ -9,6 +9,7 @@ public class BlackholeDeviceConverter {
         BlackholeDevice blackholeDevice = new BlackholeDevice();
         blackholeDevice.setDeviceName(blackholeDeviceInfo.getDeviceName());
         blackholeDevice.setDeviceDescription(blackholeDeviceInfo.getDeviceDescription());
+        blackholeDevice.setEnabled(blackholeDeviceInfo.isEnabled());
         blackholeDevice.setVersion(blackholeDeviceInfo.getVersion());
         return blackholeDevice;
     }
@@ -17,6 +18,7 @@ public class BlackholeDeviceConverter {
         BlackholeDeviceInfo blackholeDeviceInfo = new BlackholeDeviceInfo();
         blackholeDeviceInfo.setDeviceName(blackholeDevice.getDeviceName());
         blackholeDeviceInfo.setDeviceDescription(blackholeDevice.getDeviceDescription());
+        blackholeDeviceInfo.setEnabled(blackholeDevice.isEnabled());
         blackholeDeviceInfo.setVersion(blackholeDevice.getVersion());
         return blackholeDeviceInfo;
     }

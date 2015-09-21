@@ -17,7 +17,6 @@ import org.junit.Test;
 
 import aws.auth.client.config.Configuration;
 
-import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.coral.security.AccessDeniedException;
 import com.amazon.coral.service.AuthorizationInfo;
 import com.amazon.coral.service.BasicAuthorizationInfo;
@@ -31,15 +30,17 @@ import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequ
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.authorization.AuthorizationStrategy.RequestInfo;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
+import com.amazon.lookout.test.common.util.TestUtils;
 
 @ThreadSafe
 public class AuthorizationStrategyTest {
     @BeforeClass
     public static void setupOnce() {
-        TestUtils.configure();
+        TestUtils.configureLogging();
     }
     
     private AuthorizationStrategy authStrategy;
@@ -244,23 +245,23 @@ public class AuthorizationStrategyTest {
     }
     
     @Test
-    public void testGenerateResourceName() {
+    public void testUnrecornizedRequest() {
         // Test the case when Object Request is not a recognizable request
-        String norequestResource = authStrategy.generateResourceName(mock(Object.class));
-        assertNull(norequestResource);
+        RequestInfo norequestInfo = AuthorizationStrategy.getRequestInfo("ignored", mock(Object.class));
+        assertNull(norequestInfo);
     }
 
     @Test
     public void testGetRelativeId() {
         // deviceName and mitigationTemplate is null
-        String relativeId = authStrategy.getRelativeId(null, serviceName, null);
+        String relativeId = AuthorizationStrategy.getMitigationRelativeId(serviceName, null, null);
         assertEquals(AuthorizationStrategy.ANY_TEMPLATE + "/" + serviceName + "-" + DeviceName.ANY_DEVICE, relativeId);
 
         // deviceName is null
-        relativeId = authStrategy.getRelativeId(mitigationTemplate, serviceName, null);
+        relativeId = AuthorizationStrategy.getMitigationRelativeId(serviceName, null, mitigationTemplate);
         assertEquals(mitigationTemplate + "/" + serviceName + "-" + DeviceName.ANY_DEVICE, relativeId);
 
-        relativeId = authStrategy.getRelativeId(mitigationTemplate, serviceName, deviceName);
+        relativeId = AuthorizationStrategy.getMitigationRelativeId(serviceName, deviceName, mitigationTemplate);
         assertEquals(mitigationTemplate + "/" + serviceName + "-" + deviceName, relativeId);
     }
 
@@ -268,11 +269,8 @@ public class AuthorizationStrategyTest {
     public void testGenerateActionName() {
         // operations are appended with write- and read- depending on the type of operation.
         // An unknown operation is considered a read request.
-        String actionName = authStrategy.generateActionName("operation", mock(Object.class));
-        assertEquals("lookout:read-" + "operation", actionName);
-        
-        actionName = authStrategy.generateActionName("operation", createRequest);
-        assertEquals("lookout:write-" + "operation", actionName);       
+        String actionName = AuthorizationStrategy.generateActionName("operation", "prefix");
+        assertEquals("lookout:prefix-" + "operation", actionName);
     }
     
     @Test

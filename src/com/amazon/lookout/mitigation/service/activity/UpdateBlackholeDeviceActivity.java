@@ -72,10 +72,14 @@ public class UpdateBlackholeDeviceActivity extends Activity {
     @Operation("UpdateBlackholeDevice")
     @Documentation("UpdateBlackholeDevice")
     public @Nonnull UpdateBlackholeDeviceResponse enact(@Nonnull UpdateBlackholeDeviceRequest request) {
-        TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "UpdateBlackholeDevice.enact");
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;
+        TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "UpdateBlackholeDevice.enact");
         try { 
+            tsdMetrics.addProperty("Name", request.getBlackholeDeviceInfo().getDeviceName());
+            tsdMetrics.addProperty("Version", String.valueOf(request.getBlackholeDeviceInfo().getVersion()));
+            tsdMetrics.addProperty("Enabled", String.valueOf(request.getBlackholeDeviceInfo().isEnabled()));
+            
             LOG.info(String.format("UpdateBlackholeDeviceActivity called with RequestId: %s and request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
 
@@ -88,7 +92,6 @@ public class UpdateBlackholeDeviceActivity extends Activity {
                 String message = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "UpdateBlackholeDeviceActivity", ex.getMessage());
                 LOG.info(message + " for request: " + ReflectionToStringBuilder.toString(request), ex);
                 requestSuccessfullyProcessed = false;
-                tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + UpdateBlackholeDeviceExceptions.BadRequest.name());
                 throw new BadRequest400(message);
             }
             blackholeDeviceInfo.setVersion(blackholeMitigationHelper.updateBlackholeDevice(blackholeDevice, tsdMetrics).getVersion());
@@ -99,6 +102,7 @@ public class UpdateBlackholeDeviceActivity extends Activity {
             return response;
         
         } catch (BadRequest400 badrequest) {
+            tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + UpdateBlackholeDeviceExceptions.BadRequest.name());
             throw badrequest;
         } catch (ConditionalCheckFailedException ex) {
             String message = String.format(ActivityHelper.STALE_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "UpdateBlackholeDeviceActivity", ex.getMessage());

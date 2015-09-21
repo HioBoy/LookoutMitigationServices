@@ -204,6 +204,12 @@ public class RequestValidator {
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
+        if (request.getBlackholeDeviceInfo().getVersion() != 0) {
+            String msg = "Version for a new device must be 0";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
         validateBlackholeDeviceInfo(request.getBlackholeDeviceInfo());
     }
     

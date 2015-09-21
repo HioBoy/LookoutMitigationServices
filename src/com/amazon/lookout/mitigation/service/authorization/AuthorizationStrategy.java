@@ -3,9 +3,14 @@ package com.amazon.lookout.mitigation.service.authorization;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import lombok.Data;
+
+import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -17,11 +22,15 @@ import com.amazon.coral.service.AuthorizationInfo;
 import com.amazon.coral.service.BasicAuthorizationInfo;
 import com.amazon.coral.service.Context;
 import com.amazon.coral.service.Identity;
+import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
+import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
+import com.amazon.lookout.mitigation.service.ListBlackholeDevicesRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
+import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
@@ -66,7 +75,6 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     
     // Constants used for generating ARN
     private static final String PARTITION = "aws";
-    private String region;
     private static final String VENDOR = "lookout";
     private static final String NAMESPACE = "";
     private static final String SEPARATOR = "-";
@@ -74,9 +82,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     // Some APIs do not concern with MitigationTemplate. In such cases we use ANY_TEMPLATE constant in the ARN. 
     protected static final String ANY_TEMPLATE = "ANY_TEMPLATE";
     
+    private final String arnPrefix;
+    
     public AuthorizationStrategy(Configuration arcConfig, String region) {
         super(arcConfig);
-        this.region = region;
+        this.arnPrefix = "arn:" + PARTITION + ":" + VENDOR + ":" + region + ":" + NAMESPACE + ":";
     }
     
     /**
@@ -101,17 +111,18 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     @Override
     public List<AuthorizationInfo> getAuthorizationInfoList(final Context context, final Object request)
             throws Throwable {
-        List<AuthorizationInfo> authInfoList = new LinkedList<AuthorizationInfo>();
-        String actionName = generateActionName(context.getOperation().toString(), request);
-        String resourceName = generateResourceName(request);
-        LOG.debug("Action: " + actionName + " ; " + "Resource (ARN): " + resourceName);        
-        if (resourceName == null) {            
+        
+        RequestInfo requestInfo = getRequestInfo(context.getOperation().toString(), request);
+        if (requestInfo == null) {            
             throw new AccessDeniedException("LookoutMitigationService did not recognize the incoming request: " + request);
         }
         
+        String resourceName = arnPrefix + requestInfo.getRelativeArn();
+        LOG.debug("Action: " + requestInfo.getAction() + " ; " + "Resource (ARN): " + resourceName);        
+        
         BasicAuthorizationInfo authorizationInfo = new BasicAuthorizationInfo();
         // Action that need to be authorized
-        authorizationInfo.setAction(actionName);
+        authorizationInfo.setAction(requestInfo.getAction());
         // Resource that is guarded
         authorizationInfo.setResource(resourceName);
         // Principal identifier of the resource owner
@@ -120,106 +131,120 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         // Any custom policies to include in the authorization check
         authorizationInfo.setPolicies(Collections.emptyList());
 
+        List<AuthorizationInfo> authInfoList = new LinkedList<AuthorizationInfo>();
         authInfoList.add(authorizationInfo);
 
         return authInfoList;
     }
     
-    private boolean isMitigationModificationRequest(final Object request) {
-        return (request instanceof MitigationModificationRequest); 
-    }    
-    
-    private boolean isGetRequestStatusRequest(final Object request) {
-        return (request instanceof GetRequestStatusRequest);
+    @Data
+    static class RequestInfo {
+        private final String action;
+        private final String relativeArn;
     }
     
-    private boolean isListActiveMitigationsForServiceRequest(final Object request) {
-        return (request instanceof ListActiveMitigationsForServiceRequest);
+    interface RequestInfoFunction<T> {
+        public RequestInfo getRequestInfo(String action, T request);
     }
     
-    private boolean isGetMitigationInfoRequest(final Object request) {
-        return (request instanceof GetMitigationInfoRequest);
+    private static Map<Class<?>, RequestInfoFunction<Object>> requestInfoParsers;
+    
+    @SuppressWarnings("unchecked")
+    private static <T> void addRequestInfoParser(Class<T> clazz, RequestInfoFunction<T> function) {
+        if (requestInfoParsers.containsKey(clazz)) {
+            throw new IllegalArgumentException("Class " + clazz.getName() + " was already registered");
+        }
+        requestInfoParsers.put(clazz, (RequestInfoFunction<Object>) function);
     }
     
-    private boolean isReportInactiveLocationRequest(final Object request) {
-        return (request instanceof ReportInactiveLocationRequest);
+    private static RequestInfo generateMitigationRequestInfo(
+            String action, String prefix, String serviceName, String deviceName, String mitigationTemplate)
+    {
+        return new RequestInfo(
+                generateActionName(action, prefix), 
+                getMitigationRelativeId(serviceName, deviceName, mitigationTemplate));
     }
+    
+    private static RequestInfo generateMetadataRequestInfo(
+            String action, String prefix, String metadataType)
+    {
+        Validate.notNull(metadataType);
+        Validate.notNull(prefix);
         
-    /* 
-     * Generate Amazon Resource Name (ARN) looking inside the Request, with the following structure
-     * arn:<partition>:<vendor>:<region>:<namespace>:<relative-id>, as described at:
-     * https://w.amazon.com/index.php/AWS/Common/Naming/Identifiers#Canonical_Names 
-     */
-    protected String generateResourceName(final Object request) {
-        StringBuilder arnBuilder = new StringBuilder();
-        /**
-         * Note: Currently, all serviceName+deviceName combinations are equally accessible from
-         * all regions where LookoutMitigationService are executing.   
-         */
-        arnBuilder.append("arn")
-                  .append(":")
-                  .append(PARTITION)
-                  .append(":")
-                  .append(VENDOR)
-                  .append(":")
-                  .append(region)
-                  .append(":")
-                  .append(NAMESPACE)
-                  .append(":");
-        
-        boolean recognizedRequest = true;
-        String deviceName = null;
-        String serviceName = null;
-        String mitigationTemplate = null;
-        
-        // TODO: Add a helper class to retrieve deviceName and serviceName for all request types,
-        // and use that here.
+        return new RequestInfo(
+                generateActionName(action, prefix), 
+                "metadata" + "/" + metadataType);
+    }
+    
+    static {
+        requestInfoParsers = new ConcurrentHashMap<>();
         
         // All MitigationModificationRequests share authorization policy
-        if (isMitigationModificationRequest(request)) {
-            // create relative-id
-            MitigationModificationRequest mitigationModificationRequest = (MitigationModificationRequest) request;
-            mitigationTemplate = mitigationModificationRequest.getMitigationTemplate();
-            serviceName = mitigationModificationRequest.getServiceName();
-            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
-            if (deviceNameAndScope == null) {
-                return null;
-            }
-            deviceName = deviceNameAndScope.getDeviceName().name();
-        } else if (isGetRequestStatusRequest(request)) {
-            GetRequestStatusRequest getRequestStatusRequest = (GetRequestStatusRequest) request;
-            mitigationTemplate = null;
-            serviceName = getRequestStatusRequest.getServiceName();
-            deviceName = getRequestStatusRequest.getDeviceName();
-        } else if (isListActiveMitigationsForServiceRequest(request)) {
-            ListActiveMitigationsForServiceRequest listMitigationsRequest = (ListActiveMitigationsForServiceRequest) request;                       
-            mitigationTemplate = null;
-            serviceName = listMitigationsRequest.getServiceName();
-            // deviceName is not required and may be null
-            deviceName = listMitigationsRequest.getDeviceName();
-        } else if (isGetMitigationInfoRequest(request)) {
-            GetMitigationInfoRequest getMitigationInfoRequestRequest = (GetMitigationInfoRequest) request;
-            mitigationTemplate = null;
-            serviceName = getMitigationInfoRequestRequest.getServiceName();
-            deviceName = getMitigationInfoRequestRequest.getDeviceName();
-        } else if (isReportInactiveLocationRequest(request)) {
-            ReportInactiveLocationRequest reportInactiveLocationRequest = (ReportInactiveLocationRequest) request;
-            mitigationTemplate = null;
-            serviceName = reportInactiveLocationRequest.getServiceName();
-            deviceName = reportInactiveLocationRequest.getDeviceName();
-        } else {
-            recognizedRequest = false;
+        addRequestInfoParser(
+                MitigationModificationRequest.class,
+                (action, request) -> {
+                    String mitigationTemplate = request.getMitigationTemplate();
+                    String serviceName = request.getServiceName();
+                    DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
+                    if (deviceNameAndScope == null) {
+                        return null;
+                    }
+                    String deviceName = deviceNameAndScope.getDeviceName().name();
+                    return generateMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, serviceName, deviceName, mitigationTemplate);
+                });
+        
+        addRequestInfoParser(
+                GetRequestStatusRequest.class, 
+                (action, request) -> 
+                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+        
+        addRequestInfoParser(
+                ListActiveMitigationsForServiceRequest.class, 
+                (action, request) -> 
+                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+        
+        addRequestInfoParser(
+                GetMitigationInfoRequest.class, 
+                (action, request) -> 
+                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+        
+        addRequestInfoParser(
+                ReportInactiveLocationRequest.class, 
+                (action, request) -> 
+                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+        
+        for (Class<?> clazz : new Class[]{ListBlackholeDevicesRequest.class, GetBlackholeDeviceRequest.class} ) {
+            addRequestInfoParser(
+                    clazz, (action, request) -> generateMetadataRequestInfo(action, READ_OPERATION_PREFIX, "blackhole-device"));
         }
         
-        if (recognizedRequest) {            
-            String relativeId = getRelativeId(mitigationTemplate, serviceName, deviceName);            
-            arnBuilder.append(relativeId);
-            return arnBuilder.toString();
+        for (Class<?> clazz : new Class[]{CreateBlackholeDeviceRequest.class, UpdateBlackholeDeviceRequest.class} ) {
+            addRequestInfoParser(
+                    clazz, (action, request) -> generateMetadataRequestInfo(action, WRITE_OPERATION_PREFIX, "blackhole-device"));
         }
-             
-        return null;
     }
     
+    private static RequestInfoFunction<Object> getRequestInfoFunction(Object request) {
+        RequestInfoFunction<Object> function = requestInfoParsers.get(request.getClass());
+        if (function != null) {
+            return function;
+        }
+        
+        function = requestInfoParsers.entrySet().stream()
+            .filter(e -> e.getKey().isInstance(request))
+            .findFirst()
+            .map(e -> e.getValue())
+            .orElse((a,r) -> null); // If not present use a function that always returns null
+        
+        requestInfoParsers.put(request.getClass(), function);
+        
+        return function;
+    }
+    
+    static RequestInfo getRequestInfo(String action, Object request) {
+        return getRequestInfoFunction(request).getRequestInfo(action, request);
+    }
+        
     /**
      * serviceName+deviceName+mitigationTemplate combination is included in the relative identifier as: 
      * mitigationTemplate/serviceName-deviceName if mitigationTemplate is not null, else as: serviceName-deviceName.
@@ -228,7 +253,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      * serviceName+deviceName combinations. E.g., different sets of users may be authorized for applying
      * ratelimit and count filters on routers.
      */
-    protected String getRelativeId(String mitigationTemplate, final String serviceName, String deviceName) {
+    static String getMitigationRelativeId(String serviceName, String deviceName, String mitigationTemplate) {
         if (deviceName == null) {
             /**
              * for some request types deviceName is not a required field. In those cases deviceName is 
@@ -236,6 +261,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
              */
             deviceName = DeviceName.ANY_DEVICE.name();
         }
+        
         if (mitigationTemplate == null) {
             mitigationTemplate = ANY_TEMPLATE;
         }
@@ -251,19 +277,16 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     
     /**
      * Generate action name with the following structure:
-     * action: <vendor>:read-<operationname> or <vendor>:write-<operationname>
+     * action: <vendor>:prefix-<operationname>
      */
-    protected String generateActionName(final String operationName, final Object request) {
+    static String generateActionName(final String operationName, String prefix) {
+        Validate.notNull(operationName);
+        Validate.notNull(prefix);
+        
         StringBuilder actionName = new StringBuilder();
         actionName.append(VENDOR)
-                  .append(":");
-        String prefix = "";
-        if (isMitigationModificationRequest(request) /*|| isGetRequestStatus(request)*/) {
-            prefix = WRITE_OPERATION_PREFIX;
-        } else {
-            prefix = READ_OPERATION_PREFIX;
-        }
-        actionName.append(prefix)
+                  .append(":")
+                  .append(prefix)
                   .append(SEPARATOR)
                   .append(operationName);
         return actionName.toString();
