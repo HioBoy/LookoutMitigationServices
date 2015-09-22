@@ -17,6 +17,7 @@ package.LookoutMitigationService = {
             # Build logic for spring integration
             CoralSpringLauncher = 4.0;
             AWSSimpleWorkflowJavaFlowDeciderAPT = 3.2;
+            CoralGenerator = 1.0;
         };
     };
     

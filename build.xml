@@ -10,11 +10,13 @@
   <property name="tests.additional.jvmargs" value="-enableassertions"/>
 
   <ht:import file="coral-launcher.xml" optional="false"/>
+  <ht:import file="coral-generator.xml" optional="false"/>
 	
   <!-- Cobertura doesn't work under JDK-1.7 without UseSplitVerifier -->
   <property name="coverage.additional.jvmargs" value="${tests.additional.jvmargs} -XX:-UseSplitVerifier"/>
 
   <ht:import file="happier-trails.xml"/>
+  
   
   <!-- Set any property overrides -->
   <property name="coral-src.dir" location="${output.dir}/private/src"/>
@@ -36,21 +38,33 @@
           <sysproperty key="java.net.preferIPv4Stack" value="true"/>
       	  <sysproperty key="spring.config.root" value="$${APOLLO_ACTUAL_ENVIRONMENT_ROOT}/spring-configuration/mitigation-service" />
           
-          <classpath path="${bp:run.classpath}"/>
-
           <env key="LANG" value="en_US.UTF-8"/>
           <env key="NLS_LANG" value="American_America.UTF8"/>
 
           <!-- Heap Sizing -->
           <!-- Set via brazil-config to vary between prod and other stages -->
           <jvmarg value="$$JVM_OPTS"/>
+        
+          <!-- Debug port -->
+          <jvmarg value="-Xdebug"/>
+          <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=11003"/>
 
           <!-- OOM Conditions -->
           <jvmarg value="-XX:+HeapDumpOnOutOfMemoryError"/>
           <jvmarg value="-XX:HeapDumpPath=var/tmp"/>
           <jvmarg value="-XX:OnOutOfMemoryError=&quot;/bin/kill -9 %p&quot;"/>      	
       </coral:apollo>
-  </target>	
+  </target>
+
+  <!-- build the activity stubs. This is not part of the usual build -->
+  <target name="activity-stub">
+    <property name="activity-stub.dir" value="${output.dir}/private/stub"/>
+    <mkdir dir="${activity-stub.dir}"/>
+
+    <coral:generate dir="${activity-stub.dir}" mode="stub">
+      <package name="LookoutMitigationServiceModel"/>
+    </coral:generate>
+  </target>
 
   <!-- Copy process manager config and spring configuration -->
   <target name="copy-configs">
