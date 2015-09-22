@@ -1,10 +1,11 @@
 package com.amazon.lookout.mitigation.service.activity;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.aws158.commons.tst.TestUtils;
 import com.amazon.coral.google.common.collect.ImmutableList;
 import com.amazon.lookout.mitigation.service.ApplyIPTablesRulesAction;
+import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
+import com.amazon.lookout.mitigation.service.DropAction;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
@@ -22,6 +23,7 @@ import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper
 import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.s3.AmazonS3;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -29,13 +31,13 @@ import com.google.common.collect.Sets;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 
-import org.apache.log4j.Level;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.List;
 
+import static java.util.Collections.emptyList;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.any;
@@ -49,7 +51,7 @@ import static junitparams.JUnitParamsRunner.$;
 public class CreateMitigationActivityTest {
     @BeforeClass
     public static void setup() {
-        TestUtils.configure(Level.OFF);
+        TestUtils.configureLogging();
     }
 
     @Test
@@ -80,6 +82,36 @@ public class CreateMitigationActivityTest {
                 .storeRequestForWorkflow(
                         eq(request),
                         eq(Sets.newHashSet("EdgeWorldwide")),
+                        eq(RequestType.CreateRequest),
+                        any(TSDMetrics.class));
+    }
+
+    @Test
+    public void testBlackholeMitigationRequest() {
+        CreateMitigationActivity activity = createActivityWithValidators();
+        CreateMitigationRequest request = sampleCreateBlackholeMitigationRequest("TestBlackholeMitigation");
+
+        MitigationModificationResponse response = activity.enact(request);
+
+        assertThat(response.getDeviceName(), is(DeviceName.ARBOR.name()));
+        assertThat(response.getMitigationName(), is("TestBlackholeMitigation"));
+        assertThat(response.getMitigationTemplate(), is(MitigationTemplate.Blackhole_Mitigation_ArborCustomer));
+        assertThat(response.getServiceName(), is(ServiceName.Blackhole));
+    }
+
+    @Test
+    public void defaultLocationForBlackholeMitigationRequest() {
+        RequestStorageManager requestStorageManagerMock = mock(RequestStorageManager.class);
+        CreateMitigationActivity activity = createActivityWithValidators(requestStorageManagerMock);
+        CreateMitigationRequest request = sampleCreateBlackholeMitigationRequest("TestBlackholeMitigation");
+
+        MitigationModificationResponse response = activity.enact(request);
+
+        assertThat(response.getMitigationName(), is("TestBlackholeMitigation"));
+        verify(requestStorageManagerMock)
+                .storeRequestForWorkflow(
+                        eq(request),
+                        eq(Sets.newHashSet("Worldwide")),
                         eq(RequestType.CreateRequest),
                         any(TSDMetrics.class));
     }
@@ -212,5 +244,30 @@ public class CreateMitigationActivityTest {
                 "    \"Custom-Country-Codes\": {\n" +
                 "    }\n" +
                 "}";
+    }
+
+    private CreateMitigationRequest sampleCreateBlackholeMitigationRequest(String mitigationName) {
+        CreateMitigationRequest request = new CreateMitigationRequest();
+        request.setMitigationName(mitigationName);
+        request.setServiceName(ServiceName.Blackhole);
+        request.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
+
+        MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
+        actionMetadata.setUser("username");
+        actionMetadata.setToolName("unit-tests");
+        actionMetadata.setDescription("description");
+        request.setMitigationActionMetadata(actionMetadata);
+
+        MitigationDefinition mitigationDefinition = new MitigationDefinition();
+        mitigationDefinition.setAction(new DropAction());
+
+        ArborBlackholeConstraint constraint = new ArborBlackholeConstraint();
+        constraint.setIp("1.2.3.4/32");
+        constraint.setEnabled(true);
+        constraint.setTransitProviderIds(emptyList());
+        mitigationDefinition.setConstraint(constraint);
+
+        request.setMitigationDefinition(mitigationDefinition);
+        return request;
     }
 }
