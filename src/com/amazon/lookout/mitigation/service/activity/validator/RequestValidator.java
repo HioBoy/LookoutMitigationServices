@@ -204,13 +204,12 @@ public class RequestValidator {
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
-        if (request.getBlackholeDeviceInfo().getVersion() != 0) {
-            String msg = "Version for a new device must be 0";
+        validateBlackholeDeviceInfo(request.getBlackholeDeviceInfo());
+        if (request.getBlackholeDeviceInfo().getVersion() != null) {
+            String msg = "Version for a new device must be null";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
-        
-        validateBlackholeDeviceInfo(request.getBlackholeDeviceInfo());
     }
     
     public void validateUpdateBlackholeDeviceRequest(@NonNull UpdateBlackholeDeviceRequest request) {
@@ -220,6 +219,11 @@ public class RequestValidator {
             throw new IllegalArgumentException(msg);
         }
         validateBlackholeDeviceInfo(request.getBlackholeDeviceInfo());
+        if (request.getBlackholeDeviceInfo().getVersion() == null) {
+            String msg = "Version for update must be not be null";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
     }
     
     public void validateCreateTransitProviderRequest(@NonNull CreateTransitProviderRequest request) {
@@ -439,7 +443,7 @@ public class RequestValidator {
             throw new IllegalArgumentException(msg);
         }
         
-        if (blackholeDeviceInfo.getVersion() < 0) {
+        if (blackholeDeviceInfo.getVersion() != null && blackholeDeviceInfo.getVersion() < 0) {
             String msg = "The device version that was provided, " + blackholeDeviceInfo.getVersion() + ", is not valid.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
@@ -473,7 +477,7 @@ public class RequestValidator {
             throw new IllegalArgumentException(msg);
         }
         
-        if (transitProviderInfo.getVersion() < 0) {
+        if (transitProviderInfo.getVersion() != null && transitProviderInfo.getVersion() < 0) {
             String msg = "The transit provider version that was provided, " + transitProviderInfo.getVersion() + ", is not valid.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
