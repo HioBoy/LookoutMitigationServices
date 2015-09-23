@@ -23,14 +23,18 @@ import com.amazon.coral.service.BasicAuthorizationInfo;
 import com.amazon.coral.service.Context;
 import com.amazon.coral.service.Identity;
 import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
+import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
+import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.ListBlackholeDevicesRequest;
+import com.amazon.lookout.mitigation.service.ListTransitProvidersRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
+import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
@@ -221,6 +225,16 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         for (Class<?> clazz : new Class[]{CreateBlackholeDeviceRequest.class, UpdateBlackholeDeviceRequest.class} ) {
             addRequestInfoParser(
                     clazz, (action, request) -> generateMetadataRequestInfo(action, WRITE_OPERATION_PREFIX, "blackhole-device"));
+        }
+        
+        for (Class<?> clazz : new Class[]{ListTransitProvidersRequest.class, GetTransitProviderRequest.class} ) {
+            addRequestInfoParser(
+                    clazz, (action, request) -> generateMetadataRequestInfo(action, READ_OPERATION_PREFIX, "transit-provider"));
+        }
+        
+        for (Class<?> clazz : new Class[]{CreateTransitProviderRequest.class, UpdateTransitProviderRequest.class} ) {
+            addRequestInfoParser(
+                    clazz, (action, request) -> generateMetadataRequestInfo(action, WRITE_OPERATION_PREFIX, "transit-provider"));
         }
     }
     

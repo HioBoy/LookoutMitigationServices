@@ -55,6 +55,8 @@ package.LookoutMitigationService = {
             
             LookoutMWSClientJava = 1.0;
             LookoutFakeRouterServiceJavaClient = 1.0;
+            
+            ArborPeakflowJavaClient = 1.0;
         };
     };
     
@@ -116,6 +118,9 @@ package.LookoutMitigationService = {
             SpringCore = 4.0.x;
             SpringContext = 4.0.x;
             junit = 4.12;
+            Apache-HttpComponents-HttpCore = 4.2GA;
+            JakartaCommons-httpclient = 3.1;
+            JavaMail = 1.4.6;
         };
     };
     

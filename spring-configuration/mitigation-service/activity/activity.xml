@@ -62,24 +62,40 @@
         <constructor-arg name="domain" value="${domain}"/>
     </bean>
     
-    <bean id="blackholeActivityBase" abstract="true">
+    <bean id="blackholeMetadataActivityBase" abstract="true">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
     </bean>
     
     <bean class="com.amazon.lookout.mitigation.service.activity.CreateBlackholeDeviceActivity"
-        parent="blackholeActivityBase">
+        parent="blackholeMetadataActivityBase">
     </bean>
     
     <bean class="com.amazon.lookout.mitigation.service.activity.UpdateBlackholeDeviceActivity"
-        parent="blackholeActivityBase">
+        parent="blackholeMetadataActivityBase">
     </bean>
     
     <bean class="com.amazon.lookout.mitigation.service.activity.GetBlackholeDeviceActivity"
-        parent="blackholeActivityBase">
+        parent="blackholeMetadataActivityBase">
     </bean>
     
     <bean class="com.amazon.lookout.mitigation.service.activity.ListBlackholeDevicesActivity">
+        <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
+    </bean>
+    
+    <bean class="com.amazon.lookout.mitigation.service.activity.CreateTransitProviderActivity"
+        parent="blackholeMetadataActivityBase">
+    </bean>
+    
+    <bean class="com.amazon.lookout.mitigation.service.activity.UpdateTransitProviderActivity"
+        parent="blackholeMetadataActivityBase">
+    </bean>
+    
+    <bean class="com.amazon.lookout.mitigation.service.activity.GetTransitProviderActivity"
+        parent="blackholeMetadataActivityBase">
+    </bean>
+    
+    <bean class="com.amazon.lookout.mitigation.service.activity.ListTransitProvidersActivity">
         <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
     </bean>
     

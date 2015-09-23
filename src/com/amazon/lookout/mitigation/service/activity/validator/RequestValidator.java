@@ -1,9 +1,11 @@
 package com.amazon.lookout.mitigation.service.activity.validator;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -21,8 +23,10 @@ import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
+import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
+import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
@@ -55,7 +59,8 @@ public class RequestValidator {
     private final Set<String> serviceNames = Sets.newHashSet(ServiceName.values());
     
     private static final int DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS = 100;
-    private static final int MAX_LENGTH_MITIGATION_DESCRIPTION = 500;
+    private static final int DEFAULT_MAX_LENGTH_DESCRIPTION = 500;
+    private static final int MAX_LENGTH_BLACKHOLE_DEVICE = 50;
     
     private static final int MAX_NUMBER_OF_LOCATIONS = 200;
     private static final int MAX_NUMBER_OF_TICKETS = 10;
@@ -212,6 +217,10 @@ public class RequestValidator {
         }
     }
     
+    public void validateGetBlackholeDeviceRequest(@NonNull GetBlackholeDeviceRequest request) {
+        validateBlackholeDeviceName(request.getName());
+    }
+    
     public void validateUpdateBlackholeDeviceRequest(@NonNull UpdateBlackholeDeviceRequest request) {
         if (request.getBlackholeDeviceInfo() == null) {
             String msg = "No blackhole device info found.";
@@ -233,6 +242,10 @@ public class RequestValidator {
             throw new IllegalArgumentException(msg);
         }
         validateTransitProviderInfo(request.getTransitProviderInfo());
+    }
+    
+    public void validateGetTransitProviderRequest(@NonNull GetTransitProviderRequest request) {
+        validateTransitProviderId(request.getId());
     }
     
     public void validateUpdateTransitProviderRequest(@NonNull UpdateTransitProviderRequest request) {
@@ -275,7 +288,7 @@ public class RequestValidator {
     }
     
     private void validateDeviceName(String deviceName) {
-        if (isInvalidFreeFormText(deviceName, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+        if (isInvalidFreeFormText(deviceName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
             String msg = "Invalid device name found! Valid device names: " + deviceNames;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
@@ -292,7 +305,7 @@ public class RequestValidator {
     }
     
     private void validateServiceName(String serviceName) {
-        if (isInvalidFreeFormText(serviceName, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+        if (isInvalidFreeFormText(serviceName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
             String msg = "Invalid service name found: " + serviceName + ". Valid service names are: " + serviceNames;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
@@ -306,7 +319,7 @@ public class RequestValidator {
     }
     
     private void validateDeviceScope(String deviceScope) {
-        if (isInvalidFreeFormText(deviceScope, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+        if (isInvalidFreeFormText(deviceScope, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
             String msg = "Invalid device scope found! Valid device scopes: " + deviceScopes;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
@@ -322,8 +335,8 @@ public class RequestValidator {
         }
     }
     
-    private void validateMitigationName(String mitigationName) {
-        if (isInvalidFreeFormText(mitigationName, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+    private static void validateMitigationName(String mitigationName) {
+        if (isInvalidFreeFormText(mitigationName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
             String msg = "Invalid mitigation name found! A valid mitigation name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
@@ -331,7 +344,7 @@ public class RequestValidator {
     }
     
     private void validateMitigationTemplate(String mitigationTemplate) {
-        if (isInvalidFreeFormText(mitigationTemplate, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+        if (isInvalidFreeFormText(mitigationTemplate, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
             String msg = "Invalid mitigation template found! Valid mitigation templates are: " + mitigationTemplates;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
@@ -344,31 +357,31 @@ public class RequestValidator {
         }
     }
     
-    private void validateUserName(String userName) {
-        if (isInvalidFreeFormText(userName, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+    private static void validateUserName(String userName) {
+        if (isInvalidFreeFormText(userName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
             String msg = "Invalid user name found! A valid user name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
     }
     
-    private void validateToolName(String toolName) {
-        if (isInvalidFreeFormText(toolName, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+    private static void validateToolName(String toolName) {
+        if (isInvalidFreeFormText(toolName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
             String msg = "Invalid tool name found! A valid tool name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
     }
     
-    private void validateMitigationDescription(String mitigationDescription) {
-        if (isInvalidFreeFormText(mitigationDescription, MAX_LENGTH_MITIGATION_DESCRIPTION)) {
-            String msg = "Invalid description found! A valid description must contain more than 0 and less than: " + MAX_LENGTH_MITIGATION_DESCRIPTION + " ascii-printable characters.";
+    private static void validateMitigationDescription(String mitigationDescription) {
+        if (isInvalidFreeFormText(mitigationDescription, false, DEFAULT_MAX_LENGTH_DESCRIPTION)) {
+            String msg = "Invalid description found! A valid description must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_DESCRIPTION + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
     }
     
-    private void validateRelatedTickets(List<String> relatedTickets) {
+    private static void validateRelatedTickets(List<String> relatedTickets) {
         if (relatedTickets.size() > MAX_NUMBER_OF_TICKETS) {
             String msg = "Exceeded the number of tickets that can be specified for a single mitigation. Max allowed: " + MAX_NUMBER_OF_TICKETS + ", but found " + relatedTickets.size() + " tickets.";
             LOG.info(msg);
@@ -385,7 +398,7 @@ public class RequestValidator {
         // We currently (02/2015) don't constraint the user of how they want to input the tickets, either as just ids (0043589677) or 
         // abbreviated link: tt/0043589677 or the entire link: https://tt.amazon.com/0043589677. Hence simply checking to just ensure we have all valid characters for each of those.
         for (String ticket : relatedTickets) {
-            if (isInvalidFreeFormText(ticket, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            if (isInvalidFreeFormText(ticket, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
                 String msg = "Invalid ticket found! A valid ticket must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
@@ -411,7 +424,7 @@ public class RequestValidator {
             Set<String> validLocationsForService = serviceLocationsHelper.getLocationsForService(serviceName).orNull();
             List<String> invalidLocationsInRequest = new ArrayList<>();
             for (String location : locations) {
-                if (isInvalidFreeFormText(location, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+                if (isInvalidFreeFormText(location, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
                     String msg = "Invalid location name found! A valid location name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
                     LOG.info(msg);
                     throw new IllegalArgumentException(msg);
@@ -430,17 +443,18 @@ public class RequestValidator {
         }
     }
     
-    private void validateBlackholeDeviceInfo(BlackholeDeviceInfo blackholeDeviceInfo) {
-        if (isInvalidFreeFormText(blackholeDeviceInfo.getDeviceName(), DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
-            String msg = "The device name that was provided, " + blackholeDeviceInfo.getDeviceName() + ", is not valid.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
+    private static final String BLACKHOLE_DEVICE_DESCRIPTION_ERROR_MSG = 
+            String.format(
+                    "Blackhole device description must be an non empty string of ascii-printable " + 
+                    "characters shorter than %d characters", DEFAULT_MAX_LENGTH_DESCRIPTION);
+    
+    private static void validateBlackholeDeviceInfo(BlackholeDeviceInfo blackholeDeviceInfo) {
+        validateBlackholeDeviceName(blackholeDeviceInfo.getDeviceName());
         
-        if (isInvalidFreeFormText(blackholeDeviceInfo.getDeviceDescription(), DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
-            String msg = "The device descriptioname that was provided, " + blackholeDeviceInfo.getDeviceDescription() + ", is not valid.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
+        String deviceDescription = blackholeDeviceInfo.getDeviceDescription();
+        if (isInvalidFreeFormText(deviceDescription, false, DEFAULT_MAX_LENGTH_DESCRIPTION)) {
+            LOG.info(BLACKHOLE_DEVICE_DESCRIPTION_ERROR_MSG);
+            throw new IllegalArgumentException(BLACKHOLE_DEVICE_DESCRIPTION_ERROR_MSG);
         }
         
         if (blackholeDeviceInfo.getVersion() != null && blackholeDeviceInfo.getVersion() < 0) {
@@ -450,32 +464,57 @@ public class RequestValidator {
         }
     }
     
-    private void validateTransitProviderInfo(TransitProviderInfo transitProviderInfo) {
-        if (isInvalidFreeFormText(transitProviderInfo.getId(), DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
-            String msg = "The transit provider id that was provided, " + transitProviderInfo.getId() + ", is not valid.";
+    private static final String TRANSIT_PROVIDER_ID_ERROR_MSG = 
+            String.format("Transit provider id must be an url safe base64 encoded string.");
+    
+    private static void validateTransitProviderId(String transitProviderId) {
+        if (StringUtils.isEmpty(transitProviderId)) {
+            LOG.info(TRANSIT_PROVIDER_ID_ERROR_MSG);
+            throw new IllegalArgumentException(TRANSIT_PROVIDER_ID_ERROR_MSG);
+        }
+        
+        byte[] transitProviderBytes;
+        try {
+            transitProviderBytes = Base64.getUrlDecoder().decode(transitProviderId);
+        } catch (IllegalArgumentException e) {
+            LOG.info(TRANSIT_PROVIDER_ID_ERROR_MSG);
+            throw new IllegalArgumentException(TRANSIT_PROVIDER_ID_ERROR_MSG, e);
+        }
+        
+        if (transitProviderBytes.length != 16) {
+            LOG.info(TRANSIT_PROVIDER_ID_ERROR_MSG);
+            throw new IllegalArgumentException(TRANSIT_PROVIDER_ID_ERROR_MSG);
+        }
+    }
+    
+    private static void validateTransitProviderInfo(TransitProviderInfo transitProviderInfo) {
+        validateTransitProviderId(transitProviderInfo.getId());
+        
+        validateFreeFormText("The transit provider name", 
+                transitProviderInfo.getProviderName(), false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS);
+        
+        validateFreeFormText("The transit provider description", 
+                transitProviderInfo.getProviderDescription(), false, DEFAULT_MAX_LENGTH_DESCRIPTION);
+        
+        if (!TransitProvider.TRANSIT_PROVIDER_STATUSES.contains(transitProviderInfo.getBlackholeSupported())) {
+            String msg = "Unrecognized blackhole supported status. Allowed values for blackhole supported are "
+                    + TransitProvider.TRANSIT_PROVIDER_STATUSES;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
-        if (isInvalidFreeFormText(transitProviderInfo.getProviderName(), DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
-            String msg = "The transit provider name that was provided, " + transitProviderInfo.getProviderName() + ", is not valid.";
+        validateCommunityString(transitProviderInfo.getCommunityString());
+        
+        if (transitProviderInfo.getBlackholeSupported().equals(TransitProvider.BLACKHOLE_SUPPORTED) &&
+            StringUtils.isEmpty(transitProviderInfo.getCommunityString())) 
+        {
+            String msg = "The community string may not be empty for an enabled transit provider";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
         
-        if (isInvalidFreeFormText(transitProviderInfo.getProviderDescription(), DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
-            String msg = "The transit provider description that was provided, " + transitProviderInfo.getProviderDescription() + ", is not valid.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        if (!transitProviderInfo.getBlackholeSupported().equals(TransitProvider.BLACKHOLE_MANUAL_SUPPORTED) && 
-                !transitProviderInfo.getBlackholeSupported().equals(TransitProvider.BLACKHOLE_SUPPORTED) && 
-                !transitProviderInfo.getBlackholeSupported().equals(TransitProvider.BLACKHOLE_UNSUPPORTED)) {
-            String msg = "The transit provider blackhole supported that was provided, " + transitProviderInfo.getBlackholeSupported() + ", is not valid.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
+        validateFreeFormText("The transit provider blackhole link", 
+                transitProviderInfo.getManualBlackholeLink(), true, DEFAULT_MAX_LENGTH_DESCRIPTION);
         
         if (transitProviderInfo.getVersion() != null && transitProviderInfo.getVersion() < 0) {
             String msg = "The transit provider version that was provided, " + transitProviderInfo.getVersion() + ", is not valid.";
@@ -484,10 +523,98 @@ public class RequestValidator {
         }
     }
     
-    protected boolean isInvalidFreeFormText(String stringToCheck, int maxLength) {
-        boolean isBlank = StringUtils.isBlank(stringToCheck);
-        boolean containsOnlyPrintableCharacters = StringUtils.isAsciiPrintable(stringToCheck);
-        boolean exceedsDefaultLength = ((stringToCheck != null) ? (stringToCheck.length() > maxLength) : false);
-        return (isBlank || !containsOnlyPrintableCharacters || exceedsDefaultLength);
+    private static String COMMUNITY_STRING_ERROR_MSG = 
+            "The community string must be a space seperated list of <asn>:<value> where asn and value are integers.";
+    
+    private static void validateCommunityString(String communityString) {
+        if (StringUtils.isEmpty(communityString)) {
+            // Empty community strings are allowed for disabled or manual transit providers
+            return;
+        }
+        
+        if (communityString.length() > DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS) {
+            // 100 characters should be more than enough for any sane community string
+            String message = "Community string must be no more than than " + DEFAULT_MAX_LENGTH_DESCRIPTION + " characters long";
+            LOG.info(message);
+            throw new IllegalArgumentException(message);
+        }
+        
+        String[] values = communityString.split(" ");
+        for (String value : values) {
+            if (!isCommunityStringValueValid(value)) {
+                LOG.info(COMMUNITY_STRING_ERROR_MSG);
+                throw new IllegalArgumentException(COMMUNITY_STRING_ERROR_MSG);
+            }
+        }
+    }
+    
+    private static boolean isCommunityStringValueValid(String value) {
+        String parts[] = value.split(":");
+        if (parts.length != 2) {
+            return false;
+        }
+        
+        for (String part : parts) {
+            try {
+                Long.parseLong(part);
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    private static final Pattern BLACKHOLE_DEVICE_NAME_PATTERN = Pattern.compile("[A-Za-z0-9-.]*");
+            
+    private static final String BLACKHOLE_DEVICE_NAME_ERROR_MSG = 
+            String.format(
+                    "Blackhole device name must be an non empty string shorter than %d characters containing " +
+                    "only alpha numeric characters, '-' and '.'", MAX_LENGTH_BLACKHOLE_DEVICE);
+    
+    /**
+     * Check that stringToCheck is valid for a blackhole device name. If it isn't then an IllegalArgumentException
+     * will be thrown. 
+     * 
+     * @param deviceName the string to check
+     * @throws IllegalArgumentException if the stringToCheck is invalid
+     */
+    private static void validateBlackholeDeviceName(String deviceName) {
+        if (StringUtils.isBlank(deviceName) || deviceName.length() > MAX_LENGTH_BLACKHOLE_DEVICE ||
+            !BLACKHOLE_DEVICE_NAME_PATTERN.matcher(deviceName).matches())
+        {
+            LOG.info(BLACKHOLE_DEVICE_NAME_ERROR_MSG);
+            throw new IllegalArgumentException(BLACKHOLE_DEVICE_NAME_ERROR_MSG);
+        }
+    }
+    
+    private static boolean isInvalidFreeFormText(String stringToCheck, boolean allowBlank, int maxLength) {
+        if (StringUtils.isBlank(stringToCheck)) {
+            if (!allowBlank) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        
+        if (!StringUtils.isAsciiPrintable(stringToCheck)) {
+            return true;
+        }
+        
+        if ((stringToCheck != null) && (stringToCheck.length() > maxLength)) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    private static void validateFreeFormText(String fieldDescription, String stringToCheck, boolean allowBlank, int maxLength) {
+        if (isInvalidFreeFormText(stringToCheck, allowBlank, maxLength)) {
+            String message = 
+                    fieldDescription + " must be a non empty string of ascii-printable characters " +
+                    "with length of at most " + maxLength + " characters.";
+            LOG.info(message);
+            throw new IllegalArgumentException(message);
+        }
     }
 }

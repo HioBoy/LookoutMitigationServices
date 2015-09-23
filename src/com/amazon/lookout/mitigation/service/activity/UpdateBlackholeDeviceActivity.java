@@ -31,7 +31,6 @@ import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackholeDeviceConverter;
-import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
@@ -48,7 +47,7 @@ public class UpdateBlackholeDeviceActivity extends Activity {
         InternalError
     };
 
-    // Maintain a Set<String> for all the exceptions to allow passing it to the CommonActivityMetricsHelper which is called from
+    // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
     private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(
             Arrays.stream(UpdateBlackholeDeviceExceptions.values())
@@ -76,14 +75,17 @@ public class UpdateBlackholeDeviceActivity extends Activity {
         boolean requestSuccessfullyProcessed = true;
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "UpdateBlackholeDevice.enact");
         try { 
-            tsdMetrics.addProperty("Name", request.getBlackholeDeviceInfo().getDeviceName());
-            tsdMetrics.addProperty("Version", String.valueOf(request.getBlackholeDeviceInfo().getVersion()));
-            tsdMetrics.addProperty("Enabled", String.valueOf(request.getBlackholeDeviceInfo().isEnabled()));
-            
             LOG.info(String.format("UpdateBlackholeDeviceActivity called with RequestId: %s and request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
 
             BlackholeDeviceInfo blackholeDeviceInfo = request.getBlackholeDeviceInfo();
+            
+            if (blackholeDeviceInfo != null) {
+                tsdMetrics.addProperty("Name", blackholeDeviceInfo.getDeviceName());
+                tsdMetrics.addProperty("Version", String.valueOf(blackholeDeviceInfo.getVersion()));
+                tsdMetrics.addProperty("Enabled", String.valueOf(blackholeDeviceInfo.isEnabled()));
+            }
+            
             BlackholeDevice blackholeDevice = null;
             try {
                 requestValidator.validateUpdateBlackholeDeviceRequest(request);
@@ -102,13 +104,13 @@ public class UpdateBlackholeDeviceActivity extends Activity {
             return response;
         
         } catch (BadRequest400 badrequest) {
-            tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + UpdateBlackholeDeviceExceptions.BadRequest.name());
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + UpdateBlackholeDeviceExceptions.BadRequest.name());
             throw badrequest;
         } catch (ConditionalCheckFailedException ex) {
             String message = String.format(ActivityHelper.STALE_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "UpdateBlackholeDeviceActivity", ex.getMessage());
             LOG.info(message + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             requestSuccessfullyProcessed = false;
-            tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + UpdateBlackholeDeviceExceptions.StaleRequest.name());
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + UpdateBlackholeDeviceExceptions.StaleRequest.name());
             throw new StaleRequestException400(message);       
         } catch (Exception internalError) {
             String msg = "Internal error in UpdateBlackholeDeviceActivity for requestId: " + requestId + ", reason: " + internalError.getMessage();

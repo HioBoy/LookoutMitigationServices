@@ -30,7 +30,6 @@ import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.TransitProviderInfo;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
-import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.TransitProviderConverter;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
@@ -48,7 +47,7 @@ public class CreateTransitProviderActivity extends Activity {
         InternalError
     };
 
-    // Maintain a Set<String> for all the exceptions to allow passing it to the CommonActivityMetricsHelper which is called from
+    // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
     Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(
             Arrays.stream(CreateTransitProviderExceptions.values())
@@ -81,6 +80,11 @@ public class CreateTransitProviderActivity extends Activity {
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
 
             TransitProviderInfo transitProviderInfo = request.getTransitProviderInfo();
+            if (transitProviderInfo != null) {
+                tsdMetrics.addProperty("Id", transitProviderInfo.getId());
+                tsdMetrics.addProperty("Name", transitProviderInfo.getProviderName());
+            }
+            
             TransitProvider transitProvider = null;
             try {
                 requestValidator.validateCreateTransitProviderRequest(request);
@@ -89,7 +93,7 @@ public class CreateTransitProviderActivity extends Activity {
                 String message = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "CreateTransitProviderActivity", ex.getMessage());
                 LOG.info(message + " for request: " + ReflectionToStringBuilder.toString(request), ex);
                 requestSuccessfullyProcessed = false;
-                tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateTransitProviderExceptions.BadRequest.name());
+                tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateTransitProviderExceptions.BadRequest.name());
                 throw new BadRequest400(message);
             }
             transitProviderInfo.setVersion(blackholeMitigationHelper.updateTransitProvider(transitProvider, tsdMetrics).getVersion());
@@ -105,7 +109,7 @@ public class CreateTransitProviderActivity extends Activity {
             String message = String.format(ActivityHelper.STALE_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "CreateTransitProviderActivity", ex.getMessage());
             LOG.info(message + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             requestSuccessfullyProcessed = false;
-            tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateTransitProviderExceptions.StaleRequest.name());
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateTransitProviderExceptions.StaleRequest.name());
             throw new StaleRequestException400(message);  
         } catch (Exception internalError) {
             String msg = "Internal error in CreateTransitProviderActivity for requestId: " + requestId + ", reason: " + internalError.getMessage();

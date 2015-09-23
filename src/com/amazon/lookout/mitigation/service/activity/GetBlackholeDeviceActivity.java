@@ -28,7 +28,6 @@ import com.amazon.lookout.mitigation.service.GetBlackholeDeviceResponse;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackholeDeviceConverter;
-import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
@@ -43,7 +42,7 @@ public class GetBlackholeDeviceActivity extends Activity {
         InternalError
     };
 
-    // Maintain a Set<String> for all the exceptions to allow passing it to the CommonActivityMetricsHelper which is called from
+    // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
     private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(
             Arrays.stream(GetBlackholeDeviceActivityExceptions.values())
@@ -68,16 +67,24 @@ public class GetBlackholeDeviceActivity extends Activity {
     public GetBlackholeDeviceResponse enact(GetBlackholeDeviceRequest request)
             throws InternalServerError500, BadRequest400
     {
-        getMetrics().addProperty("Name", request.getName());
-        
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;
         
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "GetBlackholeDevice.enact");
         try {
-            CommonActivityMetricsHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
+            LOG.info(String.format("GetBlackholeDeviceActivity called with RequestId: %s and request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
+            ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
             
-            Optional<BlackholeDevice> device = blackholeMitigationHelper.getBlackholeDevice(request.getName(), tsdMetrics);
+            tsdMetrics.addProperty("Name", request.getName());
+            
+            try {
+                requestValidator.validateGetBlackholeDeviceRequest(request);
+            } catch (IllegalArgumentException ex) {
+                String message = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "GetBlackholeDeviceActivity", ex.getMessage());
+                throw new BadRequest400(message);
+            }
+            
+            Optional<BlackholeDevice> device = blackholeMitigationHelper.loadBlackholeDevice(request.getName(), tsdMetrics);
             if (!device.isPresent()) {
                 throw new BadRequest400("Device " + request.getName() + " does not exist");
             }
@@ -90,6 +97,9 @@ public class GetBlackholeDeviceActivity extends Activity {
             
             return response;
         } catch (BadRequest400 badrequest) {
+            LOG.info(badrequest.getMessage() + " for request: " + ReflectionToStringBuilder.toString(request), badrequest.getCause());
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetBlackholeDeviceActivityExceptions.BadRequest.name());
+            requestSuccessfullyProcessed = false;
             throw badrequest;
         } catch (Exception internalError) {
             String msg = "Internal error in GetBlackholeDeviceActivity for requestId: " + requestId + ", reason: " + internalError.getMessage();

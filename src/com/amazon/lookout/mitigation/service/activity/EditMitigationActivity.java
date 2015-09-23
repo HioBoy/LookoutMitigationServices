@@ -28,7 +28,6 @@ import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.StaleRequestException400;
-import com.amazon.lookout.mitigation.service.activity.helper.CommonActivityMetricsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
@@ -55,7 +54,7 @@ public class EditMitigationActivity extends Activity {
         InternalError
     };
 
-    // Maintain a Set<String> for all the exceptions to allow passing it to the CommonActivityMetricsHelper which is called from
+    // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
     private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(Sets.newHashSet(EditExceptions.BadRequest.name(),
             EditExceptions.StaleRequest.name(),
@@ -101,19 +100,19 @@ public class EditMitigationActivity extends Activity {
 
         try {
             LOG.debug(String.format("EditMitigationActivity called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(editRequest)));
-            CommonActivityMetricsHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
+            ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
 
             String mitigationTemplate = editRequest.getMitigationTemplate(); 
-            CommonActivityMetricsHelper.addTemplateNameCountMetrics(mitigationTemplate, tsdMetrics);
+            ActivityHelper.addTemplateNameCountMetrics(mitigationTemplate, tsdMetrics);
 
             DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
             String deviceName = deviceNameAndScope.getDeviceName().name();
-            CommonActivityMetricsHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
+            ActivityHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
             String deviceScope = deviceNameAndScope.getDeviceScope().name();
-            CommonActivityMetricsHelper.addDeviceScopeCountMetrics(deviceScope, tsdMetrics);
+            ActivityHelper.addDeviceScopeCountMetrics(deviceScope, tsdMetrics);
 
             String serviceName = editRequest.getServiceName();
-            CommonActivityMetricsHelper.addServiceNameCountMetrics(serviceName, tsdMetrics);
+            ActivityHelper.addServiceNameCountMetrics(serviceName, tsdMetrics);
 
             // Step1. Validate this request.
             requestValidator.validateEditRequest(editRequest);
@@ -162,24 +161,24 @@ public class EditMitigationActivity extends Activity {
         } catch (IllegalArgumentException ex) {
             String message = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "EditMitigationActivity", ex.getMessage());
             LOG.warn(message + " for request: " + ReflectionToStringBuilder.toString(editRequest), ex);
-            tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.BadRequest.name());
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.BadRequest.name());
             throw new BadRequest400(message);
         } catch (StaleRequestException400 ex) {
             LOG.warn(String.format("Caught StaleRequestException in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
                     ReflectionToStringBuilder.toString(editRequest)), ex);
-            tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.StaleRequest.name());
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.StaleRequest.name());
             throw ex;
         } catch (DuplicateDefinitionException400 ex) {
             LOG.warn(String.format("Caught DuplicateDefinitionException400 in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
                     ReflectionToStringBuilder.toString(editRequest)), ex);
-            tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.DuplicateDefinition.name());
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.DuplicateDefinition.name());
             throw ex;
         } catch (Exception internalError) {
             String errMsg = String.format("Internal error while fulfilling request for EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, internalError.getMessage(),
                     ReflectionToStringBuilder.toString(editRequest));
             LOG.error(LookoutMitigationServiceConstants.CRITICAL_ACTIVITY_ERROR_LOG_PREFIX + errMsg, internalError);
             requestSuccessfullyProcessed = false;
-            tsdMetrics.addOne(CommonActivityMetricsHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.InternalError.name());
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.InternalError.name());
             throw new InternalServerError500(errMsg);
         } finally {
             if (requestSuccessfullyProcessed) {

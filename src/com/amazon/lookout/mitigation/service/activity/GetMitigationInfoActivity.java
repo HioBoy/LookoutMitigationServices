@@ -52,7 +52,7 @@ public class GetMitigationInfoActivity extends Activity {
         MissingMitigation
     };
     
-    // Maintain a Set<String> for all the exceptions to allow passing it to the CommonActivityMetricsHelper which is called from
+    // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
     private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(Sets.newHashSet(GetMitigationInfoExceptions.BadRequest.name(),
                                                                                                       GetMitigationInfoExceptions.InternalError.name())); 
