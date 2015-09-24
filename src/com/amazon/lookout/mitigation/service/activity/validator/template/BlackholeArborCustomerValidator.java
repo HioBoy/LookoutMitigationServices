@@ -1,7 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
 import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
@@ -11,6 +10,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.net.IPUtils;
+import com.amazon.aws158.commons.net.IpCidr;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.lookout.mitigation.service.Constraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
@@ -24,7 +24,6 @@ import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
-import com.google.common.net.InetAddresses;
 
 public class BlackholeArborCustomerValidator implements DeviceBasedServiceTemplateValidator {
     private static final Log LOG = LogFactory.getLog(BlackholeArborCustomerValidator.class);
@@ -115,7 +114,7 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         validateNoDeploymentChecks(request.getPostDeploymentChecks());
     }
     
-    private void validateMitigationConstraint(Constraint constraint) {
+    private static void validateMitigationConstraint(Constraint constraint) {
         // Step1. Check if it is a simple constraint
         if (!(constraint instanceof SimpleConstraint)) {
             throw new IllegalArgumentException("Expects a SimpleConstraint type, constraining only by destIPs, instead found: " + ReflectionToStringBuilder.toString(constraint));
@@ -136,54 +135,34 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         
         // Step3. We currently only allow constraining by DestinationIPs. We thus check to ensure we have at least 1 of such destIPs specified.
         List<String> constraintValues = simpleConstraint.getAttributeValues();
-        if ((constraintValues == null) || constraintValues.isEmpty() || constraintValues.size() > 1) {
-            throw new IllegalArgumentException("Expects 1 destIPs in the constraint, instead found: " + constraintValues);
+        if ((constraintValues == null) || constraintValues.size() != 1) {
+            throw new IllegalArgumentException("Expects 1 CIDR in the constraint, instead found: " + constraintValues.size());
         }
         
         // Step4. Ensure all the DestinationIPs are /32s
-        for (String destIP : constraintValues) {
+        for (String destCIDRStr : constraintValues) {
             // Explicit null-check despite the isBlank check later to provide specific message useful for system tests.
-            if (destIP == null) {
-                throw new IllegalArgumentException("Expects all destIPs to be /32, instead received one of the destIPs as null");
+            if (StringUtils.isBlank(destCIDRStr)) {
+                throw new IllegalArgumentException("CIDRs in the constraint must not be blank");
             }
             
-            if (!StringUtils.isAsciiPrintable(destIP)) {
-                throw new IllegalArgumentException("Invalid destIP found! A valid destIP name must conform to the string representation of an IPv4 address.");
+            // Throws IllegalArgumentException if destCIDRStr is not a CIDR
+            IpCidr destCIDR = IPUtils.parseIpCidr(destCIDRStr);
+            if (!(destCIDR.getAddress() instanceof Inet4Address)) {
+                throw new IllegalArgumentException("Only IPv4 addresses are currently supported");
             }
             
-            if (StringUtils.isBlank(destIP)) {
-                throw new IllegalArgumentException("Expects all destIPs to be /32, instead received one of the destIPs as empty");
+            if (destCIDR.getMask() != IPUtils.NUM_BITS_IN_IPV4) {
+                throw new IllegalArgumentException("Blackholes can only work on /32s");
             }
             
-            String[] subnetParts = destIP.split(IPUtils.IP_CIDR_SEPARATOR);
-            if (subnetParts.length > 1) {
-                int maskLength = 0;
-                try {
-                    maskLength = Integer.parseInt(subnetParts[1]);
-                } catch (NumberFormatException ex) {
-                    throw new IllegalArgumentException("Invalid destIP found! A valid destIP name must conform to the string representation of an IPv4 address.");
-                }
-                
-                if (maskLength != IPUtils.NUM_BITS_IN_IPV4) {
-                    throw new IllegalArgumentException("Expects all destIPs to be /32, instead found: " + constraintValues);
-                }
-                
-                InetAddress address = InetAddresses.forString(subnetParts[0]);
-                if (!(address instanceof Inet4Address)) {
-                    throw new IllegalArgumentException("Only IPv4 address are currently supported.");
-                }
-
-                if (address.isLoopbackAddress() || address.isLinkLocalAddress() || address.isMulticastAddress() ||
-                    address.isSiteLocalAddress()) {
-                    throw new IllegalArgumentException(subnetParts[0] + " is not a public IP address");
-                }
-            } else {
-                throw new IllegalArgumentException("Invalid destIP found! A valid destIP name must conform to the string representation of an IPv4 address.");
+            if (!IPUtils.isStandardAddress(destCIDR.getAddress())) {
+                throw new IllegalArgumentException("Special (broadcast, multicast, etc) IP addresses are not supported");
             }
         }
     }
     
-    private void validateNoLocations(List<String> locationsToApplyMitigation) {
+    private static void validateNoLocations(List<String> locationsToApplyMitigation) {
         if ((locationsToApplyMitigation != null) && !locationsToApplyMitigation.isEmpty()) {
             String msg = "Expect no locations to be provided in the request, since this mitigation is " +
                         "expected to be applied to all Arbor devices.";
@@ -192,7 +171,7 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         }
     }
     
-    private void validateNoDeploymentChecks(List<MitigationDeploymentCheck> deploymentChecks) {
+    private static void validateNoDeploymentChecks(List<MitigationDeploymentCheck> deploymentChecks) {
         if ((deploymentChecks != null) && !deploymentChecks.isEmpty()) {
             String msg = "Expect not have any deployment checks to be performed.";
             LOG.info(msg);
