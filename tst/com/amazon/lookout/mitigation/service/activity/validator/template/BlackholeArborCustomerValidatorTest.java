@@ -44,7 +44,7 @@ public class BlackholeArborCustomerValidatorTest {
     }
 
     @Test
-    public void mitigationNameIsNotEmptyForCreateRequest() throws Exception {
+    public void mitigationNameIsNotEmpty() throws Exception {
         assertThat(
             validationMessage(
                 validCreateMitigationRequest(),
@@ -72,7 +72,7 @@ public class BlackholeArborCustomerValidatorTest {
     }
 
     @Test
-    public void constraintHasValidTypeForCreateRequest() throws Exception {
+    public void constraintHasValidType() throws Exception {
         assertThat(
             validationMessage(
                 validCreateMitigationRequest(),
@@ -86,59 +86,136 @@ public class BlackholeArborCustomerValidatorTest {
     }
 
     @Test
-    public void ipIsSpecifiedForCreateRequest() throws Exception {
+    public void ipIsSpecified() throws Exception {
         assertThat(
             validationMessage(
                 validCreateMitigationRequest(),
                 request -> constraint(request).setIp(null)),
-            containsString("destIP"));
+            containsString("must not be blank"));
         assertThat(
             validationMessage(
                 validEditMitigationRequest(),
                 request -> constraint(request).setIp(null)),
-            containsString("destIP"));
+            containsString("must not be blank"));
+    }
+
+    @Test
+    public void ipIsNotEmpty() throws Exception {
+        assertThat(
+            validationMessage(
+                validCreateMitigationRequest(),
+                request -> constraint(request).setIp("")),
+            containsString("must not be blank"));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> constraint(request).setIp("")),
+            containsString("must not be blank"));
     }
 
     @Test
     @Parameters({
-        "",
         "a",
-        "幸",
-        "1.2.3.4/3f",
-        "1.2.3.4/33",
-        "::1/32", // IPv6 localhost address with /32 mask
+        "幸"
+    })
+    public void ipIsValid(String invalidIp) throws Exception {
+        assertThat(
+            validationMessage(
+                validCreateMitigationRequest(),
+                request -> constraint(request).setIp(invalidIp)),
+            containsString("not a valid CIDR"));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> constraint(request).setIp(invalidIp)),
+            containsString("not a valid CIDR"));
+    }
+
+    @Test
+    @Parameters({
+        "33",
+        "3f"
+    })
+    public void netMaskIsValid(String invalidNetMask) throws Exception {
+        assertThat(
+            validationMessage(
+                validCreateMitigationRequest(),
+                request -> constraint(request).setIp(String.format("1.2.3.4/%s", invalidNetMask))),
+            containsString(invalidNetMask));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> constraint(request).setIp(String.format("1.2.3.4/%s", invalidNetMask))),
+            containsString(invalidNetMask));
+    }
+
+    @Test
+    @Parameters({
+        "16",
+        "24",
+        "31"
+    })
+    public void netMaskIs32(String invalidNetMask) throws Exception {
+        assertThat(
+            validationMessage(
+                validCreateMitigationRequest(),
+                request -> constraint(request).setIp(String.format("1.2.0.0/%s", invalidNetMask))),
+            containsString("Blackholes can only work on /32s"));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> constraint(request).setIp(String.format("1.2.0.0/%s", invalidNetMask))),
+            containsString("Blackholes can only work on /32s"));
+    }
+
+    @Test
+    @Parameters({
         "127.0.0.1/32", // loopback address
         "169.254.0.1/32" // link local address
     })
-    public void ipIsValidForCreateRequest(String invalidIp) throws Exception {
+    public void ipV6IsNotSupported(String invalidIp) throws Exception {
         assertThat(
             validationMessage(
                 validCreateMitigationRequest(),
                 request -> constraint(request).setIp(invalidIp)),
-            containsString("destIP"));
+            containsString("not supported"));
         assertThat(
             validationMessage(
                 validEditMitigationRequest(),
                 request -> constraint(request).setIp(invalidIp)),
-            containsString("destIP"));
+            containsString("not supported"));
     }
 
     @Test
-    public void ipIsInCidrFormatForCreateRequest() throws Exception {
+    public void specialIpsAreNotSupported() throws Exception {
+        assertThat(
+            validationMessage(
+                validCreateMitigationRequest(),
+                request -> constraint(request).setIp("::1/32")),
+            containsString("::1"));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> constraint(request).setIp("::1/32")),
+            containsString("::1"));
+    }
+
+    @Test
+    public void ipIsInCidrFormat() throws Exception {
         assertThat(
             validationMessage(
                 validCreateMitigationRequest(),
                 request -> constraint(request).setIp("1.2.3.4")),
-            containsString("destIP"));
+            containsString("not a valid CIDR"));
         assertThat(
             validationMessage(
                 validEditMitigationRequest(),
                 request -> constraint(request).setIp("1.2.3.4")),
-            containsString("/32"));
+            containsString("not a valid CIDR"));
     }
 
     @Test
-    public void noPreDeploymentChecksForCreateRequest() throws Exception {
+    public void noPreDeploymentChecks() throws Exception {
         assertThat(
             validationMessage(
                 validCreateMitigationRequest(),
@@ -152,7 +229,7 @@ public class BlackholeArborCustomerValidatorTest {
     }
 
     @Test
-    public void noPostDeploymentChecksForCreateRequest() throws Exception {
+    public void noPostDeploymentChecks() throws Exception {
         assertThat(
             validationMessage(
                 validCreateMitigationRequest(),
