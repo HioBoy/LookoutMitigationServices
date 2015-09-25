@@ -17,6 +17,7 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.Templat
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper;
@@ -79,7 +80,7 @@ public class CreateMitigationActivityTest {
         verify(requestStorageManagerMock)
                 .storeRequestForWorkflow(
                         eq(request),
-                        eq(Sets.newHashSet("EdgeWorldwide")),
+                        eq(Sets.newHashSet(StandardLocations.EDGE_WORLD_WIDE)),
                         eq(RequestType.CreateRequest),
                         any(TSDMetrics.class));
     }
@@ -121,7 +122,7 @@ public class CreateMitigationActivityTest {
         request.setMitigationName(mitigationName);
         request.setServiceName(ServiceName.Edge);
         request.setMitigationTemplate(MitigationTemplate.IPTables_Mitigation_EdgeCustomer);
-        request.setLocations(Lists.newArrayList("EdgeWorldwide"));
+        request.setLocations(Lists.newArrayList(StandardLocations.EDGE_WORLD_WIDE));
 
         MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
         actionMetadata.setUser("username");

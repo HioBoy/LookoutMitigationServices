@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nonnull;
@@ -49,13 +50,19 @@ public class TemplateBasedLocationsManager {
             return new HashSet<String>(templateBasedLocationsHelper.getLocationsForDeployment(request));
         }
         
+        List<String> requestLocations = null;
         if (request instanceof CreateMitigationRequest) {
-            return new HashSet<String>(((CreateMitigationRequest) request).getLocations());
+            requestLocations = ((CreateMitigationRequest) request).getLocations();
+            Validate.notEmpty(requestLocations, "locations may not be empty for create");
+        } else if (request instanceof EditMitigationRequest) {
+            requestLocations = ((EditMitigationRequest) request).getLocation();
+            Validate.notEmpty(requestLocations, "location may not be empty for edit");
         }
         
-        if (request instanceof EditMitigationRequest) {
-            return new HashSet<String>(((EditMitigationRequest) request).getLocation());
+        if (requestLocations != null) {
+            return new HashSet<>(requestLocations);
         }
-        return new HashSet<String>();
+        
+        return new HashSet<>();
     }
 }

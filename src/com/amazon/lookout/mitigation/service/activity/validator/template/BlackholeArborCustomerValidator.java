@@ -24,6 +24,8 @@ import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
+import com.google.common.collect.ImmutableList;
 
 public class BlackholeArborCustomerValidator implements DeviceBasedServiceTemplateValidator {
     private static final Log LOG = LogFactory.getLog(BlackholeArborCustomerValidator.class);
@@ -96,19 +98,19 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         // We do not current validate if there is a co-existed mitigation for the template and device
     }
     
-    private void validateCreateRequest(CreateMitigationRequest request) {
+    private static void validateCreateRequest(CreateMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
-        validateNoLocations(request.getLocations());
+        validateArborLocation(request.getLocations());
         validateMitigationConstraint(request.getMitigationDefinition().getConstraint());
         validateNoDeploymentChecks(request.getPreDeploymentChecks());
         validateNoDeploymentChecks(request.getPostDeploymentChecks());
     }
     
-    private void validateEditRequest(EditMitigationRequest request) {
+    private static void validateEditRequest(EditMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
-        validateNoLocations(request.getLocation());
+        validateArborLocation(request.getLocation());
         validateMitigationConstraint(request.getMitigationDefinition().getConstraint());
         validateNoDeploymentChecks(request.getPreDeploymentChecks());
         validateNoDeploymentChecks(request.getPostDeploymentChecks());
@@ -162,10 +164,9 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         }
     }
     
-    private static void validateNoLocations(List<String> locationsToApplyMitigation) {
-        if ((locationsToApplyMitigation != null) && !locationsToApplyMitigation.isEmpty()) {
-            String msg = "Expect no locations to be provided in the request, since this mitigation is " +
-                        "expected to be applied to all Arbor devices.";
+    private static void validateArborLocation(List<String> locationsToApplyMitigation) {
+        if (!ImmutableList.of(StandardLocations.ARBOR).equals(locationsToApplyMitigation)) {
+            String msg = "Blackhole mitigation must be applied to location " + StandardLocations.ARBOR;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
