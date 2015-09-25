@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.Set;
@@ -16,6 +17,6 @@ public class ArborBlackholeLocationsHelper implements TemplateBasedLocationsHelp
      */
     @Override
     public Set<String> getLocationsForDeployment(MitigationModificationRequest request) {
-        return ImmutableSet.of("Worldwide");
+        return ImmutableSet.of(StandardLocations.ARBOR);
     }
 }

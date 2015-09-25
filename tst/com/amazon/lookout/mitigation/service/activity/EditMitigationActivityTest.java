@@ -15,6 +15,7 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.Templat
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper;
@@ -69,7 +70,7 @@ public class EditMitigationActivityTest {
         verify(requestStorageManagerMock)
                 .storeRequestForWorkflow(
                     eq(request),
-                    eq(Sets.newHashSet("Worldwide")),
+                    eq(Sets.newHashSet(StandardLocations.ARBOR)),
                     eq(RequestType.EditRequest),
                     any(TSDMetrics.class));
     }
