@@ -4,6 +4,7 @@ import java.net.Inet4Address;
 import java.util.List;
 
 import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
+import com.amazon.lookout.mitigation.service.ArborBlackholeSetEnabledStateConstraint;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
@@ -117,13 +118,15 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
             throw new IllegalArgumentException("Constraint must not be null.");
         }
 
-        if (!(constraint instanceof ArborBlackholeConstraint)) {
-            throw new IllegalArgumentException("Expecting an ArborBlackholeConstraint type instead found: " +
-                ReflectionToStringBuilder.toString(constraint));
+        if (constraint instanceof ArborBlackholeConstraint) {
+            ArborBlackholeConstraint arborConstraint = (ArborBlackholeConstraint) constraint;
+            validateDestinationIP(arborConstraint.getIp());
+        } else if (!(constraint instanceof ArborBlackholeSetEnabledStateConstraint)) {
+            throw new IllegalArgumentException(
+                "Expecting an ArborBlackholeConstraint or ArborBlackholeSetEnabledStateConstraint type, " +
+                    "instead found: " +
+                    ReflectionToStringBuilder.toString(constraint));
         }
-
-        ArborBlackholeConstraint arborConstraint = (ArborBlackholeConstraint) constraint;
-        validateDestinationIP(arborConstraint.getIp());
     }
 
     private static void validateDestinationIP(String destCidrString) {

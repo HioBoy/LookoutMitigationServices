@@ -2,6 +2,7 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
+import com.amazon.lookout.mitigation.service.ArborBlackholeSetEnabledStateConstraint;
 import com.amazon.lookout.mitigation.service.DropAction;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
@@ -49,6 +50,19 @@ public class EditMitigationActivityTest {
     public void testBlackholeMitigationRequest() {
         EditMitigationActivity activity = createActivityWithValidators();
         EditMitigationRequest request = sampleEditBlackholeMitigationRequest("TestBlackholeMitigation");
+
+        MitigationModificationResponse response = activity.enact(request);
+
+        assertThat(response.getDeviceName(), is(DeviceName.ARBOR.name()));
+        assertThat(response.getMitigationName(), is("TestBlackholeMitigation"));
+        assertThat(response.getMitigationTemplate(), is(MitigationTemplate.Blackhole_Mitigation_ArborCustomer));
+        assertThat(response.getServiceName(), is(ServiceName.Blackhole));
+    }
+
+    @Test
+    public void testBlackholeMitigationSetEnabledState() {
+        EditMitigationActivity activity = createActivityWithValidators();
+        EditMitigationRequest request = sampleBlackholeMitigationSetEnabledStateRequest("TestBlackholeMitigation");
 
         MitigationModificationResponse response = activity.enact(request);
 
@@ -109,6 +123,30 @@ public class EditMitigationActivityTest {
         constraint.setIp("1.2.3.4/32");
         constraint.setEnabled(true);
         constraint.setTransitProviderIds(emptyList());
+        mitigationDefinition.setConstraint(constraint);
+
+        request.setMitigationDefinition(mitigationDefinition);
+        return request;
+    }
+
+    private EditMitigationRequest sampleBlackholeMitigationSetEnabledStateRequest(String mitigationName) {
+        EditMitigationRequest request = new EditMitigationRequest();
+        request.setMitigationName(mitigationName);
+        request.setServiceName(ServiceName.Blackhole);
+        request.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
+        request.setMitigationVersion(2);
+
+        MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
+        actionMetadata.setUser("username");
+        actionMetadata.setToolName("unit-tests");
+        actionMetadata.setDescription("description");
+        request.setMitigationActionMetadata(actionMetadata);
+
+        MitigationDefinition mitigationDefinition = new MitigationDefinition();
+        mitigationDefinition.setAction(new DropAction());
+
+        ArborBlackholeSetEnabledStateConstraint constraint = new ArborBlackholeSetEnabledStateConstraint();
+        constraint.setEnabled(true);
         mitigationDefinition.setConstraint(constraint);
 
         request.setMitigationDefinition(mitigationDefinition);
