@@ -5,7 +5,7 @@
   <import file="${happytrails.root}/happytrails.xml"/>
 
   <!-- Define HappierTrails property overrides here -->
-  <property name="findbugs.failOnError" value="false"/>
+  <property name="findbugs.failOnError" value="true"/>
   <property name="checkstyle.failOnError" value="false"/>
   <property name="tests.additional.jvmargs" value="-enableassertions"/>
   <property name="sources.javac.extra.args" value="-Xlint:all"/>

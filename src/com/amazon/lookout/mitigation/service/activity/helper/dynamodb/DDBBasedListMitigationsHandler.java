@@ -360,8 +360,8 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         mitigationDescription.setDeviceName(keyValues.get(DEVICE_NAME_KEY).getS());
         mitigationDescription.setJobId(Long.parseLong(keyValues.get(WORKFLOW_ID_KEY).getN()));
         mitigationDescription.setMitigationName(keyValues.get(MITIGATION_NAME_KEY).getS());
-        mitigationDescription.setMitigationVersion(Integer.valueOf(keyValues.get(MITIGATION_VERSION_KEY).getN()));
-        mitigationDescription.setRequestDate(Long.valueOf(keyValues.get(REQUEST_DATE_KEY).getN()));
+        mitigationDescription.setMitigationVersion(Integer.parseInt(keyValues.get(MITIGATION_VERSION_KEY).getN()));
+        mitigationDescription.setRequestDate(Long.parseLong(keyValues.get(REQUEST_DATE_KEY).getN()));
         mitigationDescription.setRequestStatus(keyValues.get(WORKFLOW_STATUS_KEY).getS());
         mitigationDescription.setDeviceScope(keyValues.get(DEVICE_SCOPE_KEY).getS());
         mitigationDescription.setRequestType(keyValues.get(REQUEST_TYPE_KEY).getS());
@@ -504,14 +504,14 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         List<ActiveMitigationDetails> convertedList = new ArrayList<>(); 
         for (Map<String, AttributeValue> keyValues : listOfKeyValues) {
             String location = keyValues.get(ActiveMitigationsModel.LOCATION_KEY).getS();
-            long jobId = Long.valueOf(keyValues.get(ActiveMitigationsModel.JOB_ID_KEY).getN());
+            long jobId = Long.parseLong(keyValues.get(ActiveMitigationsModel.JOB_ID_KEY).getN());
             String mitigationName = keyValues.get(ActiveMitigationsModel.MITIGATION_NAME_KEY).getS();
             String deviceName = keyValues.get(ActiveMitigationsModel.DEVICE_NAME_KEY).getS();
-            int mitigationVersion = Integer.valueOf(keyValues.get(ActiveMitigationsModel.MITIGATION_VERSION_KEY).getN());
+            int mitigationVersion = Integer.parseInt(keyValues.get(ActiveMitigationsModel.MITIGATION_VERSION_KEY).getN());
             
             long lastDeployDate = 0;
             if (keyValues.containsKey(ActiveMitigationsModel.LAST_DEPLOY_DATE)) {
-                lastDeployDate = Long.valueOf(keyValues.get(ActiveMitigationsModel.LAST_DEPLOY_DATE).getN());
+                lastDeployDate = Long.parseLong(keyValues.get(ActiveMitigationsModel.LAST_DEPLOY_DATE).getN());
             }
             
             ActiveMitigationDetails activeMitigationDetails = new ActiveMitigationDetails(mitigationName, jobId, location, 

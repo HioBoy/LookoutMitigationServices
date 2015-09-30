@@ -130,6 +130,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         case MitigationTemplate.Router_CountMode_Route53Customer:
             validateRouterMitigationName(mitigationName, mitigationTemplate);
             break;
+        default:
         }            
     }
     
@@ -150,6 +151,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         case MitigationTemplate.Router_CountMode_Route53Customer:
             checkForNoLocations(locationsToApplyMitigation, mitigationTemplate);
             break;
+        default:
         }
     }
 
@@ -333,6 +335,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         case MitigationTemplate.Router_CountMode_Route53Customer:
             validateNoDeploymentChecks(preDeploymentChecks, mitigationTemplate);
             break;
+        default:
         }
     }
     
@@ -344,6 +347,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         case MitigationTemplate.Router_CountMode_Route53Customer:
             validateNoDeploymentChecks(postDeploymentChecks, mitigationTemplate);
             break;
+        default:
         }
     }
     

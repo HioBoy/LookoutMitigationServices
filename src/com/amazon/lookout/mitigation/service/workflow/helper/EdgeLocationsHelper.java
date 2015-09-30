@@ -3,8 +3,10 @@ package com.amazon.lookout.mitigation.service.workflow.helper;
 import java.beans.ConstructorProperties;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.HashSet;
@@ -398,7 +400,12 @@ public class EdgeLocationsHelper implements Runnable {
             // If there is already a .new file, delete it and create a new one
             File newFile = new File(popsListDiskCacheDir, POPS_LIST_FILE_NAME + FILE_NEW_SUFFIX);
             if (newFile.exists()) {
-                newFile.delete();
+                boolean deletedSuccessfully = newFile.delete();
+                if (!deletedSuccessfully) {
+                    LOG.error("Unable to delete file " + newFile.getAbsolutePath());
+                    return;
+                }
+
                 try {
                     newFile.createNewFile();
                 } catch (IOException e) {
@@ -409,7 +416,7 @@ public class EdgeLocationsHelper implements Runnable {
     
             BufferedWriter writer = null;
             try {
-                writer = new BufferedWriter(new FileWriter(newFile));
+                writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(newFile), StandardCharsets.UTF_8));
                 for (String popName : allClassicPOPs) {
                     String isBWFlag = Boolean.toString(blackwatchClassicPOPs.contains(popName)); 
                     writer.write(popName + "," + isBWFlag + "\n");

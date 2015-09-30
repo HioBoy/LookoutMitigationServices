@@ -5,6 +5,7 @@ import static com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterI
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -212,7 +213,7 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
                 // upload the processed configuration content to s3 as a new object
                 ObjectMetadata metadata = new ObjectMetadata();
                 metadata.setContentLength(processedConfig.length());
-                InputStream objectStream = new ByteArrayInputStream(processedConfig.getBytes());
+                InputStream objectStream = new ByteArrayInputStream(processedConfig.getBytes(StandardCharsets.UTF_8));
                 // the config object will be modified to hold the processed configuration s3 object
                 PutObjectRequest request = new PutObjectRequest(config.getBucket(), config.getKey(), objectStream, metadata);
                 PutObjectResult response = blackWatchConfigS3Client.putObject(request);

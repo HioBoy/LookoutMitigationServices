@@ -88,6 +88,7 @@ public class UpdateTransitProviderActivity extends Activity {
             TransitProvider transitProvider = null;
             try {
                 requestValidator.validateUpdateTransitProviderRequest(request);
+                assert transitProviderInfo != null; // validateUpdateTransitProviderRequest() makes sure it is not null
                 transitProvider = TransitProviderConverter.convertTransitProviderInfoRequest(transitProviderInfo);
             } catch (IllegalArgumentException ex) {
                 String message = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "UpdateTransitProviderActivity", ex.getMessage());

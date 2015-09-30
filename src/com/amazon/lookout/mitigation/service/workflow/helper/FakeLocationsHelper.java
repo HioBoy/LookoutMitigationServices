@@ -19,6 +19,8 @@ import com.amazon.lookoutfakerouterservice.RouterMetaDataStruct;
 
 import lombok.NonNull;
 
+import javax.annotation.Nonnull;
+
 /**
  * Locations helper to interact with the Fake Router Service. Will return lists
  * of fake routers that exist in the service
@@ -36,9 +38,9 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
     
     @ConstructorProperties({ "cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries",
             "popsListDir", "metricsFactory", "fakeBlackWatchClassicLocations" })
-    public FakeLocationsHelper(@NonNull EdgeOperatorServiceClient cloudfrontClient, @NonNull DaasControlAPIServiceV20100701Client daasClient, 
-            @NonNull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, @NonNull String popsListDiskCacheDirName,
-            @NonNull MetricsFactory metricsFactory, @NonNull List<String> fakeBlackWatchClassicLocations) {
+    public FakeLocationsHelper(@Nonnull EdgeOperatorServiceClient cloudfrontClient, @Nonnull DaasControlAPIServiceV20100701Client daasClient,
+            @Nonnull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, @Nonnull String popsListDiskCacheDirName,
+            @Nonnull MetricsFactory metricsFactory, @Nonnull List<String> fakeBlackWatchClassicLocations) {
         super(cloudfrontClient, daasClient, bwLocationsHelper, sleepBetweenRetriesInMillis, popsListDiskCacheDirName,
                 metricsFactory, fakeBlackWatchClassicLocations);
         refreshFakeRouters();
@@ -122,7 +124,7 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
 
     }
 
-    private class PopLists {
+    private static class PopLists {
         private final HashSet<String> allClassicPOPs;
         private final HashSet<String> blackwatchClassicPOPs;
         public PopLists(Collection<String> classicPOPs, Collection<String> blackwatchClassicPOPs) {
