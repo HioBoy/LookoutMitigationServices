@@ -12,11 +12,7 @@
   <ht:import file="coral-launcher.xml" optional="false"/>
   <ht:import file="coral-generator.xml" optional="false"/>
 	
-  <!-- Cobertura doesn't work under JDK-1.7 without UseSplitVerifier -->
-  <property name="coverage.additional.jvmargs" value="${tests.additional.jvmargs} -XX:-UseSplitVerifier"/>
-
   <ht:import file="happier-trails.xml"/>
-  
   
   <!-- Set any property overrides -->
   <property name="coral-src.dir" location="${output.dir}/private/src"/>
