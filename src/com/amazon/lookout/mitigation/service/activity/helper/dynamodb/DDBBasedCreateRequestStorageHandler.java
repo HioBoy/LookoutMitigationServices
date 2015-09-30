@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -19,6 +20,7 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.ActionType;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
+import com.amazon.lookout.mitigation.service.DuplicateMitigationNameException400;
 import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
@@ -30,6 +32,10 @@ import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToFixed
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.QueryFilter;
+import com.amazonaws.services.dynamodbv2.document.RangeKeyCondition;
+import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
@@ -63,11 +69,13 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
     private final DataConverter jsonDataConverter = new JsonDataConverter();
 
     private final TemplateBasedRequestValidator templateBasedRequestValidator;
+    private final DynamoDB dynamoDB;
 
     public DDBBasedCreateRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain, @NonNull TemplateBasedRequestValidator templateBasedRequestValidator) {
         super(dynamoDBClient, domain);
 
         this.templateBasedRequestValidator = templateBasedRequestValidator;
+        this.dynamoDB = new DynamoDB(dynamoDBClient);
     }
 
     /**
@@ -128,11 +136,18 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 
                 // First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
                 currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName, deviceScope, prevMaxWorkflowId, subMetrics);
-                
+
+                // Next, check if the mitigation name has already been used before.
+                if (doesMitigationNameExist(deviceName, mitigationName, subMetrics)) {
+                    String msg = "MitigationName: " + mitigationName + " already exists for device: " + deviceName;
+                    LOG.warn(msg);
+                    throw new DuplicateMitigationNameException400(msg);
+                }
+ 
                 // Next, check if we have any duplicate mitigations already in place.
                 queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, 
                                                   mitigationName, mitigationTemplate, prevMaxWorkflowId, subMetrics);
-                
+
                 long newWorkflowId = 0;
                 // If we didn't get any workflows for the same deviceName and deviceScope, we simply assign the newWorkflowId to be the min for this deviceScope.
                 if (currMaxWorkflowId == null) {
@@ -172,6 +187,46 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
         }
     }
     
+    private static List<String> NON_FAILED_WORKFLOW_STATUS;
+    static {
+        NON_FAILED_WORKFLOW_STATUS = Arrays.asList(WorkflowStatus.values()).stream()
+                .filter(status -> (status != WorkflowStatus.FAILED) && (status != WorkflowStatus.INDETERMINATE))
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * check whether there is a non-failed deployment on this mitigation name, this device name before.
+     * @param deviceName : device name
+     * @param mitigationName : mitigation name
+     * @param metrics : TSD metrics
+     * @return true, if there is a successful deployment on this mitigation name, this device name before.
+     * false, if there is not.
+     */
+    boolean doesMitigationNameExist(String deviceName, String mitigationName, TSDMetrics metrics) {
+        QuerySpec query = new QuerySpec().withAttributesToGet(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY)
+                .withConsistentRead(true).withHashKey(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY, deviceName)
+                .withRangeKeyCondition(new RangeKeyCondition(
+                        DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY).eq(mitigationName))
+                .withQueryFilters(new QueryFilter(WORKFLOW_STATUS_KEY).in(NON_FAILED_WORKFLOW_STATUS.toArray()),
+                        new QueryFilter(REQUEST_TYPE_KEY).ne(RequestType.DeleteRequest.name()),
+                        new QueryFilter(MitigationRequestsModel.DEFUNCT_DATE).notExist())
+                        .withMaxResultSize(50);
+        
+        try(TSDMetrics subMetrics = metrics.newSubMetrics(
+                "DDBBasedCreateRequestStorageHandler.doesMitigationNameExist")) {
+            try {
+                return dynamoDB.getTable(mitigationRequestsTableName).getIndex(MITIGATION_NAME_LSI)
+                        .query(query).getTotalCount() != 0;
+            } catch (RuntimeException ex) {
+                String message = "Failed to query dynamodb for checking doesMitigationNameExist, with query: "
+                        + ReflectionToStringBuilder.toString(query);
+                LOG.warn(message);
+                subMetrics.addOne(DDB_QUERY_FAILURE_COUNT);
+                throw ex;
+            }
+        }
+    }
+
     /**
      * Query DDB and check if there exists a duplicate request for the create request being processed. Protected for unit-testing.
      * @param deviceName DeviceName for which the new mitigation needs to be created.

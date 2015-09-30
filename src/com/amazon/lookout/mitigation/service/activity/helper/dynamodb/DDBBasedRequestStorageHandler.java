@@ -61,6 +61,7 @@ public abstract class DDBBasedRequestStorageHandler {
 
     public static final String MITIGATION_REQUEST_TABLE_NAME_PREFIX = MitigationRequestsModel.MITIGATION_REQUESTS_TABLE_NAME_PREFIX;
     public static final String ACTIVE_MITIGATIONS_TABLE_NAME_PREFIX = "ACTIVE_MITIGATIONS_";
+    public static final String DDB_QUERY_FAILURE_COUNT = "DynamoDBQueryFailureCount";
     
     private static final int NUM_RECORDS_TO_FETCH_FOR_MAX_WORKFLOW_ID = 5;
     

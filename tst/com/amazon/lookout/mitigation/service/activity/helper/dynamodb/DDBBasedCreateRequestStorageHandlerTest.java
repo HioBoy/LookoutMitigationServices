@@ -34,6 +34,7 @@ import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.BlastRadiusCheck;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
+import com.amazon.lookout.mitigation.service.DuplicateMitigationNameException400;
 import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
@@ -842,7 +843,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
-        
+
+        when(storageHandler.doesMitigationNameExist(anyString(), anyString(), any(TSDMetrics.class))).thenReturn(false);
+
         when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), anySet(), any(TSDMetrics.class))).thenCallRealMethod();
         
         // Asserting that the request's mitigation definition has a null action, which should get populated in the storeRequestForWorkflow method.
@@ -872,7 +875,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(null);
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
-        
+
+        when(storageHandler.doesMitigationNameExist(anyString(), anyString(), any(TSDMetrics.class))).thenReturn(false);
+
         when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), anySet(), any(TSDMetrics.class))).thenCallRealMethod();
         long workflowId = storageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
         assertEquals(workflowId, deviceNameAndScope.getDeviceScope().getMinWorkflowId());
@@ -969,7 +974,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         doThrow(new RuntimeException()).doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(storageHandler).storeRequestInDDB(any(CreateMitigationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
-        
+
+        when(storageHandler.doesMitigationNameExist(anyString(), anyString(), any(TSDMetrics.class))).thenReturn(false);
+
         when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), anySet(), any(TSDMetrics.class))).thenCallRealMethod();
         long workflowId = storageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
         assertEquals(workflowId, maxWorkflowId + 1);
@@ -984,5 +991,24 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                                                                            request.getMitigationTemplate(), null, subMetrics);
         verify(storageHandler, times(3)).queryAndCheckDuplicateMitigations(deviceName, deviceScope, mitigationDefinition, request.getMitigationName(), 
                                                                            request.getMitigationTemplate(), maxWorkflowId, subMetrics);
+    }
+
+    /**
+     * Validate duplicate mitigation exception is thrown when mitigation name is used before.
+     */
+    @Test(expected = DuplicateMitigationNameException400.class)
+    public void testMitigationNameUsedBefore() {
+        DDBBasedCreateRequestStorageHandler storageHandler = mock(DDBBasedCreateRequestStorageHandler.class);
+
+        CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
+
+        when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(null);
+
+        when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
+
+        when(storageHandler.doesMitigationNameExist(anyString(), anyString(), any(TSDMetrics.class))).thenReturn(true);
+
+        when(storageHandler.storeRequestForWorkflow(any(CreateMitigationRequest.class), anySet(), any(TSDMetrics.class))).thenCallRealMethod();
+        storageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
     }
 }

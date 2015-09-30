@@ -19,6 +19,7 @@ public abstract class DDBBasedMitigationStorageHandler {
     
     public static final String MITIGATION_INSTANCES_TABLE_NAME_PREFIX = "MITIGATION_INSTANCES_";
     public static final String ACTIVE_MITIGATIONS_TABLE_NAME_PREFIX = "ACTIVE_MITIGATIONS_";
+    public static final String DDB_QUERY_FAILURE_COUNT = "DynamoDBQueryFailureCount";
     
     // Below is a list of all the attributes we store in the MitigationInstances table.
     public static final String DEVICE_WORKFLOW_ID_KEY = "DeviceWorkflowId";

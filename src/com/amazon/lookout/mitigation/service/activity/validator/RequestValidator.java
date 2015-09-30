@@ -12,6 +12,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import lombok.NonNull;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
@@ -24,6 +25,9 @@ import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
+import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest;
+import com.amazon.lookout.mitigation.service.GetMitigationDefinitionRequest;
+import com.amazon.lookout.mitigation.service.GetMitigationHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
@@ -179,6 +183,56 @@ public class RequestValidator {
         validateMitigationName(request.getMitigationName());
     }
     
+    /**
+     * Validates if the request object passed to the GetMitigationHistory API is valid
+     * @param An instance of GetMitigationHistoryRequest representing the input to the GetMitigationHistory API
+     * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
+     */
+    public void validateGetMitigationHistoryRequest(
+            GetMitigationHistoryRequest request) {
+        validateServiceName(request.getServiceName());
+        validateDeviceName(request.getDeviceName());
+        validateDeviceScope(request.getDeviceScope());
+        validateMitigationName(request.getMitigationName());
+        Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
+        if (maxNumberOfHistoryEntriesToFetch != null) {
+            Validate.isTrue(maxNumberOfHistoryEntriesToFetch > 0);
+        }
+        Integer startVersion = request.getExclusiveStartVersion();
+        if (startVersion != null) {
+            Validate.isTrue(startVersion > 0);
+        }
+    }
+
+    /**
+     * Validates if the request object passed to the GetMitigationHistory API is valid
+     * @param An instance of GetMitigationHistoryRequest representing the input to the GetMitigationHistory API
+     * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
+     */
+    public void validateGetLocationDeploymentHistoryRequest(GetLocationDeploymentHistoryRequest request) {
+        validateDeviceName(request.getDeviceName());
+        validateLocation(request.getLocation());
+        Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
+        if (maxNumberOfHistoryEntriesToFetch != null) {
+            Validate.isTrue(maxNumberOfHistoryEntriesToFetch > 0);
+        }
+        Long lastEvaluatedTimestamp = request.getExclusiveLastEvaluatedTimestamp();
+        if (lastEvaluatedTimestamp != null) {
+            Validate.isTrue(lastEvaluatedTimestamp > 0);
+        }
+    }
+
+    /**
+     * Validate get mitigation definition request.
+     * @param request : GetMitigationDefinitionRequest
+     * throw IllegalArgumentException if it is invalid
+     */
+    public void validateGetMitigationDefinitionRequest(GetMitigationDefinitionRequest request) {
+        validateDeviceName(request.getDeviceName());
+        validateMitigationName(request.getMitigationName());
+        Validate.isTrue(request.getMitigationVersion() > 0);
+    }
+
     /**
      * Validates if the request object passed to the ListActiveMitigationsForService API is valid
      * @param A ListActiveMitigationsForServiceRequest object representing the input to the ListActiveMitigationsForService API
@@ -440,6 +494,14 @@ public class RequestValidator {
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
             }
+        }
+    }
+    
+    private void validateLocation(String location) {
+        if (isInvalidFreeFormText(location, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "Invalid location name found! A valid location name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
         }
     }
     
