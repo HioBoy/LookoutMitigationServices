@@ -3,6 +3,7 @@ package com.amazon.lookout.mitigation.service.activity.validator.template;
 import java.net.Inet4Address;
 import java.util.List;
 
+import com.amazon.arbor.ArborUtils;
 import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
 import com.amazon.lookout.mitigation.service.ArborBlackholeSetEnabledStateConstraint;
 import org.apache.commons.lang3.StringUtils;
@@ -94,7 +95,8 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
     }
     
     private static void validateCreateRequest(CreateMitigationRequest request) {
-        Validate.notEmpty(request.getMitigationName(), "mitigationName cannot be null or empty.");
+        validateMitigationName(request.getMitigationName());
+        validateDescription(request.getMitigationActionMetadata().getDescription());
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
         validateNoLocations(request.getLocations());
@@ -102,9 +104,10 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         validateNoDeploymentChecks(request.getPreDeploymentChecks());
         validateNoDeploymentChecks(request.getPostDeploymentChecks());
     }
-    
+
     private static void validateEditRequest(EditMitigationRequest request) {
-        Validate.notEmpty(request.getMitigationName(), "mitigationName cannot be null or empty.");
+        validateMitigationName(request.getMitigationName());
+        validateDescription(request.getMitigationActionMetadata().getDescription());
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
         validateNoLocations(request.getLocation());
@@ -112,7 +115,29 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         validateNoDeploymentChecks(request.getPreDeploymentChecks());
         validateNoDeploymentChecks(request.getPostDeploymentChecks());
     }
-    
+
+    private static void validateMitigationName(String mitigationName) {
+        if (StringUtils.isBlank(mitigationName)) {
+            throw new IllegalArgumentException("mitigationName cannot be null or empty");
+        }
+
+        String error = ArborUtils.checkArgument(mitigationName);
+        if (error != null) {
+            throw new IllegalArgumentException(String.format("Invalid mitigationName: %s", error));
+        }
+    }
+
+    private static void validateDescription(String description) {
+        if (description == null) {
+            return;
+        }
+
+        String error = ArborUtils.checkArgument(description);
+        if (error != null) {
+            throw new IllegalArgumentException(String.format("Invalid description: %s", error));
+        }
+    }
+
     private static void validateMitigationConstraint(Constraint constraint) {
         if (constraint == null) {
             throw new IllegalArgumentException("Constraint must not be null.");

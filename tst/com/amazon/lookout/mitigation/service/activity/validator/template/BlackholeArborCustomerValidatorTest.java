@@ -50,17 +50,54 @@ public class BlackholeArborCustomerValidatorTest {
     }
 
     @Test
-    public void mitigationNameIsNotEmpty() throws Exception {
+    @Parameters({
+        "",
+        "Cannot contain both space and \"quote",
+        "跑",
+        "#"
+    })
+    public void mitigationNameIsValid(String invalidMitigationName) throws Exception {
         assertThat(
             validationMessage(
                 validCreateMitigationRequest(),
-                request -> request.setMitigationName("")),
+                request -> request.setMitigationName(invalidMitigationName)),
             containsString("mitigationName"));
         assertThat(
             validationMessage(
                 validEditMitigationRequest(),
-                request -> request.setMitigationName("")),
+                request -> request.setMitigationName(invalidMitigationName)),
             containsString("mitigationName"));
+    }
+
+    @Test
+    public void descriptionCanBeNotSpecified() {
+        CreateMitigationRequest createRequest = validCreateMitigationRequest();
+        createRequest.getMitigationActionMetadata().setDescription(null);
+        validate(createRequest);
+
+
+        EditMitigationRequest editRequest = validEditMitigationRequest();
+        editRequest.getMitigationActionMetadata().setDescription(null);
+        validate(editRequest);
+    }
+
+    @Test
+    @Parameters({
+        "Cannot contain both space and \"quote",
+        "跑",
+        "#"
+    })
+    public void descriptionIsValid(String invalidDescription) throws Exception {
+        assertThat(
+            validationMessage(
+                validCreateMitigationRequest(),
+                request -> request.getMitigationActionMetadata().setDescription(invalidDescription)),
+            containsString("description"));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> request.getMitigationActionMetadata().setDescription(invalidDescription)),
+            containsString("description"));
     }
 
     @Test
