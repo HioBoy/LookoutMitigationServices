@@ -20,7 +20,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.activities.model.ActiveMitigationDetails;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.OperationNotSupportedException400;
@@ -39,7 +39,7 @@ public class ReportInactiveLocationActivityTest {
     
     @BeforeClass
     public static void setup() {
-        TestUtils.configure();
+        TestUtils.configureLogging();
     }
     
     @Test

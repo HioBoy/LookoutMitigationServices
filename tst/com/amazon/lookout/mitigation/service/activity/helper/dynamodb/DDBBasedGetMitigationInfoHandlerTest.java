@@ -21,7 +21,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -36,7 +36,7 @@ public class DDBBasedGetMitigationInfoHandlerTest {
     
     @BeforeClass
     public static void setUpOnce() {
-        TestUtils.configure();
+        TestUtils.configureLogging();
     }
     
     @Before

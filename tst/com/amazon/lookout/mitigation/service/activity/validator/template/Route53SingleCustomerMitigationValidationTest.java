@@ -21,7 +21,7 @@ import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.BlastRadiusCheck;
 import com.amazon.lookout.mitigation.service.CompositeOrConstraint;
 import com.amazon.lookout.mitigation.service.CountAction;
@@ -48,7 +48,7 @@ public class Route53SingleCustomerMitigationValidationTest {
     
     @BeforeClass
     public static void setUpOnce() {
-        TestUtils.configure();
+        TestUtils.configureLogging();
     }
     
     @Before

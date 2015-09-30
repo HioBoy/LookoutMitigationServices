@@ -30,7 +30,7 @@ import org.mockito.Mockito;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.BlastRadiusCheck;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
@@ -71,7 +71,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     
     @BeforeClass
     public static void setUpOnce() {
-        TestUtils.configure();
+        TestUtils.configureLogging();
     }
     
     @Before

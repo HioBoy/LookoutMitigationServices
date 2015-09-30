@@ -16,7 +16,7 @@ import org.apache.commons.logging.LogFactory;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
-import com.amazon.aws158.commons.dynamo.RouterMetadataConstants;
+import com.amazon.lookout.mitigation.router.model.RouterMetadataConstants;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.lookout.mitigation.router.model.RouterFilterInfoWithMetadata;
 import com.amazon.lookout.mitigation.service.CompositeAndConstraint;

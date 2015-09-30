@@ -27,7 +27,7 @@ import amazon.mws.response.GetMetricDataResponse;
 import amazon.mws.response.ResponseException;
 import amazon.odin.awsauth.OdinAWSCredentialsProvider;
 
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.ldaputils.LdapProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 
@@ -37,7 +37,7 @@ public class BlackwatchLocationsHelperTest {
 
     @BeforeClass
     public static void setup() {
-        TestUtils.configure();
+        TestUtils.configureLogging();
     }
     
     public static class MockMonitoringQueryClientProvider extends MonitoringQueryClientProvider {

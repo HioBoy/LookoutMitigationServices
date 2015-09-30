@@ -19,9 +19,9 @@ import org.joda.time.format.DateTimeFormatter;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.amazon.aws158.commons.dynamo.RouterMetadataConstants;
+import com.amazon.lookout.mitigation.router.model.RouterMetadataConstants;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.router.model.RouterFilterInfoWithMetadata;
 import com.amazon.lookout.mitigation.service.CompositeAndConstraint;
 import com.amazon.lookout.mitigation.service.CompositeOrConstraint;
@@ -53,7 +53,7 @@ public class DDBBasedRouterMetadataHelperTest {
     
     @BeforeClass
     public static void setup() {
-        TestUtils.configure();
+        TestUtils.configureLogging();
     }
     
     @Test

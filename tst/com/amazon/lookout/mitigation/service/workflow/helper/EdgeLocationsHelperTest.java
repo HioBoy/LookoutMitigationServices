@@ -36,7 +36,7 @@ import amazon.mws.response.ResponseException;
 import amazon.odin.awsauth.OdinAWSCredentialsProvider;
 
 import com.amazon.aws158.commons.io.FileUtils;
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.coral.metrics.NullMetricsFactory;
 import com.amazon.daas.control.DNSServer;
 import com.amazon.daas.control.DaasControlAPIServiceV20100701Client;
@@ -57,7 +57,7 @@ public class EdgeLocationsHelperTest {
     
     @BeforeClass
     public static void setup() {
-        TestUtils.configure();
+        TestUtils.configureLogging();
     }
     
     private MonitoringQueryClientProvider getMonitoringQueryClientProviderForBWPOP() throws Exception {

@@ -1,6 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity;
 
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
@@ -30,7 +30,7 @@ import static org.mockito.Mockito.mock;
 public class DeleteMitigationFromAllLocationsActivityTest {
     @BeforeClass
     public static void setUpOnce() {
-        TestUtils.configure(Level.OFF);
+        TestUtils.configureLogging();
     }
 
     @Test

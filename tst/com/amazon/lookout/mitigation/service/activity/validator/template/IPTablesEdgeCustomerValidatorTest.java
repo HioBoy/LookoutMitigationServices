@@ -1,6 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.coral.google.common.collect.ImmutableList;
 import com.amazon.lookout.mitigation.service.ApplyIPTablesRulesAction;
 import com.amazon.lookout.mitigation.service.CompositeAndConstraint;
@@ -37,7 +37,7 @@ import static org.mockito.Mockito.mock;
 public class IPTablesEdgeCustomerValidatorTest {
     @BeforeClass
     public static void setUpOnce() {
-        TestUtils.configure(Level.OFF);
+        TestUtils.configureLogging();
     }
 
     @Test

@@ -17,7 +17,7 @@ import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
@@ -48,7 +48,7 @@ public class RequestValidatorTest {
     
     @BeforeClass
     public static void setUpOnce() {
-        TestUtils.configure();
+        TestUtils.configureLogging();
     }
     
     @Before
