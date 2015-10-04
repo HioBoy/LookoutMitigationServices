@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import edu.umd.cs.findbugs.annotations.SuppressWarnings;
+import lombok.Setter;
 import org.apache.commons.lang.Validate;
 
 import lombok.AllArgsConstructor;
@@ -48,11 +48,11 @@ public class TrafficFilterConfiguration {
      * origin traffic filter, used for parsing and validating input traffic filter in JSON configuration
      */
     @Getter
-    @SuppressWarnings("UWF_UNWRITTEN_FIELD")
+    @Setter
     private static class OriginTrafficFilter {
         private String name;
         private String desc;
-        private Map<String, String>filter;
+        private Map<String, String> filter;
     }
     
     /**

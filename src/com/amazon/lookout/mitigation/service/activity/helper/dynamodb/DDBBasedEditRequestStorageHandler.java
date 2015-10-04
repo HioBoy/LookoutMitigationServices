@@ -50,6 +50,8 @@ public class DDBBasedEditRequestStorageHandler extends DDBBasedRequestStorageHan
 
     public DDBBasedEditRequestStorageHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain, @Nonnull TemplateBasedRequestValidator templateBasedRequestValidator) {
         super(dynamoDBClient, domain);
+
+        Validate.notNull(templateBasedRequestValidator);
         this.templateBasedRequestValidator = templateBasedRequestValidator;
     }
 

@@ -131,6 +131,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
             validateRouterMitigationName(mitigationName, mitigationTemplate);
             break;
         default:
+            throw new IllegalArgumentException("Mitigation template is not supported: " + mitigationTemplate);
         }            
     }
     
@@ -152,6 +153,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
             checkForNoLocations(locationsToApplyMitigation, mitigationTemplate);
             break;
         default:
+            throw new IllegalArgumentException("Mitigation template is not supported: " + mitigationTemplate);
         }
     }
 
@@ -336,6 +338,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
             validateNoDeploymentChecks(preDeploymentChecks, mitigationTemplate);
             break;
         default:
+            throw new IllegalArgumentException("Mitigation template is not supported: " + mitigationTemplate);
         }
     }
     
@@ -348,6 +351,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
             validateNoDeploymentChecks(postDeploymentChecks, mitigationTemplate);
             break;
         default:
+            throw new IllegalArgumentException("Mitigation template is not supported: " + mitigationTemplate);
         }
     }
     
