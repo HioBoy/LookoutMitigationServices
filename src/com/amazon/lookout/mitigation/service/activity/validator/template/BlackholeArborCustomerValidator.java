@@ -58,6 +58,7 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         Validate.notNull(deviceNameAndScope);
         
         if (request instanceof DeleteMitigationFromAllLocationsRequest) {
+            validateDeleteRequest((DeleteMitigationFromAllLocationsRequest) request);
             return;
         }
         
@@ -74,7 +75,7 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         throw new IllegalArgumentException(
             String.format("request %s is not supported for mitigation template %s", request, mitigationTemplate));
     }
-    
+
     @Override
     public void validateCoexistenceForTemplateAndDevice(
             String templateForNewDefinition,
@@ -83,17 +84,21 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
             String templateForExistingDefinition,
             String mitigationNameForExistingDefinition,
             MitigationDefinition existingDefinition) {
-       
+
         Validate.notEmpty(templateForNewDefinition);
         Validate.notEmpty(mitigationNameForNewDefinition);
         Validate.notNull(newDefinition);
         Validate.notEmpty(templateForExistingDefinition);
         Validate.notEmpty(mitigationNameForExistingDefinition);
         Validate.notNull(existingDefinition);
-        
+
         // We do not current validate if there is a co-existed mitigation for the template and device
     }
-    
+
+    private void validateDeleteRequest(DeleteMitigationFromAllLocationsRequest request) {
+        validateMitigationName(request.getMitigationName());
+    }
+
     private static void validateCreateRequest(CreateMitigationRequest request) {
         validateMitigationName(request.getMitigationName());
         validateDescription(request.getMitigationActionMetadata().getDescription());

@@ -32,7 +32,7 @@ public class BlackholeArborCustomerValidatorTest {
     public void validRequest() throws Exception {
         validate(validCreateMitigationRequest());
         validate(validEditMitigationRequest());
-        validate(anyDeleteMitigationRequest());
+        validate(validDeleteMitigationRequest());
     }
 
     @Test
@@ -65,6 +65,11 @@ public class BlackholeArborCustomerValidatorTest {
         assertThat(
             validationMessage(
                 validEditMitigationRequest(),
+                request -> request.setMitigationName(invalidMitigationName)),
+            containsString("mitigationName"));
+        assertThat(
+            validationMessage(
+                validDeleteMitigationRequest(),
                 request -> request.setMitigationName(invalidMitigationName)),
             containsString("mitigationName"));
     }
@@ -379,8 +384,20 @@ public class BlackholeArborCustomerValidatorTest {
         return request;
     }
 
-    private static DeleteMitigationFromAllLocationsRequest anyDeleteMitigationRequest() {
-        return new DeleteMitigationFromAllLocationsRequest();
+    private static DeleteMitigationFromAllLocationsRequest validDeleteMitigationRequest() {
+        DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
+        request.setMitigationName("TestMitigation");
+        request.setServiceName(ServiceName.Blackhole);
+        request.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
+        request.setMitigationVersion(2);
+
+        MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
+        actionMetadata.setUser("username");
+        actionMetadata.setToolName("unit-tests");
+        actionMetadata.setDescription("description");
+        request.setMitigationActionMetadata(actionMetadata);
+
+        return request;
     }
 
     private static MitigationModificationRequest notSupportedRequest() {
