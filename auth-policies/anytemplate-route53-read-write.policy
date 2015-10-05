@@ -1,0 +1,25 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "lookout:read-*",
+            "Resource": "arn:aws:lookout:*::*/Route53-*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "lookout:read-*",
+            "Resource": "arn:aws:lookout:*::*/Edge-*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "lookout:write-*",
+            "Resource": "arn:aws:lookout:*::*/Route53-POP_ROUTER"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "lookout:write-*",
+            "Resource": "arn:aws:lookout:*::*/Edge-*"
+        }
+    ]
+}
