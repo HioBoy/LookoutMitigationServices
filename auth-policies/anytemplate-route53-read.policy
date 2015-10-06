@@ -4,7 +4,7 @@
         {
             "Effect": "Allow",
             "Action": "lookout:read-*",
-            "Resource": "arn:aws:lookout:*::*/Route53-*"
+            "Resource": "arn:aws:lookout:us-east-1::Route53-*"
         }
     ]
 }

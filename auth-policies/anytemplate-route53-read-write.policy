@@ -19,7 +19,7 @@
         {
             "Effect": "Allow",
             "Action": "lookout:write-*",
-            "Resource": "arn:aws:lookout:*::*/Edge-*"
+            "Resource": "arn:aws:lookout:*::*/Edge-POP_HOSTS_IP_TABLES"
         }
     ]
 }

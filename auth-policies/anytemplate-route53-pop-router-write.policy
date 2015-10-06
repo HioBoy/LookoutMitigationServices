@@ -1,0 +1,10 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "lookout:write-*",
+      "Resource": "arn:aws:lookout:us-east-1::Route53-POP_ROUTER"
+    }
+  ]
+}
