@@ -19,8 +19,6 @@ import com.amazon.lookoutfakerouterservice.RouterMetaDataStruct;
 
 import lombok.NonNull;
 
-import javax.annotation.Nonnull;
-
 /**
  * Locations helper to interact with the Fake Router Service. Will return lists
  * of fake routers that exist in the service
@@ -35,12 +33,11 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
     //set time of last update to an expired timestamp
     private volatile DateTime timeOfLastUpdate = new DateTime().minus(POP_LIST_EXPIRATION_SECONDS * 2);
 
-    
     @ConstructorProperties({ "cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries",
             "popsListDir", "metricsFactory", "fakeBlackWatchClassicLocations" })
-    public FakeLocationsHelper(@Nonnull EdgeOperatorServiceClient cloudfrontClient, @Nonnull DaasControlAPIServiceV20100701Client daasClient,
-            @Nonnull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, @Nonnull String popsListDiskCacheDirName,
-            @Nonnull MetricsFactory metricsFactory, @Nonnull List<String> fakeBlackWatchClassicLocations) {
+    public FakeLocationsHelper(EdgeOperatorServiceClient cloudfrontClient, DaasControlAPIServiceV20100701Client daasClient,
+            BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, String popsListDiskCacheDirName,
+            MetricsFactory metricsFactory, List<String> fakeBlackWatchClassicLocations) {
         super(cloudfrontClient, daasClient, bwLocationsHelper, sleepBetweenRetriesInMillis, popsListDiskCacheDirName,
                 metricsFactory, fakeBlackWatchClassicLocations);
         refreshFakeRouters();

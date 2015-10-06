@@ -27,7 +27,6 @@ import com.amazonaws.services.simpleworkflow.flow.DataConverter;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.google.common.util.concurrent.Uninterruptibles;
 
-import javax.annotation.Nonnull;
 
 public class DDBBasedEditRequestStorageHandler extends DDBBasedRequestStorageHandler implements RequestStorageHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedEditRequestStorageHandler.class);
@@ -48,10 +47,9 @@ public class DDBBasedEditRequestStorageHandler extends DDBBasedRequestStorageHan
     private final DataConverter jsonDataConverter = new JsonDataConverter();
     private final TemplateBasedRequestValidator templateBasedRequestValidator;
 
-    public DDBBasedEditRequestStorageHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain, @Nonnull TemplateBasedRequestValidator templateBasedRequestValidator) {
+    public DDBBasedEditRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain, @NonNull TemplateBasedRequestValidator templateBasedRequestValidator) {
         super(dynamoDBClient, domain);
 
-        Validate.notNull(templateBasedRequestValidator);
         this.templateBasedRequestValidator = templateBasedRequestValidator;
     }
 
