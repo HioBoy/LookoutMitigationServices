@@ -2,11 +2,11 @@ package com.amazon.lookout.mitigation.service.activity.validator.template;
 
 import java.beans.ConstructorProperties;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer.IPTablesJsonValidator;
 
+import lombok.NonNull;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -44,11 +44,8 @@ public class TemplateBasedRequestValidator {
      *                              this matcher, in case they have to perform any subnet specific checks.
      */
     @ConstructorProperties({"serviceSubnetsMatcher", "edgeLocationsHelper", "blackWatchS3Client"})
-    public TemplateBasedRequestValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher, 
-            @Nonnull EdgeLocationsHelper edgeLocationsHelper, @Nonnull AmazonS3 blackWatchS3Client) {
-        Validate.notNull(serviceSubnetsMatcher);
-        Validate.notNull(edgeLocationsHelper);
-        Validate.notNull(blackWatchS3Client);
+    public TemplateBasedRequestValidator(@NonNull ServiceSubnetsMatcher serviceSubnetsMatcher,
+            @NonNull EdgeLocationsHelper edgeLocationsHelper, @NonNull AmazonS3 blackWatchS3Client) {
         
         this.blackWatchS3Client = blackWatchS3Client;
         this.edgeLocationsHelper = edgeLocationsHelper;
@@ -63,9 +60,7 @@ public class TemplateBasedRequestValidator {
      * @param metrics
      * @return void. Returns nothing, but will propagate any exceptions thrown by the ServiceTemplateValidator whom this validation is delegated to.
      */
-    public void validateRequestForTemplate(@Nonnull MitigationModificationRequest request, @Nonnull TSDMetrics metrics) {
-        Validate.notNull(request);
-        Validate.notNull(metrics);
+    public void validateRequestForTemplate(@NonNull MitigationModificationRequest request, @NonNull TSDMetrics metrics) {
         
         TSDMetrics subMetrics = metrics.newSubMetrics("TemplateBasedRequestValidator.validateRequestForTemplate");
         try {
@@ -92,15 +87,13 @@ public class TemplateBasedRequestValidator {
      * @param nameForExistingDefinition MitigationName of the existing mitigation.
      * @param existingDefinition MitigationDefinition of the existing mitigation.
      */
-    public void validateCoexistenceForTemplateAndDevice(@Nonnull String templateForNewDefinition, @Nonnull String nameForNewDefinition, @Nonnull MitigationDefinition newDefinition, 
-                                                        @Nonnull String templateForExistingDefinition, @Nonnull String nameForExistingDefinition, 
-                                                        @Nonnull MitigationDefinition existingDefinition) {
+    public void validateCoexistenceForTemplateAndDevice(@NonNull String templateForNewDefinition, @NonNull String nameForNewDefinition, @NonNull MitigationDefinition newDefinition,
+                                                        @NonNull String templateForExistingDefinition, @NonNull String nameForExistingDefinition,
+                                                        @NonNull MitigationDefinition existingDefinition) {
         Validate.notEmpty(templateForNewDefinition);
         Validate.notEmpty(nameForNewDefinition);
-        Validate.notNull(newDefinition);
         Validate.notEmpty(templateForExistingDefinition);
         Validate.notEmpty(nameForExistingDefinition);
-        Validate.notNull(existingDefinition);
         
         ServiceTemplateValidator templateBasedValidator = getValidator(templateForNewDefinition);
         

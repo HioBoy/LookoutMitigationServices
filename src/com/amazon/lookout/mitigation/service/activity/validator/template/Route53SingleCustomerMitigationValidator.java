@@ -6,12 +6,12 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 
+import lombok.NonNull;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
@@ -56,8 +56,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     private final List<String> validPacketAttributeValues;
     private final DataConverter jsonDataConverter = new JsonDataConverter();
     
-    public Route53SingleCustomerMitigationValidator(@Nonnull ServiceSubnetsMatcher serviceSubnetsMatcher) {
-        Validate.notNull(serviceSubnetsMatcher);
+    public Route53SingleCustomerMitigationValidator(@NonNull ServiceSubnetsMatcher serviceSubnetsMatcher) {
         this.serviceSubnetsMatcher = serviceSubnetsMatcher;
         
         this.validPacketAttributeValues = new ArrayList<>();
@@ -67,8 +66,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     }
     
     @Override
-    public void validateRequestForTemplate(@Nonnull MitigationModificationRequest request, @Nonnull String mitigationTemplate) {
-        Validate.notNull(request);
+    public void validateRequestForTemplate(@NonNull MitigationModificationRequest request, @NonNull String mitigationTemplate) {
         Validate.notEmpty(mitigationTemplate);
         
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
@@ -88,12 +86,10 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     }
 
     @Override
-    public void validateRequestForTemplateAndDevice(@Nonnull MitigationModificationRequest request, @Nonnull String mitigationTemplate, 
-                                                    @Nonnull DeviceNameAndScope deviceNameAndScope) {
-        Validate.notNull(request);
+    public void validateRequestForTemplateAndDevice(@NonNull MitigationModificationRequest request, @NonNull String mitigationTemplate,
+                                                    @NonNull DeviceNameAndScope deviceNameAndScope) {
         Validate.notEmpty(mitigationTemplate);
-        Validate.notNull(deviceNameAndScope);
-        
+
         String mitigationName = request.getMitigationName();
         
         MitigationDefinition mitigationDefinition = null;
@@ -281,15 +277,13 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     }
 
     @Override
-    public void validateCoexistenceForTemplateAndDevice(@Nonnull String templateForNewDefinition, @Nonnull String nameForNewDefinition, 
-                                                        @Nonnull MitigationDefinition newDefinition, @Nonnull String templateForExistingDefinition, 
-                                                        @Nonnull String nameForExistingDefinition, @Nonnull MitigationDefinition existingDefinition) {
+    public void validateCoexistenceForTemplateAndDevice(@NonNull String templateForNewDefinition, @NonNull String nameForNewDefinition,
+                                                        @NonNull MitigationDefinition newDefinition, @NonNull String templateForExistingDefinition,
+                                                        @NonNull String nameForExistingDefinition, @NonNull MitigationDefinition existingDefinition) {
         Validate.notEmpty(templateForNewDefinition);
         Validate.notEmpty(nameForNewDefinition);
-        Validate.notNull(newDefinition);
         Validate.notEmpty(templateForExistingDefinition);
         Validate.notEmpty(nameForExistingDefinition);
-        Validate.notNull(existingDefinition);
         
         if (templateForNewDefinition.equals(MitigationTemplate.Router_RateLimit_Route53Customer)) {
             checkForDuplicateDefinition(templateForNewDefinition, nameForNewDefinition, newDefinition, templateForExistingDefinition, nameForExistingDefinition, existingDefinition);
@@ -310,9 +304,9 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
      * 
      * We also first check if the hashcode for definitions matches - which acts as a shortcut to avoid deep inspection of the definitions.
      */
-    private void checkForDuplicateDefinition(@Nonnull String templateForNewDefinition, @Nonnull String nameForNewDefinition, 
-                                             @Nonnull MitigationDefinition newDefinition, @Nonnull String templateForExistingDefinition, 
-                                             @Nonnull String nameForExistingDefinition, @Nonnull MitigationDefinition existingDefinition) {
+    private void checkForDuplicateDefinition(@NonNull String templateForNewDefinition, @NonNull String nameForNewDefinition,
+                                             @NonNull MitigationDefinition newDefinition, @NonNull String templateForExistingDefinition,
+                                             @NonNull String nameForExistingDefinition, @NonNull MitigationDefinition existingDefinition) {
         if ((existingDefinition.hashCode()== newDefinition.hashCode()) && newDefinition.equals(existingDefinition)) {
             String msg = "Found identical mitigation definition: " + nameForExistingDefinition + " for existingTemplate: " + templateForExistingDefinition +
                          " with definition: " + jsonDataConverter.toData(existingDefinition) + " for request with MitigationName: " + nameForNewDefinition + 
@@ -329,7 +323,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         }
     }
     
-    private void validatePreDeploymentChecks(@Nullable List<MitigationDeploymentCheck> preDeploymentChecks, @Nonnull String mitigationTemplate) {
+    private void validatePreDeploymentChecks(@Nullable List<MitigationDeploymentCheck> preDeploymentChecks, @NonNull String mitigationTemplate) {
         switch (mitigationTemplate) {
         case MitigationTemplate.Router_RateLimit_Route53Customer:
             validateNoDeploymentChecks(preDeploymentChecks, mitigationTemplate);
@@ -342,7 +336,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         }
     }
     
-    private void validatePostDeploymentChecks(@Nullable List<MitigationDeploymentCheck> postDeploymentChecks, @Nonnull String mitigationTemplate) {
+    private void validatePostDeploymentChecks(@Nullable List<MitigationDeploymentCheck> postDeploymentChecks, @NonNull String mitigationTemplate) {
         switch (mitigationTemplate) {
         case MitigationTemplate.Router_RateLimit_Route53Customer:
             validateNoDeploymentChecks(postDeploymentChecks, mitigationTemplate);

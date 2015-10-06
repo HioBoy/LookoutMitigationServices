@@ -3,9 +3,8 @@ package com.amazon.lookout.mitigation.service.workflow;
 import java.beans.ConstructorProperties;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
+import lombok.NonNull;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -52,8 +51,7 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
     private final SWFWorkflowClientProvider workflowClientProvider;
     
     @ConstructorProperties({"swfWorkflowProvider"})
-    public SWFWorkflowStarterImpl(@Nonnull SWFWorkflowClientProvider workflowClientProvider) {
-        Validate.notNull(workflowClientProvider);
+    public SWFWorkflowStarterImpl(@NonNull SWFWorkflowClientProvider workflowClientProvider) {
         this.workflowClientProvider = workflowClientProvider;
     }
     
@@ -66,11 +64,9 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * @return WorkflowClientExternal Representing the client that should be used to start running this workflow.
      */
     @Override
-    public WorkflowClientExternal createMitigationModificationWorkflowClient(long workflowId, @Nonnull MitigationModificationRequest request, @Nonnull String deviceName, @Nonnull TSDMetrics metrics) {
+    public WorkflowClientExternal createMitigationModificationWorkflowClient(long workflowId, @NonNull MitigationModificationRequest request, @NonNull String deviceName, @NonNull TSDMetrics metrics) {
         Validate.isTrue(workflowId > 0);
-        Validate.notNull(request);
         Validate.notEmpty(deviceName);
-        Validate.notNull(metrics);
         
         TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.createMitigationModificationWorkflowClient");
         try {
@@ -84,9 +80,8 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
     }
     
     @Override
-    public WorkflowClientExternal createReaperWorkflowClient(String swfWorkflowId, @Nonnull TSDMetrics metrics) {
+    public WorkflowClientExternal createReaperWorkflowClient(String swfWorkflowId, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(swfWorkflowId);
-        Validate.notNull(metrics);
         
         TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.createReaperWorkflowClient");
         try {
@@ -109,17 +104,14 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to check for workflowId's uniqueness.
      */
     @Override
-    public void startMitigationModificationWorkflow(long workflowId, @Nonnull MitigationModificationRequest request, @Nonnull Set<String> locationsToDeploy, 
-                                                    @Nonnull RequestType requestType, int mitigationVersion, @Nonnull String deviceName, @Nonnull String deviceScope, 
-                                                    @Nonnull WorkflowClientExternal workflowExternalClient, @Nonnull TSDMetrics metrics) {
+    public void startMitigationModificationWorkflow(long workflowId, @NonNull MitigationModificationRequest request, @NonNull Set<String> locationsToDeploy,
+                                                    @NonNull RequestType requestType, int mitigationVersion, @NonNull String deviceName, @NonNull String deviceScope,
+                                                    @NonNull WorkflowClientExternal workflowExternalClient, @NonNull TSDMetrics metrics) {
         Validate.isTrue(workflowId > 0);
-        Validate.notNull(request);
         Validate.notEmpty(locationsToDeploy);
         Validate.isTrue(mitigationVersion > 0);
         Validate.notEmpty(deviceName);
         Validate.notEmpty(deviceScope);
-        Validate.notNull(workflowExternalClient);
-        Validate.notNull(metrics);
         
         TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.startMitigationModificationWorkflow");
         try {
@@ -167,12 +159,9 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to check for workflowId's uniqueness.
      */
     @Override
-    public void startReaperWorkflow(@Nonnull String workflowId, @Nonnull RequestToReap requestToReap, @Nonnull WorkflowClientExternal workflowExternalClient, @Nonnull TSDMetrics metrics) {
+    public void startReaperWorkflow(@NonNull String workflowId, @NonNull RequestToReap requestToReap, @NonNull WorkflowClientExternal workflowExternalClient, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(workflowId);
-        Validate.notNull(requestToReap);
-        Validate.notNull(workflowExternalClient);
-        Validate.notNull(metrics);
-        
+
         TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.startReaperWorkflow");
         try {
             // Add workflow properties to request metrics.

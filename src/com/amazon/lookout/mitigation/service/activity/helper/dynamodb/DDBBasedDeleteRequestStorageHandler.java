@@ -6,8 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.List;
 
-import javax.annotation.Nonnull;
-
+import lombok.NonNull;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -49,7 +48,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
     private static final String NUM_ACTIVE_INSTANCES_FOR_MITIGATIONS = "NumActiveMitigationInstances";
     private static final String NUM_ATTEMPTS_TO_STORE_DELETE_REQUEST = "NumDeleteRequestStoreAttempts";
     
-    public DDBBasedDeleteRequestStorageHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain) {
+    public DDBBasedDeleteRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain) {
         super(dynamoDBClient, domain);
     }
 
@@ -64,16 +63,14 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
      * 6. If when storing the request we encounter an exception, it could be either because someone else started using the maxWorkflowId+1 workflowId for that device
      *    or it is some transient exception. In either case, we query the DDB table once again for mitigations >= maxWorkflowId for the device and
      *    continue with step 3. 
-     * @param deleteRequest Request to be stored.
+     * @param request Request to be stored.
      * @param locations Set of String where this request applies.
      * @param metrics
      * @return The workflowId that this request was stored with, using the algorithm above.
      */
     @Override
-    public long storeRequestForWorkflow(@Nonnull MitigationModificationRequest request, @Nonnull Set<String> locations, @Nonnull TSDMetrics metrics) {
-        Validate.notNull(request);
+    public long storeRequestForWorkflow(@NonNull MitigationModificationRequest request, @NonNull Set<String> locations, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(locations);
-        Validate.notNull(metrics);
 
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedDeleteRequestStorageHandler.storeRequestForWorkflow");
         int numAttempts = 0;

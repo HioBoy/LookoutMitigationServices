@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
+import lombok.NonNull;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
@@ -35,7 +35,7 @@ public class ServiceSubnetsMatcher {
         private final String subnet;
         private final int maskLength;
         
-        public ServiceSubnet(@Nonnull String serviceName, @Nonnull String subnet, @Nonnull int maskLength) {
+        public ServiceSubnet(@NonNull String serviceName, @NonNull String subnet, @NonNull int maskLength) {
             Validate.notEmpty(serviceName);
             Validate.notEmpty(subnet);
             Validate.isTrue((maskLength > 0) && (maskLength <= 32));
@@ -60,7 +60,7 @@ public class ServiceSubnetsMatcher {
     
     private final HashTrie<ServiceSubnet> validServiceSubnetsTrie;
     
-    public ServiceSubnetsMatcher(@Nonnull List<CustomerSubnetsFetcher> serviceSubnetsFetcher) {
+    public ServiceSubnetsMatcher(@NonNull List<CustomerSubnetsFetcher> serviceSubnetsFetcher) {
         Validate.notEmpty(serviceSubnetsFetcher);
         
         Map<String, List<String>> serviceSubnetsMap = new HashMap<>();
@@ -123,7 +123,7 @@ public class ServiceSubnetsMatcher {
      * @param subnetToCheck Subnet to check against the service's subnets.
      * @return String representing serviceName for the service whose subnet matches (or is a super-set) the input subnet. Null otherwise.
      */
-    public String getServiceForSubnet(@Nonnull String subnetToCheck) {
+    public String getServiceForSubnet(@NonNull String subnetToCheck) {
         Validate.notEmpty(subnetToCheck);
         
         String matchedServiceName = null;
@@ -169,7 +169,7 @@ public class ServiceSubnetsMatcher {
      * @param subnetsToCheck List of subnets to check against service's subnets.
      * @return String representing serviceName for the service whose subnets matches (or is a super-set) the input subnets. Null otherwise.
      */
-    public String getServiceForSubnets(@Nonnull List<String> subnetsToCheck) {
+    public String getServiceForSubnets(@NonNull List<String> subnetsToCheck) {
         Validate.notEmpty(subnetsToCheck);
         
         String serviceForAllSubnets = null;
@@ -200,7 +200,7 @@ public class ServiceSubnetsMatcher {
      * @param subnetsToCheck List of subnets to check against service's subnets.
      * @return Set<String> representing serviceNames for the services whose subnets matches (or is a super-set) one or more of the input subnets. Empty otherwise.
      */
-    public Set<String> getAllServicesForSubnets(@Nonnull List<String> subnetsToCheck) {
+    public Set<String> getAllServicesForSubnets(@NonNull List<String> subnetsToCheck) {
         Validate.notEmpty(subnetsToCheck);
         
         Set<String> servicesForSubnets = new HashSet<>();

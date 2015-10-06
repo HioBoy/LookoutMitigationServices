@@ -4,8 +4,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
+import lombok.NonNull;
 import org.apache.commons.lang.Validate;
 
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
@@ -23,9 +22,7 @@ public class TemplateBasedLocationsManager {
     // Maintain a map of templateName to the locationsHelper for the template.
     private final ImmutableMap<String, TemplateBasedLocationsHelper> templateBasedLocationsHelpers;
     
-    public TemplateBasedLocationsManager(@Nonnull Route53SingleCustomerTemplateLocationsHelper route53SingleCustomerHelper) {
-        Validate.notNull(route53SingleCustomerHelper);
-        
+    public TemplateBasedLocationsManager(@NonNull Route53SingleCustomerTemplateLocationsHelper route53SingleCustomerHelper) {
         ImmutableMap.Builder<String, TemplateBasedLocationsHelper> mapBuilder = new ImmutableMap.Builder<>();
         mapBuilder.put(MitigationTemplate.Router_RateLimit_Route53Customer, route53SingleCustomerHelper);
         // Router_CountMode_Route53Customer is currently used only by external monitors, and

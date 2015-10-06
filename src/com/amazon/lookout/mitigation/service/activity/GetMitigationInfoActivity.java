@@ -6,9 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
-import org.apache.commons.lang.Validate;
+import lombok.NonNull;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,7 +48,7 @@ public class GetMitigationInfoActivity extends Activity {
         BadRequest,
         InternalError,
         MissingMitigation
-    };
+    }
     
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
@@ -62,22 +60,18 @@ public class GetMitigationInfoActivity extends Activity {
     private final MitigationInstanceInfoHandler mitigationInstanceHandler;
     
     @ConstructorProperties({"requestValidator", "requestInfoHandler", "mitigationInstanceHandler"})
-    public GetMitigationInfoActivity(@Nonnull RequestValidator requestValidator, @Nonnull RequestInfoHandler requestInfoHandler, 
-                                     @Nonnull MitigationInstanceInfoHandler mitigationInstanceHandler) {
-        Validate.notNull(requestValidator);
+    public GetMitigationInfoActivity(@NonNull RequestValidator requestValidator, @NonNull RequestInfoHandler requestInfoHandler,
+                                     @NonNull MitigationInstanceInfoHandler mitigationInstanceHandler) {
+
         this.requestValidator = requestValidator;
-        
-        Validate.notNull(requestInfoHandler);
         this.requestInfoHandler = requestInfoHandler;
-        
-        Validate.notNull(mitigationInstanceHandler);
         this.mitigationInstanceHandler = mitigationInstanceHandler;
     }
 
     @Validated
     @Operation("GetMitigationInfo")
     @Documentation("GetMitigationInfo")
-    public @Nonnull GetMitigationInfoResponse enact(@Nonnull GetMitigationInfoRequest request) {
+    public @NonNull GetMitigationInfoResponse enact(@NonNull GetMitigationInfoRequest request) {
         // Wrap the CoralMetrics for this activity in a TSDMetrics instance.
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "GetMitigationInfo.enact");
         

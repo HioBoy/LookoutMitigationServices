@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,13 +30,13 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
     // Keys for TSDMetric properties.
     private static final String NUM_ATTEMPTS_TO_GET_MITIGATION_INSTANCE_STATUSES = "NumGetMitigationInstanceStatusesAttempts";
     
-    public DDBBasedGetMitigationInfoHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain) {
+    public DDBBasedGetMitigationInfoHandler(AmazonDynamoDBClient dynamoDBClient, String domain) {
         super(dynamoDBClient, domain);
     }
     
     /**
      * Generate a list of MitigationInstanceStatus.
-     * @param device The name of the device.
+     * @param deviceName The name of the device.
      * @param jobId The job id of the mitigation instance.
      * @param tsdMetrics A TSDMetrics object.
      */
@@ -104,7 +102,7 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
     
     /**
      * Generate a List of MitigationInstanceStatuses from a List of Map of String to AttributeValue.
-     * @param list A List of Map of String to AttributeValue.
+     * @param keyValues A List of Map of String to AttributeValue.
      * @return A List of MitigationInstanceStatuses
      */
     private List<MitigationInstanceStatus> mitigationInstanceStatusListConverter(List<Map<String, AttributeValue>> keyValues){ 

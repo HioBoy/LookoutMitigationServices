@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
+import lombok.NonNull;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -64,10 +64,9 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
 
     private final TemplateBasedRequestValidator templateBasedRequestValidator;
 
-    public DDBBasedCreateRequestStorageHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain, @Nonnull TemplateBasedRequestValidator templateBasedRequestValidator) {
+    public DDBBasedCreateRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain, @NonNull TemplateBasedRequestValidator templateBasedRequestValidator) {
         super(dynamoDBClient, domain);
 
-        Validate.notNull(templateBasedRequestValidator);
         this.templateBasedRequestValidator = templateBasedRequestValidator;
     }
 
@@ -88,10 +87,8 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
      * @return The workflowId that this request was stored with, using the algorithm above.
      */
     @Override
-    public long storeRequestForWorkflow(@Nonnull MitigationModificationRequest request, @Nonnull Set<String> locations, @Nonnull TSDMetrics metrics) {
-        Validate.notNull(request);
+    public long storeRequestForWorkflow(@NonNull MitigationModificationRequest request, @NonNull Set<String> locations, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(locations);
-        Validate.notNull(metrics);
         
         CreateMitigationRequest createMitigationRequest = (CreateMitigationRequest) request;
 

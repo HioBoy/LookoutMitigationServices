@@ -2,9 +2,9 @@ package com.amazon.lookout.mitigation.service.activity.helper;
 
 import java.util.Set;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
+import lombok.NonNull;
 import org.apache.commons.lang.Validate;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
@@ -35,9 +35,8 @@ public class ActivityHelper {
      * @param templateInRequest String representing the template that was passed in the request.
      * @param tsdMetrics TSDMetrics instance to which we need to add the count metrics.
      */
-    public static void addTemplateNameCountMetrics(@Nonnull String templateInRequest, @Nonnull TSDMetrics tsdMetrics) {
+    public static void addTemplateNameCountMetrics(@NonNull String templateInRequest, @NonNull TSDMetrics tsdMetrics) {
         Validate.notEmpty(templateInRequest);
-        Validate.notNull(tsdMetrics);
         
         // Add the metric to track the template for which this request was made.
         for (String template : MitigationTemplate.values()) {
@@ -51,10 +50,7 @@ public class ActivityHelper {
      * @param deviceNameInRequest String representing the deviceName that was passed in the request.
      * @param tsdMetrics TSDMetrics instance to which we need to add the count metrics.
      */
-    public static void addDeviceNameCountMetrics(@Nonnull String deviceNameInRequest, @Nonnull TSDMetrics tsdMetrics) {
-        Validate.notNull(deviceNameInRequest);
-        Validate.notNull(tsdMetrics);
-        
+    public static void addDeviceNameCountMetrics(@NonNull String deviceNameInRequest, @NonNull TSDMetrics tsdMetrics) {
         // Add the metric to track the device for which this request was made.
         for (DeviceName device : DeviceName.values()) {
             tsdMetrics.addCount(DEVICE_NAME_COUNT_METRIC_PREFIX + device.name(), 0);
@@ -67,10 +63,7 @@ public class ActivityHelper {
      * @param deviceScopeInRequest String representing the deviceScope that was passed in the request.
      * @param tsdMetrics TSDMetrics instance to which we need to add the count metrics.
      */
-    public static void addDeviceScopeCountMetrics(@Nonnull String deviceScopeInRequest, @Nonnull TSDMetrics tsdMetrics) {
-        Validate.notNull(deviceScopeInRequest);
-        Validate.notNull(tsdMetrics);
-        
+    public static void addDeviceScopeCountMetrics(@NonNull String deviceScopeInRequest, @NonNull TSDMetrics tsdMetrics) {
         // Add the metric to track the device for which this request was made.
         for (DeviceScope deviceScope : DeviceScope.values()) {
             tsdMetrics.addCount(DEVICE_SCOPE_COUNT_METRIC_PREFIX + deviceScope.name(), 0);
@@ -83,10 +76,7 @@ public class ActivityHelper {
      * @param serviceNameInRequest String representing the serviceName for which the request was made.
      * @param tsdMetrics TSDMetrics instance to which we need to add the count metrics.
      */
-    public static void addServiceNameCountMetrics(@Nonnull String serviceNameInRequest, @Nonnull TSDMetrics tsdMetrics) {
-        Validate.notNull(serviceNameInRequest);
-        Validate.notNull(tsdMetrics);
-        
+    public static void addServiceNameCountMetrics(@NonNull String serviceNameInRequest, @NonNull TSDMetrics tsdMetrics) {
         // Add the metric to track the device for which this request was made.
         for (String serviceName : ServiceName.values()) {
             tsdMetrics.addCount(SERVICE_NAME_COUNT_METRIC_PREFIX + serviceName, 0);
@@ -96,12 +86,11 @@ public class ActivityHelper {
     
     /**
      * Helper to initialize the different exceptions thrown by an activity to 0 count value.
-     * @param requestStates Set of String representing the exceptions thrown by an activity.
+     * @param exceptions Set of String representing the exceptions thrown by an activity.
      * @param tsdMetrics TSDMetrics instance to which we need to add the count metrics.
      */
-    public static void initializeRequestExceptionCounts(@Nonnull Set<String> exceptions, @Nonnull TSDMetrics tsdMetrics) {
+    public static void initializeRequestExceptionCounts(@NonNull Set<String> exceptions, @NonNull TSDMetrics tsdMetrics) {
         Validate.notEmpty(exceptions);
-        Validate.notNull(tsdMetrics);
         
         // Initialize all requestExceptions to 0.
         for (String exception : exceptions) {

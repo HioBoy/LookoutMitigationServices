@@ -6,11 +6,8 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nonnull;
-
 import lombok.NonNull;
 
-import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,7 +42,7 @@ public class UpdateBlackholeDeviceActivity extends Activity {
         BadRequest,
         StaleRequest,
         InternalError
-    };
+    }
 
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
@@ -58,19 +55,17 @@ public class UpdateBlackholeDeviceActivity extends Activity {
     @NonNull private final BlackholeMitigationHelper blackholeMitigationHelper;
     
     @ConstructorProperties({"requestValidator", "blackholeMitigationHelper"})
-    public UpdateBlackholeDeviceActivity(@Nonnull RequestValidator requestValidator, 
-            @Nonnull BlackholeMitigationHelper blackholeMitigationHelper) {
-        Validate.notNull(requestValidator);
+    public UpdateBlackholeDeviceActivity(@NonNull RequestValidator requestValidator,
+            @NonNull BlackholeMitigationHelper blackholeMitigationHelper) {
+
         this.requestValidator = requestValidator;
-        
-        Validate.notNull(blackholeMitigationHelper);
         this.blackholeMitigationHelper = blackholeMitigationHelper;
     }
 
     @Validated
     @Operation("UpdateBlackholeDevice")
     @Documentation("UpdateBlackholeDevice")
-    public @Nonnull UpdateBlackholeDeviceResponse enact(@Nonnull UpdateBlackholeDeviceRequest request) {
+    public @NonNull UpdateBlackholeDeviceResponse enact(@NonNull UpdateBlackholeDeviceRequest request) {
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "UpdateBlackholeDevice.enact");

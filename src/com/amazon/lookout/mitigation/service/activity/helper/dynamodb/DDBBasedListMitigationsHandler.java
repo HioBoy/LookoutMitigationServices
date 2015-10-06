@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import lombok.NonNull;
 
 import org.apache.commons.lang.StringUtils;
@@ -68,7 +66,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     
     private final DataConverter jsonDataConverter = new JsonDataConverter();
 
-    public DDBBasedListMitigationsHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain, @NonNull ActiveMitigationsStatusHelper activeMitigationStatusHelper) {
+    public DDBBasedListMitigationsHandler(AmazonDynamoDBClient dynamoDBClient, String domain, @NonNull ActiveMitigationsStatusHelper activeMitigationStatusHelper) {
         super(dynamoDBClient, domain);
         this.activeMitigationStatusHelper = activeMitigationStatusHelper;
         
@@ -165,9 +163,8 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     }
     
     @Override
-    public List<ActiveMitigationDetails> getActiveMitigationsForService(@Nonnull String serviceName, String deviceName, List<String> locations, @Nonnull TSDMetrics tsdMetrics) {
+    public List<ActiveMitigationDetails> getActiveMitigationsForService(@NonNull String serviceName, String deviceName, List<String> locations, @NonNull TSDMetrics tsdMetrics) {
         Validate.notEmpty(serviceName);
-        Validate.notNull(tsdMetrics);
         
         final TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getActiveMitigationsForService");
         try {
@@ -248,10 +245,9 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * @return a List of MitigationRequestDescription, where each MitigationRequestDescription instance describes a mitigation that is currently being worked on (whose WorkflowStatus is RUNNING).
      */
     @Override
-    public List<MitigationRequestDescriptionWithLocations> getOngoingRequestsDescription(@Nonnull String serviceName, @Nonnull String deviceName, @Nonnull TSDMetrics tsdMetrics) {
+    public List<MitigationRequestDescriptionWithLocations> getOngoingRequestsDescription(@NonNull String serviceName, @NonNull String deviceName, @NonNull TSDMetrics tsdMetrics) {
         Validate.notEmpty(serviceName);
         Validate.notEmpty(deviceName);
-        Validate.notNull(tsdMetrics);
         
         final TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getInProgressRequestsDescription");
         try {
@@ -330,7 +326,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     
     /**
      * Generate an instance of MitigationRequestDescription from a Map of String to AttributeValue.
-     * @param item Map of String to AttributeValue.
+     * @param keyValues Map of String to AttributeValue.
      * @return A MitigationRequestDescription object.
      */
     private MitigationRequestDescription convertToRequestDescription(Map<String, AttributeValue> keyValues) {
@@ -496,8 +492,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     
     /**
      * Generate a list of MitigationInstanceStatuses from a list of maps of Strings as keys and AttributeValues as values.
-     * @param list A list of maps of Strings as keys and AttributeValues as keys.
-     * @param showCreateDate A boolean indicating whether we want to return the createdate for a mitigation.
+     * @param listOfKeyValues A list of maps of Strings as keys and AttributeValues as keys.
      * @return a list of MitigationInstanceStatuses
      */
     private List<ActiveMitigationDetails> activeMitigationsListConverter(List<Map<String, AttributeValue>> listOfKeyValues){ 
@@ -533,13 +528,12 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * @return List of MitigationRequestDescription instances, should contain a single request representing the latest (create/edit) mitigation request for this mitigationName.
      */
     @Override
-    public List<MitigationRequestDescription> getMitigationRequestDescriptionsForMitigation(@Nonnull String serviceName, @Nonnull String deviceName, String deviceScope, 
-                                                                                            @Nonnull String mitigationName, @Nonnull TSDMetrics tsdMetrics) {
+    public List<MitigationRequestDescription> getMitigationRequestDescriptionsForMitigation(@NonNull String serviceName, @NonNull String deviceName, String deviceScope,
+                                                                                            @NonNull String mitigationName, @NonNull TSDMetrics tsdMetrics) {
         Validate.notEmpty(serviceName);
         Validate.notEmpty(deviceName);
         Validate.notEmpty(deviceScope);
         Validate.notEmpty(mitigationName);
-        Validate.notNull(tsdMetrics);
         
         final TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getMitigationDescriptionsForMitigation");
         try {
@@ -643,7 +637,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * @param items List of Map, where each Map has attributeName (String) as the key and DDB's AttributeValue as the corresponding value.
      * @return MitigationRequestDescription representing the latest MitigationRequestDescription.
      */
-    private MitigationRequestDescription getLatestMitigationDescription(@Nonnull List<Map<String, AttributeValue>> items) {
+    private MitigationRequestDescription getLatestMitigationDescription(@NonNull List<Map<String, AttributeValue>> items) {
         MitigationRequestDescription latestRequestDescription = null;
         for (Map<String, AttributeValue> item : items) {
             MitigationRequestDescription description = convertToRequestDescription(item);

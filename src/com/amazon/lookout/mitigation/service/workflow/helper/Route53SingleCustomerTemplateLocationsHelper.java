@@ -4,9 +4,7 @@ import java.beans.ConstructorProperties;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
-import org.apache.commons.lang.Validate;
+import lombok.NonNull;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -24,12 +22,9 @@ public class Route53SingleCustomerTemplateLocationsHelper implements TemplateBas
     private final Set<String> popsWithCiscoRouter;
     
     @ConstructorProperties({"edgeLocationsHelper", "popsWithCiscoRouter"})
-    public Route53SingleCustomerTemplateLocationsHelper(@Nonnull EdgeLocationsHelper locationsHelper, @Nonnull Set<String> popsWithCiscoRouter) {
-        Validate.notNull(locationsHelper);
+    public Route53SingleCustomerTemplateLocationsHelper(@NonNull EdgeLocationsHelper locationsHelper, @NonNull Set<String> popsWithCiscoRouter) {
         this.locationsHelper = locationsHelper;
-        
-        Validate.notNull(popsWithCiscoRouter); // Could be empty for beta.
-        this.popsWithCiscoRouter = popsWithCiscoRouter;
+        this.popsWithCiscoRouter = popsWithCiscoRouter; // Could be empty for beta.
     }
     
     /**

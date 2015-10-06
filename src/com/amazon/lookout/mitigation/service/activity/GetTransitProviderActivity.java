@@ -7,11 +7,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nonnull;
-
 import lombok.NonNull;
 
-import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,7 +37,7 @@ public class GetTransitProviderActivity extends Activity {
         BadRequest,
         StaleRequest,
         InternalError
-    };
+    }
 
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
@@ -53,12 +50,10 @@ public class GetTransitProviderActivity extends Activity {
     @NonNull private final BlackholeMitigationHelper blackholeMitigationHelper;
 
     @ConstructorProperties({"requestValidator", "blackholeMitigationHelper"})
-    public GetTransitProviderActivity(@Nonnull RequestValidator requestValidator, 
-            @Nonnull BlackholeMitigationHelper blackholeMitigationHelper) {
-        Validate.notNull(requestValidator);
+    public GetTransitProviderActivity(@NonNull RequestValidator requestValidator,
+            @NonNull BlackholeMitigationHelper blackholeMitigationHelper) {
+
         this.requestValidator = requestValidator;
-        
-        Validate.notNull(blackholeMitigationHelper);
         this.blackholeMitigationHelper = blackholeMitigationHelper;
     }
     

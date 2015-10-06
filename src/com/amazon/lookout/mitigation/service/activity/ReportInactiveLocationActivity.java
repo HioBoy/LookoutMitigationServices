@@ -6,8 +6,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
 import lombok.NonNull;
 
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
@@ -56,7 +54,7 @@ public class ReportInactiveLocationActivity extends Activity {
         BadRequest,
         InternalError,
         OperationNotSupported
-    };
+    }
 
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
@@ -87,7 +85,7 @@ public class ReportInactiveLocationActivity extends Activity {
     @Validated
     @Operation("ReportInactiveLocation")
     @Documentation("ReportInactiveLocation")
-    public @Nonnull ReportInactiveLocationResponse enact(@NonNull ReportInactiveLocationRequest request) {
+    public @NonNull ReportInactiveLocationResponse enact(@NonNull ReportInactiveLocationRequest request) {
         // Wrap the CoralMetrics for this activity in a TSDMetrics instance
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "ReportInactiveLocation.enact");
 

@@ -9,7 +9,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
-import javax.annotation.Nonnull;
 import javax.jms.IllegalStateException;
 
 import lombok.AllArgsConstructor;
@@ -58,7 +57,7 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
     private enum ListActiveMitigationsExceptions {
         BadRequest,
         InternalError
-    };
+    }
     
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
@@ -77,7 +76,7 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
     @Validated
     @Operation("ListActiveMitigationsForService")
     @Documentation("ListActiveMitigationsForService")
-    public @Nonnull ListActiveMitigationsForServiceResponse enact(@Nonnull ListActiveMitigationsForServiceRequest request) {
+    public @NonNull ListActiveMitigationsForServiceResponse enact(@NonNull ListActiveMitigationsForServiceRequest request) {
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "ListActiveMitigationsForService.enact");
         
         String requestId = getRequestId().toString();

@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nonnull;
-
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
@@ -41,7 +39,7 @@ public class ListTransitProvidersActivity extends Activity {
     
     private enum ListTransitProvidersExceptions {
         InternalError
-    };
+    }
     
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
@@ -55,7 +53,7 @@ public class ListTransitProvidersActivity extends Activity {
     @Validated
     @Operation("ListTransitProviders")
     @Documentation("ListTransitProviders")
-    public @Nonnull ListTransitProvidersResponse enact(@Nonnull ListTransitProvidersRequest request) {
+    public @NonNull ListTransitProvidersResponse enact(@NonNull ListTransitProvidersRequest request) {
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "ListTransitProviders.enact");
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;

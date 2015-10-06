@@ -2,9 +2,9 @@ package com.amazon.lookout.mitigation.service.workflow;
 
 import java.beans.ConstructorProperties;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
+import lombok.NonNull;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,8 +31,7 @@ public class SWFWorkflowClientProviderImpl implements SWFWorkflowClientProvider 
     private final LookoutReaperWorkflowClientExternalFactory reaperWorkflowFactory;
     
     @ConstructorProperties({"swfClient", "swfDomain"})
-    public SWFWorkflowClientProviderImpl(@Nonnull AmazonSimpleWorkflowClient simpleWorkflowClient, @Nonnull String swfDomain) {
-        Validate.notNull(simpleWorkflowClient);
+    public SWFWorkflowClientProviderImpl(@NonNull AmazonSimpleWorkflowClient simpleWorkflowClient, @NonNull String swfDomain) {
         Validate.notEmpty(swfDomain);
         
         this.mitigationModificationWorkflowFactory = new LookoutMitigationWorkflowClientExternalFactoryImpl(simpleWorkflowClient, swfDomain);
@@ -47,7 +46,7 @@ public class SWFWorkflowClientProviderImpl implements SWFWorkflowClientProvider 
      * @return WorkflowClientExternal which represents the workflow client to be used for this template and device.
      */
     @Override
-    public WorkflowClientExternal getMitigationModificationWorkflowClient(@Nonnull String template, @Nonnull String deviceName, long workflowId) {
+    public WorkflowClientExternal getMitigationModificationWorkflowClient(@NonNull String template, @NonNull String deviceName, long workflowId) {
         Validate.notEmpty(template);
         Validate.notEmpty(deviceName);
         Validate.isTrue(workflowId > 0);
@@ -64,7 +63,7 @@ public class SWFWorkflowClientProviderImpl implements SWFWorkflowClientProvider 
      * @return WorkflowClientExternal which represents the reaper workflow client to be used.
      */
     @Override
-    public WorkflowClientExternal getReaperWorkflowClient(@Nonnull String swfWorkflowId) {
+    public WorkflowClientExternal getReaperWorkflowClient(@NonNull String swfWorkflowId) {
         Validate.notEmpty(swfWorkflowId);
         
         LOG.debug("Requested ReaperWorkflowFactory for workflowId: " + swfWorkflowId);

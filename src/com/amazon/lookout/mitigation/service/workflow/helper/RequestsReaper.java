@@ -9,12 +9,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazonaws.services.simpleworkflow.model.ListOpenWorkflowExecutionsRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfos;
 import com.google.common.util.concurrent.Uninterruptibles;
+import lombok.NonNull;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -97,12 +97,9 @@ public class RequestsReaper implements Runnable {
     private final SWFWorkflowStarter workflowStarter;
     
     @ConstructorProperties({"dynamoDBClient", "swfClient", "appDomain", "swfDomainName", "swfSocketTimeoutMillis", "swfConnTimeoutMillis", "workflowStarter", "metricsFactory"})
-    public RequestsReaper(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull AmazonSimpleWorkflowClient swfClient, @Nonnull String appDomain, @Nonnull String swfDomain, 
-                          int swfSocketTimeoutMillis, int swfConnTimeoutMillis, @Nonnull SWFWorkflowStarter workflowStarter, @Nonnull MetricsFactory metricsFactory) {
-        Validate.notNull(dynamoDBClient);
+    public RequestsReaper(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull AmazonSimpleWorkflowClient swfClient, @NonNull String appDomain, @NonNull String swfDomain,
+                          int swfSocketTimeoutMillis, int swfConnTimeoutMillis, @NonNull SWFWorkflowStarter workflowStarter, @NonNull MetricsFactory metricsFactory) {
         this.dynamoDBClient = dynamoDBClient;
-        
-        Validate.notNull(swfClient);
         this.swfClient = swfClient;
         
         Validate.notEmpty(appDomain);
@@ -116,10 +113,7 @@ public class RequestsReaper implements Runnable {
         Validate.isTrue(swfSocketTimeoutMillis > 0);
         maxSecondsToStartWorkflow = swfConnTimeoutMillis/1000 + swfSocketTimeoutMillis/1000 + BUFFER_SECONDS_BEFORE_STARTING_WORKFLOW;
         
-        Validate.notNull(workflowStarter);
         this.workflowStarter = workflowStarter;
-        
-        Validate.notNull(metricsFactory);
         this.metricsFactory = metricsFactory;
     }
 
@@ -143,7 +137,7 @@ public class RequestsReaper implements Runnable {
      * It next starts a workflow per RequestToReap instance, setting the workflowId as the RequestDeviceName + <SEPARATOR> OriginalWorkflowId + <SEPARATOR> + Reaper.
      * This ensures only one of such workflow would be running at any point in time.
      */
-    protected void reapRequests(@Nonnull TSDMetrics tsdMetrics) {
+    protected void reapRequests(@NonNull TSDMetrics tsdMetrics) {
         TSDMetrics metrics = tsdMetrics.newSubMetrics("reapRequests");
         try {
             metrics.addCount(NUM_REQUESTS_TO_REAP_METRIC_KEY, 0);
@@ -198,7 +192,7 @@ public class RequestsReaper implements Runnable {
      * @return List of RequestToReap, each RequestToReap instance contains details about the user request that needs to be reaped, along with the locations
      *         corresponding to that request which aren't in a clean state.
      */
-    protected List<RequestToReap> getRequestsToReap(@Nonnull TSDMetrics metrics) {
+    protected List<RequestToReap> getRequestsToReap(@NonNull TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("getWorkflowsToReap");
         try {
             subMetrics.addCount("NumDevicesFailingReaperCheck", 0);
@@ -351,7 +345,7 @@ public class RequestsReaper implements Runnable {
      * @param lastEvaluatedKey Represents the lastEvaluatedKey returned by DDB for the previous key, null if this is the first query.
      * @return QueryResult containing the result of querying for workflows whose status reflect them as being active.
      */
-    protected QueryResult getUnsuccessfulUnreapedRequests(@Nonnull String deviceName, Map<String, AttributeValue> lastEvaluatedKey) {
+    protected QueryResult getUnsuccessfulUnreapedRequests(@NonNull String deviceName, Map<String, AttributeValue> lastEvaluatedKey) {
         QueryRequest request = createQueryForRequests(deviceName, lastEvaluatedKey);
         return queryDynamoDB(request);
     }
@@ -362,7 +356,7 @@ public class RequestsReaper implements Runnable {
      * @param lastEvaluatedKey Represents the lastEvaluatedKey returned by DDB for the previous key, null if this is the first query.
      * @return QueryRequest representing the query to be issued against DDB to get the appropriate list of requests that need to be reaped.
      */
-    protected QueryRequest createQueryForRequests(@Nonnull String deviceName, Map<String, AttributeValue> lastEvaluatedKey) {
+    protected QueryRequest createQueryForRequests(@NonNull String deviceName, Map<String, AttributeValue> lastEvaluatedKey) {
         QueryRequest request = new QueryRequest(getRequestsTableName());
         Map<String, Condition> queryConditions = new HashMap<>();
         
@@ -407,7 +401,7 @@ public class RequestsReaper implements Runnable {
      * @param lastEvaluatedKey Represents the lastEvaluatedKey returned by DDB for the previous key, null if this is the first query.
      * @return QueryRequest representing the query to be issued against DDB to get the appropriate list of instances that need to be reaped.
      */
-    protected QueryRequest createQueryForInstances(@Nonnull String deviceName, @Nonnull String workflowIdStr, Map<String, AttributeValue> lastEvaluatedKey) {
+    protected QueryRequest createQueryForInstances(@NonNull String deviceName, @NonNull String workflowIdStr, Map<String, AttributeValue> lastEvaluatedKey) {
         QueryRequest request = new QueryRequest(getInstancesTableName());
         String deviceWorkflowKey = MitigationInstancesModel.getDeviceWorkflowId(deviceName, workflowIdStr);
         
@@ -432,7 +426,7 @@ public class RequestsReaper implements Runnable {
      * @param workflowIdStr WorkflowId represented as string, whose instances are being queried. 
      * @return Map whose key is the locations that needs to be reaped and whose value is an attribute-value Map for representing the state of the location.
      */
-    protected Map<String, Map<String, AttributeValue>> queryInstancesForWorkflow(@Nonnull String deviceName, @Nonnull String workflowIdStr) {
+    protected Map<String, Map<String, AttributeValue>> queryInstancesForWorkflow(@NonNull String deviceName, @NonNull String workflowIdStr) {
         Map<String, Map<String, AttributeValue>> instancesDetails = new HashMap<>();
         Map<String, AttributeValue> lastEvaluatedKey = null;
         do {
@@ -462,7 +456,7 @@ public class RequestsReaper implements Runnable {
      * @param metrics
      * @return boolean flag indicating true if the workflow represented by the input parameters is considered Closed by SWF, false otherwise. 
      */
-    protected boolean isWorkflowClosedInSWF(@Nonnull String deviceName, @Nonnull String workflowIdStr, long requestDateInMillis, @Nonnull TSDMetrics metrics) {
+    protected boolean isWorkflowClosedInSWF(@NonNull String deviceName, @NonNull String workflowIdStr, long requestDateInMillis, @NonNull TSDMetrics metrics) {
         try (TSDMetrics subMetrics = metrics.newSubMetrics("isWorkflowClosedInSWF")) {
             DateTime now = new DateTime(DateTimeZone.UTC);
             String swfWorkflowId = deviceName + SWF_WORKFLOW_ID_KEY_SEPARATOR + workflowIdStr;
@@ -499,7 +493,7 @@ public class RequestsReaper implements Runnable {
         }
     }
 
-    private List<WorkflowExecutionInfo> getClosedExecutions(@Nonnull String swfWorkflowId, long requestDateInMillis) {
+    private List<WorkflowExecutionInfo> getClosedExecutions(@NonNull String swfWorkflowId, long requestDateInMillis) {
         ListClosedWorkflowExecutionsRequest request = buildListClosedWorkflowExecutionsRequest(
                 swfWorkflowId,
                 requestDateInMillis);

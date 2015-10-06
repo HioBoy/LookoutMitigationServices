@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nonnull;
-
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
@@ -41,7 +39,7 @@ public class ListBlackholeDevicesActivity extends Activity {
     
     private enum ListBlackholeDevicesExceptions {
         InternalError
-    };
+    }
     
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
@@ -55,7 +53,7 @@ public class ListBlackholeDevicesActivity extends Activity {
     @Validated
     @Operation("ListBlackholeDevices")
     @Documentation("ListBlackholeDevices")
-    public @Nonnull ListBlackholeDevicesResponse enact(@Nonnull ListBlackholeDevicesRequest request) {
+    public @NonNull ListBlackholeDevicesResponse enact(@NonNull ListBlackholeDevicesRequest request) {
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "ListBlackholeDevices.enact");
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;

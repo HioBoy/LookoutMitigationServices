@@ -5,9 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
-import org.apache.commons.lang.Validate;
+import lombok.NonNull;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,7 +38,7 @@ public class GetRequestStatusActivity extends Activity{
     private enum GetRequestStatusExceptions {
         BadRequest,
         InternalError
-    };
+    }
     
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
@@ -52,14 +50,9 @@ public class GetRequestStatusActivity extends Activity{
     private final RequestValidator requestValidator;
     
     @ConstructorProperties({"requestValidator", "requestInfoHandler", "mitigationInfoHandler"})
-    public GetRequestStatusActivity(@Nonnull RequestValidator requestValidator, @Nonnull RequestInfoHandler requestInfoHandler, @Nonnull MitigationInstanceInfoHandler mitigationInfoHandler) {
-        Validate.notNull(requestValidator);
+    public GetRequestStatusActivity(@NonNull RequestValidator requestValidator, @NonNull RequestInfoHandler requestInfoHandler, @NonNull MitigationInstanceInfoHandler mitigationInfoHandler) {
         this.requestValidator = requestValidator;
-        
-        Validate.notNull(requestInfoHandler);
         this.requestInfoHandler = requestInfoHandler;
-        
-        Validate.notNull(mitigationInfoHandler);
         this.mitigationInfoHandler = mitigationInfoHandler;
         
     }
@@ -67,7 +60,7 @@ public class GetRequestStatusActivity extends Activity{
     @Validated
     @Operation("GetRequestStatus")
     @Documentation("GetRequestStatus")
-    public @Nonnull GetRequestStatusResponse enact(@Nonnull GetRequestStatusRequest request) {
+    public @NonNull GetRequestStatusResponse enact(@NonNull GetRequestStatusRequest request) {
         // Wrap the CoralMetrics for this activity in a TSDMetrics instance
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "GetRequestStatus.enact");
         
@@ -76,7 +69,7 @@ public class GetRequestStatusActivity extends Activity{
         String deviceName = request.getDeviceName();
         String templateName = request.getMitigationTemplate();
         String serviceName = request.getServiceName();
-        long jobId = Long.valueOf(request.getJobId());
+        long jobId = request.getJobId();
         try {            
             LOG.info(String.format("GetRequestStatusActivity called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);

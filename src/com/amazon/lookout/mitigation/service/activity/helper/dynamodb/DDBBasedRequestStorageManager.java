@@ -4,9 +4,9 @@ import java.beans.ConstructorProperties;
 import java.util.EnumMap;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 
+import lombok.NonNull;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,11 +38,10 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
     private final ImmutableMap<RequestType, RequestStorageHandler> requestTypeToStorageHandler;
     
     @ConstructorProperties({"dynamoDBClient", "domain","templateBasedValidator"})
-    public DDBBasedRequestStorageManager(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain,
-                                         @Nonnull TemplateBasedRequestValidator templateBasedValidator) {
-        Validate.notNull(dynamoDBClient);
+    public DDBBasedRequestStorageManager(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull String domain,
+                                         @NonNull TemplateBasedRequestValidator templateBasedValidator) {
+
         Validate.notEmpty(domain);
-        Validate.notNull(templateBasedValidator);
         
         requestTypeToStorageHandler = Maps.immutableEnumMap(getRequestTypeToStorageHandlerMap(dynamoDBClient, domain, templateBasedValidator));
     }
@@ -79,11 +78,8 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @return WorkflowId to be used to for processing this request, which was determined by the RequestStorageHandler based on the workflowId we recorded this request with.
      */
     @Override
-    public long storeRequestForWorkflow(@Nonnull MitigationModificationRequest request, @Nonnull Set<String> locations, @Nonnull RequestType requestType, @Nonnull TSDMetrics metrics) {
-        Validate.notNull(request);
+    public long storeRequestForWorkflow(@NonNull MitigationModificationRequest request, @NonNull Set<String> locations, @NonNull RequestType requestType, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(locations);
-        Validate.notNull(requestType);
-        Validate.notNull(metrics);
         
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageManager.storeRequestForWorkflow");
         try {
@@ -127,13 +123,11 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @param requestType Instance of the RequestType enum, useful for delegating the update to the RequestStorageHandler corresponding to this request.
      * @param metrics
      */
-    public void updateRunIdForWorkflowRequest(@Nonnull String deviceName, long workflowId, @Nonnull String runId, 
-                                              @Nonnull RequestType requestType, @Nonnull TSDMetrics metrics) {
+    public void updateRunIdForWorkflowRequest(@NonNull String deviceName, long workflowId, @NonNull String runId,
+                                              @NonNull RequestType requestType, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(deviceName);
         Validate.isTrue(workflowId > 0);
         Validate.notEmpty(runId);
-        Validate.notNull(requestType);
-        Validate.notNull(metrics);
         
         RequestStorageHandler handler = getRequestStorageHandler(requestType);
         handler.updateRunIdForWorkflowRequest(deviceName, workflowId, runId, metrics);

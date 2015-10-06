@@ -6,9 +6,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-
-import org.apache.commons.lang.Validate;
+import lombok.NonNull;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,7 +51,7 @@ public class CreateMitigationActivity extends Activity {
         DuplicateRequest,
         DuplicateDefinition,
         InternalError
-    };
+    }
     
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
@@ -69,29 +67,21 @@ public class CreateMitigationActivity extends Activity {
     private final TemplateBasedLocationsManager templateBasedLocationsManager;
     
     @ConstructorProperties({"requestValidator", "templateBasedValidator", "requestStorageManager", "swfWorkflowStarter", "templateBasedLocationsManager"})
-    public CreateMitigationActivity(@Nonnull RequestValidator requestValidator, @Nonnull TemplateBasedRequestValidator templateBasedValidator, 
-                                    @Nonnull RequestStorageManager requestStorageManager, @Nonnull SWFWorkflowStarter workflowStarter,
-                                    @Nonnull TemplateBasedLocationsManager templateBasedLocationsManager) {
-        Validate.notNull(requestValidator);
+    public CreateMitigationActivity(@NonNull RequestValidator requestValidator, @NonNull TemplateBasedRequestValidator templateBasedValidator,
+                                    @NonNull RequestStorageManager requestStorageManager, @NonNull SWFWorkflowStarter workflowStarter,
+                                    @NonNull TemplateBasedLocationsManager templateBasedLocationsManager) {
+
         this.requestValidator = requestValidator;
-        
-        Validate.notNull(templateBasedValidator);
         this.templateBasedValidator = templateBasedValidator;
-        
-        Validate.notNull(requestStorageManager);
         this.requestStorageManager = requestStorageManager;
-        
-        Validate.notNull(workflowStarter);
         this.workflowStarter = workflowStarter;
-        
-        Validate.notNull(templateBasedLocationsManager);
         this.templateBasedLocationsManager = templateBasedLocationsManager;
     }
 
     @Validated
     @Operation("CreateMitigation")
     @Documentation("CreateMitigation")
-    public @Nonnull MitigationModificationResponse enact(@Nonnull CreateMitigationRequest createRequest) {
+    public @NonNull MitigationModificationResponse enact(@NonNull CreateMitigationRequest createRequest) {
         // Wrap the CoralMetrics for this activity in a TSDMetrics instance.
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "CreateMitigation.enact");
         
