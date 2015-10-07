@@ -33,12 +33,11 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
     //set time of last update to an expired timestamp
     private volatile DateTime timeOfLastUpdate = new DateTime().minus(POP_LIST_EXPIRATION_SECONDS * 2);
 
-    
     @ConstructorProperties({ "cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries",
             "popsListDir", "metricsFactory", "fakeBlackWatchClassicLocations" })
-    public FakeLocationsHelper(@NonNull EdgeOperatorServiceClient cloudfrontClient, @NonNull DaasControlAPIServiceV20100701Client daasClient, 
-            @NonNull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, @NonNull String popsListDiskCacheDirName,
-            @NonNull MetricsFactory metricsFactory, @NonNull List<String> fakeBlackWatchClassicLocations) {
+    public FakeLocationsHelper(EdgeOperatorServiceClient cloudfrontClient, DaasControlAPIServiceV20100701Client daasClient,
+            BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, String popsListDiskCacheDirName,
+            MetricsFactory metricsFactory, List<String> fakeBlackWatchClassicLocations) {
         super(cloudfrontClient, daasClient, bwLocationsHelper, sleepBetweenRetriesInMillis, popsListDiskCacheDirName,
                 metricsFactory, fakeBlackWatchClassicLocations);
         refreshFakeRouters();
@@ -122,7 +121,7 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
 
     }
 
-    private class PopLists {
+    private static class PopLists {
         private final HashSet<String> allClassicPOPs;
         private final HashSet<String> blackwatchClassicPOPs;
         public PopLists(Collection<String> classicPOPs, Collection<String> blackwatchClassicPOPs) {

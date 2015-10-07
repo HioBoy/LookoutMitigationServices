@@ -5,18 +5,15 @@
   <import file="${happytrails.root}/happytrails.xml"/>
 
   <!-- Define HappierTrails property overrides here -->
-  <property name="findbugs.failOnError" value="false"/>
+  <property name="findbugs.failOnError" value="true"/>
   <property name="checkstyle.failOnError" value="false"/>
   <property name="tests.additional.jvmargs" value="-enableassertions"/>
+  <property name="sources.javac.extra.args" value="-Xlint:all"/>
 
   <ht:import file="coral-launcher.xml" optional="false"/>
   <ht:import file="coral-generator.xml" optional="false"/>
 	
-  <!-- Cobertura doesn't work under JDK-1.7 without UseSplitVerifier -->
-  <property name="coverage.additional.jvmargs" value="${tests.additional.jvmargs} -XX:-UseSplitVerifier"/>
-
   <ht:import file="happier-trails.xml"/>
-  
   
   <!-- Set any property overrides -->
   <property name="coral-src.dir" location="${output.dir}/private/src"/>

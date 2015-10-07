@@ -33,7 +33,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.activities.model.SchedulingStatus;
 import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
@@ -62,7 +62,7 @@ public class RequestsReaperTest {
     
     @BeforeClass
     public static void setup() {
-        TestUtils.configure(Level.OFF);
+        TestUtils.configureLogging();
     }
     
     @Test

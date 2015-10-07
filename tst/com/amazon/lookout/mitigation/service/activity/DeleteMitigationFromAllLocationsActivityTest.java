@@ -1,7 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
@@ -23,7 +23,6 @@ import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.s3.AmazonS3;
 
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
-import org.apache.log4j.Level;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -44,7 +43,7 @@ public class DeleteMitigationFromAllLocationsActivityTest {
 
     @BeforeClass
     public static void setUpOnce() {
-        TestUtils.configure(Level.OFF);
+        TestUtils.configureLogging();
     }
 
     @Test

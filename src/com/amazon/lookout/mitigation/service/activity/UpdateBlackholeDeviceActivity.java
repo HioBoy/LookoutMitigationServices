@@ -89,6 +89,7 @@ public class UpdateBlackholeDeviceActivity extends Activity {
             BlackholeDevice blackholeDevice = null;
             try {
                 requestValidator.validateUpdateBlackholeDeviceRequest(request);
+                assert blackholeDeviceInfo != null; // validateUpdateBlackholeDeviceRequest() makes sure it is not null
                 blackholeDevice = BlackholeDeviceConverter.convertBlackholeDeviceInfoRequest(blackholeDeviceInfo);
             } catch (IllegalArgumentException ex) {
                 String message = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "UpdateBlackholeDeviceActivity", ex.getMessage());

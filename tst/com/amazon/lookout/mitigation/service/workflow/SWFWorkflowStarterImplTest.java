@@ -21,7 +21,7 @@ import org.apache.log4j.Level;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
 import com.amazon.lookout.workflow.LookoutMitigationWorkflowClientExternal;
@@ -36,7 +36,7 @@ public class SWFWorkflowStarterImplTest {
     
     @BeforeClass
     public static void setup() {
-        TestUtils.configure(Level.OFF);
+        TestUtils.configureLogging();
     }
     
     @Test

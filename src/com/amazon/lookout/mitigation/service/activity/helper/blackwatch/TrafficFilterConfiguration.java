@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import lombok.Setter;
 import org.apache.commons.lang.Validate;
 
 import lombok.AllArgsConstructor;
@@ -47,10 +48,11 @@ public class TrafficFilterConfiguration {
      * origin traffic filter, used for parsing and validating input traffic filter in JSON configuration
      */
     @Getter
+    @Setter
     private static class OriginTrafficFilter {
         private String name;
         private String desc;
-        private Map<String, String>filter;
+        private Map<String, String> filter;
     }
     
     /**
@@ -72,10 +74,12 @@ public class TrafficFilterConfiguration {
      */
     private static Map<AttributeName, PacketAttribute> createAttribute(Map<String, String> filter) {
         Map<AttributeName, PacketAttribute> packetAttributes = new EnumMap<>(AttributeName.class);
-        for (String fieldName : filter.keySet()) {
+        for (Map.Entry<String, String> fieldNameValuePair : filter.entrySet()) {
+            String fieldName = fieldNameValuePair.getKey();
+            String value = fieldNameValuePair.getValue();
             try {
                 AttributeName attributeName = AttributeName.valueOf(fieldName.toUpperCase());
-                packetAttributes.put(attributeName, attributeName.getType().createPacketAttribute(filter.get(fieldName)));
+                packetAttributes.put(attributeName, attributeName.getType().createPacketAttribute(value));
             } catch (IllegalArgumentException ex) {
                 throw new IllegalArgumentException(String.format("field %s is not supported by BlackWatch Traffic filter. "
                         + "Supported fields : %s", fieldName, Arrays.asList(AttributeName.values())), ex);

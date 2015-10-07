@@ -351,7 +351,7 @@ public class RequestsReaper implements Runnable {
      * @param lastEvaluatedKey Represents the lastEvaluatedKey returned by DDB for the previous key, null if this is the first query.
      * @return QueryResult containing the result of querying for workflows whose status reflect them as being active.
      */
-    protected QueryResult getUnsuccessfulUnreapedRequests(@Nonnull String deviceName, @Nonnull Map<String, AttributeValue> lastEvaluatedKey) {
+    protected QueryResult getUnsuccessfulUnreapedRequests(@Nonnull String deviceName, Map<String, AttributeValue> lastEvaluatedKey) {
         QueryRequest request = createQueryForRequests(deviceName, lastEvaluatedKey);
         return queryDynamoDB(request);
     }
@@ -362,7 +362,7 @@ public class RequestsReaper implements Runnable {
      * @param lastEvaluatedKey Represents the lastEvaluatedKey returned by DDB for the previous key, null if this is the first query.
      * @return QueryRequest representing the query to be issued against DDB to get the appropriate list of requests that need to be reaped.
      */
-    protected QueryRequest createQueryForRequests(@Nonnull String deviceName, @Nonnull Map<String, AttributeValue> lastEvaluatedKey) {
+    protected QueryRequest createQueryForRequests(@Nonnull String deviceName, Map<String, AttributeValue> lastEvaluatedKey) {
         QueryRequest request = new QueryRequest(getRequestsTableName());
         Map<String, Condition> queryConditions = new HashMap<>();
         
@@ -407,7 +407,7 @@ public class RequestsReaper implements Runnable {
      * @param lastEvaluatedKey Represents the lastEvaluatedKey returned by DDB for the previous key, null if this is the first query.
      * @return QueryRequest representing the query to be issued against DDB to get the appropriate list of instances that need to be reaped.
      */
-    protected QueryRequest createQueryForInstances(@Nonnull String deviceName, @Nonnull String workflowIdStr, @Nonnull Map<String, AttributeValue> lastEvaluatedKey) {
+    protected QueryRequest createQueryForInstances(@Nonnull String deviceName, @Nonnull String workflowIdStr, Map<String, AttributeValue> lastEvaluatedKey) {
         QueryRequest request = new QueryRequest(getInstancesTableName());
         String deviceWorkflowKey = MitigationInstancesModel.getDeviceWorkflowId(deviceName, workflowIdStr);
         
@@ -440,11 +440,11 @@ public class RequestsReaper implements Runnable {
             
             QueryResult result = queryDynamoDB(request);
             lastEvaluatedKey = result.getLastEvaluatedKey();
-            
-            if ((result == null) || (result.getCount() == 0)) {
+
+            if (result.getCount() == 0) {
                 continue;
             }
-            
+
             for (Map<String, AttributeValue> item : result.getItems()) {
                 String location = item.get(MitigationInstancesModel.LOCATION_KEY).getS();
                 instancesDetails.put(location, item);

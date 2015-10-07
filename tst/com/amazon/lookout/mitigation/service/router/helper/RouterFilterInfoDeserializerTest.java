@@ -10,7 +10,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
-import com.amazon.aws158.commons.tst.TestUtils;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.router.model.RouterFilterInfoWithMetadata;
 import com.amazon.lookout.mitigation.router.model.RouterMitigationActionType;
 import com.amazon.lookout.mitigation.service.CompositeAndConstraint;
@@ -27,7 +27,7 @@ public class RouterFilterInfoDeserializerTest {
 
     @BeforeClass
     public static void setup() {
-        TestUtils.configure();
+        TestUtils.configureLogging();
     }
     
     @Test

@@ -8,8 +8,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.Nonnull;
-
 import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
@@ -125,8 +123,7 @@ public abstract class DDBBasedRequestStorageHandler {
     protected final String mitigationRequestsTableName;
     protected final String activeMitigationsTableName;
     
-    public DDBBasedRequestStorageHandler(@Nonnull AmazonDynamoDBClient dynamoDBClient, @Nonnull String domain) {
-        Validate.notNull(dynamoDBClient);
+    public DDBBasedRequestStorageHandler(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull String domain) {
         this.dynamoDBClient = dynamoDBClient;
         
         Validate.notEmpty(domain);
@@ -576,7 +573,7 @@ public abstract class DDBBasedRequestStorageHandler {
      * @param runId SWF assigned runId for the running instance of this workflow.
      * @param metrics
      */
-    public void updateRunIdForWorkflowRequest(@Nonnull String deviceName, long workflowId, @Nonnull String runId, @Nonnull TSDMetrics metrics) {
+    public void updateRunIdForWorkflowRequest(@NonNull String deviceName, long workflowId, @NonNull String runId, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(deviceName);
         Validate.isTrue(workflowId > 0);
         Validate.notEmpty(runId);
