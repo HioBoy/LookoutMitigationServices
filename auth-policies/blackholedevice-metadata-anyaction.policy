@@ -1,0 +1,10 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "lookout:*",
+            "Resource": "arn:aws:lookout:*::metadata/blackhole-device"
+        }
+    ]
+}

@@ -90,7 +90,8 @@ package.LookoutMitigationService = {
             EdgeSetupVLANIptables = 1.0;      
             
             # rotate PMAdmin and GC logs
-            CronologRotateLogHourlyScripts = 1.0;                                
+            CronologRotateLogHourlyScripts = 1.0;
+            AmazonCACerts = 1.0;
         };
     };
 

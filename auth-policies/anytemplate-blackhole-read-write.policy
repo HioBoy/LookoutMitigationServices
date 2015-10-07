@@ -4,12 +4,12 @@
         {
             "Effect": "Allow",
             "Action": "lookout:read-*",
-            "Resource": "arn:aws:lookout:*::*/Route53-POP_ROUTER"
+            "Resource": "arn:aws:lookout:*::*/Blackhole-*"
         },
         {
-            "Effect": "Allow",
+            "Effect": "Allow",           
             "Action": "lookout:write-*",
-            "Resource": "arn:aws:lookout:*::Router_CountMode_Route53Customer/Route53-POP_ROUTER"
+            "Resource": "arn:aws:lookout:*::*/Blackhole-*"
         }
     ]
 }
