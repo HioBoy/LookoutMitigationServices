@@ -120,6 +120,7 @@
         <constructor-arg name="serviceSubnetsMatcher" ref="serviceSubnetsMatcher"/>
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
         <constructor-arg name="blackWatchS3Client" ref="blackWatchS3Client"/>
+        <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
     </bean>
     
     <bean id="ddbBasedRequestStorageManager" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedRequestStorageManager">
