@@ -7,6 +7,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer.IPTablesJsonValidator;
 
 import lombok.NonNull;
+
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -20,6 +21,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
+import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
 import com.amazonaws.services.s3.AmazonS3;
 
 /**
@@ -35,6 +37,7 @@ public class TemplateBasedRequestValidator {
     
     private final EdgeLocationsHelper edgeLocationsHelper;
     private final AmazonS3 blackWatchS3Client;
+    private final BlackholeMitigationHelper blackholeMitigationHelper;
     
     // Map of templateName -> ServiceTemplateValidator which is responsible for validating this template.
     private final ImmutableMap<String, ServiceTemplateValidator> serviceTemplateValidatorMap;
@@ -43,12 +46,15 @@ public class TemplateBasedRequestValidator {
      * @param serviceSubnetsMatcher ServiceSubnetsMatcher is taken as an input in the constructor to allow for the service template specific validators to use
      *                              this matcher, in case they have to perform any subnet specific checks.
      */
-    @ConstructorProperties({"serviceSubnetsMatcher", "edgeLocationsHelper", "blackWatchS3Client"})
+    @ConstructorProperties({"serviceSubnetsMatcher", "edgeLocationsHelper", "blackWatchS3Client", "blackholeMitigationHelper"})
     public TemplateBasedRequestValidator(@NonNull ServiceSubnetsMatcher serviceSubnetsMatcher,
-            @NonNull EdgeLocationsHelper edgeLocationsHelper, @NonNull AmazonS3 blackWatchS3Client) {
+            @NonNull EdgeLocationsHelper edgeLocationsHelper, @NonNull AmazonS3 blackWatchS3Client,
+            @NonNull BlackholeMitigationHelper blackholeMitigationHelper) 
+    {
         
         this.blackWatchS3Client = blackWatchS3Client;
         this.edgeLocationsHelper = edgeLocationsHelper;
+        this.blackholeMitigationHelper = blackholeMitigationHelper;
         
         // this line should be the last line of constructor, as it might relies on the variable assigned before.
         this.serviceTemplateValidatorMap = getServiceTemplateValidatorMap(serviceSubnetsMatcher);
@@ -71,7 +77,7 @@ public class TemplateBasedRequestValidator {
             
             LOG.debug("Calling validator for service: " + templateBasedValidator.getServiceNameToValidate() + " for template: " + mitigationTemplate + " for request: " +
                       ReflectionToStringBuilder.toString(request));
-            templateBasedValidator.validateRequestForTemplate(request, mitigationTemplate);
+            templateBasedValidator.validateRequestForTemplate(request, mitigationTemplate, metrics);
         } finally {
             subMetrics.end();
         }
@@ -150,7 +156,7 @@ public class TemplateBasedRequestValidator {
     }
     
     private ServiceTemplateValidator getBlackholeArborCustomerValidator() {
-        return new BlackholeArborCustomerValidator();
+        return new BlackholeArborCustomerValidator(blackholeMitigationHelper);
     }
 
     /**

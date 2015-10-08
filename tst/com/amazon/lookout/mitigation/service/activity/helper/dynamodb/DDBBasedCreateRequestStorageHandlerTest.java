@@ -54,6 +54,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
+import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -81,6 +82,11 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     
     public static MitigationDefinition defaultCreateMitigationDefinition() {
         return createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));
+    }
+    
+    private static TemplateBasedRequestValidator createValidator() {
+        return new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
+                mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class));
     }
     
     public static MitigationDefinition createMitigationDefinition(String attrName, List<String> attrValues) {
@@ -156,7 +162,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     private class MockTemplateBasedRequestValidator extends TemplateBasedRequestValidator {
         private final ServiceTemplateValidator serviceTemplateValidator;
         public MockTemplateBasedRequestValidator(ServiceSubnetsMatcher serviceSubnetsMatcher, ServiceTemplateValidator serviceTemplateValidator) {
-            super(serviceSubnetsMatcher, mock(EdgeLocationsHelper.class), mock(AmazonS3.class));
+            super(serviceSubnetsMatcher, mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class));
             this.serviceTemplateValidator = serviceTemplateValidator;
         }
         
@@ -268,8 +274,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testCheckDuplicateDefinitionForDuplicateDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class));
+        TemplateBasedRequestValidator templateBasedValidator = createValidator();
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
@@ -295,8 +300,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testCheckDuplicateDefinitionForNonCoexistentDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class));
+        TemplateBasedRequestValidator templateBasedValidator = createValidator();
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
@@ -710,8 +714,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class));
+        TemplateBasedRequestValidator templateBasedValidator = createValidator();
 
         when(storageHandler.getTemplateBasedValidator()).thenReturn(templateBasedValidator);
         when(storageHandler.getKeysForActiveMitigationsForDevice(anyString())).thenCallRealMethod();
@@ -734,7 +737,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         verify(storageHandler, times(0)).getKeysForDeviceAndWorkflowId(deviceName, workflowIdToReturn);
         verify(storageHandler, times(1)).getKeysForActiveMitigationsForDevice(anyString());
     }
-    
+
     /**
      * Test the checkDuplicatesAndGetMaxWorkflowId method for dissimilar definitions.
      * We expect the check to succeed and don't expect any exceptions to be thrown in this case.
@@ -785,8 +788,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testCheckDuplicatesForDuplicateDefinitions() {
         AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class));
+        TemplateBasedRequestValidator templateBasedValidator = createValidator();
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
         
         CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();

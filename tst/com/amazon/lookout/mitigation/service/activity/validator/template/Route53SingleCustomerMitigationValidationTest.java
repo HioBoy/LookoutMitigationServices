@@ -99,11 +99,11 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         // RateLimit MitigationTemplate
         CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();        
-        route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate());
+        route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate(), mock(TSDMetrics.class));
         
         // CountMode MitigationTemplate
         request = generateCreateCountModeMitigationRequest();        
-        route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate());
+        route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate(), mock(TSDMetrics.class));
         
     }
     
@@ -119,7 +119,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate());
+            route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate(), mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -136,12 +136,12 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         CreateMitigationRequest request = generateCreateRateLimitMitigationRequest();
         
-        doThrow(new IllegalArgumentException()).when(route53SingleCustomerValidator).validateRequestForTemplateAndDevice(any(MitigationModificationRequest.class), anyString(), any(DeviceNameAndScope.class));
+        doThrow(new IllegalArgumentException()).when(route53SingleCustomerValidator).validateRequestForTemplateAndDevice(any(MitigationModificationRequest.class), anyString(), any(DeviceNameAndScope.class), any(TSDMetrics.class));
         
         Throwable caughtException = null;
         try {
-            doCallRealMethod().when(route53SingleCustomerValidator).validateRequestForTemplate(any(MitigationModificationRequest.class), anyString());
-            route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate());
+            doCallRealMethod().when(route53SingleCustomerValidator).validateRequestForTemplate(any(MitigationModificationRequest.class), anyString(), any(TSDMetrics.class));
+            route53SingleCustomerValidator.validateRequestForTemplate(request, request.getMitigationTemplate(), mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -162,7 +162,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -185,7 +185,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         // Ensure the call goes through fine with the default request object.
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -200,7 +200,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -223,7 +223,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         // Ensure the call goes through fine with the default request object.
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -238,7 +238,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -260,7 +260,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (IllegalArgumentException ex) {
             caughtException = ex;
         }
@@ -275,7 +275,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (IllegalArgumentException ex) {
             caughtException = ex;
         }
@@ -295,7 +295,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -317,7 +317,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -339,7 +339,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -361,7 +361,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -384,7 +384,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -407,7 +407,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -430,7 +430,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -453,7 +453,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -478,7 +478,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -490,7 +490,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -553,7 +553,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         
         Throwable caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -563,7 +563,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         request.setMitigationName("Some\nName!");
         caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -573,7 +573,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         request.setMitigationName("/*Name!");
         caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -583,7 +583,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         request.setMitigationName("Name!*/");
         caughtException = null;
         try {
-            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope);
+            route53SingleCustomerValidator.validateRequestForTemplateAndDevice(request, request.getMitigationTemplate(), deviceNameAndScope, mock(TSDMetrics.class));
         } catch (Exception ex) {
             caughtException = ex;
         }

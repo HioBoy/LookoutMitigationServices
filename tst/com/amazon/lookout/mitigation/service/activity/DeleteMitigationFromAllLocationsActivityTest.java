@@ -19,10 +19,11 @@ import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
+import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.s3.AmazonS3;
-
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
+
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -81,7 +82,7 @@ public class DeleteMitigationFromAllLocationsActivityTest {
         return new DeleteMitigationFromAllLocationsActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class)),
+                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class)),
             mock(RequestStorageManager.class),
             workflowStarter,
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));

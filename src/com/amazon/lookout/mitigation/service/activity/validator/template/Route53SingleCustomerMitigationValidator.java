@@ -12,12 +12,14 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 
 import lombok.NonNull;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.net.IPUtils;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.coral.google.common.collect.Sets;
@@ -66,7 +68,9 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     }
     
     @Override
-    public void validateRequestForTemplate(@NonNull MitigationModificationRequest request, @NonNull String mitigationTemplate) {
+    public void validateRequestForTemplate(
+            @NonNull MitigationModificationRequest request, @NonNull String mitigationTemplate, @NonNull TSDMetrics metrics) 
+    {
         Validate.notEmpty(mitigationTemplate);
         
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
@@ -77,7 +81,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
             throw new InternalServerError500(msg);
         }
         
-        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope);
+        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope, metrics);
     }
 
     @Override
@@ -87,7 +91,7 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
 
     @Override
     public void validateRequestForTemplateAndDevice(@NonNull MitigationModificationRequest request, @NonNull String mitigationTemplate,
-                                                    @NonNull DeviceNameAndScope deviceNameAndScope) {
+                                                    @NonNull DeviceNameAndScope deviceNameAndScope, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(mitigationTemplate);
 
         String mitigationName = request.getMitigationName();

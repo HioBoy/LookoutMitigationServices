@@ -2,14 +2,21 @@ package com.amazon.lookout.mitigation.service.activity.validator.template;
 
 import java.net.Inet4Address;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import lombok.NonNull;
 
 import com.amazon.arbor.ArborUtils;
+import com.amazon.lookout.ddb.model.TransitProvider;
 import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
 import com.amazon.lookout.mitigation.service.ArborBlackholeSetEnabledStateConstraint;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 
+import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.net.IPUtils;
 import com.amazon.aws158.commons.net.IpCidr;
 import com.amazon.lookout.mitigation.service.Constraint;
@@ -20,15 +27,23 @@ import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
 
 public class BlackholeArborCustomerValidator implements DeviceBasedServiceTemplateValidator {
+    @NonNull 
+    private final BlackholeMitigationHelper blackholeMitigationHelper;
+    
+    public BlackholeArborCustomerValidator(@NonNull BlackholeMitigationHelper blackholeMitigationHelper) {
+        this.blackholeMitigationHelper = blackholeMitigationHelper;
+    }
+
     @Override
     public void validateRequestForTemplate(
-            MitigationModificationRequest request, String mitigationTemplate) {
-        Validate.notNull(request);
+            @NonNull MitigationModificationRequest request, @NonNull  String mitigationTemplate, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(mitigationTemplate);
 
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(
@@ -40,7 +55,7 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
             throw new InternalServerError500(msg);
         }
 
-        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope);
+        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope, metrics);
     }
 
     @Override
@@ -50,12 +65,11 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
 
     @Override
     public void validateRequestForTemplateAndDevice(
-            MitigationModificationRequest request,
-            String mitigationTemplate,
-            DeviceNameAndScope deviceNameAndScope) {
-        Validate.notNull(request);
+            @NonNull MitigationModificationRequest request,
+            @NonNull String mitigationTemplate,
+            @NonNull DeviceNameAndScope deviceNameAndScope,
+            @NonNull TSDMetrics metrics) {
         Validate.notEmpty(mitigationTemplate);
-        Validate.notNull(deviceNameAndScope);
         
         if (request instanceof DeleteMitigationFromAllLocationsRequest) {
             validateDeleteRequest((DeleteMitigationFromAllLocationsRequest) request);
@@ -63,12 +77,12 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         }
         
         if (request instanceof CreateMitigationRequest) {
-            validateCreateRequest((CreateMitigationRequest) request);
+            validateCreateRequest((CreateMitigationRequest) request, metrics);
             return;
         }
         
         if (request instanceof EditMitigationRequest) {
-            validateEditRequest((EditMitigationRequest) request);
+            validateEditRequest((EditMitigationRequest) request, metrics);
             return;
         }
         
@@ -95,28 +109,28 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         // We do not current validate if there is a co-existed mitigation for the template and device
     }
 
-    private void validateDeleteRequest(DeleteMitigationFromAllLocationsRequest request) {
+    private static void validateDeleteRequest(DeleteMitigationFromAllLocationsRequest request) {
         validateMitigationName(request.getMitigationName());
     }
 
-    private static void validateCreateRequest(CreateMitigationRequest request) {
+    private void validateCreateRequest(@NonNull CreateMitigationRequest request, @NonNull TSDMetrics metrics) {
         validateMitigationName(request.getMitigationName());
         validateDescription(request.getMitigationActionMetadata().getDescription());
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
         validateNoLocations(request.getLocations());
-        validateMitigationConstraint(request.getMitigationDefinition().getConstraint());
+        validateMitigationConstraint(request.getMitigationDefinition().getConstraint(), metrics);
         validateNoDeploymentChecks(request.getPreDeploymentChecks());
         validateNoDeploymentChecks(request.getPostDeploymentChecks());
     }
 
-    private static void validateEditRequest(EditMitigationRequest request) {
+    private void validateEditRequest(@NonNull EditMitigationRequest request, @NonNull TSDMetrics metrics) {
         validateMitigationName(request.getMitigationName());
         validateDescription(request.getMitigationActionMetadata().getDescription());
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
         validateNoLocations(request.getLocation());
-        validateMitigationConstraint(request.getMitigationDefinition().getConstraint());
+        validateMitigationConstraint(request.getMitigationDefinition().getConstraint(), metrics);
         validateNoDeploymentChecks(request.getPreDeploymentChecks());
         validateNoDeploymentChecks(request.getPostDeploymentChecks());
     }
@@ -143,7 +157,7 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         }
     }
 
-    private static void validateMitigationConstraint(Constraint constraint) {
+    private void validateMitigationConstraint(Constraint constraint, TSDMetrics metrics) {
         if (constraint == null) {
             throw new IllegalArgumentException("Constraint must not be null.");
         }
@@ -151,6 +165,21 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         if (constraint instanceof ArborBlackholeConstraint) {
             ArborBlackholeConstraint arborConstraint = (ArborBlackholeConstraint) constraint;
             validateDestinationIP(arborConstraint.getIp());
+            
+            boolean hasAdditionalCommunityString =
+                    !StringUtils.isEmpty(arborConstraint.getAdditionalCommunityString());
+            
+            if (!hasAdditionalCommunityString && 
+               (arborConstraint.getTransitProviderIds() == null || arborConstraint.getTransitProviderIds().isEmpty()))
+            {
+                throw new IllegalArgumentException("At least one transit provider or additionalCommunityString must be provided");
+            }
+            
+            if (hasAdditionalCommunityString) {
+                RequestValidator.validateCommunityString(arborConstraint.getAdditionalCommunityString());
+            }
+            
+            validateTransitProviders(arborConstraint.getTransitProviderIds(), hasAdditionalCommunityString, metrics);
         } else if (!(constraint instanceof ArborBlackholeSetEnabledStateConstraint)) {
             throw new IllegalArgumentException(
                 "Expecting an ArborBlackholeConstraint or ArborBlackholeSetEnabledStateConstraint type, " +
@@ -158,7 +187,44 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
                     ReflectionToStringBuilder.toString(constraint));
         }
     }
-
+    
+    /**
+     * Check that the transit provider ids follow the right pattern, and that the match the actual
+     * entries in the database.
+     * 
+     * @param transitProviderIds
+     * @param metrics
+     */
+    private void validateTransitProviders(List<String> transitProviderIds, boolean hasAdditionalCommunityString, TSDMetrics metrics) {
+        if (transitProviderIds == null || transitProviderIds.isEmpty()) return;
+        boolean hasCommunityString = hasAdditionalCommunityString;
+        
+        // First validate they at least follow the expected pattern
+        transitProviderIds.forEach(id -> RequestValidator.validateTransitProviderId(id));
+        
+        // The number of transit providers should be small so its cheaper to fetch them all in one go then 
+        // to fetch one by one
+        Map<String, TransitProvider> transitProviders = blackholeMitigationHelper.listTransitProviders(metrics).stream()
+                    .collect(Collectors.toMap(t -> t.getTransitProviderId(), t -> t));
+        
+        for (String id : transitProviderIds) {
+            TransitProvider provider = transitProviders.get(id);
+            if (provider == null) {
+                throw new IllegalArgumentException("Invalid transit provider id: " + id);
+            }
+            
+            if (!StringUtils.isEmpty(provider.getTransitProviderCommunity())) {
+                hasCommunityString = true;
+            }
+        }
+        
+        if (!hasCommunityString) {
+            throw new IllegalArgumentException(
+                    "None of the specified transit providers has a community string " + 
+                    "and no additional community string was provided.");
+        }
+    }
+    
     private static void validateDestinationIP(String destCidrString) {
         if (StringUtils.isBlank(destCidrString)) {
             throw new IllegalArgumentException("CIDRs in the constraint must not be blank");

@@ -467,7 +467,7 @@ public class RequestValidator {
     private static final String TRANSIT_PROVIDER_ID_ERROR_MSG = 
             String.format("Transit provider id must be an url safe base64 encoded string.");
     
-    private static void validateTransitProviderId(String transitProviderId) {
+    public static void validateTransitProviderId(String transitProviderId) {
         if (StringUtils.isEmpty(transitProviderId)) {
             LOG.info(TRANSIT_PROVIDER_ID_ERROR_MSG);
             throw new IllegalArgumentException(TRANSIT_PROVIDER_ID_ERROR_MSG);
@@ -526,7 +526,7 @@ public class RequestValidator {
     private static String COMMUNITY_STRING_ERROR_MSG = 
             "The community string must be a space seperated list of <asn>:<value> where asn and value are integers.";
     
-    private static void validateCommunityString(String communityString) {
+    public static void validateCommunityString(String communityString) {
         if (StringUtils.isEmpty(communityString)) {
             // Empty community strings are allowed for disabled or manual transit providers
             return;

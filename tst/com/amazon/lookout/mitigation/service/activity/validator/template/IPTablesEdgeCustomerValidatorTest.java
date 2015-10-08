@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
 import com.amazon.lookout.test.common.util.TestUtils;
+import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.google.common.collect.ImmutableList;
 import com.amazon.lookout.mitigation.service.ApplyIPTablesRulesAction;
 import com.amazon.lookout.mitigation.service.CompositeAndConstraint;
@@ -45,7 +46,7 @@ public class IPTablesEdgeCustomerValidatorTest {
         CreateMitigationRequest request = generateCreateMitigationRequest(validIpTablesJson());
         IPTablesEdgeCustomerValidator validator = createValidator();
 
-        validator.validateRequestForTemplate(request, request.getMitigationTemplate());
+        validator.validateRequestForTemplate(request, request.getMitigationTemplate(), mock(TSDMetrics.class));
     }
 
     @Test
@@ -60,7 +61,7 @@ public class IPTablesEdgeCustomerValidatorTest {
 
         IllegalArgumentException actualError = assertThrows(
                 IllegalArgumentException.class,
-                () -> validator.validateRequestForTemplate(request, request.getMitigationTemplate()));
+                () -> validator.validateRequestForTemplate(request, request.getMitigationTemplate(), mock(TSDMetrics.class)));
 
         assertThat(actualError, is(expectedError));
     }
@@ -245,7 +246,7 @@ public class IPTablesEdgeCustomerValidatorTest {
         IPTablesEdgeCustomerValidator validator = createValidator();
         return assertThrows(
                 expectedException,
-                () -> validator.validateRequestForTemplate(request, request.getMitigationTemplate()));
+                () -> validator.validateRequestForTemplate(request, request.getMitigationTemplate(), mock(TSDMetrics.class)));
     }
 
     private static CreateMitigationRequest generateCreateMitigationRequest() {

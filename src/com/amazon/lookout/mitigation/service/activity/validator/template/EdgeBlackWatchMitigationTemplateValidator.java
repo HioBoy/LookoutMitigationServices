@@ -17,6 +17,7 @@ import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.AlarmCheck;
 import com.amazon.lookout.mitigation.service.BlackWatchConfigBasedConstraint;
 import com.amazon.lookout.mitigation.service.Constraint;
@@ -75,7 +76,7 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
     
     @Override
     public void validateRequestForTemplate(
-            MitigationModificationRequest request, String mitigationTemplate) {
+            MitigationModificationRequest request, String mitigationTemplate, TSDMetrics metrics) {
         Validate.notEmpty(mitigationTemplate, "mitigation template can not be empty");
         
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
@@ -89,13 +90,14 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
             throw new InternalServerError500(message);
         }
 
-        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope);
+        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope, metrics);
     }
 
     @Override
     public void validateRequestForTemplateAndDevice(
             MitigationModificationRequest request, String mitigationTemplate,
-            DeviceNameAndScope deviceNameAndScope) {
+            DeviceNameAndScope deviceNameAndScope, 
+            TSDMetrics metrics) {
         Validate.notEmpty(mitigationTemplate, "mitigation template can not be empty");
 
         if (request instanceof CreateMitigationRequest) {

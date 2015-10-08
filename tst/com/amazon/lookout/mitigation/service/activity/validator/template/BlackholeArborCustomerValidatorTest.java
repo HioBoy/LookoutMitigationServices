@@ -1,5 +1,24 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
+import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Consumer;
+
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.AlarmCheck;
 import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
 import com.amazon.lookout.mitigation.service.ArborBlackholeSetEnabledStateConstraint;
@@ -11,23 +30,21 @@ import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
+import com.amazon.lookout.mitigation.service.activity.BlackholeTestUtils;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import java.util.function.Consumer;
-
-import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
-import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertThat;
+import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
+import com.google.common.collect.ImmutableList;
 
 @RunWith(JUnitParamsRunner.class)
 public class BlackholeArborCustomerValidatorTest {
+    private BlackholeMitigationHelper blackholeMitigationHelper;
+    
+    @Before
+    public void before() {
+        blackholeMitigationHelper = BlackholeTestUtils.mockMitigationHelper();
+    }
+    
     @Test
     public void validRequest() throws Exception {
         validate(validCreateMitigationRequest());
@@ -146,7 +163,7 @@ public class BlackholeArborCustomerValidatorTest {
                 request -> constraint(request).setIp(null)),
             containsString("must not be blank"));
     }
-
+    
     @Test
     public void ipIsNotEmpty() throws Exception {
         assertThat(
@@ -221,7 +238,7 @@ public class BlackholeArborCustomerValidatorTest {
         "127.0.0.1/32", // loopback address
         "169.254.0.1/32" // link local address
     })
-    public void ipV6IsNotSupported(String invalidIp) throws Exception {
+    public void specialIpsAreNotSupported(String invalidIp) throws Exception {
         assertThat(
             validationMessage(
                 validCreateMitigationRequest(),
@@ -235,17 +252,17 @@ public class BlackholeArborCustomerValidatorTest {
     }
 
     @Test
-    public void specialIpsAreNotSupported() throws Exception {
+    public void ipV6IsNotSupported() throws Exception {
         assertThat(
             validationMessage(
                 validCreateMitigationRequest(),
-                request -> constraint(request).setIp("::1/32")),
-            containsString("::1"));
+                request -> constraint(request).setIp("2001:4860:4860::8888/48")),
+            containsString("is not a valid IP"));
         assertThat(
             validationMessage(
                 validEditMitigationRequest(),
-                request -> constraint(request).setIp("::1/32")),
-            containsString("::1"));
+                request -> constraint(request).setIp("2001:4860:4860::8888/48")),
+            containsString("is not a valid IP"));
     }
 
     @Test
@@ -289,7 +306,116 @@ public class BlackholeArborCustomerValidatorTest {
                 request -> request.setPostDeploymentChecks(singletonList(new AlarmCheck()))),
             containsString("deployment checks"));
     }
-
+    
+    public Object[] validTransitProviderCombinations() {
+        return new Object[] {
+            ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID),
+            ImmutableList.of(
+                    BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID, 
+                    BlackholeTestUtils.VALID_UNSUPPORTED_TRANSIT_PROVIDER_ID)
+        };
+    }
+    
+    @Parameters(method="validTransitProviderCombinations")
+    @Test
+    public void validTransitProvidersNoAdditionalCommunity(List<String> transitProviderIds) throws Exception {
+        CreateMitigationRequest createRequest = validCreateMitigationRequest();
+        constraint(createRequest).setTransitProviderIds(transitProviderIds);
+        constraint(createRequest).setAdditionalCommunityString(null);
+        validate(createRequest);
+        
+        EditMitigationRequest editRequest = validEditMitigationRequest();
+        constraint(editRequest).setTransitProviderIds(transitProviderIds);
+        constraint(createRequest).setAdditionalCommunityString(null);
+        validate(editRequest);
+    }
+    
+    @Parameters(method="validTransitProviderCombinations")
+    @Test
+    public void validTransitProvidersWithAdditionalCommunity(List<String> transitProviderIds) throws Exception {
+        CreateMitigationRequest createRequest = validCreateMitigationRequest();
+        constraint(createRequest).setTransitProviderIds(transitProviderIds);
+        constraint(createRequest).setAdditionalCommunityString("16509:3 16509:20");
+        validate(createRequest);
+        
+        EditMitigationRequest editRequest = validEditMitigationRequest();
+        constraint(editRequest).setTransitProviderIds(transitProviderIds);
+        constraint(createRequest).setAdditionalCommunityString("16509:3 16509:20");
+        validate(editRequest);
+    }
+    
+    @Parameters({
+        BlackholeTestUtils.INVALID_TRANSIT_PROVIDER_ID + ", must be an url safe base64 encoded string", 
+        BlackholeTestUtils.WELL_FORMATTED_BUT_INVALID_TRANSIT_PROVIDER_ID + ", Invalid transit provider id: " + 
+                BlackholeTestUtils.WELL_FORMATTED_BUT_INVALID_TRANSIT_PROVIDER_ID})
+    @Test
+    public void invalidTransitProviders(String invalidTransitProviderId, String expected) throws Exception {
+        assertThat(
+                validationMessage(
+                    validCreateMitigationRequest(),
+                    request -> constraint(request).setTransitProviderIds(ImmutableList.of(invalidTransitProviderId))),
+                containsString(expected));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> constraint(request).setTransitProviderIds(ImmutableList.of(invalidTransitProviderId))),
+            containsString(expected));
+    }
+    
+    @Test
+    public void noTransitProviderOrCommunityString() throws Exception {
+        assertThat(
+                validationMessage(
+                    validCreateMitigationRequest(),
+                    request -> {
+                        constraint(request).setTransitProviderIds(Collections.emptyList());
+                        constraint(request).setAdditionalCommunityString("");
+                    }),
+                containsString("At least one transit provider or additionalCommunityString must be provided"));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> {
+                    constraint(request).setTransitProviderIds(Collections.emptyList());
+                    constraint(request).setAdditionalCommunityString("");
+                }),
+            containsString("At least one transit provider or additionalCommunityString must be provided"));
+    }
+    
+    @Test
+    public void noActiveTransitProviderOrCommunityString() throws Exception {
+        assertThat(
+                validationMessage(
+                    validCreateMitigationRequest(),
+                    request -> {
+                        constraint(request).setTransitProviderIds(ImmutableList.of(BlackholeTestUtils.VALID_UNSUPPORTED_TRANSIT_PROVIDER_ID));
+                        constraint(request).setAdditionalCommunityString("");
+                    }),
+                containsString("None of the specified transit providers has a community string"));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> {
+                    constraint(request).setTransitProviderIds(ImmutableList.of(BlackholeTestUtils.VALID_UNSUPPORTED_TRANSIT_PROVIDER_ID));
+                    constraint(request).setAdditionalCommunityString("");
+                }),
+            containsString("None of the specified transit providers has a community string"));
+    }
+    
+    @Test
+    public void invalidAdditionalCommunity() throws Exception {
+        assertThat(
+                validationMessage(
+                    validCreateMitigationRequest(),
+                    request -> constraint(request).setAdditionalCommunityString("Invalid")),
+                containsString("The community string must be"));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> constraint(request).setAdditionalCommunityString("Invalid")),
+            containsString("The community string must be"));
+    } 
+    
     private static ArborBlackholeConstraint constraint(MitigationModificationRequest request) {
         if (request instanceof CreateMitigationRequest) {
             return (ArborBlackholeConstraint)
@@ -302,11 +428,12 @@ public class BlackholeArborCustomerValidatorTest {
         }
     }
 
-    private static void validate(MitigationModificationRequest request) {
-        BlackholeArborCustomerValidator validator = new BlackholeArborCustomerValidator();
+    private void validate(MitigationModificationRequest request) {
+        BlackholeArborCustomerValidator validator = new BlackholeArborCustomerValidator(blackholeMitigationHelper);
         validator.validateRequestForTemplate(
             request,
-            MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
+            MitigationTemplate.Blackhole_Mitigation_ArborCustomer,
+            mock(TSDMetrics.class));
     }
 
     private static CreateMitigationRequest validCreateMitigationRequest() {
@@ -328,6 +455,7 @@ public class BlackholeArborCustomerValidatorTest {
         constraint.setIp("1.2.3.4/32");
         constraint.setEnabled(true);
         constraint.setTransitProviderIds(emptyList());
+        constraint.setAdditionalCommunityString("16509:1 16509:10");
         mitigationDefinition.setConstraint(constraint);
 
         request.setMitigationDefinition(mitigationDefinition);
@@ -354,6 +482,7 @@ public class BlackholeArborCustomerValidatorTest {
         constraint.setIp("1.2.3.4/32");
         constraint.setEnabled(true);
         constraint.setTransitProviderIds(emptyList());
+        constraint.setAdditionalCommunityString("16509:1 16509:10");
         mitigationDefinition.setConstraint(constraint);
 
         request.setMitigationDefinition(mitigationDefinition);
@@ -404,7 +533,7 @@ public class BlackholeArborCustomerValidatorTest {
         return new MitigationModificationRequest() {};
     }
 
-    private static <T extends MitigationModificationRequest> String validationMessage(
+    private <T extends MitigationModificationRequest> String validationMessage(
         T request,
         Consumer<T> setupRequest)
         throws Exception {
@@ -412,7 +541,7 @@ public class BlackholeArborCustomerValidatorTest {
         return validationException(request, setupRequest).getMessage();
     }
 
-    private static <T extends MitigationModificationRequest> IllegalArgumentException validationException(
+    private <T extends MitigationModificationRequest> IllegalArgumentException validationException(
         T request,
         Consumer<T> setupRequest)
         throws Exception {

@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
+import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.Constraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
@@ -43,7 +44,8 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
     public void validateRequestForTemplateAndDevice(
             @NonNull MitigationModificationRequest request,
             @NonNull String mitigationTemplate,
-            @NonNull DeviceNameAndScope deviceNameAndScope) {
+            @NonNull DeviceNameAndScope deviceNameAndScope,
+            @NonNull TSDMetrics metrics) {
         Validate.notEmpty(mitigationTemplate);
 
         validateMitigationName(request.getMitigationName());
@@ -61,7 +63,8 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
     @Override
     public void validateRequestForTemplate(
             @NonNull MitigationModificationRequest request,
-            @NonNull String mitigationTemplate) {
+            @NonNull String mitigationTemplate,
+            @NonNull TSDMetrics metrics) {
         Validate.notEmpty(mitigationTemplate);
 
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(
@@ -76,7 +79,7 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
             throw new InternalServerError500(message);
         }
 
-        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope);
+        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope, metrics);
     }
 
     /**

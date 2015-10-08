@@ -23,6 +23,7 @@ import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
+import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.s3.AmazonS3;
@@ -36,6 +37,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.Collections;
 import java.util.List;
 
 import static java.util.Collections.emptyList;
@@ -133,7 +135,7 @@ public class CreateMitigationActivityTest {
         return new CreateMitigationActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class)),
+                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper()),
             mock(RequestStorageManager.class),
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));
@@ -143,7 +145,7 @@ public class CreateMitigationActivityTest {
         return new CreateMitigationActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class)),
+                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper()),
                 requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));
@@ -265,7 +267,7 @@ public class CreateMitigationActivityTest {
         ArborBlackholeConstraint constraint = new ArborBlackholeConstraint();
         constraint.setIp("1.2.3.4/32");
         constraint.setEnabled(true);
-        constraint.setTransitProviderIds(emptyList());
+        constraint.setTransitProviderIds(Collections.singletonList(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID));
         mitigationDefinition.setConstraint(constraint);
 
         request.setMitigationDefinition(mitigationDefinition);
