@@ -27,7 +27,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 
 public class IAMUserUtilsBase {
-    private static final String CREDENTIALS_BASE = "com.amazon.lookout.lookoutmitigationservice.account.access";
+    private static final String OLD_CREDENTIALS_BASE = "com.amazon.lookout.lookoutmitigationservice.account.access";
+    private static final String NEW_CREDENTIALS_BASE = "com.amazon.lookout.lookoutmitigationservice.iam";
     
     private static final ImmutableMap<String, PolicyDescription> basePolicies;
     
@@ -134,27 +135,17 @@ public class IAMUserUtilsBase {
         String endpoint;
         switch(domain) {
         case "beta":
-            credentials = CREDENTIALS_BASE + ".beta";
+            credentials = OLD_CREDENTIALS_BASE + ".beta";
             endpoint = "https://aws-iams.integ.amazon.com";
             break;
         case "gamma":
-            credentials = CREDENTIALS_BASE + ".gamma";
+            credentials = OLD_CREDENTIALS_BASE + ".gamma";
             endpoint = "https://aws-iams-gamma.amazon.com";
             break;
-        case "systest":
-            // The systest account doesn't have a root access key so use an IAM specific one.
-            // TODO: Move all accounts to this
-            credentials = "com.amazon.lookout.lookoutmitigationservice.iam.systest";
-            endpoint = "https://iam.amazonaws.com";
-            break;
-        case "prod":
-            credentials = CREDENTIALS_BASE;
-            endpoint = "https://iam.amazonaws.com";
-            break;
         default:
-            System.err.println("Unrecognized domain " + domain);
-            System.exit(-1);
-            throw new RuntimeException("Unreachable");
+            credentials = NEW_CREDENTIALS_BASE + "." + domain;
+            endpoint = "https://iam.amazonaws.com";
+            break;
         }
         AWSCredentialsProvider credentialsProvider = new OdinAWSCredentialsProvider(credentials);
         iamClient = new AmazonIdentityManagementClient(credentialsProvider);

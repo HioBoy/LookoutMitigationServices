@@ -25,7 +25,7 @@ public class CreateIAMUsers extends IAMUserUtilsBase {
         Logger.getRootLogger().setLevel(Level.WARN);
         
         if (args.length != 1) {
-            System.err.println("Usage: java " + VerifyIAMUsers.class + " <domain>");
+            System.err.println("Usage: java " + CreateIAMUsers.class + " <domain>");
             System.exit(-1);
         }
         
