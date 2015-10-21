@@ -21,7 +21,6 @@ import org.junit.runner.RunWith;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.AlarmCheck;
 import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
-import com.amazon.lookout.mitigation.service.ArborBlackholeSetEnabledStateConstraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.DropAction;
@@ -53,11 +52,6 @@ public class BlackholeArborCustomerValidatorTest {
     }
 
     @Test
-    public void validEnabledStateRequest() {
-        validate(validSetEnabledStateRequest());
-    }
-
-    @Test
     public void invalidNotSupportedRequest() throws Exception {
         assertThat(
             validationMessage(
@@ -71,7 +65,8 @@ public class BlackholeArborCustomerValidatorTest {
         "",
         "Cannot contain both space and \"quote",
         "跑",
-        "#"
+        "#",
+        "MissingLKT-"
     })
     public void mitigationNameIsValid(String invalidMitigationName) throws Exception {
         assertThat(
@@ -438,7 +433,7 @@ public class BlackholeArborCustomerValidatorTest {
 
     private static CreateMitigationRequest validCreateMitigationRequest() {
         CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationName("TestMitigation");
+        request.setMitigationName("LKT-TestMitigation");
         request.setServiceName(ServiceName.Blackhole);
         request.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
 
@@ -464,7 +459,7 @@ public class BlackholeArborCustomerValidatorTest {
 
     private static EditMitigationRequest validEditMitigationRequest() {
         EditMitigationRequest request = new EditMitigationRequest();
-        request.setMitigationName("TestMitigation");
+        request.setMitigationName("LKT-TestMitigation");
         request.setServiceName(ServiceName.Blackhole);
         request.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
         request.setMitigationVersion(2);
@@ -489,33 +484,9 @@ public class BlackholeArborCustomerValidatorTest {
         return request;
     }
 
-    private static EditMitigationRequest validSetEnabledStateRequest() {
-        EditMitigationRequest request = new EditMitigationRequest();
-        request.setMitigationName("TestMitigation");
-        request.setServiceName(ServiceName.Blackhole);
-        request.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
-        request.setMitigationVersion(2);
-
-        MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
-        actionMetadata.setUser("username");
-        actionMetadata.setToolName("unit-tests");
-        actionMetadata.setDescription("description");
-        request.setMitigationActionMetadata(actionMetadata);
-
-        MitigationDefinition mitigationDefinition = new MitigationDefinition();
-        mitigationDefinition.setAction(new DropAction());
-
-        ArborBlackholeSetEnabledStateConstraint constraint = new ArborBlackholeSetEnabledStateConstraint();
-        constraint.setEnabled(true);
-        mitigationDefinition.setConstraint(constraint);
-
-        request.setMitigationDefinition(mitigationDefinition);
-        return request;
-    }
-
     private static DeleteMitigationFromAllLocationsRequest validDeleteMitigationRequest() {
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
-        request.setMitigationName("TestMitigation");
+        request.setMitigationName("LKT-TestMitigation");
         request.setServiceName(ServiceName.Blackhole);
         request.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
         request.setMitigationVersion(2);

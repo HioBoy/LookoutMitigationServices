@@ -92,12 +92,12 @@ public class CreateMitigationActivityTest {
     @Test
     public void testBlackholeMitigationRequest() {
         CreateMitigationActivity activity = createActivityWithValidators();
-        CreateMitigationRequest request = sampleCreateBlackholeMitigationRequest("TestBlackholeMitigation");
+        CreateMitigationRequest request = sampleCreateBlackholeMitigationRequest("LKT-TestBlackholeMitigation");
 
         MitigationModificationResponse response = activity.enact(request);
 
         assertThat(response.getDeviceName(), is(DeviceName.ARBOR.name()));
-        assertThat(response.getMitigationName(), is("TestBlackholeMitigation"));
+        assertThat(response.getMitigationName(), is("LKT-TestBlackholeMitigation"));
         assertThat(response.getMitigationTemplate(), is(MitigationTemplate.Blackhole_Mitigation_ArborCustomer));
         assertThat(response.getServiceName(), is(ServiceName.Blackhole));
     }
@@ -106,11 +106,11 @@ public class CreateMitigationActivityTest {
     public void defaultLocationForBlackholeMitigationRequest() {
         RequestStorageManager requestStorageManagerMock = mock(RequestStorageManager.class);
         CreateMitigationActivity activity = createActivityWithValidators(requestStorageManagerMock);
-        CreateMitigationRequest request = sampleCreateBlackholeMitigationRequest("TestBlackholeMitigation");
+        CreateMitigationRequest request = sampleCreateBlackholeMitigationRequest("LKT-TestBlackholeMitigation");
 
         MitigationModificationResponse response = activity.enact(request);
 
-        assertThat(response.getMitigationName(), is("TestBlackholeMitigation"));
+        assertThat(response.getMitigationName(), is("LKT-TestBlackholeMitigation"));
         verify(requestStorageManagerMock)
                 .storeRequestForWorkflow(
                         eq(request),

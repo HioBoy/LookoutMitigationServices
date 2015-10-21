@@ -9,8 +9,8 @@ import lombok.NonNull;
 
 import com.amazon.arbor.ArborUtils;
 import com.amazon.lookout.ddb.model.TransitProvider;
+import com.amazon.lookout.mitigation.arbor.model.ArborConstants;
 import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
-import com.amazon.lookout.mitigation.service.ArborBlackholeSetEnabledStateConstraint;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
@@ -139,6 +139,10 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         if (StringUtils.isBlank(mitigationName)) {
             throw new IllegalArgumentException("mitigationName cannot be null or empty");
         }
+        
+        if (!mitigationName.startsWith(ArborConstants.MANAGED_BLACKHOLE_NAME_PREFIX)) {
+            throw new IllegalArgumentException("Blackhole mitigationNames must start with " + ArborConstants.MANAGED_BLACKHOLE_NAME_PREFIX);
+        }
 
         String error = ArborUtils.checkArgument(mitigationName);
         if (error != null) {
@@ -180,10 +184,9 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
             }
             
             validateTransitProviders(arborConstraint.getTransitProviderIds(), hasAdditionalCommunityString, metrics);
-        } else if (!(constraint instanceof ArborBlackholeSetEnabledStateConstraint)) {
+        } else {
             throw new IllegalArgumentException(
-                "Expecting an ArborBlackholeConstraint or ArborBlackholeSetEnabledStateConstraint type, " +
-                    "instead found: " +
+                "Expecting an ArborBlackholeConstraint type, instead found: " +
                     ReflectionToStringBuilder.toString(constraint));
         }
     }

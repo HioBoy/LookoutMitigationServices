@@ -110,7 +110,7 @@ public class DeleteMitigationFromAllLocationsActivityTest {
 
     private DeleteMitigationFromAllLocationsRequest sampleDeleteBlackholeMitigationRequest() {
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
-        request.setMitigationName("TestBlackholeMitigation");
+        request.setMitigationName("LKT-TestBlackholeMitigation");
         request.setServiceName(ServiceName.Blackhole);
         request.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
         request.setMitigationVersion(MITIGATION_VERSION);
