@@ -532,7 +532,7 @@ public class RequestValidator {
             return;
         }
         
-        if (communityString.length() > DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS) {
+        if (communityString.length() > DEFAULT_MAX_LENGTH_DESCRIPTION) {
             // 100 characters should be more than enough for any sane community string
             String message = "Community string must be no more than than " + DEFAULT_MAX_LENGTH_DESCRIPTION + " characters long";
             LOG.info(message);
