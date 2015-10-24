@@ -133,20 +133,5 @@
       </java>
     </sequential>
   </macrodef>
-  
-  <target name="verify-iam" depends="build" description="Verify the IAM users and policies for a domain.">
-    <fail unless="domain">Add -Ddomain to set the domain to verify</fail>
-    <lkt-java classname="com.amazon.lookout.mitigation.service.iam.setup.VerifyIAMUsers">
-        <arg value="${domain}"/>
-    </lkt-java>
-  </target>
-
-  <target name="create-iam" depends="build" description="Create/Update the IAM users and policies for a domain">
-    <fail unless="domain">Add -Ddomain to set the domain to verify</fail>
-    <lkt-java classname="com.amazon.lookout.mitigation.service.iam.setup.CreateIAMUsers">
-        <arg value="${domain}"/>
-    </lkt-java>
-  </target>
-
 
 </project>
