@@ -25,15 +25,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.amazonaws.services.simpleworkflow.model.ListOpenWorkflowExecutionsRequest;
-import org.apache.log4j.Level;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.activities.model.SchedulingStatus;
 import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
@@ -44,6 +41,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.model.RequestType;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.workflow.model.RequestToReap;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
@@ -54,6 +52,7 @@ import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.ExecutionStatus;
 import com.amazonaws.services.simpleworkflow.model.ListClosedWorkflowExecutionsRequest;
+import com.amazonaws.services.simpleworkflow.model.ListOpenWorkflowExecutionsRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfo;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfos;
 import com.google.common.collect.Lists;
@@ -590,6 +589,31 @@ public class RequestsReaperTest {
         assertEquals(request5.getRequestType(), RequestType.CreateRequest.name());
         assertEquals(request5.getServiceName(), ServiceName.Route53);
         assertEquals(request5.getWorkflowIdStr(), "5");
+    }
+    
+    @Test
+    public void testGetRequestsWithNoCountButLastEval() {
+        RequestsReaper reaper = mock(RequestsReaper.class);
+        when(reaper.getRequestsToReap(any(TSDMetrics.class))).thenCallRealMethod();
+        when(reaper.getMaxSecondsToStartWorkflow()).thenReturn(60);
+        
+        TSDMetrics metrics = mock(TSDMetrics.class);
+        when(metrics.newSubMetrics(anyString())).thenReturn(metrics);
+        
+        QueryResult result1 = new QueryResult();
+        result1.setItems(new ArrayList<>());
+        result1.setLastEvaluatedKey(new HashMap<>());
+        
+        QueryResult result2 = new QueryResult();
+        result2.setItems(new ArrayList<>());
+       
+        when(reaper.getUnsuccessfulUnreapedRequests(anyString(), anyMap())).thenReturn(result1).thenReturn(result2);
+        
+        List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
+        assertEquals(0, requestsToReap.size());
+        
+        // Verify that we have 1 call per device + an additional call for getting the result1 defined above which has a non-null lastEvaluatedKey.
+        verify(reaper, times(DeviceName.values().length + 1)).getUnsuccessfulUnreapedRequests(anyString(), anyMap());
     }
     
     @Test

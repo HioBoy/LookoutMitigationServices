@@ -206,11 +206,11 @@ public class RequestsReaper implements Runnable {
                     try {
                         // Get a list of active requests which weren't successful and haven't been reaped as yet.
                         QueryResult queryResult = getUnsuccessfulUnreapedRequests(deviceName.name(), lastEvaluatedKey);
-                        if ((queryResult == null) || (queryResult.getCount() == 0)) {
-                            LOG.debug("Found no unsuccessful + unreaped requests");
-                            continue;
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("Found: " + queryResult.getItems().size() + " unsuccessful+unreaped requests: " + ReflectionToStringBuilder.toString(queryResult));
                         }
-                        LOG.debug("Found: " + queryResult.getItems().size() + " unsuccessful+unreaped requests: " + ReflectionToStringBuilder.toString(queryResult));
+                        
+                        lastEvaluatedKey = queryResult.getLastEvaluatedKey();
                         
                         for (Map<String, AttributeValue> item : queryResult.getItems()) {
                             String workflowIdStr = item.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN();
@@ -273,7 +273,6 @@ public class RequestsReaper implements Runnable {
                             LOG.info("Request that needs to be reaped: " + workflowInfo);
                             requestsToBeReaped.add(workflowInfo);
                         }
-                        lastEvaluatedKey = queryResult.getLastEvaluatedKey();
                     } catch (Exception ex) {
                         // Handle any exceptions by logging a warning and moving on to the next device.
                         String msg = "Caught exception when querying active workflows for device: " + deviceName.name();
