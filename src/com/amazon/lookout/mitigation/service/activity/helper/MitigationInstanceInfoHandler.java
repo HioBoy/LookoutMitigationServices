@@ -10,6 +10,6 @@ public interface MitigationInstanceInfoHandler {
 
     public List<MitigationInstanceStatus> getMitigationInstanceStatus(String deviceName, long jobId, TSDMetrics tsdMetrics);
 
-    public List<LocationDeploymentInfo> getLocationDeploymentInfoOnLocation(String deviceName, String location,
-             int maxNumberOfHistoryEntriesToFetch, Long exclusiveLastEvaluatedTimestamp, TSDMetrics tsdMetrics);
+    public List<LocationDeploymentInfo> getLocationDeploymentInfoOnLocation(String deviceName, String serviceName,
+            String location, int maxNumberOfHistoryEntriesToFetch, Long exclusiveLastEvaluatedTimestamp, TSDMetrics tsdMetrics);
 }

@@ -671,6 +671,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * Get mitigation definition based on device name, mitigation name, and mitigation version
      * This API queries GSI, result is eventually consistent.
      * @param deviceName : device name
+     * @param serviceName: service name
      * @param mitigationName : mitigation name
      * @param mitigationVersion : mitigation version
      * @param tsdMetrics : TSD metrics
@@ -678,8 +679,8 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * @throws MissingMitigationException400, if mitigation not found
      */
     @Override
-    public MitigationRequestDescription getMitigationDefinition(String deviceName, String mitigationName, int mitigationVersion,
-            TSDMetrics tsdMetrics) {
+    public MitigationRequestDescription getMitigationDefinition(String deviceName, String serviceName, String mitigationName,
+            int mitigationVersion, TSDMetrics tsdMetrics) {
         Validate.notEmpty(deviceName);
         Validate.notEmpty(mitigationName);
         Validate.isTrue(mitigationVersion > 0);
@@ -687,6 +688,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         QuerySpec query = new QuerySpec().withHashKey(MITIGATION_NAME_KEY, mitigationName)
                 .withRangeKeyCondition(new RangeKeyCondition(MITIGATION_VERSION_KEY).eq(mitigationVersion))
                 .withQueryFilters(new QueryFilter(DEVICE_NAME_KEY).eq(deviceName),
+                        new QueryFilter(SERVICE_NAME_KEY).eq(serviceName),
                         new QueryFilter(REQUEST_TYPE_KEY).ne(RequestType.DeleteRequest.name()),
                         new QueryFilter(WORKFLOW_STATUS_KEY).in(WorkflowStatus.SUCCEEDED, WorkflowStatus.RUNNING))
                 .withMaxResultSize(10);

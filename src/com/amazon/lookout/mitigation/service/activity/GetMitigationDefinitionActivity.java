@@ -84,19 +84,25 @@ public class GetMitigationDefinitionActivity extends Activity {
         try {            
             String deviceName = request.getDeviceName();
             String mitigationName = request.getMitigationName();
+            String serviceName = request.getServiceName();
+            
             int mitigationVersion = request.getMitigationVersion();
 
-            LOG.info(String.format("GetMitigationDefinitionActivity called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
+            LOG.info(String.format("GetMitigationDefinitionActivity called with RequestId: %s and Request: %s.",
+                    requestId, ReflectionToStringBuilder.toString(request)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
             
             // Step 1. Validate this request
             requestValidator.validateGetMitigationDefinitionRequest(request);
             
             // Step 2. get mitigation request for this device, mitigationName and mitigation version from the requests table.
-            MitigationRequestDescription mitigationDescription = requestInfoHandler.getMitigationDefinition(deviceName, mitigationName, mitigationVersion, tsdMetrics);
+            MitigationRequestDescription mitigationDescription = requestInfoHandler.getMitigationDefinition(
+                    deviceName, serviceName, mitigationName, mitigationVersion, tsdMetrics);
             
-            // Step 3. query the individual instance status and populate a new MitigationRequestDescriptionWithStatus instance to wrap this information.
-            List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler.getMitigationInstanceStatus(deviceName, mitigationDescription.getJobId(), tsdMetrics);
+            // Step 3. query the individual instance status and populate a new
+            // MitigationRequestDescriptionWithStatus instance to wrap this information.
+            List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler.getMitigationInstanceStatus(
+                    deviceName, mitigationDescription.getJobId(), tsdMetrics);
 
             MitigationRequestDescriptionWithStatus mitigationRequestDescriptionWithStatus = new MitigationRequestDescriptionWithStatus();
             mitigationRequestDescriptionWithStatus.setMitigationRequestDescription(mitigationDescription);
@@ -108,12 +114,14 @@ public class GetMitigationDefinitionActivity extends Activity {
             response.setRequestId(requestId);
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
-            String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "GetMitigationDefinitionActivity", ex.getMessage());
+            String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId,
+                    "GetMitigationDefinitionActivity", ex.getMessage());
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationDefinitionExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
         } catch (MissingMitigationException400 missingMitigationException) {
-            String msg = "Caught MissingMitigationException in GetMitigationDefinitionActivity for requestId: " + requestId + ", reason: " + missingMitigationException.getMessage();
+            String msg = "Caught MissingMitigationException in GetMitigationDefinitionActivity for requestId: " + requestId
+                    + ", reason: " + missingMitigationException.getMessage();
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), missingMitigationException);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationDefinitionExceptions.MissingMitigation.name(), 1);
             throw new MissingMitigationException400(msg);

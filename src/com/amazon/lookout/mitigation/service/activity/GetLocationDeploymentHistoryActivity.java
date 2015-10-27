@@ -88,6 +88,7 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
             
             String deviceName = request.getDeviceName();
             String location = request.getLocation();
+            String serviceName = request.getServiceName();
             
             Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
             if (maxNumberOfHistoryEntriesToFetch == null) {
@@ -97,7 +98,7 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
 
             // Step 2. Fetch list of mitigation deployment history on this location
             List<LocationDeploymentInfo> listOfLocationDeploymentInfo = 
-                    mitigationInstanceHandler.getLocationDeploymentInfoOnLocation(deviceName, location,
+                    mitigationInstanceHandler.getLocationDeploymentInfoOnLocation(deviceName, serviceName, location,
                             maxNumberOfHistoryEntriesToFetch, request.getExclusiveLastEvaluatedTimestamp(), tsdMetrics);
             
             // Step 3. Create the response object to return back to the client.

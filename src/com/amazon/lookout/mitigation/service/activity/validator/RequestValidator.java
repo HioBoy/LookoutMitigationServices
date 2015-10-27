@@ -190,8 +190,8 @@ public class RequestValidator {
      */
     public void validateGetMitigationHistoryRequest(
             GetMitigationHistoryRequest request) {
-        validateServiceName(request.getServiceName());
         validateDeviceName(request.getDeviceName());
+        validateServiceName(request.getServiceName());
         validateDeviceScope(request.getDeviceScope());
         validateMitigationName(request.getMitigationName());
         Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
@@ -211,6 +211,7 @@ public class RequestValidator {
      */
     public void validateGetLocationDeploymentHistoryRequest(GetLocationDeploymentHistoryRequest request) {
         validateDeviceName(request.getDeviceName());
+        validateServiceName(request.getServiceName());
         validateLocation(request.getLocation());
         Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
         if (maxNumberOfHistoryEntriesToFetch != null) {
@@ -229,6 +230,7 @@ public class RequestValidator {
      */
     public void validateGetMitigationDefinitionRequest(GetMitigationDefinitionRequest request) {
         validateDeviceName(request.getDeviceName());
+        validateServiceName(request.getServiceName());
         validateMitigationName(request.getMitigationName());
         Validate.isTrue(request.getMitigationVersion() > 0);
     }

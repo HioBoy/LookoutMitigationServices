@@ -173,6 +173,7 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
      * The return order will be 136, 135, 134, 112, 101.
      * This API query GSI, so result is eventually consistent.
      * @param deviceName : device name
+     * @param serviceName : service name
      * @param location : location
      * @param maxNumberOfHistoryEntriesToFetch : max number of entry to retrieve
      * @param exclusiveLastEvaluatedTimestamp : fetch the deployment history that is before to this timestamp in UTC, 
@@ -182,8 +183,8 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
      * @throws : MissingLocationException400, if location is not found
      */
     @Override
-    public List<LocationDeploymentInfo> getLocationDeploymentInfoOnLocation(String deviceName, String location,
-            int maxNumberOfHistoryEntriesToFetch, Long exclusiveLastEvaluatedTimestamp, TSDMetrics tsdMetrics) {
+    public List<LocationDeploymentInfo> getLocationDeploymentInfoOnLocation(String deviceName, String serviceName,
+            String location, int maxNumberOfHistoryEntriesToFetch, Long exclusiveLastEvaluatedTimestamp, TSDMetrics tsdMetrics) {
         Validate.notEmpty(deviceName);
         Validate.notEmpty(location);
         Validate.notNull(tsdMetrics); 
@@ -195,7 +196,8 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
                     .withAttributesToGet(CREATE_DATE_KEY, DEPLOYMENT_HISTORY_KEY,
                             DEVICE_WORKFLOW_ID_HASH_KEY, LOCATION_RANGE_KEY, MITIGATION_NAME_KEY,
                             MITIGATION_STATUS_KEY, MITIGATION_VERSION_KEY, SCHEDULING_STATUS_KEY)
-                            .withQueryFilters(new QueryFilter(DEVICE_NAME_KEY).eq(deviceName))
+                            .withQueryFilters(new QueryFilter(DEVICE_NAME_KEY).eq(deviceName),
+                                    new QueryFilter(SERVICE_NAME_KEY).eq(serviceName))
                             .withConsistentRead(false).withMaxResultSize(maxNumberOfHistoryEntriesToFetch * 10)
                             .withScanIndexForward(false);
             if (exclusiveLastEvaluatedTimestamp != null) {

@@ -26,6 +26,9 @@ import com.amazon.coral.service.Identity;
 import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
+import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest;
+import com.amazon.lookout.mitigation.service.GetMitigationDefinitionRequest;
+import com.amazon.lookout.mitigation.service.GetMitigationHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
@@ -230,6 +233,21 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         
         addRequestInfoParser(
                 ReportInactiveLocationRequest.class, 
+                (action, request) -> 
+                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+         
+        addRequestInfoParser(
+                GetMitigationDefinitionRequest.class, 
+                (action, request) -> 
+                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+         
+        addRequestInfoParser(
+                GetMitigationHistoryRequest.class, 
+                (action, request) -> 
+                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+         
+        addRequestInfoParser(
+                GetLocationDeploymentHistoryRequest.class, 
                 (action, request) -> 
                     generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
         

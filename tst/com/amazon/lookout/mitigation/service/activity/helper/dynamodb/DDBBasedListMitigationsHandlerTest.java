@@ -923,8 +923,14 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.setWorkflowId(++workflowId);
         itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
         itemCreator.addItem();
+        
+        // different service name
+        itemCreator.setServiceName("otherService");
+        itemCreator.setWorkflowId(++workflowId);
+        itemCreator.addItem();
  
         // same name other device
+        itemCreator.setServiceName(serviceName);
         itemCreator.setDeviceName("anotherDevice");
         itemCreator.setWorkflowId(++workflowId);
         itemCreator.addItem();
@@ -959,7 +965,7 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.setWorkflowStatus(WorkflowStatus.PARTIAL_SUCCESS);
         itemCreator.addItem();
        
-        MitigationRequestDescription desc = listHandler.getMitigationDefinition(deviceName, mitigationName,
+        MitigationRequestDescription desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName,
                 1, tsdMetrics);
 
         assertEquals(1, desc.getMitigationVersion());
@@ -967,8 +973,7 @@ public class DDBBasedListMitigationsHandlerTest {
         assertEquals(mitigationName, desc.getMitigationName());
         assertEquals(10001, desc.getJobId());
         
-        desc = listHandler.getMitigationDefinition(deviceName, mitigationName,
-                2, tsdMetrics);
+        desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName, 2, tsdMetrics);
 
         assertEquals(2, desc.getMitigationVersion());
         assertEquals(deviceName, desc.getDeviceName());
@@ -981,7 +986,7 @@ public class DDBBasedListMitigationsHandlerTest {
      */
     @Test(expected = MissingMitigationException400.class)
     public void testGetMitigationDefinitionNonExistMitigation() {
-        listHandler.getMitigationDefinition(deviceName, mitigationName, 1, tsdMetrics);
+        listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName, 1, tsdMetrics);
     }
     
     /**

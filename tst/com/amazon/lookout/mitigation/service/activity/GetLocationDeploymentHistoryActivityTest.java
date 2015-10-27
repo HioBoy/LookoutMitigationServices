@@ -27,6 +27,7 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
         request.setDeviceName(deviceName);
         request.setExclusiveLastEvaluatedTimestamp(exclusiveLastEvaluatedTimestamp);
         request.setLocation(location);
+        request.setServiceName(serviceName);
         request.setMaxNumberOfHistoryEntriesToFetch(maxNumberOfHistoryEntriesToFetch);
     }
     
@@ -41,7 +42,7 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
         Mockito.doNothing().when(requestValidator).validateGetLocationDeploymentHistoryRequest(request);
         
         Mockito.doThrow(new MissingLocationException400()).when(mitigationInstanceInfoHandler)
-                .getLocationDeploymentInfoOnLocation(eq(deviceName), eq(location), eq(maxNumberOfHistoryEntriesToFetch),
+                .getLocationDeploymentInfoOnLocation(eq(deviceName), eq(serviceName), eq(location), eq(maxNumberOfHistoryEntriesToFetch),
                         eq(exclusiveLastEvaluatedTimestamp), isA(TSDMetrics.class));
         
         getLocationDeploymentHistoryActivity.enact(request);
@@ -71,8 +72,8 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
         listOfLocationDeploymentInfo.add(locationDeploymentInfo);
         
         Mockito.doReturn(listOfLocationDeploymentInfo).when(mitigationInstanceInfoHandler)
-                .getLocationDeploymentInfoOnLocation(eq(deviceName), eq(location), eq(maxNumberOfHistoryEntriesToFetch),
-                        eq(exclusiveLastEvaluatedTimestamp), isA(TSDMetrics.class));
+                .getLocationDeploymentInfoOnLocation(eq(deviceName), eq(serviceName), eq(location),
+                        eq(maxNumberOfHistoryEntriesToFetch), eq(exclusiveLastEvaluatedTimestamp), isA(TSDMetrics.class));
         
         GetLocationDeploymentHistoryResponse response = getLocationDeploymentHistoryActivity.enact(request);
         

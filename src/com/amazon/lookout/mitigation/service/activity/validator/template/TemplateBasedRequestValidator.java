@@ -165,7 +165,7 @@ public class TemplateBasedRequestValidator {
     }
 
     private ServiceTemplateValidator getBlackWatchEdgeValidator() {
-    	return new EdgeBlackWatchMitigationTemplateValidator(blackWatchS3Client, edgeLocationsHelper);
+    	return new BlackWatchPerTargetEdgeLocationTemplateValidator(edgeLocationsHelper, blackWatchS3Client);
     }
     
     /**

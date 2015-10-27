@@ -227,7 +227,7 @@ public class DDBBasedGetMitigationInfoHandlerTest {
 
         // validate all deployment history are retrieved.
         List<LocationDeploymentInfo> instanceStatuses = mitigationInfoHandler.getLocationDeploymentInfoOnLocation(deviceName,
-                location, 100, null, tsdMetrics);
+                serviceName, location, 100, null, tsdMetrics);
 
         assertEquals(deploymentCount, instanceStatuses.size());
         for (int i = 0; i < deploymentCount; ++i) {
@@ -256,7 +256,7 @@ public class DDBBasedGetMitigationInfoHandlerTest {
 
         int maxEntryCount = 5;
         List<LocationDeploymentInfo> instanceStatuses = mitigationInfoHandler.getLocationDeploymentInfoOnLocation(deviceName,
-                location, maxEntryCount, null, tsdMetrics);
+                serviceName, location, maxEntryCount, null, tsdMetrics);
 
         assertEquals(maxEntryCount, instanceStatuses.size());
         for (int i = 0; i < maxEntryCount; ++i) {
@@ -286,15 +286,15 @@ public class DDBBasedGetMitigationInfoHandlerTest {
         int maxEntryCount = 5;
         long deploymentTime = dateTime.plusMinutes(8).getMillis();
         List<LocationDeploymentInfo> instanceStatuses = mitigationInfoHandler.getLocationDeploymentInfoOnLocation(deviceName,
-                location, maxEntryCount, deploymentTime, tsdMetrics);
+                serviceName, location, maxEntryCount, deploymentTime, tsdMetrics);
 
         assertEquals(maxEntryCount, instanceStatuses.size());
         for (int i = 0; i < maxEntryCount; ++i) {
             assertEquals(deploymentCount - i - 3, instanceStatuses.get(i).getMitigationVersion());
         }
 
-        instanceStatuses = mitigationInfoHandler.getLocationDeploymentInfoOnLocation(deviceName, location, 10, deploymentTime,
-                tsdMetrics);
+        instanceStatuses = mitigationInfoHandler.getLocationDeploymentInfoOnLocation(deviceName, serviceName, location, 10,
+                deploymentTime, tsdMetrics);
 
         assertEquals(7, instanceStatuses.size());
         for (int i = 0; i < 7; ++i) {
@@ -328,7 +328,7 @@ public class DDBBasedGetMitigationInfoHandlerTest {
         itemCreator.addItem();
 
         List<LocationDeploymentInfo> instanceStatuses = mitigationInfoHandler.getLocationDeploymentInfoOnLocation(deviceName,
-                location, 20, null, tsdMetrics);
+                serviceName, location, 20, null, tsdMetrics);
 
         assertEquals(deploymentCount, instanceStatuses.size());
         for (int i = 0; i < deploymentCount; ++i) {
@@ -337,10 +337,44 @@ public class DDBBasedGetMitigationInfoHandlerTest {
     }
 
     /**
+     * Test filter service name
+     */
+    @Test
+    public void testGetLocationDeploymentHistoryfilterServiceName() {
+        // create deployment history for a location in ddb table
+        MitigationInstanceItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, location,
+                mitigationStatus, blockingDeviceWorkflowId, schedulingStatus);
+
+        // add deployment history
+        int deploymentCount = 10;
+        DateTime dateTime = DateTime.now();
+        for (int v = 1; v <= deploymentCount; ++v) {
+            itemCreator.setDeviceWorkflowId(getDeviceWorkflowId(deviceName, v + 10000));
+            itemCreator.setCreateDate(dateTime.plusMinutes(v).toString(CREATE_DATE_FORMATTER));
+            itemCreator.setMitigationVersion(v);
+            itemCreator.addItem();
+        }
+
+        itemCreator.setServiceName("otherService");
+        itemCreator.setDeviceWorkflowId(getDeviceWorkflowId(deviceName, 20000));
+        itemCreator.setCreateDate(dateTime.plusMinutes(20).toString(CREATE_DATE_FORMATTER));
+        itemCreator.setMitigationVersion(20);
+        itemCreator.addItem();
+
+        List<LocationDeploymentInfo> instanceStatuses = mitigationInfoHandler.getLocationDeploymentInfoOnLocation(deviceName,
+                serviceName, location, 20, null, tsdMetrics);
+
+        assertEquals(deploymentCount, instanceStatuses.size());
+        for (int i = 0; i < deploymentCount; ++i) {
+            assertEquals(deploymentCount - i, instanceStatuses.get(i).getMitigationVersion());
+        }
+    }
+    
+    /**
      * Test location does not have any deployment history
      */
     @Test(expected = MissingLocationException400.class)
     public void testGetLocationDeploymentHistoryAtNonExistingLocation() {
-        mitigationInfoHandler.getLocationDeploymentInfoOnLocation(deviceName, location, 20, null, tsdMetrics);
+        mitigationInfoHandler.getLocationDeploymentInfoOnLocation(deviceName, serviceName, location, 20, null, tsdMetrics);
     }
 }

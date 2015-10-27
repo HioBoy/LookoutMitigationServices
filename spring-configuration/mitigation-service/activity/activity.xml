@@ -49,8 +49,25 @@
         <constructor-arg name="routerMetadataHelper" ref="routerMetadataHelper"/>
         <constructor-arg name="threadPool" ref="listMitigationsActivityThreadPool"/>
     </bean>
-    
+
     <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationInfoActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
+        <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
+    </bean>
+
+    <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
+    </bean>
+
+    <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationDefinitionActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
+        <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
+    </bean>
+
+    <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
         <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
