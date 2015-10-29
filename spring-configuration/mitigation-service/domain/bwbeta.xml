@@ -39,12 +39,6 @@
     
     <util:set id="bwbeta.defaultPOPsForEdgeLocationsHelper"/>
 
-    <bean class="org.springframework.beans.factory.config.MethodInvokingBean">
-        <property name="targetClass" value="com.amazon.lookout.mitigation.router.FakeRouterConstants" />
-        <property name="targetMethod" value="setClientQualifier" />
-        <property name="arguments" value="Base.Bwbeta"/>
-    </bean>
-    
      <bean id="bwbeta.edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.FakeLocationsHelper">
         <constructor-arg name="cloudfrontClient" ref="edgeOperatorServiceClient"/>
         <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>
@@ -53,6 +47,7 @@
         <constructor-arg name="popsListDir" value="var/state/popsList"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
         <constructor-arg name="fakeBlackWatchClassicLocations" ref="bwbeta.fakeBlackWatchClassicLocations"/>
+        <constructor-arg name="qualifier" value="Base.Bwbeta"/>
     </bean>
     
 </beans>

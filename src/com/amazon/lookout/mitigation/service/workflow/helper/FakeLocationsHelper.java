@@ -32,7 +32,7 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
     private volatile PopLists popLists = null;
     //set time of last update to an expired timestamp
     private volatile DateTime timeOfLastUpdate = new DateTime().minus(POP_LIST_EXPIRATION_SECONDS * 2);
-
+    
     @ConstructorProperties({ "cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries",
             "popsListDir", "metricsFactory", "fakeBlackWatchClassicLocations" })
     public FakeLocationsHelper(EdgeOperatorServiceClient cloudfrontClient, DaasControlAPIServiceV20100701Client daasClient,
@@ -42,6 +42,15 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
                 metricsFactory, fakeBlackWatchClassicLocations);
         refreshFakeRouters();
     }
+    
+    @ConstructorProperties({ "cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries", "popsListDir", "metricsFactory", "fakeBlackWatchClassicLocations", "qualifier" })
+    public FakeLocationsHelper(EdgeOperatorServiceClient cloudfrontClient, DaasControlAPIServiceV20100701Client daasClient, BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, String popsListDiskCacheDirName,
+            MetricsFactory metricsFactory, List<String> fakeBlackWatchClassicLocations, String qualifier) {
+        super(cloudfrontClient, daasClient, bwLocationsHelper, sleepBetweenRetriesInMillis, popsListDiskCacheDirName, metricsFactory, fakeBlackWatchClassicLocations);
+        FakeDevice.updateQualifier(qualifier);
+        refreshFakeRouters();
+    }
+    
     @Override
     public Set<String> getAllClassicPOPs() {
         updateListsIfNeeded();
@@ -76,7 +85,7 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
     }
 
     private void updateListsIfNeeded() {
-        if(timeOfLastUpdate.plusSeconds(POP_LIST_EXPIRATION_SECONDS).isBeforeNow()) {
+        if(timeOfLastUpdate !=null && timeOfLastUpdate.plusSeconds(POP_LIST_EXPIRATION_SECONDS).isBeforeNow()) {
             refreshFakeRouters();
         }
     }
