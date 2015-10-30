@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import junitparams.JUnitParamsRunner;
@@ -49,6 +50,20 @@ public class BlackholeArborCustomerValidatorTest {
         validate(validCreateMitigationRequest());
         validate(validEditMitigationRequest());
         validate(validDeleteMitigationRequest());
+    }
+    
+    @Test
+    public void validSystestRequest() throws Exception {
+        String testName = "SYSAUTO=LKT-TestName=" + UUID.randomUUID().toString();
+        
+        validate(withName(validCreateMitigationRequest(), testName));
+        validate(withName(validEditMitigationRequest(), testName));
+        validate(withName(validDeleteMitigationRequest(), testName));
+    }
+    
+    private static MitigationModificationRequest withName(MitigationModificationRequest request, String name) {
+        request.setMitigationName(name);
+        return request;
     }
 
     @Test

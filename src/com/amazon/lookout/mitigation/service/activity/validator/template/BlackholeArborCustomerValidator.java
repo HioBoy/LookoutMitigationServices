@@ -140,7 +140,9 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
             throw new IllegalArgumentException("mitigationName cannot be null or empty");
         }
         
-        if (!mitigationName.startsWith(ArborConstants.MANAGED_BLACKHOLE_NAME_PREFIX)) {
+        if (!mitigationName.startsWith(ArborConstants.MANAGED_BLACKHOLE_NAME_PREFIX) && 
+            !mitigationName.startsWith(ArborConstants.SYSTEST_MANAGED_BLACKHOLE_NAME_PREFIX)) 
+        {
             throw new IllegalArgumentException("Blackhole mitigationNames must start with " + ArborConstants.MANAGED_BLACKHOLE_NAME_PREFIX);
         }
 
