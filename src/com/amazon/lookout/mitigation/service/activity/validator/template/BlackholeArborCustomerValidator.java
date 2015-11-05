@@ -110,7 +110,7 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
     }
 
     private static void validateDeleteRequest(DeleteMitigationFromAllLocationsRequest request) {
-        validateMitigationName(request.getMitigationName());
+        validateMitigationNameForDelete(request.getMitigationName());
     }
 
     private void validateCreateRequest(@NonNull CreateMitigationRequest request, @NonNull TSDMetrics metrics) {
@@ -146,6 +146,23 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
             throw new IllegalArgumentException("Blackhole mitigationNames must start with " + ArborConstants.MANAGED_BLACKHOLE_NAME_PREFIX);
         }
 
+        String error = ArborUtils.checkArgument(mitigationName);
+        if (error != null) {
+            throw new IllegalArgumentException(String.format("Invalid mitigationName: %s", error));
+        }
+    }
+    
+    /**
+     * A version of validateMitigationName that allows names not starting with LKT- so that we can cleanup
+     * mitigations created that were created before we enforced the prefix or that somehow bypassed the requirement.
+     * 
+     * @param mitigationName
+     */
+    private static void validateMitigationNameForDelete(String mitigationName) {
+        if (StringUtils.isBlank(mitigationName)) {
+            throw new IllegalArgumentException("mitigationName cannot be null or empty");
+        }
+        
         String error = ArborUtils.checkArgument(mitigationName);
         if (error != null) {
             throw new IllegalArgumentException(String.format("Invalid mitigationName: %s", error));

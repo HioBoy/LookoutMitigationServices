@@ -61,6 +61,12 @@ public class BlackholeArborCustomerValidatorTest {
         validate(withName(validDeleteMitigationRequest(), testName));
     }
     
+    @Test
+    public void validDeleteRequestWithoutLKT() {
+        String testName = "OldMitigationName";
+        validate(withName(validDeleteMitigationRequest(), testName));
+    }
+    
     private static MitigationModificationRequest withName(MitigationModificationRequest request, String name) {
         request.setMitigationName(name);
         return request;
@@ -78,12 +84,12 @@ public class BlackholeArborCustomerValidatorTest {
     @Test
     @Parameters({
         "",
-        "Cannot contain both space and \"quote",
-        "跑",
-        "#",
+        "LKT-Cannot contain both space and \"quote",
+        "LKT-跑",
+        "LKT-#",
         "MissingLKT-"
     })
-    public void mitigationNameIsValid(String invalidMitigationName) throws Exception {
+    public void mitigationNameIsValidForCreateOrEdit(String invalidMitigationName) throws Exception {
         assertThat(
             validationMessage(
                 validCreateMitigationRequest(),
@@ -94,6 +100,18 @@ public class BlackholeArborCustomerValidatorTest {
                 validEditMitigationRequest(),
                 request -> request.setMitigationName(invalidMitigationName)),
             containsString("mitigationName"));
+    }
+    
+    // Delete allows mitigation names not starting with LKT- so we don't include the 
+    // MissingLKT- value used for create and edit here
+    @Test
+    @Parameters({
+        "",
+        "LKT-Cannot contain both space and \"quote",
+        "LKT-跑",
+        "LKT-#",
+    })
+    public void mitigationNameIsValidForDelete(String invalidMitigationName) throws Exception {
         assertThat(
             validationMessage(
                 validDeleteMitigationRequest(),
