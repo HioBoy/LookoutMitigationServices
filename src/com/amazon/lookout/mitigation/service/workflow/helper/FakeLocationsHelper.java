@@ -30,7 +30,6 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
 
     private static final int POP_LIST_EXPIRATION_SECONDS = 1;
     private volatile PopLists popLists = null;
-    //set time of last update to an expired timestamp
     private volatile DateTime nextUpdateTime;
     
     @ConstructorProperties({ "cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries",

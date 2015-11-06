@@ -4,7 +4,6 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.junit.BeforeClass;
@@ -17,6 +16,8 @@ import com.amazon.lookout.mitigation.service.GetMitigationHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationHistoryResponse;
 import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocationAndStatus;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.test.common.util.TestUtils;
 
 public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
@@ -45,8 +46,18 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
         mitigationRequestDescription2.setJobId(jobId2);
         mitigationRequestDescription2.setMitigationVersion(mitigationVersion2);
     }
-    private static final List<MitigationRequestDescription> listOfMitigationRequestDescription = 
-            Arrays.asList(mitigationRequestDescription1, mitigationRequestDescription2);
+    private static final List<MitigationRequestDescriptionWithLocations> listOfMitigationRequestDescription;
+    static {
+        listOfMitigationRequestDescription = new ArrayList<>();
+        MitigationRequestDescriptionWithLocations descWithLocation = new MitigationRequestDescriptionWithLocations();
+        descWithLocation.setMitigationRequestDescription(mitigationRequestDescription1);
+        descWithLocation.setLocations(locations);
+        listOfMitigationRequestDescription.add(descWithLocation);
+        descWithLocation = new MitigationRequestDescriptionWithLocations();
+        descWithLocation.setMitigationRequestDescription(mitigationRequestDescription2);
+        descWithLocation.setLocations(locations);
+        listOfMitigationRequestDescription.add(descWithLocation);
+    }
     
     @BeforeClass
     public static void setup() {
@@ -92,7 +103,11 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
         assertEquals(mitigationName, response.getMitigationName());
         assertEquals(requestId, response.getRequestId());
         assertEquals(serviceName, response.getServiceName());
-        assertEquals(2, response.getMitigationRequestDescriptionsWithStatus().size());
+        assertEquals(2, response.getListOfMitigationRequestDescriptionsWithLocationAndStatus().size());
+        for (MitigationRequestDescriptionWithLocationAndStatus desc :
+                response.getListOfMitigationRequestDescriptionsWithLocationAndStatus()) {
+            assertEquals(locations, desc.getMitigationRequestDescriptionWithLocations().getLocations());
+        }
     }
     
     /**

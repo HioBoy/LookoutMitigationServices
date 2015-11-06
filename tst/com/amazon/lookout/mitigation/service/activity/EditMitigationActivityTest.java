@@ -19,6 +19,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
+import com.amazon.lookout.mitigation.service.workflow.helper.BlackWatchTemplateLocationHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
@@ -89,7 +90,8 @@ public class EditMitigationActivityTest {
                     mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper()),
                 requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
-            new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class)));
+            new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class),
+                    mock(BlackWatchTemplateLocationHelper.class)));
     }
 
     private EditMitigationRequest sampleEditBlackholeMitigationRequest(String mitigationName) {

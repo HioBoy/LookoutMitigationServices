@@ -178,8 +178,13 @@
         <constructor-arg name="swfDomain" value="LookoutMitigationService-${domain}"/>
     </bean>
     
+    <bean id="blackWatchTemplateLocationHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.BlackWatchTemplateLocationHelper">
+        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
+    </bean>
+
     <bean id="templateBasedLocationsManager" class="com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager">
-        <constructor-arg ref="route53SingleCustomerTemplateLocationsHelper"/>
+        <constructor-arg name="route53SingleCustomerHelper" ref="route53SingleCustomerTemplateLocationsHelper"/>
+        <constructor-arg name="blackWatchTemplateLocationHelper" ref="blackWatchTemplateLocationHelper"/>
     </bean>
     
     <bean id="route53SingleCustomerTemplateLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper">

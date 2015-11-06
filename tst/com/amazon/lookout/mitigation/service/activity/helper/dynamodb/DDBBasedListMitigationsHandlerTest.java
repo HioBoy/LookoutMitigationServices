@@ -551,12 +551,13 @@ public class DDBBasedListMitigationsHandlerTest {
         // validate all history can be retrieved.
         Integer startVersion = 15;
         Integer maxNumberOfHistoryEntriesToFetch = 20;
-        List<MitigationRequestDescription> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
+        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
                 deviceScope, mitigationName, startVersion, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
 
         assertEquals(versionCounts, descs.size());
         for (int v = versionCounts; v >= 1; --v) {
-            assertEquals(v, descs.get(versionCounts - v).getMitigationVersion());
+            assertEquals(v, descs.get(versionCounts - v).getMitigationRequestDescription().getMitigationVersion());
+            assertEquals(new ArrayList<>(locations), descs.get(versionCounts - v).getLocations());
         }
     }
 
@@ -578,12 +579,12 @@ public class DDBBasedListMitigationsHandlerTest {
 
         // validate all history can be retrieved, when startVersion is null
         Integer maxNumberOfHistoryEntriesToFetch = 20;
-        List<MitigationRequestDescription> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
+        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
                 deviceScope, mitigationName, null, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
 
         assertEquals(versionCounts, descs.size());
         for (int v = versionCounts; v >= 1; --v) {
-            assertEquals(v, descs.get(versionCounts - v).getMitigationVersion());
+            assertEquals(v, descs.get(versionCounts - v).getMitigationRequestDescription().getMitigationVersion());
         }
     }
 
@@ -605,12 +606,12 @@ public class DDBBasedListMitigationsHandlerTest {
 
         // validate all history can be retrieved, when startVersion is null
         int maxNumberOfHistoryEntriesToFetch = 4;
-        List<MitigationRequestDescription> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
+        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
                 deviceScope, mitigationName, null, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
 
         assertEquals(maxNumberOfHistoryEntriesToFetch, descs.size());
         for (int i = 0; i < maxNumberOfHistoryEntriesToFetch; ++i) {
-            assertEquals(versionCounts - i, descs.get(i).getMitigationVersion());
+            assertEquals(versionCounts - i, descs.get(i).getMitigationRequestDescription().getMitigationVersion());
         }
     }
 
@@ -633,12 +634,12 @@ public class DDBBasedListMitigationsHandlerTest {
         // validate all history can be retrieved, when startVersion is null
         Integer startVersion = 8;
         int maxNumberOfHistoryEntriesToFetch = 4;
-        List<MitigationRequestDescription> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
+        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
                 deviceScope, mitigationName, startVersion, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
 
         assertEquals(maxNumberOfHistoryEntriesToFetch, descs.size());
         for (int i = 1; i <= maxNumberOfHistoryEntriesToFetch; ++i) {
-            assertEquals(startVersion - i, descs.get(i - 1).getMitigationVersion());
+            assertEquals(startVersion - i, descs.get(i - 1).getMitigationRequestDescription().getMitigationVersion());
         }
     }
     
@@ -659,7 +660,7 @@ public class DDBBasedListMitigationsHandlerTest {
         }
 
         // validate all history can be retrieved, when startVersion is null
-        List<MitigationRequestDescription> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
+        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
                 deviceScope, "nonExistMitigation", null, 20, tsdMetrics);
         assertEquals(0, descs.size());
     }
@@ -691,12 +692,12 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.addItem();
         
         // validate all history can be retrieved, when startVersion is null
-        List<MitigationRequestDescription> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
+        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
                 deviceScope, mitigationName, null, 2, tsdMetrics);
 
         assertEquals(2, descs.size());
-        assertEquals(12, descs.get(0).getMitigationVersion());
-        assertEquals(10, descs.get(1).getMitigationVersion());
+        assertEquals(12, descs.get(0).getMitigationRequestDescription().getMitigationVersion());
+        assertEquals(10, descs.get(1).getMitigationRequestDescription().getMitigationVersion());
     }
     
     /**
@@ -721,11 +722,11 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.addItem();
 
         // validate all history can be retrieved, when startVersion is null
-        List<MitigationRequestDescription> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
+        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
                 deviceScope, mitigationName, null, 1, tsdMetrics);
 
         assertEquals(1, descs.size());
-        assertEquals(10, descs.get(0).getMitigationVersion());
+        assertEquals(10, descs.get(0).getMitigationRequestDescription().getMitigationVersion());
     }
     
     /**
@@ -750,11 +751,11 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.addItem();
 
         // validate all history can be retrieved, when startVersion is null
-        List<MitigationRequestDescription> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
+        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
                 deviceScope, mitigationName, null, 1, tsdMetrics);
 
         assertEquals(1, descs.size());
-        assertEquals(10, descs.get(0).getMitigationVersion());
+        assertEquals(10, descs.get(0).getMitigationRequestDescription().getMitigationVersion());
     }
     
     /**
@@ -779,11 +780,11 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.addItem();
 
         // validate all history can be retrieved, when startVersion is null
-        List<MitigationRequestDescription> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
+        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
                 deviceScope, mitigationName, null, 1, tsdMetrics);
 
         assertEquals(1, descs.size());
-        assertEquals(10, descs.get(0).getMitigationVersion());
+        assertEquals(10, descs.get(0).getMitigationRequestDescription().getMitigationVersion());
     }
     
     /**
@@ -828,13 +829,13 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.addItem();
 
         // validate all history can be retrieved, when startVersion is null
-        List<MitigationRequestDescription> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
+        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
                 deviceScope, mitigationName, null, 3, tsdMetrics);
 
         assertEquals(3, descs.size());
-        assertEquals(15, descs.get(0).getMitigationVersion());
-        assertEquals(14, descs.get(1).getMitigationVersion());
-        assertEquals(10, descs.get(2).getMitigationVersion());
+        assertEquals(15, descs.get(0).getMitigationRequestDescription().getMitigationVersion());
+        assertEquals(14, descs.get(1).getMitigationRequestDescription().getMitigationVersion());
+        assertEquals(10, descs.get(2).getMitigationRequestDescription().getMitigationVersion());
     }
 
     /**

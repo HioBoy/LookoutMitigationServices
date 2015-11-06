@@ -114,7 +114,7 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             // Step3. Get the locations where we need to start running the workflow.
             // In most cases it is provided by the client, but for some templates we might have locations based on the templateName, 
             // hence checking with the templateBasedLocationsHelper and also passing it the original request to have the entire context.
-            Set<String> locationsToDeploy = templateBasedLocationsManager.getLocationsForDeployment(deleteRequest);
+            Set<String> locationsToDeploy = templateBasedLocationsManager.getLocationsForDeployment(deleteRequest, tsdMetrics);
             
             // Step4. Persist this request in DDB and get back the workflowId associated with this request.
             long workflowId = requestStorageManager.storeRequestForWorkflow(deleteRequest, locationsToDeploy, RequestType.DeleteRequest, tsdMetrics);

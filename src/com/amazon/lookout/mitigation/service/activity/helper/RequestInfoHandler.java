@@ -19,7 +19,7 @@ public interface RequestInfoHandler {
     
     public List<MitigationRequestDescription> getActiveMitigationRequestDescriptionsForMitigation(String serviceName, String deviceName, String deviceScope, String mitigationName, TSDMetrics tsdMetrics);
     
-    public List<MitigationRequestDescription> getMitigationHistoryForMitigation(
+    public List<MitigationRequestDescriptionWithLocations> getMitigationHistoryForMitigation(
             String serviceName, String deviceName, String deviceScope, String mitigationName, Integer exclusiveStartVersion, 
             Integer maxNumberOfHistoryEntriesToFetch, TSDMetrics tsdMetrics);
     

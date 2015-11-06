@@ -11,6 +11,7 @@ import java.util.Set;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
@@ -36,7 +37,7 @@ public class Route53SingleCustomerTemplateLocationsHelperTest {
         CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         request.setLocations(Lists.newArrayList("SomePOP1", "SomePOP2"));
         
-        Set<String> locations = helper.getLocationsForDeployment(request);
+        Set<String> locations = helper.getLocationsForDeployment(request, mock(TSDMetrics.class));
         assertNotNull(locations);
         assertTrue(locations.size() == (nonBWLocations.size() - ciscoLocations.size()));
         assertEquals(locations, Sets.difference(nonBWLocations, ciscoLocations));
@@ -45,7 +46,7 @@ public class Route53SingleCustomerTemplateLocationsHelperTest {
         request = DDBBasedCreateRequestStorageHandlerTest.generateCountModeMitigationRequest();
         request.setLocations(Lists.newArrayList("SomePOP1", "SomePOP2"));
         
-        locations = helper.getLocationsForDeployment(request);
+        locations = helper.getLocationsForDeployment(request, mock(TSDMetrics.class));
         assertNotNull(locations);
         assertTrue(locations.size() == (nonBWLocations.size() - ciscoLocations.size()));
         assertEquals(locations, Sets.difference(nonBWLocations, ciscoLocations));

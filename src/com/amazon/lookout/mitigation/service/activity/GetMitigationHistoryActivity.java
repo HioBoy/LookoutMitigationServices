@@ -27,8 +27,8 @@ import com.amazon.lookout.mitigation.service.GetMitigationHistoryResponse;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
-import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
-import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithStatus;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocationAndStatus;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
@@ -93,7 +93,7 @@ public class GetMitigationHistoryActivity extends Activity {
             
             // Step 1. Validate this request
             requestValidator.validateGetMitigationHistoryRequest(request);
-            List<MitigationRequestDescriptionWithStatus> mitigationDescriptionWithStatuses = new ArrayList<>();
+            List<MitigationRequestDescriptionWithLocationAndStatus> listOfMitigationDescriptions = new ArrayList<>();
             
             String deviceName = request.getDeviceName();
             String deviceScope = request.getDeviceScope();
@@ -107,20 +107,21 @@ public class GetMitigationHistoryActivity extends Activity {
             maxNumberOfHistoryEntriesToFetch = Math.min(maxNumberOfHistoryEntriesToFetch, MAX_NUMBER_OF_HISTORY_TO_FETCH);
 
             // Step 2. Fetch list of mitigation history
-            List<MitigationRequestDescription> mitigationDescriptions = requestInfoHandler.
-                    getMitigationHistoryForMitigation(serviceName, deviceName, deviceScope, mitigationName, exclusiveStartVersion, 
-                            maxNumberOfHistoryEntriesToFetch, tsdMetrics);
+            List<MitigationRequestDescriptionWithLocations> mitigationDescriptionsWithLocations = requestInfoHandler.
+                    getMitigationHistoryForMitigation(serviceName, deviceName, deviceScope, mitigationName,
+                            exclusiveStartVersion, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
 
             // Step 3. For each of the requests fetched above, query the individual instance status and 
             //     populate a new MitigationRequestDescriptionWithStatus instance to wrap this information.
-            for (MitigationRequestDescription description : mitigationDescriptions) {
+            for (MitigationRequestDescriptionWithLocations description : mitigationDescriptionsWithLocations) {
                 List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler
-                        .getMitigationInstanceStatus(deviceName, description.getJobId(), tsdMetrics);
+                        .getMitigationInstanceStatus(deviceName, description.getMitigationRequestDescription().getJobId(), tsdMetrics);
                 
-                MitigationRequestDescriptionWithStatus mitigationDescriptionWithStatus = new MitigationRequestDescriptionWithStatus();
-                mitigationDescriptionWithStatus.setMitigationRequestDescription(description);
+                MitigationRequestDescriptionWithLocationAndStatus mitigationDescriptionWithStatus =
+                        new MitigationRequestDescriptionWithLocationAndStatus();
+                mitigationDescriptionWithStatus.setMitigationRequestDescriptionWithLocations(description);
                 mitigationDescriptionWithStatus.setInstancesStatus(instanceStatuses);
-                mitigationDescriptionWithStatuses.add(mitigationDescriptionWithStatus);
+                listOfMitigationDescriptions.add(mitigationDescriptionWithStatus);
             }
             
             // Step 4. Create the response object to return back to the client.
@@ -129,9 +130,10 @@ public class GetMitigationHistoryActivity extends Activity {
             response.setDeviceScope(deviceScope);
             response.setMitigationName(mitigationName);
             response.setServiceName(serviceName);
-            response.setMitigationRequestDescriptionsWithStatus(mitigationDescriptionWithStatuses);
+            response.setListOfMitigationRequestDescriptionsWithLocationAndStatus(listOfMitigationDescriptions);
             response.setRequestId(requestId);
-            response.setExclusiveStartVersion(mitigationDescriptions.get(mitigationDescriptions.size() - 1).getMitigationVersion());
+            response.setExclusiveStartVersion(mitigationDescriptionsWithLocations.get(mitigationDescriptionsWithLocations.size() - 1)
+                    .getMitigationRequestDescription().getMitigationVersion());
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
             String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "GetMitigationHistoryActivity", ex.getMessage());

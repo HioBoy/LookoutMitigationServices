@@ -731,7 +731,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * @throws : MissingMitigationException400, if mitigation not found
      */
     @Override
-    public List<MitigationRequestDescription> getMitigationHistoryForMitigation(
+    public List<MitigationRequestDescriptionWithLocations> getMitigationHistoryForMitigation(
             String serviceName, String deviceName, String deviceScope,
             String mitigationName, Integer exclusiveStartVersion, 
             Integer maxNumberOfHistoryEntriesToFetch, TSDMetrics tsdMetrics) {
@@ -761,11 +761,15 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         
         try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics(
                 "DDBBasedListMitigationsHandler.getMitigationHistoryForMitigation")) {
-                List<MitigationRequestDescription> descs = new ArrayList<>(maxNumberOfHistoryEntriesToFetch);
+                List<MitigationRequestDescriptionWithLocations> descs = new ArrayList<>(maxNumberOfHistoryEntriesToFetch);
             try {
                 for (Item item : requestsTable.getIndex(MitigationRequestsModel.MITIGATION_NAME_MITIGATION_VERSION_GSI)
                         .query(query)) {
-                    descs.add(convertToRequestDescription(item));
+                    MitigationRequestDescriptionWithLocations requestDesc =
+                            new MitigationRequestDescriptionWithLocations();
+                    requestDesc.setLocations(new ArrayList<>(item.getStringSet(LOCATIONS_KEY)));
+                    requestDesc.setMitigationRequestDescription(convertToRequestDescription(item));
+                    descs.add(requestDesc);
                     if (descs.size() >= maxNumberOfHistoryEntriesToFetch) {
                         break;
                     }

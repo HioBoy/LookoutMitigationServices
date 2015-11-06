@@ -88,6 +88,7 @@ public class RequestTableTestHelper {
         itemCreator.setMitigationName(mitigationName);
         itemCreator.setRequestType(RequestType.EditRequest.name());
         itemCreator.setDeviceScope(deviceScope);
+        itemCreator.setLocations(locations);
 
         itemCreator.setUserName("abc");
         itemCreator.setUserDesc("abc");

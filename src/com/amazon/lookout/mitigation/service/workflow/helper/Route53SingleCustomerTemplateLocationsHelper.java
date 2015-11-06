@@ -5,10 +5,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 import lombok.NonNull;
+
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 
@@ -33,7 +35,7 @@ public class Route53SingleCustomerTemplateLocationsHelper implements TemplateBas
      * @return Set<String> representing a set of POPs where BW doesn't have any hosts and the POP has Juniper router.
      */
     @Override
-    public Set<String> getLocationsForDeployment(MitigationModificationRequest request) {
+    public Set<String> getLocationsForDeployment(MitigationModificationRequest request, TSDMetrics tsdMetrics) {
         Set<String> locationsToDeploy = new HashSet<String>();
         for (String location : locationsHelper.getAllNonBlackwatchClassicPOPs() ) {
             if (!popsWithCiscoRouter.contains(location.toUpperCase())) {
