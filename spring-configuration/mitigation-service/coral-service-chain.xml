@@ -142,7 +142,7 @@
 
     <util:map id="authDomainMap">
          <entry key="beta" value="prodPreview"/>
-         <entry key="gamma" value="gamma"/>
+         <entry key="gamma" value="prodPreview"/>
          <entry key="bwbeta" value="prodPreview"/>
          <entry key="systest" value="prod"/>
          <entry key="prod" value="prod"/>
