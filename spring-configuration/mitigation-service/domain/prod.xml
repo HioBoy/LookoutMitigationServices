@@ -7,7 +7,7 @@
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
     
     <bean id="prod.daasControlAPIServiceURL" class="java.lang.String">
-        <constructor-arg value="http://daas-control-api.amazon.com:80"/>
+        <constructor-arg value="http://daas-operator-control-api.amazon.com:80"/>
     </bean>
     
     <bean id="prod.edgeOperatorServiceURL" class="java.lang.String">
