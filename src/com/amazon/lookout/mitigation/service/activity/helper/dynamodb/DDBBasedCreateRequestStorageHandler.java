@@ -159,7 +159,8 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
                 }
 
                 try {
-                    storeRequestInDDB(createMitigationRequest, locations, deviceNameAndScope, newWorkflowId, RequestType.CreateRequest, INITIAL_MITIGATION_VERSION, subMetrics);
+                    storeRequestInDDB(createMitigationRequest, createMitigationRequest.getMitigationDefinition(),
+                           locations, deviceNameAndScope, newWorkflowId, RequestType.CreateRequest, INITIAL_MITIGATION_VERSION, subMetrics);
                     return newWorkflowId;
                 } catch (Exception ex) {
                     String msg = "Caught exception when storing create request in DDB with newWorkflowId: " + newWorkflowId + " for DeviceName: " + deviceName + 

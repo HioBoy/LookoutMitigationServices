@@ -26,7 +26,14 @@
         <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
         <constructor-arg name="templateBasedLocationsManager" ref="templateBasedLocationsManager"/>
     </bean>
-    
+
+    <bean class="com.amazon.lookout.mitigation.service.activity.RollbackMitigationActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
+        <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
+        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
+    </bean>
+
     <bean class="com.amazon.lookout.mitigation.service.activity.DeleteMitigationFromAllLocationsActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
@@ -72,7 +79,7 @@
         <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
         <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
     </bean>
-    
+
     <bean class="com.amazon.lookout.mitigation.service.activity.ReportInactiveLocationActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="activeMitigationInfoHandler" ref="ddbBasedRequestInfoHandler"/>
@@ -243,6 +250,11 @@
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
         <constructor-arg name="realm" value="${realm}"/>
+    </bean>
+
+    <bean id="tableCreatorHelper" class="com.amazon.lookout.ddb.model.TableCreatorHelper">
+        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
+        <constructor-arg name="domain" value="${domain}"/>
     </bean>
 </beans>
 

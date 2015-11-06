@@ -11,7 +11,8 @@ import java.util.concurrent.TimeUnit;
 import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
-import org.apache.commons.lang.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang3.builder.RecursiveToStringStyle;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.joda.time.DateTime;
@@ -20,15 +21,17 @@ import org.joda.time.DateTimeZone;
 import com.amazon.aws158.commons.dynamo.DynamoDBHelper;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
-import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
-import com.amazon.lookout.mitigation.service.EditMitigationRequest;
+import com.amazon.lookout.mitigation.service.ActionType;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
+import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
+import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToFixedActionMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
@@ -53,7 +56,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
  * Details of this table can be found here: https://w.amazon.com/index.php/Lookout/Design/LookoutMitigationService/Details#MITIGATION_REQUESTS
  * 
  */
-public abstract class DDBBasedRequestStorageHandler {
+public class DDBBasedRequestStorageHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedRequestStorageHandler.class);
     
     // Log prefix to use if the sanity check for workflowId fails - we can use this tag to set logscan alarms on.
@@ -64,6 +67,10 @@ public abstract class DDBBasedRequestStorageHandler {
     public static final String DDB_QUERY_FAILURE_COUNT = "DynamoDBQueryFailureCount";
     
     private static final int NUM_RECORDS_TO_FETCH_FOR_MAX_WORKFLOW_ID = 5;
+
+    private static final String FAILED_TO_STORE_UPDATE_REQUEST_KEY = "FailedToStoreUpdateRequestKey";
+    private static final String NUM_ATTEMPTS_TO_STORE_UPDATE_REQUEST = "NumOfAttemptsToStoreUpdateRequest";
+    private static final String UPDATE_REQUEST_STORAGE_FAILED_LOGSCAN_TOKEN = "[UPDATE_REQUEST_STORAGE_FAILED]";
     
     // Below is a list of all the attributes we store in the MitigationRequests table.
     public static final String DEVICE_NAME_KEY = MitigationRequestsModel.DEVICE_NAME_KEY;
@@ -103,10 +110,16 @@ public abstract class DDBBasedRequestStorageHandler {
     private static final String NUM_DDB_GET_ITEM_ATTEMPTS_KEY = "NumDDBGetAttempts";
     private static final String FAILED_TO_FETCH_LATEST_VERSION_KEY = "FailedToFetchLatestVersion";
     
+    protected static final String INVALID_REQUEST_TO_STORE_KEY = "InvalidRequestToStore";
+    
     // Retry and sleep configs.
     private static final int DDB_QUERY_MAX_ATTEMPTS = 3;
     private static final int DDB_QUERY_RETRY_SLEEP_MILLIS_MULTIPLIER = 100;
     
+    // Num Attempts + Retry Sleep Configs.
+    protected static final int DDB_ACTIVITY_MAX_ATTEMPTS = 10;
+    protected static final int DDB_ACTIVITY_RETRY_SLEEP_MILLIS_MULTIPLIER = 100;
+
     protected static final int DDB_PUT_ITEM_MAX_ATTEMPTS = 3;
     private static final int DDB_PUT_ITEM_RETRY_SLEEP_MILLIS_MULTIPLIER = 100;
     
@@ -117,6 +130,8 @@ public abstract class DDBBasedRequestStorageHandler {
     public static final int UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS = 0;
     
     protected static final String UNEDITED_MITIGATIONS_LSI_NAME = MitigationRequestsModel.UNEDITED_MITIGATIONS_LSI_NAME;
+    
+    private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
     
     private final DataConverter jsonDataConverter = new JsonDataConverter();
     
@@ -135,19 +150,22 @@ public abstract class DDBBasedRequestStorageHandler {
     /**
      * Helper method to store a request into DDB.
      * @param request Request to be stored.
+     * @param mitigationDefinition : mitigation definition
      * @param locations Set of String representing the locations where this request applies.
      * @param deviceNameAndScope DeviceNameAndScope for this request.
      * @param workflowId WorkflowId to use for storing this request.
      * @param requestType Indicates the type of request made to the service.
      * @param mitigationVersion Version number to be associated with this mitigation to be stored.
      * @param metrics
+     * @throws ConditionalCheckFailedException : when conditional check failed in put item.
      */
-    protected void storeRequestInDDB(MitigationModificationRequest request, Set<String> locations, DeviceNameAndScope deviceNameAndScope, long workflowId, 
-                                     RequestType requestType, int mitigationVersion, TSDMetrics metrics) {
+    protected void storeRequestInDDB(MitigationModificationRequest request, MitigationDefinition mitigationDefinition,
+            Set<String> locations, DeviceNameAndScope deviceNameAndScope, long workflowId, 
+            RequestType requestType, int mitigationVersion, TSDMetrics metrics) throws ConditionalCheckFailedException {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHandler.storeRequestInDDB");
         int numAttempts = 0;
         try {
-            Map<String, AttributeValue> attributeValuesInItem = generateAttributesToStore(request, locations, deviceNameAndScope, workflowId, requestType, mitigationVersion);
+            Map<String, AttributeValue> attributeValuesInItem = generateAttributesToStore(request, mitigationDefinition, locations, deviceNameAndScope, workflowId, requestType, mitigationVersion);
             Map<String, ExpectedAttributeValue> expectedConditions = generateExpectedConditions(deviceNameAndScope, workflowId);
             
             // Try for a fixed number of times to store the item into DDB. If we succeed, we simply return, else we exit the loop and throw back an exception.
@@ -155,6 +173,8 @@ public abstract class DDBBasedRequestStorageHandler {
                 try {
                     putItemInDDB(attributeValuesInItem, expectedConditions, subMetrics);
                     return;
+                } catch (ConditionalCheckFailedException ex) {
+                    throw ex;
                 } catch (Exception ex) {
                     String msg = "Caught exception when inserting item: " + attributeValuesInItem + " into table: " + mitigationRequestsTableName + 
                                  ". Num attempts so far: " + numAttempts + " " + ReflectionToStringBuilder.toString(request) + " for locations: " + locations;
@@ -202,6 +222,7 @@ public abstract class DDBBasedRequestStorageHandler {
      * Generates the Map of String - representing the attributeName, to AttributeValue - representing the value to store for this attribute.
      * Protected for unit-testing. 
      * @param request Request to be persisted.
+     * @param mitigationDefinition : mitigation definition to be stored, can be null.
      * @param locations Set of String where this request applies.
      * @param deviceNameAndScope DeviceNameAndScope corresponding to this request.
      * @param workflowId WorkflowId to store this request with.
@@ -209,8 +230,10 @@ public abstract class DDBBasedRequestStorageHandler {
      * @param mitigationVersion Version number to use for storing the mitigation in this request.
      * @return Map of String (attributeName) -> AttributeValue.
      */
-    protected Map<String, AttributeValue> generateAttributesToStore(MitigationModificationRequest request, Set<String> locations, DeviceNameAndScope deviceNameAndScope, 
-                                                                    long workflowId, RequestType requestType, int mitigationVersion) {
+    protected Map<String, AttributeValue> generateAttributesToStore(MitigationModificationRequest request,
+            MitigationDefinition mitigationDefinition, Set<String> locations,
+            DeviceNameAndScope deviceNameAndScope, long workflowId,
+            RequestType requestType, int mitigationVersion) {
         Map<String, AttributeValue> attributesInItemToStore = new HashMap<>();
         
         AttributeValue attributeValue = new AttributeValue(deviceNameAndScope.getDeviceName().name());
@@ -263,16 +286,8 @@ public abstract class DDBBasedRequestStorageHandler {
         attributeValue = new AttributeValue().withSS(locations);
         attributesInItemToStore.put(LOCATIONS_KEY, attributeValue);
         
-        // Specifying MitigationDefinition only makes sense for the Create/Edit requests and hence extracting it only for such requests.
-        if ((requestType == RequestType.CreateRequest) || (requestType == RequestType.EditRequest)) {
-            MitigationDefinition mitigationDefinition = null;
-            
-            if (requestType == RequestType.CreateRequest) {
-                mitigationDefinition = ((CreateMitigationRequest) request).getMitigationDefinition();
-            } else {
-                mitigationDefinition = ((EditMitigationRequest) request).getMitigationDefinition();
-            }
-            
+        // Specifying MitigationDefinition only makes sense for the some of the requests and hence extracting it only for such requests.
+        if (mitigationDefinition != null) {
             String mitigationDefinitionJSONString = getJSONDataConverter().toData(mitigationDefinition); 
             attributeValue = new AttributeValue(mitigationDefinitionJSONString);
             attributesInItemToStore.put(MITIGATION_DEFINITION_KEY, attributeValue);
@@ -441,13 +456,11 @@ public abstract class DDBBasedRequestStorageHandler {
             request.addQueryFilterEntry(WORKFLOW_STATUS_KEY, new Condition().withComparisonOperator(ComparisonOperator.NE)
                                                                             .withAttributeValueList(Collections.singleton(new AttributeValue(WorkflowStatus.FAILED))));
             
+            Integer latestMitigationVersion = null;
             if (latestVersionOnLastAttempt != null) {
-                request.addQueryFilterEntry(MITIGATION_VERSION_KEY, 
-                                            new Condition().withComparisonOperator(ComparisonOperator.GE)
-                                                           .withAttributeValueList(Collections.singleton(new AttributeValue().withN(String.valueOf(latestVersionOnLastAttempt)))));
+                latestMitigationVersion = latestVersionOnLastAttempt;
             }
             
-            Integer latestMitigationVersion = null;
             Map<String, AttributeValue> lastEvaluatedKey = null;
             do {
                 if (lastEvaluatedKey != null) {
@@ -460,6 +473,13 @@ public abstract class DDBBasedRequestStorageHandler {
                 while (numAttempts++ < DDB_QUERY_MAX_ATTEMPTS) {
                     try {
                         subMetrics.addOne(NUM_DDB_QUERY_ATTEMPTS_KEY);
+                        // refine query filter with the maximum version we currently found.
+                        if (latestMitigationVersion != null) {
+                            request.addQueryFilterEntry(MITIGATION_VERSION_KEY,
+                                    new Condition().withComparisonOperator(ComparisonOperator.GE)
+                                            .withAttributeValueList(Collections.singleton(new AttributeValue()
+                                                    .withN(String.valueOf(latestMitigationVersion)))));
+                        }
                         queryResult = queryDynamoDB(request, subMetrics);
                         break;
                     } catch (Exception ex) {
@@ -874,4 +894,157 @@ public abstract class DDBBasedRequestStorageHandler {
         return queryFilters;
     }
 
+    /**
+     * Stores the update mitigation request into the DDB Table. While storing, it identifies the new workflowId to be
+     * associated with this request, validate the mitigation version and returns back the workflow ID.
+     * The algorithm it uses to identify the workflowId to use is:
+     * 1. Identify the max workflowId for the active mitigations for this device and scope and try to use
+     *    this maxWorkflowId+1 as the new workflowId when storing the request.
+     * 2. Identify the latest version of mitigation with the same mitigation name.
+     * 3. Make sure the given mitigation version in request equals the latest version + 1, to guarantee
+     *    this request does not conflict with other requests.
+     * 4. If encountered an exception when storing the request, it could be either caused by someone else
+     *    started using the maxWorkflowId+1 workflowId for that device or it is some transient exception.
+     *    In either case, we query the DDB table once again for mitigations >= maxWorkflowId for the device and
+     *    continue from step 2.
+     * package level access for unit test
+     * @param request : mitigation modification request
+     * @param mitigationDefinition : mitigation definition
+     * @param mitigationVersion : expected mitigation version
+     * @param requestType : request type
+     * @param locations : locations to deploy the mitigation
+     * @param metrics : TSD metric
+     * @return stored request record's workflow ID.
+     */
+    long storeUpdateMitigationRequest(@NonNull MitigationModificationRequest request,
+            @NonNull MitigationDefinition mitigationDefinition, @NonNull Integer mitigationVersion,
+            @NonNull RequestType requestType, Set<String> locations, @NonNull TSDMetrics metrics) {
+        Validate.notEmpty(locations);
+        try (TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHandler.storeUpdateMitigationRequest")) {
+            subMetrics.addZero(INVALID_REQUEST_TO_STORE_KEY);
+            subMetrics.addZero(FAILED_TO_STORE_UPDATE_REQUEST_KEY);
+
+            String mitigationName = request.getMitigationName();
+            subMetrics.addProperty("MitigationName", mitigationName);
+
+            String mitigationTemplate = request.getMitigationTemplate();
+            subMetrics.addProperty("MitigationTemplate", mitigationTemplate);
+
+            subMetrics.addProperty("MitigationVersion", String.valueOf(mitigationVersion));
+
+            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper
+                    .getDeviceNameAndScopeForTemplate(mitigationTemplate);
+            String deviceName = deviceNameAndScope.getDeviceName().name();
+            subMetrics.addProperty("DeviceName", deviceName);
+
+            String deviceScope = deviceNameAndScope.getDeviceScope().name();
+            subMetrics.addProperty("DeviceScope", deviceScope);
+            
+            // If action is null, check with the MitigationTemplateToFixedActionMapper to
+            // get the action for this template. This is required to get the action stored
+            // with the mitigation definition in DDB, allowing it to be later displayed on
+            // the UI.
+            if (mitigationDefinition.getAction() == null) {
+                ActionType actionType = MitigationTemplateToFixedActionMapper
+                        .getActionTypesForTemplate(mitigationTemplate);
+                if (actionType == null) {
+                    String msg = "Validation for this request went through successfully, but this request"
+                            + " doesn't have any action associated with it and no mapping found in the"
+                            + " MitigationTemplateToFixedActionMapper for the template in this request. Request: "
+                            + requestToString(request);
+                    LOG.error(msg);
+                    throw new RuntimeException(msg);
+                }
+                mitigationDefinition.setAction(actionType);
+            }
+
+            Long prevMaxWorkflowId = null;
+            Long currMaxWorkflowId = null;
+            Integer prevLatestMitigationVersion = null;
+            Integer currLatestMitigationVersion = null;
+
+            int numAttempts = 0;
+
+            // Get the max workflowId for existing mitigations, increment it by 1 and
+            // store it in the DDB. Return back the new workflowId if successful, else end
+            // the loop and throw back an exception.
+            while (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
+                numAttempts++;
+                subMetrics.addOne(NUM_ATTEMPTS_TO_STORE_UPDATE_REQUEST);
+                prevMaxWorkflowId = currMaxWorkflowId;
+
+                // First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
+                currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName, deviceScope, prevMaxWorkflowId, subMetrics);
+
+                // Next, retrieve the current latest mitigation version for the same
+                // mitigation on the same device+scope
+                prevLatestMitigationVersion = currLatestMitigationVersion;
+                currLatestMitigationVersion = getLatestVersionForMitigationOnDevice(deviceName, deviceScope,
+                        mitigationName, prevLatestMitigationVersion, subMetrics);
+
+                long newWorkflowId = 0;
+                // If we didn't get any version for the same deviceName, deviceScope and
+                // mitigation name, throw IllegalArgumentException.
+                if (currLatestMitigationVersion == null || currMaxWorkflowId == null) {
+                    String msg = "No existing mitigation found in DDB for deviceName: " + deviceName
+                                 + " and deviceScope: " + deviceScope + " and mitigationName: " + mitigationName
+                                 + ". For request: " + requestToString(request);
+                    LOG.info(msg);
+                    throw new IllegalArgumentException(msg);
+                }
+                if (mitigationVersion <= currLatestMitigationVersion) {
+                    String msg = "Mitigation found in DDB for deviceName: " + deviceName
+                            + " and deviceScope: " + deviceScope + " and mitigationName: "
+                            + mitigationName + " has a newer version: " + currLatestMitigationVersion
+                            + " than one in request: " + mitigationVersion + ". For request: "
+                            + requestToString(request);
+                    LOG.info(msg);
+                    throw new StaleRequestException400(msg);
+                }
+
+                final int expectedMitigationVersion = currLatestMitigationVersion + 1;
+                if (mitigationVersion != expectedMitigationVersion) {
+                    String msg = "Unexpected mitigation version in request for deviceName: " + deviceName
+                            + " and deviceScope: " + deviceScope + " and mitigationName: " + mitigationName
+                            + " Expected mitigation version: " + expectedMitigationVersion
+                            + " , but mitigation version in request was: " + mitigationVersion
+                            + ". Request: " + requestToString(request);
+                    LOG.info(msg);
+                    throw new IllegalArgumentException(msg);
+                }
+
+                // Increment the maxWorkflowId to use as the newWorkflowId and sanity
+                // check to ensure the new workflowId is still within the expected range.
+                newWorkflowId = currMaxWorkflowId + 1;
+                sanityCheckWorkflowId(newWorkflowId, deviceNameAndScope);
+
+                try {
+                    storeRequestInDDB(request, mitigationDefinition, locations, deviceNameAndScope, newWorkflowId,
+                            requestType, mitigationVersion, subMetrics);
+                    return newWorkflowId;
+                } catch (Exception ex) {
+                    String msg = "Caught exception when storing request in DDB with newWorkflowId: "
+                            + newWorkflowId + " for DeviceName: " + deviceName + " and deviceScope: "
+                            + deviceScope + " AttemptNum: " + numAttempts + ". For request: "
+                            + requestToString(request);
+                    LOG.warn(msg, ex);
+                }
+
+                if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
+                    Uninterruptibles.sleepUninterruptibly(
+                            DDB_ACTIVITY_RETRY_SLEEP_MILLIS_MULTIPLIER * numAttempts, TimeUnit.MILLISECONDS);
+                }
+            }
+
+            subMetrics.addOne(FAILED_TO_STORE_UPDATE_REQUEST_KEY);
+            String msg = UPDATE_REQUEST_STORAGE_FAILED_LOGSCAN_TOKEN + " - Unable to store request : "
+                    + requestToString(request) + " after " + numAttempts + " attempts";
+            LOG.warn(msg);
+            throw new RuntimeException(msg);
+        }
+    }
+
+    private String requestToString(MitigationModificationRequest request) {
+        return ReflectionToStringBuilder.toString(request, recursiveToStringStyle);
+    }
 }

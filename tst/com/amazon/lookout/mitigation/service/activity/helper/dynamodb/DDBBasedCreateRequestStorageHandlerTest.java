@@ -945,7 +945,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         long maxWorkflowId = 3;
         when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
         
-        doThrow(new RuntimeException()).when(storageHandler).storeRequestInDDB(any(CreateMitigationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        doThrow(new RuntimeException()).when(storageHandler).storeRequestInDDB(any(CreateMitigationRequest.class),
+                any(MitigationDefinition.class), anySet(), any(DeviceNameAndScope.class), anyLong(),
+                any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         
@@ -971,7 +973,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         long maxWorkflowId = 3;
         when(storageHandler.getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class))).thenReturn(maxWorkflowId);
         
-        doThrow(new RuntimeException()).doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(storageHandler).storeRequestInDDB(any(CreateMitigationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        doThrow(new RuntimeException()).doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(storageHandler)
+        .storeRequestInDDB(any(CreateMitigationRequest.class), any(MitigationDefinition.class), anySet(), any(DeviceNameAndScope.class),
+                anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
 

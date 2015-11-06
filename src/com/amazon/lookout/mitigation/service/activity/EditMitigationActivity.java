@@ -132,6 +132,7 @@ public class EditMitigationActivity extends Activity {
             // Step8. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
             mitigationModificationResponse.setMitigationName(editRequest.getMitigationName());
+            mitigationModificationResponse.setMitigationVersion(editRequest.getMitigationVersion());
             mitigationModificationResponse.setMitigationTemplate(editRequest.getMitigationTemplate());
             mitigationModificationResponse.setDeviceName(deviceName);
             mitigationModificationResponse.setServiceName(serviceName);

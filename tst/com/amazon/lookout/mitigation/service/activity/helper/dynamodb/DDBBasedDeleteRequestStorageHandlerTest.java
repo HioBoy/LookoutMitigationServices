@@ -36,6 +36,7 @@ import com.amazon.coral.google.common.collect.Sets;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
+import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
@@ -551,8 +552,9 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         doReturn((long) 12).when(spiedStorageHandler).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         doReturn(true).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
-        doThrow(new RuntimeException()).when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), 
-                                                                                    any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        doThrow(new RuntimeException()).when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class),
+                any(MitigationDefinition.class), anySet(), any(DeviceNameAndScope.class), anyLong(), 
+                any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         Throwable caughtException = null;
         try {
@@ -563,8 +565,9 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         assertNotNull(caughtException);
         assertTrue(caughtException.getMessage().startsWith(DDBBasedDeleteRequestStorageHandler.DELETE_REQUEST_STORAGE_FAILED_LOG_PREFIX));
         
-        verify(spiedStorageHandler, times(DDBBasedDeleteRequestStorageHandler.DDB_ACTIVITY_MAX_ATTEMPTS)).storeRequestInDDB(any(MitigationModificationRequest.class), anySet(), any(DeviceNameAndScope.class),
-                                                                                                                               anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        verify(spiedStorageHandler, times(DDBBasedDeleteRequestStorageHandler.DDB_ACTIVITY_MAX_ATTEMPTS))
+                .storeRequestInDDB(any(MitigationModificationRequest.class), any(MitigationDefinition.class),
+                        anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
     }
     
     /**
@@ -582,8 +585,9 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         doReturn(maxWorkflowId).when(spiedStorageHandler).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         doReturn(true).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
-        doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), 
-                                                                                                                                any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(MitigationDefinition.class),
+                anySet(), any(DeviceNameAndScope.class), anyLong(), 
+                any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         Long newWorkflowId = null;
         newWorkflowId = spiedStorageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
@@ -591,7 +595,8 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         assertNotNull(newWorkflowId);
         assertEquals((long) newWorkflowId, maxWorkflowId + 1);
         
-        verify(spiedStorageHandler, times(3)).storeRequestInDDB(any(MitigationModificationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        verify(spiedStorageHandler, times(3)).storeRequestInDDB(any(MitigationModificationRequest.class), any(MitigationDefinition.class),
+                anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         String deviceName = deviceNameAndScope.getDeviceName().name();
@@ -620,7 +625,8 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         doReturn(null).when(spiedStorageHandler).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         doReturn(true).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
-        doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(MitigationDefinition.class),
+                anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         Throwable caughtException = null;
         try {
@@ -647,7 +653,8 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         doReturn(maxWorkflowId).when(spiedStorageHandler).getMaxWorkflowIdForDevice(anyString(), anyString(), anyLong(), any(TSDMetrics.class));
         doReturn(true).when(spiedStorageHandler).evaluateActiveMitigations(anyString(), anyString(), anyString(), anyString(), anyInt(), anyLong(), anyBoolean(), any(TSDMetrics.class));
         doReturn((long) 10).when(spiedStorageHandler).getSleepMillisMultiplierBetweenStoreRetries();
-        doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        doNothing().when(spiedStorageHandler).storeRequestInDDB(any(MitigationModificationRequest.class), any(MitigationDefinition.class),
+                anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
         
         Long newWorkflowId = null;
         newWorkflowId = spiedStorageHandler.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), tsdMetrics);
@@ -655,7 +662,8 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         assertNotNull(newWorkflowId);
         assertEquals((long) newWorkflowId, maxWorkflowId + 1);
         
-        verify(spiedStorageHandler, times(1)).storeRequestInDDB(any(MitigationModificationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
+        verify(spiedStorageHandler, times(1)).storeRequestInDDB(any(MitigationModificationRequest.class), any(MitigationDefinition.class),
+                anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt(), any(TSDMetrics.class));
     }
 
 }

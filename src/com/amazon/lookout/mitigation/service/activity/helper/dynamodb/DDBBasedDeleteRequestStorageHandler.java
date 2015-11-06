@@ -120,7 +120,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                 }
 
                 try {
-                    storeRequestInDDB(deleteRequest, locations, deviceNameAndScope, newWorkflowId, RequestType.DeleteRequest, deleteRequest.getMitigationVersion(), subMetrics);
+                    storeRequestInDDB(deleteRequest, null, locations, deviceNameAndScope, newWorkflowId, RequestType.DeleteRequest, deleteRequest.getMitigationVersion(), subMetrics);
                     return newWorkflowId;
                 } catch (Exception ex) {
                     lastCaughtException = ex;

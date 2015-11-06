@@ -13,6 +13,8 @@ import lombok.NonNull;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
+import org.apache.commons.lang3.builder.RecursiveToStringStyle;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
@@ -34,7 +36,9 @@ import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
+import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.TransitProviderInfo;
 import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
@@ -68,6 +72,8 @@ public class RequestValidator {
     
     private static final int MAX_NUMBER_OF_LOCATIONS = 200;
     private static final int MAX_NUMBER_OF_TICKETS = 10;
+    
+    private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
     
     private final Set<String> deviceNames;
     private final Set<String> deviceScopes;
@@ -196,11 +202,12 @@ public class RequestValidator {
         validateMitigationName(request.getMitigationName());
         Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
         if (maxNumberOfHistoryEntriesToFetch != null) {
-            Validate.isTrue(maxNumberOfHistoryEntriesToFetch > 0);
+            Validate.isTrue(maxNumberOfHistoryEntriesToFetch > 0,
+                    "maxNumberOfHistoryEntriesToFetch should be larger than 0");
         }
         Integer startVersion = request.getExclusiveStartVersion();
         if (startVersion != null) {
-            Validate.isTrue(startVersion > 0);
+            Validate.isTrue(startVersion > 1, "exclusiveStartVersion number should be larger than 1");
         }
     }
 
@@ -215,11 +222,12 @@ public class RequestValidator {
         validateLocation(request.getLocation());
         Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
         if (maxNumberOfHistoryEntriesToFetch != null) {
-            Validate.isTrue(maxNumberOfHistoryEntriesToFetch > 0);
+            Validate.isTrue(maxNumberOfHistoryEntriesToFetch > 0,
+                    "maxNumberOfHistoryEntriesToFetch should be larger than 0");
         }
         Long lastEvaluatedTimestamp = request.getExclusiveLastEvaluatedTimestamp();
         if (lastEvaluatedTimestamp != null) {
-            Validate.isTrue(lastEvaluatedTimestamp > 0);
+            Validate.isTrue(lastEvaluatedTimestamp > 0, "exclusiveLastEvaluatedTimestamp should be larger than 0");
         }
     }
 
@@ -232,7 +240,46 @@ public class RequestValidator {
         validateDeviceName(request.getDeviceName());
         validateServiceName(request.getServiceName());
         validateMitigationName(request.getMitigationName());
-        Validate.isTrue(request.getMitigationVersion() > 0);
+        Validate.isTrue(request.getMitigationVersion() > 0, "mitigationVersion should be larger than 0.");
+    }
+
+    /**
+     * Validate rollback mitigation request.
+     * @param request : rollback mitigation request
+     * @throws IllegalArgumentException if it is invalid
+     */
+    public void validateRollbackRequest(RollbackMitigationRequest request) {
+        try {
+            validateDeviceName(request.getDeviceName());
+            validateMitigationName(request.getMitigationName());
+            validateDeviceScope(request.getDeviceScope());
+            validateMitigationTemplate(request.getMitigationTemplate());
+            validateServiceName(request.getServiceName());
+            Validate.isTrue(request.getRollbackToMitigationVersion() > 0,
+                   "rollback to mitigation version should be larger than 0");
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException(ex.getMessage() + "; request : "
+                    + ReflectionToStringBuilder.toString(request, recursiveToStringStyle), ex);
+        }
+    }
+    
+    /**
+     * Validate the value in the rollback request match the one in system.
+     * @param request : rollback reqeust
+     * @param mitigationRequestDescription : mitigation request description,
+     *      which is retrieved from system request storage
+     */
+    public void validateRollbackRequest(RollbackMitigationRequest request,
+            MitigationRequestDescription mitigationRequestDescription) {
+        String errorMessageTemplate = "rollback request field : %s, value \"%s\" does not match the one \"%s\" in system, request : "
+                + ReflectionToStringBuilder.toString(request, recursiveToStringStyle);
+        
+        Validate.isTrue(mitigationRequestDescription.getDeviceScope().equals(request.getDeviceScope()),
+                String.format(errorMessageTemplate, "deviceScope", request.getDeviceScope(),
+                        mitigationRequestDescription.getDeviceScope()));
+        Validate.isTrue(mitigationRequestDescription.getMitigationTemplate().equals(request.getMitigationTemplate()),
+                String.format(errorMessageTemplate, "mitigationTemplate", request.getMitigationTemplate(),
+                        mitigationRequestDescription.getMitigationTemplate()));
     }
 
     /**

@@ -72,7 +72,7 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
 
             validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope, tsdMetric);
         } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException(String.format("failed to validate request %s", request), ex);
+            throw new IllegalArgumentException(String.format("failed to validate request %s, error message %s", request, ex.getMessage()), ex);
         }
     }
     

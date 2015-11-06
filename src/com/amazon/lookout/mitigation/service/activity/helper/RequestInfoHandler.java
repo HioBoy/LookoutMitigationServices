@@ -25,6 +25,6 @@ public interface RequestInfoHandler {
     
     public List<MitigationRequestDescriptionWithLocations> getOngoingRequestsDescription(String serviceName, String deviceName, TSDMetrics tsdMetrics);
 
-    public MitigationRequestDescription getMitigationDefinition(String deviceName, String serviceName, String mitigationName, 
-            int mitigationVersion, TSDMetrics tsdMetrics);
+    public MitigationRequestDescriptionWithLocations getMitigationDefinition(String deviceName, String serviceName, String mitigationName, int mitigationVersion,
+            TSDMetrics tsdMetrics);
 }

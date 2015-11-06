@@ -1,22 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyMap;
-import static org.mockito.Matchers.anySet;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -31,43 +16,73 @@ import org.joda.time.Duration;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.coral.google.common.collect.Sets;
+import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
+import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
+import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
+import com.amazon.lookout.mitigation.service.request.RollbackMitigationRequestInternal;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
+import com.amazonaws.services.dynamodbv2.util.Tables;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.google.common.collect.Lists;
+
+import static com.amazon.lookout.mitigation.service.activity.helper.dynamodb.RequestTableTestHelper.*;
 
 @SuppressWarnings("unchecked")
 public class DDBBasedRequestStorageHandlerTest {
     private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
-
+    private static final String domain = "beta";
+    private static AmazonDynamoDBClient dynamoDBClient;
+    private static DynamoDB dynamodb;
+    private static DDBBasedRequestStorageHandler mitigationInfoHandler;
+    private static String tableName;
+    private static RequestTableTestHelper requestTableTestHelper;
+ 
     @BeforeClass
     public static void setUpOnce() {
         TestUtils.configureLogging();
+        
+        dynamoDBClient = DynamoDBTestUtil.get().getClient();
+        dynamodb = new DynamoDB(dynamoDBClient);
+        mitigationInfoHandler = new DDBBasedRequestStorageHandler(dynamoDBClient, domain);
+        tableName = MitigationRequestsModel.getInstance().getTableName(domain);
+        requestTableTestHelper = new RequestTableTestHelper(dynamodb, domain);
     }
 
     @Before
     public void setUpBeforeTest() {
         when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
+        CreateTableRequest request = MitigationRequestsModel.getInstance().getCreateTableRequest(tableName);
+        if (Tables.doesTableExist(dynamoDBClient, tableName)) {
+            dynamoDBClient.deleteTable(tableName);
+        }
+        dynamoDBClient.createTable(request);
+        mitigationInfoHandler = new DDBBasedRequestStorageHandler(dynamoDBClient, domain);
     }
-
+    
     /**
      * Test the happy case where the StorageHandler is able to store everything just fine into DDB.
      */
@@ -80,13 +95,13 @@ public class DDBBasedRequestStorageHandlerTest {
         long workflowId = 1;
         RequestType requestType = RequestType.CreateRequest;
         int mitigationVersion = 1;
-        doCallRealMethod().when(storageHandler).storeRequestInDDB(request, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
-        when(storageHandler.generateAttributesToStore(request, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion)).thenCallRealMethod();
+        doCallRealMethod().when(storageHandler).storeRequestInDDB(request, mitigationDefinition, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
+        when(storageHandler.generateAttributesToStore(request, mitigationDefinition, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion)).thenCallRealMethod();
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
 
         Throwable caughtException = null;
         try {
-            storageHandler.storeRequestInDDB(request, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
+            storageHandler.storeRequestInDDB(request, mitigationDefinition, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -107,15 +122,15 @@ public class DDBBasedRequestStorageHandlerTest {
         long workflowId = 1;
         RequestType requestType = RequestType.CreateRequest;
         int mitigationVersion = 1;
-        doCallRealMethod().when(storageHandler).storeRequestInDDB(request, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
-        when(storageHandler.generateAttributesToStore(request, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion)).thenCallRealMethod();
+        doCallRealMethod().when(storageHandler).storeRequestInDDB(request, mitigationDefinition, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
+        when(storageHandler.generateAttributesToStore(request, mitigationDefinition, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion)).thenCallRealMethod();
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         doThrow(new RuntimeException()).doThrow(new RuntimeException()).doNothing().when(storageHandler).putItemInDDB(anyMap(), anyMap(), any(TSDMetrics.class));
         when(storageHandler.getSleepMillisMultiplierOnPutRetry()).thenReturn(1);
 
         Throwable caughtException = null;
         try {
-            storageHandler.storeRequestInDDB(request, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
+            storageHandler.storeRequestInDDB(request, mitigationDefinition, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -137,15 +152,15 @@ public class DDBBasedRequestStorageHandlerTest {
         long workflowId = 1;
         RequestType requestType = RequestType.CreateRequest;
         int mitigationVersion = 1;
-        doCallRealMethod().when(storageHandler).storeRequestInDDB(request, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
-        when(storageHandler.generateAttributesToStore(request, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion)).thenCallRealMethod();
+        doCallRealMethod().when(storageHandler).storeRequestInDDB(request, mitigationDefinition, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
+        when(storageHandler.generateAttributesToStore(request, mitigationDefinition, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion)).thenCallRealMethod();
         when(storageHandler.getJSONDataConverter()).thenReturn(new JsonDataConverter());
         doThrow(new RuntimeException()).when(storageHandler).putItemInDDB(anyMap(), anyMap(), any(TSDMetrics.class));
         when(storageHandler.getSleepMillisMultiplierOnPutRetry()).thenReturn(1);
 
         Throwable caughtException = null;
         try {
-            storageHandler.storeRequestInDDB(request, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
+            storageHandler.storeRequestInDDB(request, mitigationDefinition, Sets.newHashSet("TST1"), deviceNameAndScope, workflowId, requestType, mitigationVersion, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -170,9 +185,11 @@ public class DDBBasedRequestStorageHandlerTest {
 
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         when(storageHandler.getJSONDataConverter()).thenReturn(jsonDataConverter);
-        when(storageHandler.generateAttributesToStore(any(MitigationModificationRequest.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt())).thenCallRealMethod();
+        when(storageHandler.generateAttributesToStore(any(MitigationModificationRequest.class), any(MitigationDefinition.class), anySet(), any(DeviceNameAndScope.class), anyLong(), any(RequestType.class), anyInt())).thenCallRealMethod();
 
-        Map<String, AttributeValue> attributesToStore = storageHandler.generateAttributesToStore(request, Sets.newHashSet(request.getLocations()), deviceNameAndScope, workflowId, requestType, mitigationVersion);
+        Map<String, AttributeValue> attributesToStore = storageHandler.generateAttributesToStore(request,
+                request.getMitigationDefinition(), Sets.newHashSet(request.getLocations()),
+                deviceNameAndScope, workflowId, requestType, mitigationVersion);
 
         assertTrue(attributesToStore.containsKey(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY));
         String deviceNameString = attributesToStore.get(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY).getS();
@@ -713,5 +730,70 @@ public class DDBBasedRequestStorageHandlerTest {
         assertTrue(queryFilters.containsKey("DeviceScope"));
         assertEquals(queryFilters.get("DeviceScope").getAttributeValueList().get(0).getS(), deviceScope);
         assertEquals(queryFilters.get("DeviceScope").getComparisonOperator(), ComparisonOperator.EQ.name());
+    }
+ 
+    /**
+     * Test mitigation version outdated
+     */
+    @Test(expected = StaleRequestException400.class)
+    public void testOutDatedMitigaitonVersion() {
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper
+                .getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        int latestVersionInDDB = 100;
+        itemCreator.setLocations(locations);
+        itemCreator.setMitigationVersion(latestVersionInDDB);
+        itemCreator.setWorkflowId(100);
+        itemCreator.addItem();
+        
+        RollbackMitigationRequestInternal request = new RollbackMitigationRequestInternal();
+        request.setMitigationName(mitigationName);
+        request.setMitigationTemplate(mitigationTemplate);
+        
+        int requestVersion = 99;
+        mitigationInfoHandler.storeUpdateMitigationRequest(request, mitigationDefinition,
+                requestVersion, RequestType.RollbackRequest, locations, tsdMetrics);
+    }
+   
+    /**
+     * Another thread has just wrote the record after we get workflowId, and versionId
+     */
+    @Test
+    public void testAnotherThreadWroteRecordAlready() {
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper
+                .getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        int latestVersionInDDB = 100;
+        itemCreator.setLocations(locations);
+        itemCreator.setMitigationVersion(latestVersionInDDB);
+        itemCreator.setWorkflowId(100);
+        itemCreator.addItem();
+        
+        RollbackMitigationRequestInternal request = new RollbackMitigationRequestInternal();
+        request.setMitigationName(mitigationName);
+        request.setMitigationTemplate(mitigationTemplate);
+        request.setServiceName(serviceName);
+        
+        MitigationActionMetadata mitigationActionMetadata = new MitigationActionMetadata();
+        mitigationActionMetadata.setDescription("desc");
+        mitigationActionMetadata.setToolName("cli");
+        mitigationActionMetadata.setUser("user");
+        request.setMitigationActionMetadata(mitigationActionMetadata);
+        
+        mitigationInfoHandler = spy(mitigationInfoHandler);
+        Mockito.doReturn(99l).doReturn(100l).when(mitigationInfoHandler).getMaxWorkflowIdForDevice(
+                eq(deviceName), eq(deviceScope), eq(null), isA(TSDMetrics.class));
+        Mockito.doReturn(99).doReturn(100).when(mitigationInfoHandler)
+                .getLatestVersionForMitigationOnDevice(eq(deviceName), eq(deviceScope),
+                       eq(mitigationName), eq(null), isA(TSDMetrics.class));
+        
+        int requestVersion = 100;
+        try {
+            mitigationInfoHandler.storeUpdateMitigationRequest(request, mitigationDefinition,
+                    requestVersion, RequestType.RollbackRequest, locations, tsdMetrics);
+            fail();
+        } catch (StaleRequestException400 ex) {
+            String expectedMessageErrorPrefix = "Mitigation found in DDB for deviceName: BLACKWATCH_BORDER and deviceScope:"
+                    + " GLOBAL and mitigationName: mitigation1 has a newer version: 100 than one in request: 100.";
+            assertTrue(ex.getMessage().startsWith(expectedMessageErrorPrefix));
+        }
     }
 }

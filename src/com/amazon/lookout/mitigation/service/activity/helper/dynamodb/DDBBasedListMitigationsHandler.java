@@ -181,7 +181,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         final TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getActiveMitigationsForService");
         try {
             String tableName = activeMitigationsTableName;
-            String indexToUse = ActiveMitigationsModel.DEVICE_NAME_INDEX;
+            String indexToUse = ActiveMitigationsModel.DEVICE_NAME_LSI;
             
             // Generate key condition to use when querying.
             Map<String, Condition> keyConditions = generateKeyConditionsForServiceAndDevice(serviceName, deviceName);
@@ -679,8 +679,8 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * @throws MissingMitigationException400, if mitigation not found
      */
     @Override
-    public MitigationRequestDescription getMitigationDefinition(String deviceName, String serviceName, String mitigationName,
-            int mitigationVersion, TSDMetrics tsdMetrics) {
+    public MitigationRequestDescriptionWithLocations getMitigationDefinition(String deviceName, String serviceName,
+            String mitigationName, int mitigationVersion, TSDMetrics tsdMetrics) {
         Validate.notEmpty(deviceName);
         Validate.notEmpty(mitigationName);
         Validate.isTrue(mitigationVersion > 0);
@@ -696,7 +696,10 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
             try {
                 for (Item item : requestsTable.getIndex(MitigationRequestsModel
                         .MITIGATION_NAME_MITIGATION_VERSION_GSI).query(query)) {
-                    return convertToRequestDescription(item);
+                    MitigationRequestDescriptionWithLocations requestDesc = new MitigationRequestDescriptionWithLocations();
+                    requestDesc.setMitigationRequestDescription(convertToRequestDescription(item));
+                    requestDesc.setLocations(new ArrayList<>(item.getStringSet(LOCATIONS_KEY)));
+                    return requestDesc;
                 }
             } catch (Exception ex) {
                 String msg = "Unable to query mitigation requests info associated on device: " + deviceName

@@ -14,9 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import lombok.Setter;
-
-import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -28,15 +25,13 @@ import com.amazon.lookout.activities.model.ActiveMitigationDetails;
 import com.amazon.lookout.activities.model.MitigationNameAndRequestStatus;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 
-import static com.amazon.lookout.ddb.model.MitigationRequestsModel.*;
-
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
+import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.RequestTableTestHelper.MitigationRequestItemCreator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.status.helper.ActiveMitigationsStatusHelper;
@@ -44,8 +39,6 @@ import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
@@ -58,6 +51,8 @@ import com.amazonaws.services.dynamodbv2.util.Tables;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.google.common.collect.Lists;
 
+import static com.amazon.lookout.mitigation.service.activity.helper.dynamodb.RequestTableTestHelper.*;
+
 public class DDBBasedListMitigationsHandlerTest {
     private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
     private final static String domain = "beta";
@@ -65,6 +60,7 @@ public class DDBBasedListMitigationsHandlerTest {
     private static DDBBasedListMitigationsHandler listHandler;
     private static AmazonDynamoDBClient dynamoDBClient;
     private static DynamoDB dynamodb;
+    private static RequestTableTestHelper requestTableTestHelper;
     
     @BeforeClass
     public static void setUpOnce() {
@@ -74,13 +70,14 @@ public class DDBBasedListMitigationsHandlerTest {
         dynamodb = new DynamoDB(dynamoDBClient);
         listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, 
                 domain, mock(ActiveMitigationsStatusHelper.class));
+        requestTableTestHelper = new RequestTableTestHelper(dynamodb, domain);
     }
     
     @Before
     public void setUpBeforeTest() {
         when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
-        String tableName = MitigationRequestsModel.getTableName(domain);
-        CreateTableRequest request = MitigationRequestsModel.getCreateTableRequest(tableName);
+        String tableName = MitigationRequestsModel.getInstance().getTableName(domain);
+        CreateTableRequest request = MitigationRequestsModel.getInstance().getCreateTableRequest(tableName);
         if (Tables.doesTableExist(dynamoDBClient, tableName)) {
             dynamoDBClient.deleteTable(tableName);
         }
@@ -535,78 +532,13 @@ public class DDBBasedListMitigationsHandlerTest {
         assertEquals(descriptionWithLocations.getLocations(), locations);
     }
 
-    @Setter
-    private class MitigationRequestItemCreator {
-        Table table;
-        String deviceName;
-        Integer workflowId;
-        String mitigationTemplate;
-        String workflowStatus;
-        String serviceName;
-        Long requestDate;
-        Integer updateWorkflowId;
-        String mitigationName;
-        Integer mitigationVersion;
-        String requestType;
-
-        String userName;
-        String userDesc;
-        String toolName;
-        String deviceScope;
-
-        void addItem() {
-            Item item = new Item();
-            item.withString(DEVICE_NAME_KEY, deviceName);
-            item.withNumber(WORKFLOW_ID_KEY, workflowId);
-            item.withString(MITIGATION_TEMPLATE_NAME_KEY, mitigationTemplate);
-            item.withString(WORKFLOW_STATUS_KEY, workflowStatus);
-            item.withString(SERVICE_NAME_KEY, serviceName);
-            item.withNumber(REQUEST_DATE_IN_MILLIS_KEY, requestDate);
-            item.withNumber(UPDATE_WORKFLOW_ID_KEY, updateWorkflowId);
-            item.withString(MITIGATION_NAME_KEY, mitigationName);
-            item.withNumber(MITIGATION_VERSION_KEY, mitigationVersion);
-            item.withString(REQUEST_TYPE_KEY, requestType);
-            item.withString(USER_NAME_KEY, userName);
-            item.withString(USER_DESCRIPTION_KEY, userDesc);
-            item.withString(TOOL_NAME_KEY, toolName);
-            item.withString(DEVICE_SCOPE_KEY, deviceScope);
-            table.putItem(item);
-        }
-    }
-
-    private MitigationRequestItemCreator getItemCreator(String deviceName, String serviceName, String mitigationName,
-            String deviceScope) {
-        MitigationRequestItemCreator itemCreator = new MitigationRequestItemCreator();
-        itemCreator.setTable(dynamodb.getTable(MitigationRequestsModel.getTableName(domain)));
-        itemCreator.setDeviceName(deviceName);
-        itemCreator.setMitigationTemplate("mitigationTemplate");
-        itemCreator.setWorkflowStatus(WorkflowStatus.SUCCEEDED);
-        itemCreator.setServiceName(serviceName);
-        itemCreator.setRequestDate(DateTime.now().getMillis());
-        itemCreator.setUpdateWorkflowId(1000);
-        itemCreator.setMitigationName(mitigationName);
-        itemCreator.setRequestType(RequestType.EditRequest.name());
-        itemCreator.setDeviceScope(deviceScope);
-
-        itemCreator.setUserName("abc");
-        itemCreator.setUserDesc("abc");
-        itemCreator.setToolName("A");
-
-        return itemCreator;
-    }
-
-    static final String deviceName = DeviceName.BLACKWATCH_BORDER.toString();
-    static final String serviceName = ServiceName.AWS;
-    static final String deviceScope = DeviceScope.GLOBAL.toString();
-    static final String mitigationName = "mitigation1";
-
     /**
      * Test all history can be retrieved.
      */
     @Test
     public void testGetMitigationHistory() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -634,7 +566,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMissingStartVersion() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -661,7 +593,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMaxNumberOfHistoryEntriesToFetch() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -688,7 +620,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryStartVersion() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -716,7 +648,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test(expected = MissingMitigationException400.class)
     public void testGetMitigationHistoryMitigationNotExist() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -738,7 +670,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMitigationRequestType() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -773,7 +705,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMitigationServiceName() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -802,7 +734,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMitigationDeviceScope() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -831,7 +763,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMitigationDeviceName() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -860,7 +792,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMitigationWorkflowStatus() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -911,7 +843,8 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationDefinition() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        itemCreator.setLocations(locations);
         int workflowId = 10000;
 
         // 2 records that will be fetched.
@@ -965,20 +898,20 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.setWorkflowStatus(WorkflowStatus.PARTIAL_SUCCESS);
         itemCreator.addItem();
        
-        MitigationRequestDescription desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName,
+        MitigationRequestDescriptionWithLocations desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName,
                 1, tsdMetrics);
 
-        assertEquals(1, desc.getMitigationVersion());
-        assertEquals(deviceName, desc.getDeviceName());
-        assertEquals(mitigationName, desc.getMitigationName());
-        assertEquals(10001, desc.getJobId());
+        assertEquals(1, desc.getMitigationRequestDescription().getMitigationVersion());
+        assertEquals(deviceName, desc.getMitigationRequestDescription().getDeviceName());
+        assertEquals(mitigationName, desc.getMitigationRequestDescription().getMitigationName());
+        assertEquals(10001, desc.getMitigationRequestDescription().getJobId());
         
         desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName, 2, tsdMetrics);
 
-        assertEquals(2, desc.getMitigationVersion());
-        assertEquals(deviceName, desc.getDeviceName());
-        assertEquals(mitigationName, desc.getMitigationName());
-        assertEquals(10002, desc.getJobId());
+        assertEquals(2, desc.getMitigationRequestDescription().getMitigationVersion());
+        assertEquals(deviceName, desc.getMitigationRequestDescription().getDeviceName());
+        assertEquals(mitigationName, desc.getMitigationRequestDescription().getMitigationName());
+        assertEquals(10002, desc.getMitigationRequestDescription().getJobId());
     }
 
     /**
@@ -994,7 +927,7 @@ public class DDBBasedListMitigationsHandlerTest {
      */
     @Test(expected = MissingMitigationException400.class)
     public void testGetMitigationInfoOnDeletedMitigation() {
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         // create a mitigation
         itemCreator.setRequestType(RequestType.CreateRequest.name());
@@ -1024,7 +957,7 @@ public class DDBBasedListMitigationsHandlerTest {
      */
     @Test
     public void testGetMitigationInfoWithOngoingDeployment() {
-        MitigationRequestItemCreator itemCreator = getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
         // create a mitigation
         itemCreator.setRequestType(RequestType.CreateRequest.name());

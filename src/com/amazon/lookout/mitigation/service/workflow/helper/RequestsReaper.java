@@ -14,7 +14,9 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.amazonaws.services.simpleworkflow.model.ListOpenWorkflowExecutionsRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfos;
 import com.google.common.util.concurrent.Uninterruptibles;
+
 import lombok.NonNull;
+
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -96,9 +98,11 @@ public class RequestsReaper implements Runnable {
     private final int maxSecondsToStartWorkflow;
     private final SWFWorkflowStarter workflowStarter;
     
-    @ConstructorProperties({"dynamoDBClient", "swfClient", "appDomain", "swfDomainName", "swfSocketTimeoutMillis", "swfConnTimeoutMillis", "workflowStarter", "metricsFactory"})
-    public RequestsReaper(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull AmazonSimpleWorkflowClient swfClient, @NonNull String appDomain, @NonNull String swfDomain,
-                          int swfSocketTimeoutMillis, int swfConnTimeoutMillis, @NonNull SWFWorkflowStarter workflowStarter, @NonNull MetricsFactory metricsFactory) {
+    @ConstructorProperties({"dynamoDBClient", "swfClient", "appDomain", "swfDomainName",
+            "swfSocketTimeoutMillis", "swfConnTimeoutMillis", "workflowStarter", "metricsFactory"})
+    public RequestsReaper(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull AmazonSimpleWorkflowClient swfClient,
+            @NonNull String appDomain, @NonNull String swfDomain, int swfSocketTimeoutMillis, int swfConnTimeoutMillis,
+            @NonNull SWFWorkflowStarter workflowStarter, @NonNull MetricsFactory metricsFactory) {
         this.dynamoDBClient = dynamoDBClient;
         this.swfClient = swfClient;
         

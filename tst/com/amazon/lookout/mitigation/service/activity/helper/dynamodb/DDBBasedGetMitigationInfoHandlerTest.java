@@ -1,7 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import static com.amazon.lookout.ddb.model.MitigationInstancesModel.*;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -64,8 +64,8 @@ public class DDBBasedGetMitigationInfoHandlerTest {
     @Before
     public void setUpBeforeTest() {
         when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
-        String tableName = MitigationInstancesModel.getTableName(domain);
-        CreateTableRequest request = MitigationInstancesModel.getCreateTableRequest(tableName);
+        String tableName = MitigationInstancesModel.getInstance().getTableName(domain);
+        CreateTableRequest request = MitigationInstancesModel.getInstance().getCreateTableRequest(tableName);
         if (Tables.doesTableExist(dynamoDBClient, tableName)) {
             dynamoDBClient.deleteTable(tableName);
         }
@@ -193,7 +193,7 @@ public class DDBBasedGetMitigationInfoHandlerTest {
     private MitigationInstanceItemCreator getItemCreator(String deviceName, String serviceName, String mitigationName,
             String location, String mitigationStatus, String blockingDeviceWorkflowId, String schedulingStatus) {
         MitigationInstanceItemCreator itemCreator = new MitigationInstanceItemCreator();
-        itemCreator.setTable(dynamodb.getTable(MitigationInstancesModel.getTableName(domain)));
+        itemCreator.setTable(dynamodb.getTable(MitigationInstancesModel.getInstance().getTableName(domain)));
 
         itemCreator.setLocation(location);
         itemCreator.setMitigationStatus(mitigationStatus);
@@ -367,6 +367,9 @@ public class DDBBasedGetMitigationInfoHandlerTest {
         assertEquals(deploymentCount, instanceStatuses.size());
         for (int i = 0; i < deploymentCount; ++i) {
             assertEquals(deploymentCount - i, instanceStatuses.get(i).getMitigationVersion());
+            assertEquals(dateTime.plusMinutes(deploymentCount - i).toString(CREATE_DATE_FORMATTER),
+                    instanceStatuses.get(i).getDeployDate());
+            assertEquals(deploymentCount - i + 10000, instanceStatuses.get(i).getJobId());
         }
     }
     

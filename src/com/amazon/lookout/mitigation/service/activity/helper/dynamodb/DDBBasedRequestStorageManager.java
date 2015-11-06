@@ -65,6 +65,9 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
         
         DDBBasedDeleteRequestStorageHandler deleteStorageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         requestStorageHandlerMap.put(RequestType.DeleteRequest, deleteStorageHandler);
+
+        DDBBasedRollbackRequestStorageHandler rollbackRequestStorageHandler = new DDBBasedRollbackRequestStorageHandler(dynamoDBClient, domain);
+        requestStorageHandlerMap.put(RequestType.RollbackRequest, rollbackRequestStorageHandler);
         
         return requestStorageHandlerMap;
     }
@@ -79,7 +82,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      */
     @Override
     public long storeRequestForWorkflow(@NonNull MitigationModificationRequest request, @NonNull Set<String> locations, @NonNull RequestType requestType, @NonNull TSDMetrics metrics) {
-        Validate.notEmpty(locations);
+        Validate.notEmpty(locations, "location is empty");
         
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageManager.storeRequestForWorkflow");
         try {

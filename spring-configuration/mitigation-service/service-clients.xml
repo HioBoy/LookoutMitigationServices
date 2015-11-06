@@ -6,12 +6,13 @@
     
     <bean id="dynamoDBClient" class="com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient">
         <constructor-arg index="0" ref="${realm}.dynamoDBCredentialsProvider"/>
+        <property name="endpoint" value="dynamodb.${realm}.amazonaws.com" />
     </bean>
     
     <bean id="swfClient" class="com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient">
         <constructor-arg index="0" ref="${realm}.swfCredentialsProvider"/>
         <constructor-arg index="1" ref="swfClientConfig"/>
-        <property name="endpoint" ref="${realm}.swfEndpoint"/>
+        <property name="endpoint" value="https://swf.${realm}.amazonaws.com"/>
     </bean>
     
     <bean id="swfClientConnectionTimeoutMillis" class="java.lang.Integer">

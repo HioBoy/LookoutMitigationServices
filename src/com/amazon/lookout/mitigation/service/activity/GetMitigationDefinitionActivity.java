@@ -26,8 +26,8 @@ import com.amazon.lookout.mitigation.service.GetMitigationDefinitionResponse;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
-import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
-import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithStatus;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocationAndStatus;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
@@ -96,21 +96,21 @@ public class GetMitigationDefinitionActivity extends Activity {
             requestValidator.validateGetMitigationDefinitionRequest(request);
             
             // Step 2. get mitigation request for this device, mitigationName and mitigation version from the requests table.
-            MitigationRequestDescription mitigationDescription = requestInfoHandler.getMitigationDefinition(
+            MitigationRequestDescriptionWithLocations mitigationDescriptionWithLocations = requestInfoHandler.getMitigationDefinition(
                     deviceName, serviceName, mitigationName, mitigationVersion, tsdMetrics);
             
-            // Step 3. query the individual instance status and populate a new
-            // MitigationRequestDescriptionWithStatus instance to wrap this information.
+            // Step 3. query the individual instance status and populate a new MitigationRequestDescriptionWithStatus instance to wrap this information.
             List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler.getMitigationInstanceStatus(
-                    deviceName, mitigationDescription.getJobId(), tsdMetrics);
+                    deviceName, mitigationDescriptionWithLocations.getMitigationRequestDescription().getJobId(), tsdMetrics);
 
-            MitigationRequestDescriptionWithStatus mitigationRequestDescriptionWithStatus = new MitigationRequestDescriptionWithStatus();
-            mitigationRequestDescriptionWithStatus.setMitigationRequestDescription(mitigationDescription);
-            mitigationRequestDescriptionWithStatus.setInstancesStatus(instanceStatuses);
+            MitigationRequestDescriptionWithLocationAndStatus mitigationRequestDescriptionWithLocationAndStatus = 
+                    new MitigationRequestDescriptionWithLocationAndStatus();
+            mitigationRequestDescriptionWithLocationAndStatus.setMitigationRequestDescriptionWithLocations(mitigationDescriptionWithLocations);
+            mitigationRequestDescriptionWithLocationAndStatus.setInstancesStatus(instanceStatuses);
             
             // Step 4. Create the response object to return back to the client.
             GetMitigationDefinitionResponse response = new GetMitigationDefinitionResponse();
-            response.setMitigationRequestDescriptionWithStatus(mitigationRequestDescriptionWithStatus);
+            response.setMitigationRequestDescriptionWithLocationAndStatus(mitigationRequestDescriptionWithLocationAndStatus);
             response.setRequestId(requestId);
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
