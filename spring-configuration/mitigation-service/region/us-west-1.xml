@@ -6,24 +6,11 @@
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
     
-    <!-- TODO: For now us-west-1 uses the us-east-1 DynamoDB service since we run on a single us-east-1 stack. Once snowforting happens, we should move this to point to us-west-1. -->
-    <bean id="us-west-1.dynamoEndpoint" class="java.lang.String">
-        <constructor-arg value="dynamodb.us-east-1.amazonaws.com"/>
-    </bean>
-    
-    <!-- TODO: For now us-west-1 uses the same credentials as us-east-1. Once snowforting happens, we should create separate credentials for us-west-1. -->
     <bean id="us-west-1.dynamoDBCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg value="com.amazon.lookout.dynamodb.mitigationservice.${domain}"/>
+        <constructor-arg value="com.amazon.lookout.dynamodb.mitigationservice.us-west-1.${domain}"/>
     </bean>
     
-    <!-- TODO: For now us-west-1 uses the same credentials as us-east-1. Once snowforting happens, we should create separate credentials for us-west-1. -->
     <bean id="us-west-1.swfCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg value="com.amazon.lookout.swf.mitigationservice.${domain}"/>
+        <constructor-arg value="com.amazon.lookout.swf.mitigationservice.us-west-1.${domain}"/>
     </bean>
-    
-    <!-- TODO: For now us-west-1 uses the us-east-1 SWF service since we run on a single us-east-1 stack. Once snowforting happens, we should move this to point to us-west-1. -->
-    <bean id="us-west-1.swfEndpoint" class="java.lang.String">
-        <constructor-arg value="https://swf.us-east-1.amazonaws.com"/>
-    </bean>
-    
 </beans>
