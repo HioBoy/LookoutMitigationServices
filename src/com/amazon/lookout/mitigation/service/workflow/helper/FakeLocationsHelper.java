@@ -31,7 +31,7 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
     private static final int POP_LIST_EXPIRATION_SECONDS = 1;
     private volatile PopLists popLists = null;
     //set time of last update to an expired timestamp
-    private volatile DateTime nextUpdateTime = new DateTime(0);
+    private volatile DateTime nextUpdateTime;
     
     @ConstructorProperties({ "cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries",
             "popsListDir", "metricsFactory", "fakeBlackWatchClassicLocations" })
@@ -85,13 +85,13 @@ public class FakeLocationsHelper extends EdgeLocationsHelper {
     }
 
     private void updateListsIfNeeded() {
-        if(nextUpdateTime.isBeforeNow()) {
+        if(nextUpdateTime == null || nextUpdateTime.isBeforeNow()) {
             refreshFakeRouters();
         }
     }
     
     private synchronized void refreshFakeRouters() {
-        if(!nextUpdateTime.isBeforeNow()) {
+        if(nextUpdateTime != null && !nextUpdateTime.isBeforeNow()) {
             //another thread already updated the lists
             return;
         }
