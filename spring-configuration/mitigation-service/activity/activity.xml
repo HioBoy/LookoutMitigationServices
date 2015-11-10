@@ -139,12 +139,19 @@
     <bean id="blackWatchS3Client" class="com.amazonaws.services.s3.AmazonS3Client">
         <constructor-arg ref="s3OdinCredential"/>
     </bean>
+
+    <bean id="blackWatchBorderLocationValidator" 
+            class="com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator">
+        <constructor-arg name="preDefinedLocations" ref="${domain}.preDefinedLocations"/>
+        <constructor-arg name="allowedLocationPrefix" ref="${domain}.allowedLocationPrefix"/>
+    </bean>
     
     <bean id="templateBasedRequestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator">
         <constructor-arg name="serviceSubnetsMatcher" ref="serviceSubnetsMatcher"/>
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
         <constructor-arg name="blackWatchS3Client" ref="blackWatchS3Client"/>
         <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
+        <constructor-arg name="blackWatchBorderLocationValidator" ref="blackWatchBorderLocationValidator"/>
     </bean>
     
     <bean id="ddbBasedRequestStorageManager" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedRequestStorageManager">

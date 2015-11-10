@@ -43,6 +43,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.RateLimitAction;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.Route53SingleCustomerMitigationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.ServiceTemplateValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
@@ -87,7 +88,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     
     private static TemplateBasedRequestValidator createValidator() {
         return new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class));
+                mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
+                mock(BlackWatchBorderLocationValidator.class));
     }
     
     public static MitigationDefinition createMitigationDefinition(String attrName, List<String> attrValues) {
@@ -163,7 +165,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     private class MockTemplateBasedRequestValidator extends TemplateBasedRequestValidator {
         private final ServiceTemplateValidator serviceTemplateValidator;
         public MockTemplateBasedRequestValidator(ServiceSubnetsMatcher serviceSubnetsMatcher, ServiceTemplateValidator serviceTemplateValidator) {
-            super(serviceSubnetsMatcher, mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class));
+            super(serviceSubnetsMatcher, mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
+                    mock(BlackholeMitigationHelper.class), mock(BlackWatchBorderLocationValidator.class));
             this.serviceTemplateValidator = serviceTemplateValidator;
         }
         

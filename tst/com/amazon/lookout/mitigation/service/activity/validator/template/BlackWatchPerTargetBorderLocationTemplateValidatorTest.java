@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
 import static org.mockito.Mockito.doReturn;
+import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,6 +11,7 @@ import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
@@ -42,6 +44,9 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
     @Mock
     protected TSDMetrics tsdMetric;
     
+    @Mock
+    protected BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
+    
     private BlackWatchPerTargetBorderLocationTemplateValidator validator;
     
     private static final AlarmCheck ALARM_CHECK = new AlarmCheck(); 
@@ -62,7 +67,8 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         // mock TSDMetric
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
-        validator = new BlackWatchPerTargetBorderLocationTemplateValidator(s3Client);
+        validator = new BlackWatchPerTargetBorderLocationTemplateValidator(s3Client,
+                blackWatchBorderLocationValidator);
     }
 
     /**
@@ -278,5 +284,37 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         request.setServiceName(ServiceName.Edge);
         validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
+    }
+    
+    /**
+     * Test invalid location
+     */
+    @Test
+    public void testInvalidLocation() {
+        IllegalArgumentException expectedException = new IllegalArgumentException();
+        try {
+            List<String> locations = Arrays.asList("E-AMS1");
+            Mockito.doThrow(expectedException).when(blackWatchBorderLocationValidator).validateLocations(locations);
+            String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
+            CreateMitigationRequest request = new CreateMitigationRequest();
+            request.setMitigationName("BLACKWATCH_POP_GLOBAL_E-AMS1");
+            request.setMitigationTemplate(mitigationTemplate);
+            request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
+            request.setServiceName(ServiceName.Edge);
+            request.setLocations(locations);
+            S3Object config = new S3Object();
+            config.setBucket("s3bucket");
+            config.setKey("s3key");
+            config.setMd5("md5");
+            BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
+            constraint.setConfig(config);
+            MitigationDefinition mitigationDefinition = new MitigationDefinition();
+            mitigationDefinition.setConstraint(constraint);
+            request.setMitigationDefinition(mitigationDefinition);
+            validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
+            fail();
+        } catch (IllegalArgumentException ex) {
+            assertEquals(expectedException, ex);
+        }
     }
 }

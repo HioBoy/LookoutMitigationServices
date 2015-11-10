@@ -50,7 +50,8 @@ public class TemplateBasedRequestValidatorTest {
         when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class));
+                mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
+                mock(BlackWatchBorderLocationValidator.class));
         MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         request.setPreDeploymentChecks(null);
         Throwable caughtException = null;
@@ -72,7 +73,8 @@ public class TemplateBasedRequestValidatorTest {
         when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class));
+                mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
+                mock(BlackWatchBorderLocationValidator.class));
         MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         request.setMitigationTemplate("BadTemplate");
         Throwable caughtException = null;
@@ -96,7 +98,8 @@ public class TemplateBasedRequestValidatorTest {
         when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(null);
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class));
+                mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
+                mock(BlackWatchBorderLocationValidator.class));
         MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
         Throwable caughtException = null;
         try {
@@ -118,7 +121,8 @@ public class TemplateBasedRequestValidatorTest {
         when(subnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(subnetsMatcher,
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class));
+                mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
+                mock(BlackWatchBorderLocationValidator.class));
         
         MitigationDefinition definition1 = DDBBasedCreateRequestStorageHandlerTest.defaultCreateMitigationDefinition();
         

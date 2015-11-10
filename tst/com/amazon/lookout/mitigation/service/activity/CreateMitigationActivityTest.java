@@ -14,6 +14,7 @@ import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManag
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
@@ -132,7 +133,8 @@ public class CreateMitigationActivityTest {
         return new CreateMitigationActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper()),
+                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper(),
+                    mock(BlackWatchBorderLocationValidator.class)),
             mock(RequestStorageManager.class),
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class),
@@ -143,7 +145,8 @@ public class CreateMitigationActivityTest {
         return new CreateMitigationActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper()),
+                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper(),
+                    mock(BlackWatchBorderLocationValidator.class)),
                 requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class),

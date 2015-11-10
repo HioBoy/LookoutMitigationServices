@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import lombok.NonNull;
 
@@ -17,7 +16,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
 
-import com.amazon.aws.authruntimeclient.internal.common.collect.ImmutableMap;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.activities.model.ActiveMitigationDetails;
 import com.amazon.lookout.activities.model.MitigationNameAndRequestStatus;
@@ -565,23 +563,21 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         }
         return convertedList;
     }
-    
+
+
     /**
      * Generates a list of MitigationRequestDescription instances, where each instance wraps information about the latest request.
-     * The mitigation must be active.
      * 
      * @param serviceName ServiceName for which we need to get the list of active mitigation descriptions.
      * @param deviceName DeviceName from which we need to read the list of active mitigation descriptions.
      * @param deviceScope DeviceScope to constraint the query to get the list of active mitigation descriptions.
      * @param mitigationName MitigationName constraint for the active mitigations.
      * @param tsdMetrics 
-     * @return List of MitigationRequestDescription instances, should contain a single request representing 
-     *      the latest (create/edit) mitigation request for this active mitigation.
-     * @throws MissingMitigationException400, if mitigation does not exist or has been deleted
+     * @return List of MitigationRequestDescription instances, should contain a single request representing the latest (create/edit) mitigation request for this mitigationName.
      */
     @Override
-    public List<MitigationRequestDescription> getActiveMitigationRequestDescriptionsForMitigation(@NonNull String serviceName,
-            @NonNull String deviceName, String deviceScope, @NonNull String mitigationName, @NonNull TSDMetrics tsdMetrics) {
+    public List<MitigationRequestDescription> getMitigationRequestDescriptionsForMitigation(@NonNull String serviceName, @NonNull String deviceName, String deviceScope,
+                                                                                            @NonNull String mitigationName, @NonNull TSDMetrics tsdMetrics) {
         Validate.notEmpty(serviceName);
         Validate.notEmpty(deviceName);
         Validate.notEmpty(deviceScope);
@@ -589,31 +585,40 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         
         final TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getMitigationDescriptionsForMitigation");
         try {
+            String tableName = mitigationRequestsTableName;
+            String indexToUse = MitigationRequestsModel.MITIGATION_NAME_LSI;
+            
             // Generate key condition to use when querying.
-            Map<String, Condition> keyConditions = ImmutableMap.of(
-                    DEVICE_NAME_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
-                        .withAttributeValueList(new AttributeValue(deviceName)),
-                    MITIGATION_NAME_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
-                        .withAttributeValueList(new AttributeValue(mitigationName)));
+            Map<String, Condition> keyConditions = new HashMap<>();
+            Map<String, Condition> queryFilter = new HashMap<>();
+            
+            AttributeValue value = new AttributeValue(deviceName);
+            Condition deviceCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
+            keyConditions.put(DEVICE_NAME_KEY, deviceCondition);
+            
+            value = new AttributeValue(mitigationName);
+            Condition mitigationNameCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
+            keyConditions.put(MITIGATION_NAME_KEY, mitigationNameCondition);
             
             // Generate query filters to use when querying.
-            Map<String, Condition> queryFilter = ImmutableMap.of(
-                    // Restrict results to active mitigation, which means updateWorkflowId == 0
-                    UPDATE_WORKFLOW_ID_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
-                        .withAttributeValueList(new AttributeValue().withN(String.valueOf(UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS))),
-                    // Restrict results to this serviceName
-                    SERVICE_NAME_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
-                        .withAttributeValueList(new AttributeValue(serviceName)),
-                    // Restrict results to this deviceName
-                    DEVICE_SCOPE_KEY, new Condition().withComparisonOperator(ComparisonOperator.EQ)
-                        .withAttributeValueList(new AttributeValue(deviceScope)),
-                    // Ignore the delete requests, since they don't contain any mitigation definitions.
-                    REQUEST_TYPE_KEY, new Condition().withComparisonOperator(ComparisonOperator.NE)
-                        .withAttributeValueList(new AttributeValue(RequestType.DeleteRequest.name())));
+            
+            // Restrict results to this serviceName
+            value = new AttributeValue(serviceName);
+            Condition serviceNameCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
+            queryFilter.put(SERVICE_NAME_KEY, serviceNameCondition);
+            
+            // Restrict results to this deviceName
+            value = new AttributeValue(deviceScope);
+            Condition deviceScopeCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
+            queryFilter.put(DEVICE_SCOPE_KEY, deviceScopeCondition);
+            
+            // Ignore the delete requests, since they don't contain any mitigation definitions.
+            value = new AttributeValue(RequestType.DeleteRequest.name());
+            Condition requestTypeCondition = new Condition().withComparisonOperator(ComparisonOperator.NE).withAttributeValueList(value);
+            queryFilter.put(REQUEST_TYPE_KEY, requestTypeCondition);            
             
             Map<String, AttributeValue> lastEvaluatedKey = null;
-            QueryRequest queryRequest = generateQueryRequest(null, keyConditions, queryFilter, mitigationRequestsTableName,
-                    true, MitigationRequestsModel.MITIGATION_NAME_LSI, lastEvaluatedKey);
+            QueryRequest queryRequest = generateQueryRequest(null, keyConditions, queryFilter, tableName, true, indexToUse, lastEvaluatedKey);
             
             // Populate the items fetched after each query succeeds.
             List<Map<String, AttributeValue>> fetchedItems = new ArrayList<>();
@@ -656,17 +661,44 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                 }
             } while (lastEvaluatedKey != null);
             
+            List<MitigationRequestDescription> requestDescriptionsToReturn = new ArrayList<>();
+            
             // Get the latest MitigationRequestDescription from the list of fetchedItems.
             if (!fetchedItems.isEmpty()) {
-                return fetchedItems.stream().map(item -> convertToRequestDescription(item)).collect(Collectors.toList());
+                MitigationRequestDescription requestDescription = getLatestMitigationDescription(fetchedItems);
+                if (requestDescription != null) {
+                    requestDescriptionsToReturn.add(requestDescription);
+                }
             }
-            throw new MissingMitigationException400("Mitigation: " + mitigationName + " for service: "
-                   + serviceName + " doesn't exist on device: " + deviceName + " with deviceScope:" + deviceScope);
+            
+            return requestDescriptionsToReturn;
         } finally {
             subMetrics.end();
         }
     }
-
+    
+    /**
+     * Helper method to convert a list of items (Map of AttributeName (String) to AttributeValue) fetched from DDB into MitigationRequestDescription instances,
+     * returning back the latest MitigationRequestDescription, regardless of whether it is "active" or not (since it might have been deleted).
+     * @param items List of Map, where each Map has attributeName (String) as the key and DDB's AttributeValue as the corresponding value.
+     * @return MitigationRequestDescription representing the latest MitigationRequestDescription.
+     */
+    private MitigationRequestDescription getLatestMitigationDescription(@NonNull List<Map<String, AttributeValue>> items) {
+        MitigationRequestDescription latestRequestDescription = null;
+        for (Map<String, AttributeValue> item : items) {
+            MitigationRequestDescription description = convertToRequestDescription(item);
+            if (latestRequestDescription == null) {
+                latestRequestDescription = description;
+            } else {
+                if (description.getJobId() > latestRequestDescription.getJobId()) {
+                    latestRequestDescription = description;
+                }
+            }
+        }
+        
+        return latestRequestDescription;
+    }
+    
     /**
      * Get mitigation definition based on device name, mitigation name, and mitigation version
      * This API queries GSI, result is eventually consistent.

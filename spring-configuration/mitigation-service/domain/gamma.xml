@@ -35,6 +35,7 @@
     </util:set>
     
     <util:list id="gamma.fakeBlackWatchClassicLocations">
+        <value>G-IAD55</value> 
         <value>SEALAB-A</value>
         <value>SEALAB-B</value>
         <value>SEALAB-C</value>
@@ -63,4 +64,28 @@
         <constructor-arg name="fakeBlackWatchClassicLocations" ref="gamma.fakeBlackWatchClassicLocations"/>
     </bean>
 
+    <util:set id="gamma.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
+        <value>BR-PDQ-1</value> 
+        <value>G-IAD55</value> 
+        <value>SEALAB-A</value>
+        <value>SEALAB-B</value>
+        <value>SEALAB-C</value>
+        <value>SEALAB-D</value>
+        <value>SEALAB-E</value>
+        <value>SEALAB-F</value>
+        <value>DEV-DSK-SAVILLE</value>
+        <value>DEV-DSK-ROMANTON</value>
+        <value>DEV-DSK-BMBENSON</value>
+        <value>DEV-DSK-CHERHARR</value>
+        <value>DEV-DSK-DMARINUS</value>
+        <value>DEV-DSK-CHUCKPHI</value>
+        <value>DEV-DSK-XINGBOW</value>
+        <value>DEV-DSK-YROBOT</value>
+        <value>DEV-DSK-HUZI</value>
+        <value>DEV-DSK-LAVIGNEN</value>
+    </util:set>
+    
+    <bean id="gamma.allowedLocationPrefix" class="java.lang.String">
+        <constructor-arg value="fakerouter"/>
+    </bean>
 </beans>

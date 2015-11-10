@@ -342,7 +342,7 @@ public class DDBBasedListMitigationsHandlerTest {
         
         when(dynamoDBClient.query(any(QueryRequest.class))).thenReturn(queryResult);
         
-        List<MitigationRequestDescription> descriptions = listHandler.getActiveMitigationRequestDescriptionsForMitigation(serviceName, deviceName, deviceScope, mitigationName, tsdMetrics);
+        List<MitigationRequestDescription> descriptions = listHandler.getMitigationRequestDescriptionsForMitigation(serviceName, deviceName, deviceScope, mitigationName, tsdMetrics);
         
         assertEquals(descriptions.size(), 1);
         MitigationRequestDescription description = descriptions.get(0);
@@ -922,63 +922,4 @@ public class DDBBasedListMitigationsHandlerTest {
     public void testGetMitigationDefinitionNonExistMitigation() {
         listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName, 1, tsdMetrics);
     }
-    
-    /**
-     * Test get mitigation info can correctly handle deleted mitigation
-     */
-    @Test(expected = MissingMitigationException400.class)
-    public void testGetMitigationInfoOnDeletedMitigation() {
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
-
-        // create a mitigation
-        itemCreator.setRequestType(RequestType.CreateRequest.name());
-        itemCreator.setMitigationVersion(1);
-        itemCreator.setWorkflowId(10000);
-        itemCreator.setUpdateWorkflowId(10001);
-        itemCreator.addItem();
-        // edit the mitigation
-        itemCreator.setRequestType(RequestType.EditRequest.name());
-        itemCreator.setMitigationVersion(2);
-        itemCreator.setWorkflowId(10001);
-        itemCreator.setUpdateWorkflowId(10002);
-        itemCreator.addItem();
-        // delete the mitigation
-        itemCreator.setRequestType(RequestType.DeleteRequest.name());
-        itemCreator.setMitigationVersion(2);
-        itemCreator.setWorkflowId(10002);
-        itemCreator.setUpdateWorkflowId(0);
-        itemCreator.addItem();
-        
-        listHandler.getActiveMitigationRequestDescriptionsForMitigation(
-                serviceName, deviceName, deviceScope, mitigationName, tsdMetrics);
-    }
-    
-    /**
-     * Test get mitigation info can correctly handle ongoing deployment on a certain mitigation
-     */
-    @Test
-    public void testGetMitigationInfoWithOngoingDeployment() {
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
-
-        // create a mitigation
-        itemCreator.setRequestType(RequestType.CreateRequest.name());
-        itemCreator.setMitigationVersion(1);
-        itemCreator.setWorkflowId(10000);
-        itemCreator.setUpdateWorkflowId(0);
-        itemCreator.addItem();
-        // edit the mitigation
-        itemCreator.setRequestType(RequestType.EditRequest.name());
-        itemCreator.setMitigationVersion(2);
-        itemCreator.setWorkflowId(10001);
-        itemCreator.setUpdateWorkflowId(0);
-        itemCreator.addItem();
-       
-        List<MitigationRequestDescription> descs = listHandler.getActiveMitigationRequestDescriptionsForMitigation(
-                serviceName, deviceName, deviceScope, mitigationName, tsdMetrics);
-        
-        assertEquals(2, descs.size());
-        assertTrue((1 == descs.get(0).getMitigationVersion()) && (2 == descs.get(1).getMitigationVersion()) || 
-                (2 == descs.get(0).getMitigationVersion()) && (1 == descs.get(1).getMitigationVersion()));
-    }
- 
 }

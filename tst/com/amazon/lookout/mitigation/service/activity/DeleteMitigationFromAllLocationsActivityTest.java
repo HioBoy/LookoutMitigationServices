@@ -9,6 +9,7 @@ import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManag
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
@@ -83,7 +84,8 @@ public class DeleteMitigationFromAllLocationsActivityTest {
         return new DeleteMitigationFromAllLocationsActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class)),
+                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
+                    mock(BlackWatchBorderLocationValidator.class)),
             mock(RequestStorageManager.class),
             workflowStarter,
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class),

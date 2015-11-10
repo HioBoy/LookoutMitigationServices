@@ -55,25 +55,21 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
     
     @Override
     public void validateRequestForTemplate(MitigationModificationRequest request, String mitigationTemplate, TSDMetrics tsdMetric) {
-        try {
-            Validate.notEmpty(mitigationTemplate, "mitigation template can not be empty");
+        Validate.notEmpty(mitigationTemplate, "mitigation template can not be empty");
 
-            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper
-                    .getDeviceNameAndScopeForTemplate(mitigationTemplate);
+        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper
+                .getDeviceNameAndScopeForTemplate(mitigationTemplate);
 
-            if (deviceNameAndScope == null) {
-                String message = String.format(
-                        "%s: No DeviceNameAndScope mapping found for template: %s. Request being validated: %s",
-                        MitigationTemplateToDeviceMapper.MISSING_DEVICE_MAPPING_KEY, mitigationTemplate,
-                        ReflectionToStringBuilder.toString(request, new RecursiveToStringStyle()));
-                LOG.error(message);
-                throw new InternalServerError500(message);
-            }
-
-            validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope, tsdMetric);
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException(String.format("failed to validate request %s, error message %s", request, ex.getMessage()), ex);
+        if (deviceNameAndScope == null) {
+            String message = String.format(
+                    "%s: No DeviceNameAndScope mapping found for template: %s. Request being validated: %s",
+                    MitigationTemplateToDeviceMapper.MISSING_DEVICE_MAPPING_KEY, mitigationTemplate,
+                    ReflectionToStringBuilder.toString(request, new RecursiveToStringStyle()));
+            LOG.error(message);
+            throw new InternalServerError500(message);
         }
+
+        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope, tsdMetric);
     }
     
     protected void validatePostDeploymentChecks(List<MitigationDeploymentCheck> checks) {
