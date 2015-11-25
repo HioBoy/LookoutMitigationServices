@@ -337,10 +337,13 @@ public class BlackholeArborCustomerValidatorTest {
     
     public Object[] validTransitProviderCombinations() {
         return new Object[] {
-            ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID),
+            ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1),
             ImmutableList.of(
-                    BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID, 
-                    BlackholeTestUtils.VALID_UNSUPPORTED_TRANSIT_PROVIDER_ID)
+                    BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1, 
+                    BlackholeTestUtils.VALID_UNSUPPORTED_TRANSIT_PROVIDER_ID),
+            ImmutableList.of(
+                    BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1, 
+                    BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_2)
         };
     }
     
@@ -388,6 +391,43 @@ public class BlackholeArborCustomerValidatorTest {
                 validEditMitigationRequest(),
                 request -> constraint(request).setTransitProviderIds(ImmutableList.of(invalidTransitProviderId))),
             containsString(expected));
+    }
+    
+    @Test
+    public void mismatchedTransitProviders() throws Exception {
+        ImmutableList<String> mismatchedTransitProviders = ImmutableList.of(
+                BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1, BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_12345_1);
+        assertThat(
+                validationMessage(
+                    validCreateMitigationRequest(),
+                    request -> constraint(request).setTransitProviderIds(mismatchedTransitProviders)),
+                containsString("must share the same ASN"));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> constraint(request).setTransitProviderIds(mismatchedTransitProviders)),
+            containsString("must share the same ASN"));
+    }
+    
+    @Test
+    public void mismatchedTransitProvidersAndCommunityString() throws Exception {
+        ImmutableList<String> transitProviders = ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1);
+        assertThat(
+            validationMessage(
+                validCreateMitigationRequest(),
+                request -> {
+                    constraint(request).setAdditionalCommunityString("1234:1 1234:10");
+                    constraint(request).setTransitProviderIds(transitProviders);
+                }),
+            containsString("must share the same ASN"));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> {
+                    constraint(request).setAdditionalCommunityString("1234:1 1234:10");
+                    constraint(request).setTransitProviderIds(transitProviders);
+                }),
+            containsString("must share the same ASN"));
     }
     
     @Test
@@ -442,7 +482,12 @@ public class BlackholeArborCustomerValidatorTest {
                 validEditMitigationRequest(),
                 request -> constraint(request).setAdditionalCommunityString("Invalid")),
             containsString("The community string must be"));
-    } 
+        assertThat(
+                validationMessage(
+                    validEditMitigationRequest(),
+                    request -> constraint(request).setAdditionalCommunityString("16509:720 1234:12")),
+                containsString("All ASNs in a community string must match"));
+    }
     
     private static ArborBlackholeConstraint constraint(MitigationModificationRequest request) {
         if (request instanceof CreateMitigationRequest) {

@@ -33,6 +33,7 @@ import com.google.common.collect.Sets;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 
+import org.apache.log4j.Level;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,7 +55,7 @@ import static junitparams.JUnitParamsRunner.$;
 public class CreateMitigationActivityTest {
     @BeforeClass
     public static void setup() {
-        TestUtils.configureLogging();
+        TestUtils.configureLogging(Level.INFO);
     }
 
     @Test
@@ -267,7 +268,7 @@ public class CreateMitigationActivityTest {
         ArborBlackholeConstraint constraint = new ArborBlackholeConstraint();
         constraint.setIp("1.2.3.4/32");
         constraint.setEnabled(true);
-        constraint.setTransitProviderIds(Collections.singletonList(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID));
+        constraint.setTransitProviderIds(Collections.singletonList(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1));
         mitigationDefinition.setConstraint(constraint);
 
         request.setMitigationDefinition(mitigationDefinition);

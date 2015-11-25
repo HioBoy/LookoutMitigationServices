@@ -526,6 +526,8 @@ public class RequestValidator {
     private static String COMMUNITY_STRING_ERROR_MSG = 
             "The community string must be a space seperated list of <asn>:<value> where asn and value are integers.";
     
+    private static String COMMUNITY_STRING_ASN_ERROR_MSG = "All ASNs in a community string must match.";
+    
     public static void validateCommunityString(String communityString) {
         if (StringUtils.isEmpty(communityString)) {
             // Empty community strings are allowed for disabled or manual transit providers
@@ -539,30 +541,31 @@ public class RequestValidator {
             throw new IllegalArgumentException(message);
         }
         
+        int asn = -1;
+        
         String[] values = communityString.split(" ");
         for (String value : values) {
-            if (!isCommunityStringValueValid(value)) {
+            String parts[] = value.split(":");
+            if (parts.length != 2) {
+                LOG.info(COMMUNITY_STRING_ERROR_MSG);
+                throw new IllegalArgumentException(COMMUNITY_STRING_ERROR_MSG);
+            }
+            
+            try {
+                int newAsn = Integer.parseInt(parts[0]);
+                if (asn == -1) {
+                    asn = newAsn; 
+                } else if (newAsn != asn) {
+                    LOG.info(COMMUNITY_STRING_ASN_ERROR_MSG);
+                    throw new IllegalArgumentException(COMMUNITY_STRING_ASN_ERROR_MSG);
+                }
+                
+                Integer.parseInt(parts[1]);
+            } catch (NumberFormatException e) {
                 LOG.info(COMMUNITY_STRING_ERROR_MSG);
                 throw new IllegalArgumentException(COMMUNITY_STRING_ERROR_MSG);
             }
         }
-    }
-    
-    private static boolean isCommunityStringValueValid(String value) {
-        String parts[] = value.split(":");
-        if (parts.length != 2) {
-            return false;
-        }
-        
-        for (String part : parts) {
-            try {
-                Long.parseLong(part);
-            } catch (IllegalArgumentException e) {
-                return false;
-            }
-        }
-        
-        return true;
     }
     
     private static final Pattern BLACKHOLE_DEVICE_NAME_PATTERN = Pattern.compile("[A-Za-z0-9-.]*");

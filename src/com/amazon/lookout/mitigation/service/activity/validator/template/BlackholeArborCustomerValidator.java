@@ -3,6 +3,8 @@ package com.amazon.lookout.mitigation.service.activity.validator.template;
 import java.net.Inet4Address;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import lombok.NonNull;
@@ -202,12 +204,23 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
                 RequestValidator.validateCommunityString(arborConstraint.getAdditionalCommunityString());
             }
             
-            validateTransitProviders(arborConstraint.getTransitProviderIds(), hasAdditionalCommunityString, metrics);
+            validateTransitProviders(arborConstraint.getTransitProviderIds(), arborConstraint.getAdditionalCommunityString(), metrics);
         } else {
             throw new IllegalArgumentException(
                 "Expecting an ArborBlackholeConstraint type, instead found: " +
                     ReflectionToStringBuilder.toString(constraint));
         }
+    }
+    
+    private static final Pattern FIRST_ASN_PATTERN = Pattern.compile("^ *([0-9]+):[0-9]* ");
+    
+    private static int getFirstASN(String communityString) {
+        Matcher matcher = FIRST_ASN_PATTERN.matcher(communityString);
+        if (!matcher.find()) {
+            throw new IllegalArgumentException(communityString + " is not a valid community string");
+        }
+        
+        return Integer.parseInt(matcher.group(1));
     }
     
     /**
@@ -217,9 +230,13 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
      * @param transitProviderIds
      * @param metrics
      */
-    private void validateTransitProviders(List<String> transitProviderIds, boolean hasAdditionalCommunityString, TSDMetrics metrics) {
+    private void validateTransitProviders(List<String> transitProviderIds, String additionalCommunityString, TSDMetrics metrics) {
         if (transitProviderIds == null || transitProviderIds.isEmpty()) return;
-        boolean hasCommunityString = hasAdditionalCommunityString;
+        int asn = -1;
+        
+        if (!StringUtils.isBlank(additionalCommunityString)) {
+            asn = getFirstASN(additionalCommunityString);
+        }
         
         // First validate they at least follow the expected pattern
         transitProviderIds.forEach(id -> RequestValidator.validateTransitProviderId(id));
@@ -235,12 +252,24 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
                 throw new IllegalArgumentException("Invalid transit provider id: " + id);
             }
             
-            if (!StringUtils.isEmpty(provider.getTransitProviderCommunity())) {
-                hasCommunityString = true;
+            if (!StringUtils.isBlank(provider.getTransitProviderCommunity())) {
+                int newAsn = getFirstASN(provider.getTransitProviderCommunity());
+                if (asn == -1) {
+                    asn = newAsn;
+                } else if (newAsn != asn) {
+                    String msg; 
+                    if (StringUtils.isBlank(additionalCommunityString)) {
+                        msg = "All transit provider communities for a blackhole must share the same ASN.";
+                    } else {
+                        msg = "All entries in the additional community strign and the transit provider communities " + 
+                              "for a blackhole must share the same ASN.";
+                    }
+                    throw new IllegalArgumentException(msg);
+                }
             }
         }
         
-        if (!hasCommunityString) {
+        if (asn == -1) {
             throw new IllegalArgumentException(
                     "None of the specified transit providers has a community string " + 
                     "and no additional community string was provided.");

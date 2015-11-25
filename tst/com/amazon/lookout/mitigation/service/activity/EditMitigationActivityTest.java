@@ -113,7 +113,7 @@ public class EditMitigationActivityTest {
         ArborBlackholeConstraint constraint = new ArborBlackholeConstraint();
         constraint.setIp("1.2.3.4/32");
         constraint.setEnabled(true);
-        constraint.setTransitProviderIds(Collections.singletonList(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID));
+        constraint.setTransitProviderIds(Collections.singletonList(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1));
         mitigationDefinition.setConstraint(constraint);
 
         request.setMitigationDefinition(mitigationDefinition);
