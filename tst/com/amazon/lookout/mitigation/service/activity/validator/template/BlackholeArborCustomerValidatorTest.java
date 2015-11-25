@@ -525,6 +525,16 @@ public class BlackholeArborCustomerValidatorTest {
                     validEditMitigationRequest(),
                     request -> constraint(request).setAdditionalCommunityString("16509:720 1234:12")),
                 containsString("All ASNs in a community string must match"));
+        assertThat(
+                validationMessage(
+                        validCreateMitigationRequest(),
+                        request -> constraint(request).setAdditionalCommunityString(" ")),
+                        containsString("The community string must be"));
+        assertThat(
+                validationMessage(
+                        validEditMitigationRequest(),
+                        request -> constraint(request).setAdditionalCommunityString("  ")),
+                        containsString("The community string must be"));
     }
     
     private void validateConflict(MitigationDefinition newDefinition, MitigationDefinition existingDefinition) 

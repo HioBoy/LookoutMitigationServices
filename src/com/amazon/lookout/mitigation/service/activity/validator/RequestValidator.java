@@ -534,6 +534,12 @@ public class RequestValidator {
             return;
         }
         
+        if (StringUtils.isBlank(communityString)) {
+            //Empty community strings are allowed for disabled or manual transit providers, but blank one is not.
+            LOG.info(COMMUNITY_STRING_ERROR_MSG);
+            throw new IllegalArgumentException(COMMUNITY_STRING_ERROR_MSG);
+        }
+        
         if (communityString.length() > DEFAULT_MAX_LENGTH_DESCRIPTION) {
             // 100 characters should be more than enough for any sane community string
             String message = "Community string must be no more than than " + DEFAULT_MAX_LENGTH_DESCRIPTION + " characters long";
