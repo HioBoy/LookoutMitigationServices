@@ -223,7 +223,8 @@ public class IPTablesEdgeCustomerValidatorTest {
                         definition1,
                         MitigationTemplate.IPTables_Mitigation_EdgeCustomer,
                         "Mitigation2",
-                        definition2));
+                        definition2,
+                        mock(TSDMetrics.class)));
 
         assertThat(actualError.getMessage(), containsString(MitigationTemplate.IPTables_Mitigation_EdgeCustomer));
         assertThat(actualError.getMessage(), containsString("Mitigation2"));

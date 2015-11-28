@@ -14,7 +14,8 @@ public interface ServiceTemplateValidator {
     
     public void validateCoexistenceForTemplateAndDevice(String templateForNewDefinition, String mitigationNameForNewDefinition, 
                                                         MitigationDefinition newDefinition, String templateForExistingDefinition, 
-                                                        String mitigationNameForExistingDefinition, MitigationDefinition existingDefinition);
+                                                        String mitigationNameForExistingDefinition, MitigationDefinition existingDefinition,
+                                                        TSDMetrics metrics);
     
     public String getServiceNameToValidate();
 }

@@ -510,7 +510,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         Throwable caughtException = null;
         try {
             route53SingleCustomerValidator.validateCoexistenceForTemplateAndDevice("Template1", "Mitigation1", definition1, MitigationTemplate.Router_RateLimit_Route53Customer, 
-                                                                                   "Mitigation2", definition2);
+                                                                                   "Mitigation2", definition2, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -528,7 +528,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         Throwable caughtException = null;
         try {
             route53SingleCustomerValidator.validateCoexistenceForTemplateAndDevice(MitigationTemplate.Router_RateLimit_Route53Customer, "Mitigation1", definition1, MitigationTemplate.Router_RateLimit_Route53Customer, 
-                                                                                   "Mitigation2", definition2);
+                                                                                   "Mitigation2", definition2, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }

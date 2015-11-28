@@ -251,7 +251,8 @@ public class EdgeBlackWatchMitigationTemplateValidator implements DeviceBasedSer
             MitigationDefinition newDefinition,
             String templateForExistingDefinition,
             String mitigationNameForExistingDefinition,
-            MitigationDefinition existingDefinition) {
+            MitigationDefinition existingDefinition,
+            TSDMetrics metrics) {
         // blackwatch allow multiple mitigations, so ignore this check.
         // it also allow same mitigation definition but different mitigation name.
         // so leave this empty.

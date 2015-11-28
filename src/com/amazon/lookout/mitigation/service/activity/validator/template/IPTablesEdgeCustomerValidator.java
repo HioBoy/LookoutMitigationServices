@@ -99,7 +99,8 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
             @NonNull MitigationDefinition newDefinition,
             @NonNull String templateForExistingDefinition,
             @NonNull String mitigationNameForExistingDefinition,
-            @NonNull MitigationDefinition existingDefinition) {
+            @NonNull MitigationDefinition existingDefinition,
+            @NonNull TSDMetrics metrics) {
         Validate.notEmpty(templateForNewDefinition);
         Validate.notEmpty(mitigationNameForNewDefinition);
         Validate.notEmpty(templateForExistingDefinition);

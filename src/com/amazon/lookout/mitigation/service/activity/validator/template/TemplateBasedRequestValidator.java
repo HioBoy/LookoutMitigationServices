@@ -95,7 +95,8 @@ public class TemplateBasedRequestValidator {
      */
     public void validateCoexistenceForTemplateAndDevice(@NonNull String templateForNewDefinition, @NonNull String nameForNewDefinition, @NonNull MitigationDefinition newDefinition,
                                                         @NonNull String templateForExistingDefinition, @NonNull String nameForExistingDefinition,
-                                                        @NonNull MitigationDefinition existingDefinition) {
+                                                        @NonNull MitigationDefinition existingDefinition,
+                                                        TSDMetrics metrics) {
         Validate.notEmpty(templateForNewDefinition);
         Validate.notEmpty(nameForNewDefinition);
         Validate.notEmpty(templateForExistingDefinition);
@@ -105,7 +106,7 @@ public class TemplateBasedRequestValidator {
         
         // Delegate the check to template specific validator.
         templateBasedValidator.validateCoexistenceForTemplateAndDevice(templateForNewDefinition, nameForNewDefinition, newDefinition, templateForExistingDefinition, 
-                                                                       nameForExistingDefinition, existingDefinition);
+                                                                       nameForExistingDefinition, existingDefinition, metrics);
         
         // Perform a symmetrical check if the templates are different, to ensure we check the validator for the existing mitigation as well.
         if (!templateForExistingDefinition.equals(templateForNewDefinition)) {
@@ -113,7 +114,7 @@ public class TemplateBasedRequestValidator {
             
             // Delegate the check to template specific validator.
             templateBasedValidator.validateCoexistenceForTemplateAndDevice(templateForExistingDefinition, nameForExistingDefinition, existingDefinition, 
-                                                                           templateForNewDefinition, nameForNewDefinition, newDefinition);
+                                                                           templateForNewDefinition, nameForNewDefinition, newDefinition, metrics);
         }
     }
     
@@ -152,7 +153,7 @@ public class TemplateBasedRequestValidator {
     }
     
     private ServiceTemplateValidator getBlackWatchEdgeCustomerValidator() {
-    	return new EdgeBlackWatchMitigationTemplateValidator(edgeLocationsHelper, blackWatchS3Client);
+        return new EdgeBlackWatchMitigationTemplateValidator(edgeLocationsHelper, blackWatchS3Client);
     }
     
     private ServiceTemplateValidator getBlackholeArborCustomerValidator() {
@@ -178,8 +179,8 @@ public class TemplateBasedRequestValidator {
                 serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getIPTablesEdgeCustomerValidator());
                 break;
             case MitigationTemplate.BlackWatchPOP_EdgeCustomer:
-            	serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchEdgeCustomerValidator());
-            	break;
+                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchEdgeCustomerValidator());
+                break;
             case MitigationTemplate.Blackhole_Mitigation_ArborCustomer:
                 serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackholeArborCustomerValidator());
                 break;

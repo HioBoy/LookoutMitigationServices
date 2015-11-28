@@ -348,7 +348,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedRequestStorageH
         try {
             MitigationDefinition existingDefinition = getJSONDataConverter().fromData(existingDefinitionAsJSONString, MitigationDefinition.class);
             getTemplateBasedValidator().validateCoexistenceForTemplateAndDevice(newMitigationTemplate, newMitigationName, newDefinition, existingMitigationTemplate, 
-                                                                                existingMitigationName, existingDefinition);
+                                                                                existingMitigationName, existingDefinition, metrics);
         } finally {
             subMetrics.end();
         }

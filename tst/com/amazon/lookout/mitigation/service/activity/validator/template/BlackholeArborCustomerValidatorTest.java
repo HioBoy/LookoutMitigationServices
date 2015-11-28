@@ -4,7 +4,9 @@ import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.allOf;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
 import java.util.Collections;
@@ -15,7 +17,9 @@ import java.util.function.Consumer;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 
+import org.apache.log4j.Level;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -25,6 +29,7 @@ import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.DropAction;
+import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
@@ -33,12 +38,21 @@ import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.BlackholeTestUtils;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.google.common.collect.ImmutableList;
 
 @RunWith(JUnitParamsRunner.class)
 public class BlackholeArborCustomerValidatorTest {
+    private static final String EXISTING_MITIGATION_NAME = "ExistingMitigation";
+    
     private BlackholeMitigationHelper blackholeMitigationHelper;
+    
+    @BeforeClass
+    public static void beforeClass() {
+        TestUtils.configureLogging(Level.WARN);
+    }
     
     @Before
     public void before() {
@@ -335,6 +349,30 @@ public class BlackholeArborCustomerValidatorTest {
             containsString("deployment checks"));
     }
     
+    private static void setLocations(MitigationModificationRequest request, List<String> locations) {
+        if (request instanceof CreateMitigationRequest) {
+            ((CreateMitigationRequest) request).setLocations(locations);
+        } else if (request instanceof EditMitigationRequest) {
+            ((EditMitigationRequest) request).setLocation(locations);
+        } else {
+            throw new RuntimeException("Cannot set location for request " + request);
+        }
+    }
+    
+    @Test
+    public void noLocations() throws Exception {
+        assertThat(
+            validationMessage(
+                validCreateMitigationRequest(),
+                request -> setLocations(request, Collections.singletonList(StandardLocations.ARBOR))),
+            containsString("Expect no locations"));
+        assertThat(
+            validationMessage(
+                validEditMitigationRequest(),
+                request -> setLocations(request, Collections.singletonList(StandardLocations.ARBOR))),
+            containsString("Expect no locations"));
+    }
+    
     public Object[] validTransitProviderCombinations() {
         return new Object[] {
             ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1),
@@ -489,16 +527,160 @@ public class BlackholeArborCustomerValidatorTest {
                 containsString("All ASNs in a community string must match"));
     }
     
+    private void validateConflict(MitigationDefinition newDefinition, MitigationDefinition existingDefinition) 
+    {
+        BlackholeArborCustomerValidator validator = new BlackholeArborCustomerValidator(blackholeMitigationHelper);
+        validator.validateCoexistenceForTemplateAndDevice(
+                MitigationTemplate.Blackhole_Mitigation_ArborCustomer, "NewMitigation", newDefinition,
+                MitigationTemplate.Blackhole_Mitigation_ArborCustomer, EXISTING_MITIGATION_NAME, existingDefinition,
+                mock(TSDMetrics.class));
+    }
+    
+    @Test
+    public void nonConflictingIPs() {
+        MitigationDefinition existingDefinition = validMitigationDefinition();
+        constraint(existingDefinition).setIp("1.2.3.4/32");
+        
+        MitigationDefinition newDefinition = validMitigationDefinition();
+        constraint(newDefinition).setIp("1.2.3.5/32");
+        
+        validateConflict(newDefinition, existingDefinition);
+    }
+    
+    @Test
+    public void existingDisabled() {
+        MitigationDefinition existingDefinition = validMitigationDefinition();
+        constraint(existingDefinition).setEnabled(false);
+        
+        MitigationDefinition newDefinition = validMitigationDefinition();
+        
+        validateConflict(newDefinition, existingDefinition);
+    }
+    
+    @Test
+    public void newDisabled() {
+        MitigationDefinition existingDefinition = validMitigationDefinition();
+        
+        MitigationDefinition newDefinition = validMitigationDefinition();
+        constraint(newDefinition).setEnabled(false);
+        
+        String ip = constraint(existingDefinition).getIp();
+        try {
+            // New disabled mitigations should still fail even if they are disabled - we 
+            // assume a new mitigation will soon be changed from disabled to enabled
+            validateConflict(newDefinition, existingDefinition);
+            fail("Mitigation should have conflicted");
+        } catch (DuplicateDefinitionException400 e) {
+            assertThat(e.getMessage(),
+                    allOf(containsString(EXISTING_MITIGATION_NAME), containsString(ip)));
+        }
+    }
+    
+    @Test
+    public void overlappingTransitProviders() {
+        List<String> transitProviders = ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1);
+        String transitProviderName = BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_NAME_16509_1;
+        
+        MitigationDefinition existingDefinition = validMitigationDefinition();
+        constraint(existingDefinition).setTransitProviderIds(transitProviders);
+        
+        MitigationDefinition newDefinition = validMitigationDefinition();
+        constraint(newDefinition).setTransitProviderIds(transitProviders);
+        
+        String ip = constraint(existingDefinition).getIp();
+        try {
+            validateConflict(newDefinition, existingDefinition);
+            fail("Mitigation should have conflicted");
+        } catch (DuplicateDefinitionException400 e) {
+            assertThat(e.getMessage(),
+                    allOf(containsString(EXISTING_MITIGATION_NAME), containsString(transitProviderName), containsString(ip)));
+        }
+    }
+    
+    @Test
+    public void overlappingCommunityStrings() {
+        MitigationDefinition existingDefinition = validMitigationDefinition();
+        constraint(existingDefinition).setTransitProviderIds(
+                ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1));
+        constraint(existingDefinition).setAdditionalCommunityString(null);
+        
+        MitigationDefinition newDefinition = validMitigationDefinition();
+        constraint(newDefinition).setTransitProviderIds(
+                ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_2));
+        constraint(newDefinition).setAdditionalCommunityString(null);
+        
+        String ip = constraint(existingDefinition).getIp();
+        try {
+            validateConflict(newDefinition, existingDefinition);
+            fail("Mitigation should have conflicted");
+        } catch (DuplicateDefinitionException400 e) {
+            assertThat(e.getMessage(),
+                    allOf(containsString(EXISTING_MITIGATION_NAME), containsString("16509:3"), containsString(ip)));
+        }
+    }
+    
+    @Test
+    public void nonOverlappingTransitProviders() {
+        MitigationDefinition existingDefinition = validMitigationDefinition();
+        constraint(existingDefinition).setTransitProviderIds(
+                ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1));
+        constraint(existingDefinition).setAdditionalCommunityString(null);
+        
+        MitigationDefinition newDefinition = validMitigationDefinition();
+        constraint(newDefinition).setTransitProviderIds(
+                ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_12345_1));
+        constraint(newDefinition).setAdditionalCommunityString(null);
+        
+        validateConflict(newDefinition, existingDefinition);
+    }
+    
+    @Test
+    public void overlappingDevices() {
+        MitigationDefinition existingDefinition = validMitigationDefinition();
+        constraint(existingDefinition).setTransitProviderIds(
+                ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1));
+        constraint(existingDefinition).setAdditionalCommunityString(null);
+        constraint(existingDefinition).setAdditionalRouters(ImmutableList.of(BlackholeTestUtils.DEVICE_12345));
+        
+        MitigationDefinition newDefinition = validMitigationDefinition();
+        constraint(newDefinition).setTransitProviderIds(
+                ImmutableList.of(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_12345_1));
+        constraint(newDefinition).setAdditionalCommunityString(null);
+        
+        String ip = constraint(existingDefinition).getIp();
+        try {
+            validateConflict(newDefinition, existingDefinition);
+            fail("Mitigation should have conflicted");
+        } catch (DuplicateDefinitionException400 e) {
+            assertThat(e.getMessage(),
+                    allOf(containsString(EXISTING_MITIGATION_NAME), containsString(BlackholeTestUtils.DEVICE_12345), containsString(ip)));
+        }
+        
+        // Test the additional device on the newDefinition as well
+        constraint(existingDefinition).setAdditionalRouters(Collections.emptyList());
+        constraint(newDefinition).setAdditionalRouters(ImmutableList.of(BlackholeTestUtils.DEVICE_16509));
+        
+        try {
+            validateConflict(newDefinition, existingDefinition);
+            fail("Mitigation should have conflicted");
+        } catch (DuplicateDefinitionException400 e) {
+            assertThat(e.getMessage(),
+                    allOf(containsString(EXISTING_MITIGATION_NAME), containsString(BlackholeTestUtils.DEVICE_16509), containsString(ip)));
+        }
+    }
+    
     private static ArborBlackholeConstraint constraint(MitigationModificationRequest request) {
         if (request instanceof CreateMitigationRequest) {
-            return (ArborBlackholeConstraint)
-                ((CreateMitigationRequest) request).getMitigationDefinition().getConstraint();
+            return constraint(((CreateMitigationRequest) request).getMitigationDefinition());
         } else if (request instanceof EditMitigationRequest) {
-            return (ArborBlackholeConstraint)
-                ((EditMitigationRequest) request).getMitigationDefinition().getConstraint();
+            return constraint(((EditMitigationRequest) request).getMitigationDefinition());
         } else {
             throw new RuntimeException("Cannot get constraint for request " + request);
         }
+    }
+    
+    private static ArborBlackholeConstraint constraint(MitigationDefinition definition) {
+        return (ArborBlackholeConstraint) definition.getConstraint();
     }
 
     private void validate(MitigationModificationRequest request) {
@@ -521,6 +703,11 @@ public class BlackholeArborCustomerValidatorTest {
         actionMetadata.setDescription("description");
         request.setMitigationActionMetadata(actionMetadata);
 
+        request.setMitigationDefinition(validMitigationDefinition());
+        return request;
+    }
+
+    private static MitigationDefinition validMitigationDefinition() {
         MitigationDefinition mitigationDefinition = new MitigationDefinition();
         mitigationDefinition.setAction(new DropAction());
 
@@ -530,9 +717,7 @@ public class BlackholeArborCustomerValidatorTest {
         constraint.setTransitProviderIds(emptyList());
         constraint.setAdditionalCommunityString("16509:1 16509:10");
         mitigationDefinition.setConstraint(constraint);
-
-        request.setMitigationDefinition(mitigationDefinition);
-        return request;
+        return mitigationDefinition;
     }
 
     private static EditMitigationRequest validEditMitigationRequest() {
@@ -548,17 +733,7 @@ public class BlackholeArborCustomerValidatorTest {
         actionMetadata.setDescription("description");
         request.setMitigationActionMetadata(actionMetadata);
 
-        MitigationDefinition mitigationDefinition = new MitigationDefinition();
-        mitigationDefinition.setAction(new DropAction());
-
-        ArborBlackholeConstraint constraint = new ArborBlackholeConstraint();
-        constraint.setIp("1.2.3.4/32");
-        constraint.setEnabled(true);
-        constraint.setTransitProviderIds(emptyList());
-        constraint.setAdditionalCommunityString("16509:1 16509:10");
-        mitigationDefinition.setConstraint(constraint);
-
-        request.setMitigationDefinition(mitigationDefinition);
+        request.setMitigationDefinition(validMitigationDefinition());
         return request;
     }
 

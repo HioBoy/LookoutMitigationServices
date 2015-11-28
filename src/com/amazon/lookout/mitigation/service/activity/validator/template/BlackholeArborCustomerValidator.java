@@ -1,15 +1,19 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
 import java.net.Inet4Address;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import lombok.NonNull;
 
 import com.amazon.arbor.ArborUtils;
+import com.amazon.lookout.ddb.model.BlackholeDevice;
 import com.amazon.lookout.ddb.model.TransitProvider;
 import com.amazon.lookout.mitigation.arbor.model.ArborConstants;
 import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
@@ -24,6 +28,7 @@ import com.amazon.aws158.commons.net.IpCidr;
 import com.amazon.lookout.mitigation.service.Constraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
+import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
@@ -34,6 +39,7 @@ import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
+import com.google.common.collect.Sets;
 
 public class BlackholeArborCustomerValidator implements DeviceBasedServiceTemplateValidator {
     @NonNull 
@@ -91,6 +97,17 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         throw new IllegalArgumentException(
             String.format("request %s is not supported for mitigation template %s", request, mitigationTemplate));
     }
+    
+    private static <T> List<T> getIntersection(Collection<? extends T> c1, Collection<? extends T> c2) {
+        return c1.stream().filter(entry -> c2.contains(entry)).collect(Collectors.toList());
+    }
+    
+    private Stream<String> getTransitProviderNames(Collection<String> transitProviderIds, TSDMetrics metrics) {
+        return transitProviderIds.stream()
+                .map(id -> blackholeMitigationHelper.loadTransitProvider(id, metrics)
+                        .map(t -> t.getTransitProviderName())
+                        .orElse("Unknown(" + id +")"));
+    }
 
     @Override
     public void validateCoexistenceForTemplateAndDevice(
@@ -99,7 +116,8 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
             MitigationDefinition newDefinition,
             String templateForExistingDefinition,
             String mitigationNameForExistingDefinition,
-            MitigationDefinition existingDefinition) {
+            MitigationDefinition existingDefinition,
+            TSDMetrics metrics) {
 
         Validate.notEmpty(templateForNewDefinition);
         Validate.notEmpty(mitigationNameForNewDefinition);
@@ -107,8 +125,89 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
         Validate.notEmpty(templateForExistingDefinition);
         Validate.notEmpty(mitigationNameForExistingDefinition);
         Validate.notNull(existingDefinition);
+        
+        if (!templateForExistingDefinition.equals(templateForNewDefinition)) return;
+        
+        ArborBlackholeConstraint existingConstraint = (ArborBlackholeConstraint) existingDefinition.getConstraint();
+        ArborBlackholeConstraint newConstraint = (ArborBlackholeConstraint) newDefinition.getConstraint();
+        
+        // Only count existing enabled blackholes.
+        // Note: We don't check the enabled flag for the new entry as even if its currently disabled we're 
+        // probably going to be enabling it soon.
+        if (!existingConstraint.isEnabled()) return;
+        
+        // Blackholes not on the same IP don't conflict
+        if (!existingConstraint.getIp().equals(newConstraint.getIp())) return;
+        String ip = existingConstraint.getIp();
+        
+        checkOverlappingTransitProviders(newConstraint, existingConstraint, mitigationNameForExistingDefinition, metrics);
+        
+        String existingCommunityString = blackholeMitigationHelper.getCommunityString(
+                existingConstraint.getTransitProviderIds(), existingConstraint.getAdditionalCommunityString(), metrics);
+        
+        String newCommunityString = blackholeMitigationHelper.getCommunityString(
+                newConstraint.getTransitProviderIds(), newConstraint.getAdditionalCommunityString(), metrics);
+        
+        checkOverlappingCommunityString(ip, newCommunityString, existingCommunityString, mitigationNameForExistingDefinition);
+        
+        checkOverlappingDevices(
+                ip, newConstraint, newCommunityString, existingConstraint, existingCommunityString, 
+                mitigationNameForExistingDefinition, metrics);
+    }
 
-        // We do not current validate if there is a co-existed mitigation for the template and device
+    private void checkOverlappingDevices(String ip, ArborBlackholeConstraint newConstraint, String newCommunityString, ArborBlackholeConstraint existingConstraint, String existingCommunityString,
+            String mitigationNameForExistingDefinition, TSDMetrics metrics) {
+        List<BlackholeDevice> allDevices = blackholeMitigationHelper.listBlackholeDevices(metrics);
+        
+        List<String> existingDevices = BlackholeMitigationHelper.getDevicesForCommunity(allDevices, existingCommunityString).stream()
+                .map(d -> d.getDeviceName()).collect(Collectors.toList());
+        if (existingConstraint.getAdditionalRouters() != null) {
+            existingDevices.addAll(existingConstraint.getAdditionalRouters());
+        }
+        
+        List<String> newDevices = BlackholeMitigationHelper.getDevicesForCommunity(allDevices, newCommunityString).stream()
+                .map(d -> d.getDeviceName()).collect(Collectors.toList());
+        if (newConstraint.getAdditionalRouters() != null) {
+            newDevices.addAll(newConstraint.getAdditionalRouters());
+        }
+        
+        List<String> overlappingDevicesNames = getIntersection(existingDevices, newDevices);
+        if (!overlappingDevicesNames.isEmpty()) {
+            throw new DuplicateDefinitionException400(
+                    String.format("Existing blackhole %s for ip %s would be deployed to overlapping devices %s",
+                    mitigationNameForExistingDefinition, ip, overlappingDevicesNames));
+        }
+    }
+
+    private static void checkOverlappingCommunityString(String ip, String newCommunityString, String existingCommunityString, String mitigationNameForExistingDefinition) {
+        Set<String> existingSplitCommunityString = Sets.newHashSet(existingCommunityString.split(" "));
+        Set<String> newSplitCommunityString = Sets.newHashSet(newCommunityString.split(" "));
+        
+        List<String> overlappingCommunities = getIntersection(existingSplitCommunityString, newSplitCommunityString);
+        if (!overlappingCommunities.isEmpty()) {
+            // The real problem is the devices but if the communities overlap so must the devices
+            throw new DuplicateDefinitionException400(
+                    String.format("Existing blackhole %s for ip %s has overlapping communities %s",
+                    mitigationNameForExistingDefinition, ip, 
+                    overlappingCommunities));
+        }
+    }
+
+    private void checkOverlappingTransitProviders(
+            ArborBlackholeConstraint newConstraint, ArborBlackholeConstraint existingConstraint, 
+            String mitigationNameForExistingDefinition, TSDMetrics metrics) 
+    {
+        if (existingConstraint.getTransitProviderIds() != null && newConstraint.getTransitProviderIds() != null) {
+            List<String> overlappingProviders = 
+                    getIntersection(existingConstraint.getTransitProviderIds(), newConstraint.getTransitProviderIds());
+            if (!overlappingProviders.isEmpty()) {
+                throw new DuplicateDefinitionException400(
+                        String.format("Existing blackhole %s for ip %s already exists with overlapping transit providers %s",
+                        mitigationNameForExistingDefinition, existingConstraint.getIp(), 
+                        getTransitProviderNames(overlappingProviders, metrics)
+                            .collect(Collectors.joining(",", "[", "]"))));
+            }
+        }
     }
 
     private static void validateDeleteRequest(DeleteMitigationFromAllLocationsRequest request) {

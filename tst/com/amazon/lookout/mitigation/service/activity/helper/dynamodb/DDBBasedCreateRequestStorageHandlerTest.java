@@ -237,7 +237,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
             caughtException = ex;
         }
         assertNull(caughtException);
-        verify(templateBasedValidator, times(1)).validateCoexistenceForTemplateAndDevice(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), any(MitigationDefinition.class));
+        verify(templateBasedValidator, times(1)).validateCoexistenceForTemplateAndDevice(
+                anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), 
+                any(MitigationDefinition.class), any(TSDMetrics.class));
     }
     
     /**
@@ -264,7 +266,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
             caughtException = ex;
         }
         assertNull(caughtException);
-        verify(templateBasedValidator, times(1)).validateCoexistenceForTemplateAndDevice(anyString(), anyString(), any(MitigationDefinition.class), anyString(), anyString(), any(MitigationDefinition.class));
+        verify(templateBasedValidator, times(1)).validateCoexistenceForTemplateAndDevice(
+                anyString(), anyString(), any(MitigationDefinition.class), anyString(), 
+                anyString(), any(MitigationDefinition.class), any(TSDMetrics.class));
     }
     
     /**

@@ -283,7 +283,8 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     @Override
     public void validateCoexistenceForTemplateAndDevice(@NonNull String templateForNewDefinition, @NonNull String nameForNewDefinition,
                                                         @NonNull MitigationDefinition newDefinition, @NonNull String templateForExistingDefinition,
-                                                        @NonNull String nameForExistingDefinition, @NonNull MitigationDefinition existingDefinition) {
+                                                        @NonNull String nameForExistingDefinition, @NonNull MitigationDefinition existingDefinition,
+                                                        @NonNull TSDMetrics metrics) {
         Validate.notEmpty(templateForNewDefinition);
         Validate.notEmpty(nameForNewDefinition);
         Validate.notEmpty(templateForExistingDefinition);
