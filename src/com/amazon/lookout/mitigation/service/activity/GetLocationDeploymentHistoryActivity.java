@@ -26,7 +26,6 @@ import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryResponse;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.LocationDeploymentInfo;
-import com.amazon.lookout.mitigation.service.MissingLocationException400;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -46,7 +45,6 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
     
     private enum GetLocationDeploymentHistoryExceptions {
         BadRequest,
-        MissingLocation,
         InternalError
     };
     
@@ -107,9 +105,11 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
             response.setLocation(location);
             response.setListOfLocationDeploymentInfo(listOfLocationDeploymentInfo);
             response.setRequestId(requestId);
-            String deployDateUTC = listOfLocationDeploymentInfo.get(listOfLocationDeploymentInfo.size() - 1).getDeployDate();
-            response.setExclusiveLastEvaluatedTimestamp(
-                    MitigationInstancesModel.CREATE_DATE_FORMATTER.parseMillis(deployDateUTC));
+            if (!listOfLocationDeploymentInfo.isEmpty()) {
+                String deployDateUTC = listOfLocationDeploymentInfo.get(listOfLocationDeploymentInfo.size() - 1).getDeployDate();
+                response.setExclusiveLastEvaluatedTimestamp(
+                        MitigationInstancesModel.CREATE_DATE_FORMATTER.parseMillis(deployDateUTC));
+            }
             
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
@@ -117,12 +117,6 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetLocationDeploymentHistoryExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
-        } catch (MissingLocationException400 ex) {
-            String msg = "Caught MissingLocationException in GetLocationDeploymentHistory for requestId: " + requestId
-                    + ", reason: " + ex.getMessage();
-            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
-            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetLocationDeploymentHistoryExceptions.MissingLocation.name(), 1);
-            throw new MissingLocationException400(msg);
         } catch (Exception internalError) {
             String msg = "Internal error in GetLocationDeploymentHistoryActivity for requestId: " + requestId + ", reason: " + internalError.getMessage(); 
             LOG.error(LookoutMitigationServiceConstants.CRITICAL_ACTIVITY_ERROR_LOG_PREFIX + msg +

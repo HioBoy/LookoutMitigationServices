@@ -27,7 +27,7 @@ import com.amazon.coral.service.Activity;
 import com.amazon.coral.validate.Validated;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
-import com.amazon.lookout.mitigation.service.MissingMitigationException400;
+import com.amazon.lookout.mitigation.service.MissingMitigationVersionException404;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
@@ -51,7 +51,7 @@ public class RollbackMitigationActivity extends Activity {
     private enum RollbackMitigationExceptions {
         BadRequest,
         InternalError,
-        MissingMitigation
+        MissingMitigationVersion
     }
 
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
@@ -153,11 +153,11 @@ public class RollbackMitigationActivity extends Activity {
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(rollbackRequest), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + RollbackMitigationExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
-        } catch (MissingMitigationException400 missingMitigationException) {
-            String msg = "Caught MissingMitigationException in RollbackMitigationActivity for requestId: " + requestId + ", reason: " + missingMitigationException.getMessage();
-            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(rollbackRequest), missingMitigationException);
-            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + RollbackMitigationExceptions.MissingMitigation.name(), 1);
-            throw new MissingMitigationException400(msg);
+        } catch (MissingMitigationVersionException404 ex) {
+            String msg = "Caught MissingMitigationVersionException404 in RollbackMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(rollbackRequest), ex);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + RollbackMitigationExceptions.MissingMitigationVersion.name(), 1);
+            throw new MissingMitigationVersionException404(msg);
         } catch (Exception internalError) {
             String msg = "Internal error in RollbackMitigationActivity for requestId: " + requestId + ", reason: " + internalError.getMessage(); 
             LOG.error(LookoutMitigationServiceConstants.CRITICAL_ACTIVITY_ERROR_LOG_PREFIX + msg +

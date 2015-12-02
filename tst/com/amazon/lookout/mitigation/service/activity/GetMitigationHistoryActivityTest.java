@@ -14,7 +14,6 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.GetMitigationHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationHistoryResponse;
-import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocationAndStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
@@ -65,21 +64,6 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
     }
 
     /**
-     * Test when no history entries is found for this mitigation, MissingMitigationException400 is thrown
-     */
-    @Test(expected = MissingMitigationException400.class)
-    public void testNoHistoryFound() {
-        GetMitigationHistoryActivity getMitigationHistoryActivity = 
-                new GetMitigationHistoryActivity(requestValidator, requestInfoHandler, mitigationInstanceInfoHandler);
-
-        Mockito.doNothing().when(requestValidator).validateGetMitigationHistoryRequest(request);
-        Mockito.doThrow(new MissingMitigationException400()).when(requestInfoHandler)
-                .getMitigationHistoryForMitigation(eq(serviceName), eq(deviceName), eq(deviceScope), eq(mitigationName), 
-                        eq(exclusiveStartVersion), eq(maxNumberOfHistoryEntriesToFetch), isA(TSDMetrics.class));
-        getMitigationHistoryActivity.enact(request);
-    }
-
-    /**
      * Test 2 history entries are retrieved
      */
     @Test
@@ -120,5 +104,19 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
 
         Mockito.doThrow(new IllegalArgumentException()).when(requestValidator).validateGetMitigationHistoryRequest(request);
         getMitigationHistoryActivity.enact(request);
+    }
+    
+    /**
+     * Test empty list of mitigation history result
+     */
+    @Test
+    public void testEmptyResult() {
+        GetMitigationHistoryActivity getMitigationHistoryActivity = 
+                spy(new GetMitigationHistoryActivity(requestValidator, requestInfoHandler, mitigationInstanceInfoHandler));
+        Mockito.doReturn(new ArrayList<MitigationRequestDescriptionWithLocations>()).when(requestInfoHandler)
+                .getMitigationHistoryForMitigation(eq(serviceName), eq(deviceName), eq(deviceScope), eq(mitigationName), 
+                eq(exclusiveStartVersion), eq(maxNumberOfHistoryEntriesToFetch), isA(TSDMetrics.class));
+        GetMitigationHistoryResponse response = getMitigationHistoryActivity.enact(request);
+        assertTrue(response.getListOfMitigationRequestDescriptionsWithLocationAndStatus().isEmpty());
     }
 }

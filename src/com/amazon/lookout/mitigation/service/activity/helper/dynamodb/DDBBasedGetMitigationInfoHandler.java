@@ -16,7 +16,6 @@ import org.joda.time.DateTime;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.mitigation.service.LocationDeploymentInfo;
-import com.amazon.lookout.mitigation.service.MissingLocationException400;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
@@ -180,7 +179,6 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
      *          result will not include this timestamp
      * @param tsdMetrics : TSD metric
      * @return : return list of mitigation instance status
-     * @throws : MissingLocationException400, if location is not found
      */
     @Override
     public List<LocationDeploymentInfo> getLocationDeploymentInfoOnLocation(String deviceName, String serviceName,
@@ -222,11 +220,7 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
                 throw ex;
             }
 
-            if (!listOfLocationDeploymentInfo.isEmpty()) {
-                return listOfLocationDeploymentInfo;
-            }
-            throw new MissingLocationException400("Can not find any deployment record at location " + location
-                    + " on device " + deviceName);
+            return listOfLocationDeploymentInfo;
         }
     }
     

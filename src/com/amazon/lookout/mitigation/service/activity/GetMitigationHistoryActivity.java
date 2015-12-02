@@ -25,7 +25,6 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.GetMitigationHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationHistoryResponse;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
-import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocationAndStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
@@ -49,8 +48,7 @@ public class GetMitigationHistoryActivity extends Activity {
     
     private enum GetMitigationHistoryExceptions {
         BadRequest,
-        InternalError,
-        MissingMitigation
+        InternalError
     };
     
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
@@ -132,19 +130,16 @@ public class GetMitigationHistoryActivity extends Activity {
             response.setServiceName(serviceName);
             response.setListOfMitigationRequestDescriptionsWithLocationAndStatus(listOfMitigationDescriptions);
             response.setRequestId(requestId);
-            response.setExclusiveStartVersion(mitigationDescriptionsWithLocations.get(mitigationDescriptionsWithLocations.size() - 1)
-                    .getMitigationRequestDescription().getMitigationVersion());
+            if (!mitigationDescriptionsWithLocations.isEmpty()) {
+                response.setExclusiveStartVersion(mitigationDescriptionsWithLocations.get(mitigationDescriptionsWithLocations.size() - 1)
+                        .getMitigationRequestDescription().getMitigationVersion());
+            }
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
             String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "GetMitigationHistoryActivity", ex.getMessage());
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationHistoryExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
-        } catch (MissingMitigationException400 missingMitigationException) {
-            String msg = "Caught MissingMitigationException in GetMitigationHistoryActivity for requestId: " + requestId + ", reason: " + missingMitigationException.getMessage();
-            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), missingMitigationException);
-            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationHistoryExceptions.MissingMitigation.name(), 1);
-            throw new MissingMitigationException400(msg);
         } catch (Exception internalError) {
             String msg = "Internal error in GetMitigationHistoryActivity for requestId: " + requestId + ", reason: " + internalError.getMessage(); 
             LOG.error(LookoutMitigationServiceConstants.CRITICAL_ACTIVITY_ERROR_LOG_PREFIX + msg +

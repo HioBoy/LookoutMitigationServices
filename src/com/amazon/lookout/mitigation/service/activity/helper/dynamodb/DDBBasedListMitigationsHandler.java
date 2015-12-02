@@ -21,7 +21,7 @@ import com.amazon.lookout.activities.model.ActiveMitigationDetails;
 import com.amazon.lookout.activities.model.MitigationNameAndRequestStatus;
 import com.amazon.lookout.ddb.model.ActiveMitigationsModel;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
-import com.amazon.lookout.mitigation.service.MissingMitigationException400;
+import com.amazon.lookout.mitigation.service.MissingMitigationVersionException404;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
@@ -708,7 +708,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * @param mitigationVersion : mitigation version
      * @param tsdMetrics : TSD metrics
      * @return MitigationRequestDescription
-     * @throws MissingMitigationException400, if mitigation not found
+     * @throws MissingMitigationVersionException404, if mitigation definition is not found
      */
     @Override
     public MitigationRequestDescriptionWithLocations getMitigationDefinition(String deviceName, String serviceName,
@@ -740,8 +740,8 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                 subMetrics.addOne(DDB_QUERY_FAILURE_COUNT);
                 throw ex;
             }
-            throw new MissingMitigationException400("Mitigation: " + mitigationName
-                    + " doesn't exist on device: " + deviceName);
+            throw new MissingMitigationVersionException404(String.format("Mitigation %s, version %d does not exist on device %s",
+                    mitigationName, mitigationVersion, deviceName));
         }
     }
 
@@ -760,7 +760,6 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * @param maxNumberOfHistoryEntriesToFetch : the max number of history entries to retrieve
      * @param tsdMetrics : TSD metric
      * @return : list of history entries of a mitigation.
-     * @throws : MissingMitigationException400, if mitigation not found
      */
     @Override
     public List<MitigationRequestDescriptionWithLocations> getMitigationHistoryForMitigation(
@@ -813,11 +812,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                 subMetrics.addOne(DDB_QUERY_FAILURE_COUNT);
                 throw ex;
             }
-            if (!descs.isEmpty()) {
-                return descs;
-            }
-            throw new MissingMitigationException400("Mitigation: " + mitigationName + " for service: " + serviceName +
-                    " doesn't exist on device: " + deviceName + " with deviceScope:" + deviceScope);
+            return descs;
         }
     }
     

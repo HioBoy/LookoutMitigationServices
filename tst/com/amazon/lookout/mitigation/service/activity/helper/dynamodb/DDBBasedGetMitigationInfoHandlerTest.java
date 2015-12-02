@@ -28,7 +28,6 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.mitigation.service.LocationDeploymentInfo;
-import com.amazon.lookout.mitigation.service.MissingLocationException400;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
@@ -376,8 +375,9 @@ public class DDBBasedGetMitigationInfoHandlerTest {
     /**
      * Test location does not have any deployment history
      */
-    @Test(expected = MissingLocationException400.class)
+    @Test
     public void testGetLocationDeploymentHistoryAtNonExistingLocation() {
-        mitigationInfoHandler.getLocationDeploymentInfoOnLocation(deviceName, serviceName, location, 20, null, tsdMetrics);
+        assertEquals(0, mitigationInfoHandler.getLocationDeploymentInfoOnLocation(
+                deviceName, serviceName, location, 20, null, tsdMetrics).size());
     }
 }

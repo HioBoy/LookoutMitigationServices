@@ -24,7 +24,7 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.GetMitigationDefinitionRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationDefinitionResponse;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
-import com.amazon.lookout.mitigation.service.MissingMitigationException400;
+import com.amazon.lookout.mitigation.service.MissingMitigationVersionException404;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocationAndStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
@@ -45,7 +45,7 @@ public class GetMitigationDefinitionActivity extends Activity {
     private enum GetMitigationDefinitionExceptions {
         BadRequest,
         InternalError,
-        MissingMitigation
+        MissingMitigationVersion
     };
     
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
@@ -102,7 +102,7 @@ public class GetMitigationDefinitionActivity extends Activity {
             // Step 3. query the individual instance status and populate a new MitigationRequestDescriptionWithStatus instance to wrap this information.
             List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler.getMitigationInstanceStatus(
                     deviceName, mitigationDescriptionWithLocations.getMitigationRequestDescription().getJobId(), tsdMetrics);
-
+            
             MitigationRequestDescriptionWithLocationAndStatus mitigationRequestDescriptionWithLocationAndStatus = 
                     new MitigationRequestDescriptionWithLocationAndStatus();
             mitigationRequestDescriptionWithLocationAndStatus.setMitigationRequestDescriptionWithLocations(mitigationDescriptionWithLocations);
@@ -119,12 +119,12 @@ public class GetMitigationDefinitionActivity extends Activity {
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationDefinitionExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
-        } catch (MissingMitigationException400 missingMitigationException) {
-            String msg = "Caught MissingMitigationException in GetMitigationDefinitionActivity for requestId: " + requestId
-                    + ", reason: " + missingMitigationException.getMessage();
-            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), missingMitigationException);
-            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationDefinitionExceptions.MissingMitigation.name(), 1);
-            throw new MissingMitigationException400(msg);
+        } catch (MissingMitigationVersionException404 ex) {
+            String msg = "Caught MissingMitigationVersionException404 in GetMitigationDefinitionActivity for requestId: " + requestId
+                    + ", reason: " + ex.getMessage();
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationDefinitionExceptions.MissingMitigationVersion.name(), 1);
+            throw new MissingMitigationVersionException404(msg);
         } catch (Exception internalError) {
             String msg = "Internal error in GetMitigationDefinitionActivity for requestId: " + requestId + ", reason: " + internalError.getMessage(); 
             LOG.error(LookoutMitigationServiceConstants.CRITICAL_ACTIVITY_ERROR_LOG_PREFIX + msg +

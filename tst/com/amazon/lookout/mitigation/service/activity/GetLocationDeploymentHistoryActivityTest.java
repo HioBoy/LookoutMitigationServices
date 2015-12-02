@@ -17,7 +17,6 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryResponse;
 import com.amazon.lookout.mitigation.service.LocationDeploymentInfo;
-import com.amazon.lookout.mitigation.service.MissingLocationException400;
 
 public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper {
     private static final String location = "location1";
@@ -29,23 +28,6 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
         request.setLocation(location);
         request.setServiceName(serviceName);
         request.setMaxNumberOfHistoryEntriesToFetch(maxNumberOfHistoryEntriesToFetch);
-    }
-    
-    /**
-     * Test when no location history is found, MissingLocationException400 is thrown.
-     */
-    @Test(expected = MissingLocationException400.class)
-    public void testNoLocationHistoryFound() {
-        GetLocationDeploymentHistoryActivity getLocationDeploymentHistoryActivity = 
-                new GetLocationDeploymentHistoryActivity(requestValidator, mitigationInstanceInfoHandler);
-        
-        Mockito.doNothing().when(requestValidator).validateGetLocationDeploymentHistoryRequest(request);
-        
-        Mockito.doThrow(new MissingLocationException400()).when(mitigationInstanceInfoHandler)
-                .getLocationDeploymentInfoOnLocation(eq(deviceName), eq(serviceName), eq(location), eq(maxNumberOfHistoryEntriesToFetch),
-                        eq(exclusiveLastEvaluatedTimestamp), isA(TSDMetrics.class));
-        
-        getLocationDeploymentHistoryActivity.enact(request);
     }
 
     /**
@@ -95,5 +77,20 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
 
         Mockito.doThrow(new IllegalArgumentException()).when(requestValidator).validateGetLocationDeploymentHistoryRequest(request);
         getLocationDeploymentHistoryActivity.enact(request);
+    }
+    
+    /**
+     * Test empty list of location deployment history
+     */
+    @Test
+    public void testEmptyHistoryResult() {
+        GetLocationDeploymentHistoryActivity getLocationDeploymentHistoryActivity = 
+                new GetLocationDeploymentHistoryActivity(requestValidator, mitigationInstanceInfoHandler);
+
+        Mockito.doReturn(new ArrayList<LocationDeploymentInfo>()).when(mitigationInstanceInfoHandler)
+                .getLocationDeploymentInfoOnLocation(eq(deviceName), eq(serviceName), eq(location),
+                        eq(maxNumberOfHistoryEntriesToFetch), eq(exclusiveLastEvaluatedTimestamp), isA(TSDMetrics.class));
+        GetLocationDeploymentHistoryResponse response = getLocationDeploymentHistoryActivity.enact(request);
+        assertTrue(response.getListOfLocationDeploymentInfo().isEmpty());
     }
 }

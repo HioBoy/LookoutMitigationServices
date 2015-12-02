@@ -24,9 +24,8 @@ import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.activities.model.ActiveMitigationDetails;
 import com.amazon.lookout.activities.model.MitigationNameAndRequestStatus;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
-
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
-import com.amazon.lookout.mitigation.service.MissingMitigationException400;
+import com.amazon.lookout.mitigation.service.MissingMitigationVersionException404;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
@@ -646,7 +645,7 @@ public class DDBBasedListMitigationsHandlerTest {
     /**
      * Test mitigation does not exist.
      */
-    @Test(expected = MissingMitigationException400.class)
+    @Test
     public void testGetMitigationHistoryMitigationNotExist() {
         // create history for a mitigation in ddb table
         MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
@@ -660,9 +659,8 @@ public class DDBBasedListMitigationsHandlerTest {
         }
 
         // validate all history can be retrieved, when startVersion is null
-        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, "nonExistMitigation", null, 20, tsdMetrics);
-        assertEquals(0, descs.size());
+        assertTrue(listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
+                deviceScope, "nonExistMitigation", null, 20, tsdMetrics).isEmpty());
     }
     
     /**
@@ -918,7 +916,7 @@ public class DDBBasedListMitigationsHandlerTest {
     /**
      * get definition on a non-exist mitigation, should throw exception
      */
-    @Test(expected = MissingMitigationException400.class)
+    @Test(expected = MissingMitigationVersionException404.class)
     public void testGetMitigationDefinitionNonExistMitigation() {
         listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName, 1, tsdMetrics);
     }

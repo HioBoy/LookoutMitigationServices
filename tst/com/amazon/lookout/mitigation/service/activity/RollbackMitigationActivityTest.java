@@ -13,7 +13,7 @@ import static org.mockito.Mockito.*;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
-import com.amazon.lookout.mitigation.service.MissingMitigationException400;
+import com.amazon.lookout.mitigation.service.MissingMitigationVersionException404;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
@@ -99,7 +99,7 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
     /**
      * Test missing mitigaiton case
      */
-    @Test(expected = MissingMitigationException400.class)
+    @Test(expected = MissingMitigationVersionException404.class)
     public void testMissingMitigation() {
         RollbackMitigationRequest request = new RollbackMitigationRequest();
         request.setDeviceName(deviceName);
@@ -110,7 +110,7 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         request.setMitigationVersion(mitigationVersion);
         request.setMitigationTemplate(mitigationTemplate);
         
-        doThrow(new MissingMitigationException400()).when(requestInfoHandler)
+        doThrow(new MissingMitigationVersionException404()).when(requestInfoHandler)
                 .getMitigationDefinition(eq(deviceName), eq(serviceName), eq(mitigationName),
                         eq(rollbackMitigationVersion), isA(TSDMetrics.class));
         
