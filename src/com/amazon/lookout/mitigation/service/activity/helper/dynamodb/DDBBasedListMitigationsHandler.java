@@ -776,7 +776,6 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                 .withQueryFilters(new QueryFilter(SERVICE_NAME_KEY).eq(serviceName),
                         new QueryFilter(DEVICE_SCOPE_KEY).eq(deviceScope),
                         new QueryFilter(DEVICE_NAME_KEY).eq(deviceName),
-                        new QueryFilter(REQUEST_TYPE_KEY).ne(RequestType.DeleteRequest.name()),
                         new QueryFilter(WORKFLOW_STATUS_KEY).in(WorkflowStatus.SUCCEEDED, WorkflowStatus.RUNNING))
                 .withMaxResultSize(maxNumberOfHistoryEntriesToFetch
                         // Max result size also decides how many items to evaluate in one query.

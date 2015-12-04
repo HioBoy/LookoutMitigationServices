@@ -664,7 +664,7 @@ public class DDBBasedListMitigationsHandlerTest {
     }
     
     /**
-     * Test query filter, request Type
+     * Test query filter, all create, edit, delete request Type should be returned
      */
     @Test
     public void testGetMitigationHistoryMitigationRequestType() {
@@ -695,7 +695,7 @@ public class DDBBasedListMitigationsHandlerTest {
 
         assertEquals(2, descs.size());
         assertEquals(12, descs.get(0).getMitigationRequestDescription().getMitigationVersion());
-        assertEquals(10, descs.get(1).getMitigationRequestDescription().getMitigationVersion());
+        assertEquals(11, descs.get(1).getMitigationRequestDescription().getMitigationVersion());
     }
     
     /**
