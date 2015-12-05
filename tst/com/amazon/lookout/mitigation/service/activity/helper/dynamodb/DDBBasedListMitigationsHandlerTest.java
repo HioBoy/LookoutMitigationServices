@@ -846,16 +846,30 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.setLocations(locations);
         int workflowId = 10000;
 
-        // 2 records that will be fetched.
+        // 4 records that will be fetched.
         itemCreator.setMitigationVersion(1);
         itemCreator.setWorkflowId(++workflowId);
+        itemCreator.setRequestType(RequestType.CreateRequest.name());
         itemCreator.addItem();
         
         itemCreator.setMitigationVersion(2);
         itemCreator.setWorkflowId(++workflowId);
         itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setRequestType(RequestType.EditRequest.name());
         itemCreator.addItem();
-        
+  
+        // delete request
+        itemCreator.setMitigationVersion(3);
+        itemCreator.setWorkflowId(++workflowId);
+        itemCreator.setRequestType(RequestType.DeleteRequest.name());
+        itemCreator.addItem();
+  
+        // rollback request
+        itemCreator.setMitigationVersion(4);
+        itemCreator.setWorkflowId(++workflowId);
+        itemCreator.setRequestType(RequestType.RollbackRequest.name());
+        itemCreator.addItem();
+       
         // different service name
         itemCreator.setServiceName("otherService");
         itemCreator.setWorkflowId(++workflowId);
@@ -878,13 +892,7 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.setMitigationVersion(3);
         itemCreator.setWorkflowId(++workflowId);
         itemCreator.addItem();
- 
-        // delete request
-        itemCreator.setMitigationVersion(1);
-        itemCreator.setWorkflowId(++workflowId);
-        itemCreator.setRequestType(RequestType.DeleteRequest.name());
-        itemCreator.addItem();
-        
+       
         // workflow status is not succeeded or running
         itemCreator.setRequestType(RequestType.CreateRequest.name());
         itemCreator.setWorkflowId(++workflowId);
@@ -897,20 +905,38 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.setWorkflowStatus(WorkflowStatus.PARTIAL_SUCCESS);
         itemCreator.addItem();
        
+        // validate first request
         MitigationRequestDescriptionWithLocations desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName,
                 1, tsdMetrics);
-
         assertEquals(1, desc.getMitigationRequestDescription().getMitigationVersion());
         assertEquals(deviceName, desc.getMitigationRequestDescription().getDeviceName());
         assertEquals(mitigationName, desc.getMitigationRequestDescription().getMitigationName());
         assertEquals(10001, desc.getMitigationRequestDescription().getJobId());
+        assertEquals(RequestType.CreateRequest.name(), desc.getMitigationRequestDescription().getRequestType());
         
+        // validate second request
         desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName, 2, tsdMetrics);
-
         assertEquals(2, desc.getMitigationRequestDescription().getMitigationVersion());
         assertEquals(deviceName, desc.getMitigationRequestDescription().getDeviceName());
         assertEquals(mitigationName, desc.getMitigationRequestDescription().getMitigationName());
         assertEquals(10002, desc.getMitigationRequestDescription().getJobId());
+        assertEquals(RequestType.EditRequest.name(), desc.getMitigationRequestDescription().getRequestType());
+
+        // validate 3rd request
+        desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName, 3, tsdMetrics);
+        assertEquals(3, desc.getMitigationRequestDescription().getMitigationVersion());
+        assertEquals(deviceName, desc.getMitigationRequestDescription().getDeviceName());
+        assertEquals(mitigationName, desc.getMitigationRequestDescription().getMitigationName());
+        assertEquals(10003, desc.getMitigationRequestDescription().getJobId());
+        assertEquals(RequestType.DeleteRequest.name(), desc.getMitigationRequestDescription().getRequestType());
+         
+        // validate 4th request
+        desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName, 4, tsdMetrics);
+        assertEquals(4, desc.getMitigationRequestDescription().getMitigationVersion());
+        assertEquals(deviceName, desc.getMitigationRequestDescription().getDeviceName());
+        assertEquals(mitigationName, desc.getMitigationRequestDescription().getMitigationName());
+        assertEquals(10004, desc.getMitigationRequestDescription().getJobId());
+        assertEquals(RequestType.RollbackRequest.name(), desc.getMitigationRequestDescription().getRequestType());
     }
 
     /**

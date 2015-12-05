@@ -721,7 +721,6 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                 .withRangeKeyCondition(new RangeKeyCondition(MITIGATION_VERSION_KEY).eq(mitigationVersion))
                 .withQueryFilters(new QueryFilter(DEVICE_NAME_KEY).eq(deviceName),
                         new QueryFilter(SERVICE_NAME_KEY).eq(serviceName),
-                        new QueryFilter(REQUEST_TYPE_KEY).ne(RequestType.DeleteRequest.name()),
                         new QueryFilter(WORKFLOW_STATUS_KEY).in(WorkflowStatus.SUCCEEDED, WorkflowStatus.RUNNING))
                 .withMaxResultSize(10);
         try(TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getMitigationDefinition")) {
