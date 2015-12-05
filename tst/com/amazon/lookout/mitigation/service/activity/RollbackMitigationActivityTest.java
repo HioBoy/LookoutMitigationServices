@@ -19,6 +19,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
+import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -41,7 +42,7 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
     
     @Before
     public void setupMore() {
-        requestValidator = new RequestValidator(mock(ServiceLocationsHelper.class));
+        requestValidator = spy(new RequestValidator(mock(ServiceLocationsHelper.class)));
         requestStorageManager = mock(RequestStorageManager.class);
         swfWorkflowStarter = mock(SWFWorkflowStarter.class);
         
@@ -95,6 +96,93 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         
         rollbackMitigationActivity.enact(request);
     }
+   
+    /**
+     * Test rollback version's device scope does not match the one in request
+     */
+    @Test(expected = BadRequest400.class)
+    public void testInvalidDeviceScope() {
+        RollbackMitigationRequest request = new RollbackMitigationRequest();
+        request.setDeviceName(deviceName);
+        request.setDeviceScope(deviceScope);
+        request.setServiceName(serviceName);
+        request.setMitigationName(mitigationName);
+        request.setRollbackToMitigationVersion(rollbackMitigationVersion);
+        request.setMitigationVersion(mitigationVersion);
+        request.setMitigationTemplate(mitigationTemplate);
+        
+        MitigationRequestDescriptionWithLocations originalModificationRequest =
+                new MitigationRequestDescriptionWithLocations();
+        originalModificationRequest.setLocations(locations);
+        MitigationRequestDescription mitigationRequestDescription = new MitigationRequestDescription();
+        originalModificationRequest.setMitigationRequestDescription(mitigationRequestDescription);
+        mitigationRequestDescription.setDeviceScope("differentDeviceScope");
+        
+        doReturn(originalModificationRequest).when(requestInfoHandler)
+                .getMitigationDefinition(eq(deviceName), eq(serviceName), eq(mitigationName),
+                        eq(rollbackMitigationVersion), isA(TSDMetrics.class));
+        
+        rollbackMitigationActivity.enact(request);
+    }
+   
+    /**
+     * Test rollback version's template does not match the one in request
+     */
+    @Test(expected = BadRequest400.class)
+    public void testInvalidMitigationTemplate() {
+        RollbackMitigationRequest request = new RollbackMitigationRequest();
+        request.setDeviceName(deviceName);
+        request.setDeviceScope(deviceScope);
+        request.setServiceName(serviceName);
+        request.setMitigationName(mitigationName);
+        request.setRollbackToMitigationVersion(rollbackMitigationVersion);
+        request.setMitigationVersion(mitigationVersion);
+        request.setMitigationTemplate(mitigationTemplate);
+        
+        MitigationRequestDescriptionWithLocations originalModificationRequest =
+                new MitigationRequestDescriptionWithLocations();
+        originalModificationRequest.setLocations(locations);
+        MitigationRequestDescription mitigationRequestDescription = new MitigationRequestDescription();
+        originalModificationRequest.setMitigationRequestDescription(mitigationRequestDescription);
+        mitigationRequestDescription.setDeviceScope(deviceScope);
+        mitigationRequestDescription.setMitigationTemplate("differentTemplate");
+        
+        doReturn(originalModificationRequest).when(requestInfoHandler)
+                .getMitigationDefinition(eq(deviceName), eq(serviceName), eq(mitigationName),
+                        eq(rollbackMitigationVersion), isA(TSDMetrics.class));
+        
+        rollbackMitigationActivity.enact(request);
+    }
+   
+    /**
+     * Test rollback to delete request
+     */
+    @Test(expected = BadRequest400.class)
+    public void testInvalidRequestType() {
+        RollbackMitigationRequest request = new RollbackMitigationRequest();
+        request.setDeviceName(deviceName);
+        request.setDeviceScope(deviceScope);
+        request.setServiceName(serviceName);
+        request.setMitigationName(mitigationName);
+        request.setRollbackToMitigationVersion(rollbackMitigationVersion);
+        request.setMitigationVersion(mitigationVersion);
+        request.setMitigationTemplate(mitigationTemplate);
+        
+        MitigationRequestDescriptionWithLocations originalModificationRequest =
+                new MitigationRequestDescriptionWithLocations();
+        originalModificationRequest.setLocations(locations);
+        MitigationRequestDescription mitigationRequestDescription = new MitigationRequestDescription();
+        originalModificationRequest.setMitigationRequestDescription(mitigationRequestDescription);
+        mitigationRequestDescription.setDeviceScope(deviceName);
+        mitigationRequestDescription.setMitigationTemplate(mitigationTemplate);
+        mitigationRequestDescription.setRequestType(RequestType.DeleteRequest.toString());
+        
+        doReturn(originalModificationRequest).when(requestInfoHandler)
+                .getMitigationDefinition(eq(deviceName), eq(serviceName), eq(mitigationName),
+                        eq(rollbackMitigationVersion), isA(TSDMetrics.class));
+        
+        rollbackMitigationActivity.enact(request);
+    }
     
     /**
      * Test missing mitigaiton case
@@ -143,11 +231,11 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         
         rollbackMitigationActivity.enact(request);
     }
-    
+     
     /**
-     * Test failed to persist request to request table, and throw runtimeException
+     * Test failed to persist request to request table, and throw StaleRequestException400
      */
-    @Test(expected = InternalServerError500.class)
+    @Test(expected = StaleRequestException400.class)
     public void failedStoreRequestToTable2() {
         RollbackMitigationRequest request = new RollbackMitigationRequest();
         request.setDeviceName(deviceName);
@@ -164,9 +252,43 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         MitigationRequestDescription mitigationRequestDescription = new MitigationRequestDescription();
         originalModificationRequest.setMitigationRequestDescription(mitigationRequestDescription);
         
+        doNothing().when(requestValidator).validateRollbackRequest(request, mitigationRequestDescription);
+        
         doReturn(originalModificationRequest).when(requestInfoHandler)
                 .getMitigationDefinition(eq(deviceName), eq(serviceName), eq(mitigationName),
-                        eq(mitigationVersion), isA(TSDMetrics.class));
+                        eq(rollbackMitigationVersion), isA(TSDMetrics.class));
+        
+        doThrow(new StaleRequestException400()).when(requestStorageManager).storeRequestForWorkflow(
+                eq(request), eq(new HashSet<>(locations)), eq(RequestType.RollbackRequest), isA(TSDMetrics.class));
+        
+        rollbackMitigationActivity.enact(request);
+    }
+    
+    /**
+     * Test failed to persist request to request table, and throw runtimeException
+     */
+    @Test(expected = InternalServerError500.class)
+    public void failedStoreRequestToTable3() {
+        RollbackMitigationRequest request = new RollbackMitigationRequest();
+        request.setDeviceName(deviceName);
+        request.setDeviceScope(deviceScope);
+        request.setServiceName(serviceName);
+        request.setMitigationName(mitigationName);
+        request.setRollbackToMitigationVersion(rollbackMitigationVersion);
+        request.setMitigationVersion(mitigationVersion);
+        request.setMitigationTemplate(mitigationTemplate);
+        
+        MitigationRequestDescriptionWithLocations originalModificationRequest =
+                new MitigationRequestDescriptionWithLocations();
+        originalModificationRequest.setLocations(locations);
+        MitigationRequestDescription mitigationRequestDescription = new MitigationRequestDescription();
+        originalModificationRequest.setMitigationRequestDescription(mitigationRequestDescription);
+        
+        doNothing().when(requestValidator).validateRollbackRequest(request, mitigationRequestDescription);
+        
+        doReturn(originalModificationRequest).when(requestInfoHandler)
+                .getMitigationDefinition(eq(deviceName), eq(serviceName), eq(mitigationName),
+                        eq(rollbackMitigationVersion), isA(TSDMetrics.class));
         
         doThrow(new RuntimeException()).when(requestStorageManager).storeRequestForWorkflow(eq(request),
                 eq(new HashSet<>(locations)), eq(RequestType.RollbackRequest), isA(TSDMetrics.class));

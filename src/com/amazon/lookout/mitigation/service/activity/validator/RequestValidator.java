@@ -47,6 +47,7 @@ import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.model.RequestType;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -265,6 +266,7 @@ public class RequestValidator {
     
     /**
      * Validate the value in the rollback request match the one in system.
+     * Also validate rollback to version is not delete request
      * @param request : rollback reqeust
      * @param mitigationRequestDescription : mitigation request description,
      *      which is retrieved from system request storage
@@ -276,10 +278,14 @@ public class RequestValidator {
         
         Validate.isTrue(mitigationRequestDescription.getDeviceScope().equals(request.getDeviceScope()),
                 String.format(errorMessageTemplate, "deviceScope", request.getDeviceScope(),
-                        mitigationRequestDescription.getDeviceScope()));
+                        mitigationRequestDescription.getDeviceScope()),
+                        "device scope in rollback request does not match the one in roll back target.");
         Validate.isTrue(mitigationRequestDescription.getMitigationTemplate().equals(request.getMitigationTemplate()),
                 String.format(errorMessageTemplate, "mitigationTemplate", request.getMitigationTemplate(),
-                        mitigationRequestDescription.getMitigationTemplate()));
+                        mitigationRequestDescription.getMitigationTemplate()),
+                        "mitigation template in rollback request does not match the one in roll back target.");
+        Validate.isTrue(!RequestType.DeleteRequest.toString().equals(mitigationRequestDescription.getRequestType()),
+                "Can not rollback to a delete request. To delete a mitigation, use delete mitigation API");
     }
 
     /**

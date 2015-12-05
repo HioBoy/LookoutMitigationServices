@@ -33,6 +33,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
+import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
@@ -51,8 +52,9 @@ public class RollbackMitigationActivity extends Activity {
     private enum RollbackMitigationExceptions {
         BadRequest,
         InternalError,
-        MissingMitigationVersion
-    }
+        MissingMitigationVersion,
+        StaleRequest,
+    };
 
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
@@ -153,6 +155,11 @@ public class RollbackMitigationActivity extends Activity {
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(rollbackRequest), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + RollbackMitigationExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
+        } catch (StaleRequestException400 ex) {
+            LOG.warn(String.format("Caught StaleRequestException in for StaleRequestException400 requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
+                    ReflectionToStringBuilder.toString(rollbackRequest)), ex);
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + RollbackMitigationExceptions.StaleRequest.name());
+            throw ex;
         } catch (MissingMitigationVersionException404 ex) {
             String msg = "Caught MissingMitigationVersionException404 in RollbackMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(rollbackRequest), ex);
