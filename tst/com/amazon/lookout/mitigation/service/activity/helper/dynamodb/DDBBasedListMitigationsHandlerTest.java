@@ -48,6 +48,9 @@ import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 import com.amazonaws.services.dynamodbv2.util.Tables;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.collect.Lists;
 
 import static com.amazon.lookout.mitigation.service.activity.helper.dynamodb.RequestTableTestHelper.*;
@@ -60,6 +63,9 @@ public class DDBBasedListMitigationsHandlerTest {
     private static AmazonDynamoDBClient dynamoDBClient;
     private static DynamoDB dynamodb;
     private static RequestTableTestHelper requestTableTestHelper;
+    
+    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectWriter prettyWriter = mapper.writerWithDefaultPrettyPrinter();
     
     @BeforeClass
     public static void setUpOnce() {
@@ -786,54 +792,46 @@ public class DDBBasedListMitigationsHandlerTest {
     }
     
     /**
-     * Test query filter, workflow status
+     * Test query filter on workflow status, filter out Failed request only
+     * @throws JsonProcessingException 
      */
     @Test
-    public void testGetMitigationHistoryMitigationWorkflowStatus() {
+    public void testGetMitigationHistoryMitigationWorkflowStatus() throws JsonProcessingException {
         // create history for a mitigation in ddb table
         MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
-        int versionCounts = 10;
-        // add versions 1 ~ versionCounts
-        for (int v = 1; v <= versionCounts; ++v) {
-            itemCreator.setMitigationVersion(v);
-            itemCreator.setWorkflowId(v + 10000);
+        // create one request for each workflow status
+        // and find the failed workflow status version 
+        int version = 1;
+        int versionOfFailedStatus = 0;
+        for (String status : WorkflowStatus.values()) {
+            ++version;
+            if (status.equals(WorkflowStatus.FAILED)) {
+                versionOfFailedStatus = version;
+            }
+            itemCreator.setWorkflowStatus(status);
+            itemCreator.setMitigationVersion(version);
+            itemCreator.setWorkflowId(10000 + version);
             itemCreator.addItem();
-        }
+       }
 
-        itemCreator.setWorkflowStatus(WorkflowStatus.INDETERMINATE);
-        itemCreator.setMitigationVersion(11);
-        itemCreator.setWorkflowId(10011);
-        itemCreator.addItem();
+        int expectedRequestsCount = WorkflowStatus.values().length - 1;
 
-        itemCreator.setWorkflowStatus(WorkflowStatus.FAILED);
-        itemCreator.setMitigationVersion(12);
-        itemCreator.setWorkflowId(10012);
-        itemCreator.addItem();
-
-        itemCreator.setWorkflowStatus(WorkflowStatus.PARTIAL_SUCCESS);
-        itemCreator.setMitigationVersion(13);
-        itemCreator.setWorkflowId(10013);
-        itemCreator.addItem();
-
-        itemCreator.setWorkflowStatus(WorkflowStatus.SUCCEEDED);
-        itemCreator.setMitigationVersion(14);
-        itemCreator.setWorkflowId(10014);
-        itemCreator.addItem();
-
-        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
-        itemCreator.setMitigationVersion(15);
-        itemCreator.setWorkflowId(10015);
-        itemCreator.addItem();
-
-        // validate all history can be retrieved, when startVersion is null
+        // validate history is correctly retrieved without Failed status request
         List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, mitigationName, null, 3, tsdMetrics);
+                deviceScope, mitigationName, null, 10, tsdMetrics);
 
-        assertEquals(3, descs.size());
-        assertEquals(15, descs.get(0).getMitigationRequestDescription().getMitigationVersion());
-        assertEquals(14, descs.get(1).getMitigationRequestDescription().getMitigationVersion());
-        assertEquals(10, descs.get(2).getMitigationRequestDescription().getMitigationVersion());
+        assertEquals(expectedRequestsCount, descs.size());
+        int validateVersion = version;
+        for (int i = 0; i < expectedRequestsCount; ++i, --validateVersion) {
+            if (versionOfFailedStatus == validateVersion) {
+                // skip failed status request
+                validateVersion -= 1;
+            }
+            assertEquals(String.format("Failed request version %d, failed to validate request %s", versionOfFailedStatus,
+                    prettyWriter.writeValueAsString(descs.get(i).getMitigationRequestDescription())),
+                    validateVersion, descs.get(i).getMitigationRequestDescription().getMitigationVersion());
+        }
     }
 
     /**
@@ -849,6 +847,7 @@ public class DDBBasedListMitigationsHandlerTest {
         // 4 records that will be fetched.
         itemCreator.setMitigationVersion(1);
         itemCreator.setWorkflowId(++workflowId);
+        itemCreator.setWorkflowStatus(WorkflowStatus.SUCCEEDED);
         itemCreator.setRequestType(RequestType.CreateRequest.name());
         itemCreator.addItem();
         
@@ -861,12 +860,14 @@ public class DDBBasedListMitigationsHandlerTest {
         // delete request
         itemCreator.setMitigationVersion(3);
         itemCreator.setWorkflowId(++workflowId);
+        itemCreator.setWorkflowStatus(WorkflowStatus.PARTIAL_SUCCESS);
         itemCreator.setRequestType(RequestType.DeleteRequest.name());
         itemCreator.addItem();
   
         // rollback request
         itemCreator.setMitigationVersion(4);
         itemCreator.setWorkflowId(++workflowId);
+        itemCreator.setWorkflowStatus(WorkflowStatus.INDETERMINATE);
         itemCreator.setRequestType(RequestType.RollbackRequest.name());
         itemCreator.addItem();
        
@@ -893,18 +894,12 @@ public class DDBBasedListMitigationsHandlerTest {
         itemCreator.setWorkflowId(++workflowId);
         itemCreator.addItem();
        
-        // workflow status is not succeeded or running
+        // workflow status is FAILED
         itemCreator.setRequestType(RequestType.CreateRequest.name());
         itemCreator.setWorkflowId(++workflowId);
         itemCreator.setWorkflowStatus(WorkflowStatus.FAILED);
         itemCreator.addItem();
-        itemCreator.setWorkflowId(++workflowId);
-        itemCreator.setWorkflowStatus(WorkflowStatus.INDETERMINATE);
-        itemCreator.addItem();
-        itemCreator.setWorkflowId(++workflowId);
-        itemCreator.setWorkflowStatus(WorkflowStatus.PARTIAL_SUCCESS);
-        itemCreator.addItem();
-       
+      
         // validate first request
         MitigationRequestDescriptionWithLocations desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName,
                 1, tsdMetrics);
@@ -913,6 +908,7 @@ public class DDBBasedListMitigationsHandlerTest {
         assertEquals(mitigationName, desc.getMitigationRequestDescription().getMitigationName());
         assertEquals(10001, desc.getMitigationRequestDescription().getJobId());
         assertEquals(RequestType.CreateRequest.name(), desc.getMitigationRequestDescription().getRequestType());
+        assertEquals(WorkflowStatus.SUCCEEDED, desc.getMitigationRequestDescription().getRequestStatus());
         
         // validate second request
         desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName, 2, tsdMetrics);
@@ -921,6 +917,7 @@ public class DDBBasedListMitigationsHandlerTest {
         assertEquals(mitigationName, desc.getMitigationRequestDescription().getMitigationName());
         assertEquals(10002, desc.getMitigationRequestDescription().getJobId());
         assertEquals(RequestType.EditRequest.name(), desc.getMitigationRequestDescription().getRequestType());
+        assertEquals(WorkflowStatus.RUNNING, desc.getMitigationRequestDescription().getRequestStatus());
 
         // validate 3rd request
         desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName, 3, tsdMetrics);
@@ -929,6 +926,7 @@ public class DDBBasedListMitigationsHandlerTest {
         assertEquals(mitigationName, desc.getMitigationRequestDescription().getMitigationName());
         assertEquals(10003, desc.getMitigationRequestDescription().getJobId());
         assertEquals(RequestType.DeleteRequest.name(), desc.getMitigationRequestDescription().getRequestType());
+        assertEquals(WorkflowStatus.PARTIAL_SUCCESS, desc.getMitigationRequestDescription().getRequestStatus());
          
         // validate 4th request
         desc = listHandler.getMitigationDefinition(deviceName, serviceName, mitigationName, 4, tsdMetrics);
@@ -937,6 +935,7 @@ public class DDBBasedListMitigationsHandlerTest {
         assertEquals(mitigationName, desc.getMitigationRequestDescription().getMitigationName());
         assertEquals(10004, desc.getMitigationRequestDescription().getJobId());
         assertEquals(RequestType.RollbackRequest.name(), desc.getMitigationRequestDescription().getRequestType());
+        assertEquals(WorkflowStatus.INDETERMINATE, desc.getMitigationRequestDescription().getRequestStatus());
     }
 
     /**

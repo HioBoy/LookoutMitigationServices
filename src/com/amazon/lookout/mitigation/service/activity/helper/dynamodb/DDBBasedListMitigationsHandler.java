@@ -721,7 +721,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                 .withRangeKeyCondition(new RangeKeyCondition(MITIGATION_VERSION_KEY).eq(mitigationVersion))
                 .withQueryFilters(new QueryFilter(DEVICE_NAME_KEY).eq(deviceName),
                         new QueryFilter(SERVICE_NAME_KEY).eq(serviceName),
-                        new QueryFilter(WORKFLOW_STATUS_KEY).in(WorkflowStatus.SUCCEEDED, WorkflowStatus.RUNNING))
+                        new QueryFilter(WORKFLOW_STATUS_KEY).ne(WorkflowStatus.FAILED))
                 .withMaxResultSize(10);
         try(TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getMitigationDefinition")) {
             try {
@@ -775,7 +775,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                 .withQueryFilters(new QueryFilter(SERVICE_NAME_KEY).eq(serviceName),
                         new QueryFilter(DEVICE_SCOPE_KEY).eq(deviceScope),
                         new QueryFilter(DEVICE_NAME_KEY).eq(deviceName),
-                        new QueryFilter(WORKFLOW_STATUS_KEY).in(WorkflowStatus.SUCCEEDED, WorkflowStatus.RUNNING))
+                        new QueryFilter(WORKFLOW_STATUS_KEY).ne(WorkflowStatus.FAILED))
                 .withMaxResultSize(maxNumberOfHistoryEntriesToFetch
                         // Max result size also decides how many items to evaluate in one query.
                         // To reduce the number of under-layer call to DDB service, we add a small overhead
