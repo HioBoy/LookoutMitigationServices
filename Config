@@ -33,7 +33,7 @@ package.LookoutMitigationService = {
             JakartaCommons-lang3 = 3.x;
             FindBugsAnnotations = 1.3.7;
             
-            AWSJavaSDKExternalRelease = 1.9;
+            AWSJavaSDKExternalRelease = 1.10;
             LookoutMitigationWorkFlowWorker = 1.0;
 
             CoralAwsAuthentication = 1.1; # To support authenticating/authorizing calls to LookoutMitigationService.

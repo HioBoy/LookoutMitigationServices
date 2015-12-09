@@ -234,14 +234,14 @@ public class IPTablesEdgeCustomerValidatorTest {
         return "\"" + elementName + "\":";
     }
 
-    private static <T extends Throwable> T assertValidationThrows(Class<T> expectedException, String ipTablesJson)
+    private static <T extends Exception> T assertValidationThrows(Class<T> expectedException, String ipTablesJson)
         throws Exception {
 
         CreateMitigationRequest request = generateCreateMitigationRequest(ipTablesJson);
         return assertValidationThrows(expectedException, request);
     }
 
-    private static <T extends Throwable> T assertValidationThrows(
+    private static <T extends Exception> T assertValidationThrows(
             Class<T> expectedException, CreateMitigationRequest request) throws Exception {
 
         IPTablesEdgeCustomerValidator validator = createValidator();
