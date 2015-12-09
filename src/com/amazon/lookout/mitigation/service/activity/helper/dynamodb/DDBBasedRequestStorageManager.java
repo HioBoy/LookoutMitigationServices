@@ -43,7 +43,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
 
         Validate.notEmpty(domain);
         
-        requestTypeToStorageHandler = Maps.immutableEnumMap(getRequestTypeToStorageHandlerMap(dynamoDBClient, domain, templateBasedValidator));
+        requestTypeToStorageHandler = getRequestTypeToStorageHandlerMap(dynamoDBClient, domain, templateBasedValidator);
     }
     
     /**
@@ -53,7 +53,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @param templateBasedValidator TemplateBasedValidator which might be required by some RequestStorageHandlers to perform checks before storage.
      * @return EnumMap with RequestType as the key and the corresponding RequestStorageHandler responsible for storing this request.
      */
-    private EnumMap<RequestType, RequestStorageHandler> getRequestTypeToStorageHandlerMap(AmazonDynamoDBClient dynamoDBClient, String domain,
+    private static ImmutableMap<RequestType, RequestStorageHandler> getRequestTypeToStorageHandlerMap(AmazonDynamoDBClient dynamoDBClient, String domain,
                                                                                           TemplateBasedRequestValidator templateBasedValidator) {
         EnumMap<RequestType, RequestStorageHandler> requestStorageHandlerMap = new EnumMap<RequestType, RequestStorageHandler>(RequestType.class);
 
@@ -66,10 +66,11 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
         DDBBasedDeleteRequestStorageHandler deleteStorageHandler = new DDBBasedDeleteRequestStorageHandler(dynamoDBClient, domain);
         requestStorageHandlerMap.put(RequestType.DeleteRequest, deleteStorageHandler);
 
-        DDBBasedRollbackRequestStorageHandler rollbackRequestStorageHandler = new DDBBasedRollbackRequestStorageHandler(dynamoDBClient, domain);
+        DDBBasedRollbackRequestStorageHandler rollbackRequestStorageHandler = new DDBBasedRollbackRequestStorageHandler(
+                dynamoDBClient, domain, templateBasedValidator);
         requestStorageHandlerMap.put(RequestType.RollbackRequest, rollbackRequestStorageHandler);
         
-        return requestStorageHandlerMap;
+        return Maps.immutableEnumMap(requestStorageHandlerMap);
     }
     
     /**
@@ -101,7 +102,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @param templateBasedValidator
      * @return New instance of DDBBasedCreateRequestStorageHandler
      */
-    private DDBBasedCreateRequestStorageHandler getCreateRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain,
+    private static DDBBasedCreateRequestStorageHandler getCreateRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain,
                                                                                TemplateBasedRequestValidator templateBasedValidator) {
         return new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
     }
@@ -113,7 +114,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @param templateBasedValidator
      * @return
      */
-    private DDBBasedEditRequestStorageHandler getEditRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain,
+    private static DDBBasedEditRequestStorageHandler getEditRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain,
             TemplateBasedRequestValidator templateBasedValidator) {
         return new DDBBasedEditRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
     }

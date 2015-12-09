@@ -2,6 +2,8 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -24,13 +26,14 @@ import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.activities.model.ActiveMitigationDetails;
 import com.amazon.lookout.activities.model.MitigationNameAndRequestStatus;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
-import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.MissingMitigationVersionException404;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.RequestTableTestHelper.MitigationRequestItemCreator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
+import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.status.helper.ActiveMitigationsStatusHelper;
@@ -56,8 +59,7 @@ import com.google.common.collect.Lists;
 import static com.amazon.lookout.mitigation.service.activity.helper.dynamodb.RequestTableTestHelper.*;
 
 public class DDBBasedListMitigationsHandlerTest {
-    private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
-    private final static String domain = "beta";
+    private static final String domain = "unit-test";
     
     private static DDBBasedListMitigationsHandler listHandler;
     private static AmazonDynamoDBClient dynamoDBClient;
@@ -66,6 +68,8 @@ public class DDBBasedListMitigationsHandlerTest {
     
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final ObjectWriter prettyWriter = mapper.writerWithDefaultPrettyPrinter();
+    
+    private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
     
     @BeforeClass
     public static void setUpOnce() {
@@ -91,31 +95,24 @@ public class DDBBasedListMitigationsHandlerTest {
     
     @Test
     public void testGetMitigationNameAndRequestStatus() {
-        DDBBasedListMitigationsHandler requestInfoHandler = mock(DDBBasedListMitigationsHandler.class);
+        MitigationRequestItemCreator itemCreator = 
+                requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        itemCreator.setWorkflowStatus("DEPLOYED");
+        itemCreator.setWorkflowId(10);
+        itemCreator.setMitigationVersion(1);
+        itemCreator.addItem();
         
-        GetRequestStatusRequest request = createRequestStatusRequest();
-        Map<String, AttributeValue> key= requestInfoHandler.generateRequestInfoKey(request.getDeviceName(), Long.valueOf(request.getJobId()));
-        
-        when(requestInfoHandler.getRequestInDDB(key, tsdMetrics)).thenReturn(createGetItemResultForMitigationNameAndRequestStatus());
-        
-        when(requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics)).thenCallRealMethod();
-        MitigationNameAndRequestStatus nameAndStatus = requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics);
-        assertEquals(nameAndStatus.getMitigationName(), "Mitigation-1");
+        MitigationNameAndRequestStatus nameAndStatus = listHandler.getMitigationNameAndRequestStatus(
+                itemCreator.getDeviceName(), itemCreator.getMitigationTemplate(), 10, tsdMetrics);
+        assertEquals(nameAndStatus.getMitigationName(), mitigationName);
         assertEquals(nameAndStatus.getRequestStatus(), "DEPLOYED");
     }
     
     @Test
     public void testGetMitigationNameAndRequestStatusWhenNoRequests() {
-        DDBBasedListMitigationsHandler requestInfoHandler = mock(DDBBasedListMitigationsHandler.class);
-        
-        GetRequestStatusRequest request = createRequestStatusRequest();
-        Map<String, AttributeValue> key= requestInfoHandler.generateRequestInfoKey(request.getDeviceName(), Long.valueOf(request.getJobId()));
-        
-        when(requestInfoHandler.getRequestInDDB(key, tsdMetrics)).thenReturn(createEmptyGetItemResultForMitigationNameAndRequestStatus());
-        
-        when(requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics)).thenCallRealMethod();
         try {
-            requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics);
+            listHandler.getMitigationNameAndRequestStatus(
+                    DeviceName.POP_ROUTER.name(), MitigationTemplate.Router_CountMode_Route53Customer, 11, tsdMetrics);
         } catch (IllegalStateException ex) {
             assertTrue(ex.getMessage().contains("Could not find an item for the requested"));
         }
@@ -123,31 +120,23 @@ public class DDBBasedListMitigationsHandlerTest {
     
     @Test(expected=IllegalArgumentException.class)
     public void testGetMitigationNameAndRequestStatusWhenEmptyParameters() {
-        DDBBasedListMitigationsHandler requestInfoHandler = mock(DDBBasedListMitigationsHandler.class);
-        
-        GetRequestStatusRequest request = new GetRequestStatusRequest();
-        Map<String, AttributeValue> key= requestInfoHandler.generateRequestInfoKey(request.getDeviceName(), Long.valueOf(request.getJobId()));
-        
-        when(requestInfoHandler.getRequestInDDB(key, tsdMetrics)).thenReturn(createEmptyGetItemResultForMitigationNameAndRequestStatus());
-        
-        when(requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics)).thenCallRealMethod();
-        requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics);
+        listHandler.getMitigationNameAndRequestStatus(null, null, 0, tsdMetrics);
     }
     
     @Test
     public void testGetMitigationNameAndRequestStatusWhenWrongTemplate() {
-        DDBBasedListMitigationsHandler requestInfoHandler = mock(DDBBasedListMitigationsHandler.class);
+        MitigationRequestItemCreator itemCreator = 
+                requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        itemCreator.setWorkflowStatus("DEPLOYED");
+        itemCreator.setWorkflowId(10);
+        itemCreator.setMitigationVersion(1);
+        itemCreator.addItem();
         
-        GetRequestStatusRequest request = createRequestStatusRequest();
-        Map<String, AttributeValue> key= requestInfoHandler.generateRequestInfoKey(request.getDeviceName(), Long.valueOf(request.getJobId()));
-        
-        when(requestInfoHandler.getRequestInDDB(key, tsdMetrics)).thenReturn(createGetItemResultWithWrongTemplateForMitigationNameAndRequestStatus());
-        
-        when(requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics)).thenCallRealMethod();
         try {
-            requestInfoHandler.getMitigationNameAndRequestStatus(request.getDeviceName(), request.getMitigationTemplate(), Long.valueOf(request.getJobId()), tsdMetrics);
+            listHandler.getMitigationNameAndRequestStatus(
+                    itemCreator.getDeviceName(), itemCreator.getMitigationTemplate(), 10, tsdMetrics);
         } catch (IllegalStateException ex) {
-            assertTrue(ex.getMessage().contains("associated with a different template than requested"));
+            assertThat(ex.getMessage(), containsString("associated with a different template than requested"));
         }
     }
     
@@ -157,7 +146,7 @@ public class DDBBasedListMitigationsHandlerTest {
         DDBBasedListMitigationsHandler listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, domain, mock(ActiveMitigationsStatusHelper.class));
         DDBBasedListMitigationsHandler spiedListHandler = spy(listHandler);
         
-        doReturn(new QueryResult().withCount(0)).when(spiedListHandler).queryRequestsInDDB(any(QueryRequest.class), any(TSDMetrics.class));
+        doReturn(new QueryResult().withCount(0)).when(spiedListHandler).queryDynamoDBWithRetries(any(QueryRequest.class), any(TSDMetrics.class));
         List<ActiveMitigationDetails> list = spiedListHandler.getActiveMitigationsForService("Route53", "foo", new ArrayList<String>(), tsdMetrics);
         assertEquals(list, new ArrayList<ActiveMitigationDetails>());
     }
@@ -198,7 +187,7 @@ public class DDBBasedListMitigationsHandlerTest {
         attributeValue = new AttributeValue().withN(String.valueOf(workflowId));
         keys.put(MitigationRequestsModel.WORKFLOW_ID_KEY, attributeValue);
         
-        MitigationDefinition mitigationDefinition = DDBBasedCreateRequestStorageHandlerTest.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));
+        MitigationDefinition mitigationDefinition = RequestTestHelper.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         String mitigationDefinitionJsonString = jsonDataConverter.toData(mitigationDefinition);
         
@@ -313,7 +302,7 @@ public class DDBBasedListMitigationsHandlerTest {
         Condition requestTypeCondition = new Condition().withComparisonOperator(ComparisonOperator.NE).withAttributeValueList(value);
         queryFilter.put(MitigationRequestsModel.REQUEST_TYPE_KEY, requestTypeCondition);
         
-        MitigationDefinition mitigationDefinition = DDBBasedCreateRequestStorageHandlerTest.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));
+        MitigationDefinition mitigationDefinition = RequestTestHelper.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         String mitigationDefinitionJsonString = jsonDataConverter.toData(mitigationDefinition);
         
@@ -371,54 +360,6 @@ public class DDBBasedListMitigationsHandlerTest {
         assertEquals(description.getMitigationDefinition(), mitigationDefinition);
     }
     
-    private GetRequestStatusRequest createRequestStatusRequest() {
-        GetRequestStatusRequest request = new GetRequestStatusRequest();
-        request.setDeviceName("POP_ROUTER");
-        request.setMitigationTemplate("Router_RateLimit_Route53Customer");
-        request.setJobId(Long.valueOf("1"));
-        request.setServiceName("Route53");
-        return request;
-    }
-    
-    private GetItemResult createGetItemResultForMitigationNameAndRequestStatus() {
-        Map<String, AttributeValue> item = new HashMap<>();
-        
-        AttributeValue attributeValue = new AttributeValue("Mitigation-1");
-        item.put(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, attributeValue);
-        attributeValue = new AttributeValue("DEPLOYED");
-        item.put(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, attributeValue);
-        attributeValue = new AttributeValue("Router_RateLimit_Route53Customer");
-        item.put(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, attributeValue);
-        GetItemResult result = new GetItemResult();
-        result.setItem(item);
-        
-        return result;
-    }
-    
-    private GetItemResult createEmptyGetItemResultForMitigationNameAndRequestStatus() {
-        Map<String, AttributeValue> item = new HashMap<>();
-        
-        GetItemResult result = new GetItemResult();
-        result.setItem(item);
-        
-        return result;
-    }
-    
-    private GetItemResult createGetItemResultWithWrongTemplateForMitigationNameAndRequestStatus() {
-        Map<String, AttributeValue> item = new HashMap<>();
-        
-        AttributeValue attributeValue = new AttributeValue("Mitigation-1");
-        item.put(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, attributeValue);
-        attributeValue = new AttributeValue("DEPLOYED");
-        item.put(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, attributeValue);
-        attributeValue = new AttributeValue("Wrong_Template");
-        item.put(DDBBasedRequestStorageHandler.MITIGATION_TEMPLATE_KEY, attributeValue);
-        GetItemResult result = new GetItemResult();
-        result.setItem(item);
-    
-        return result;
-    }
-    
     /**
      * Test to ensure we pass the right set of keys/queryFilters when querying DDB for fetching mitigation description.
      * Also checks if we correctly parse the QueryResult to wrap it into List of MitigationRequestDescription instances.
@@ -453,23 +394,23 @@ public class DDBBasedListMitigationsHandlerTest {
         Map<String, Condition> keyConditions = new HashMap<>();
         AttributeValue value = new AttributeValue(deviceName);
         Condition deviceCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
-        keyConditions.put(DDBBasedRequestStorageHandler.DEVICE_NAME_KEY, deviceCondition);
+        keyConditions.put(MitigationRequestsModel.DEVICE_NAME_KEY, deviceCondition);
         
         value = new AttributeValue().withN("0");
         Condition uneditedCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
-        keyConditions.put(DDBBasedRequestStorageHandler.UPDATE_WORKFLOW_ID_KEY, uneditedCondition);
+        keyConditions.put(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY, uneditedCondition);
         
         // Setup the queryFilters to check.
         Map<String, Condition> queryFilter = new HashMap<>();
         value = new AttributeValue(serviceName);
         Condition serviceNameCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
-        queryFilter.put(DDBBasedRequestStorageHandler.SERVICE_NAME_KEY, serviceNameCondition);
+        queryFilter.put(MitigationRequestsModel.SERVICE_NAME_KEY, serviceNameCondition);
         
         value = new AttributeValue(WorkflowStatus.RUNNING);
         Condition runningCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
-        queryFilter.put(DDBBasedRequestStorageHandler.WORKFLOW_STATUS_KEY, runningCondition);
+        queryFilter.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, runningCondition);
         
-        MitigationDefinition mitigationDefinition = DDBBasedCreateRequestStorageHandlerTest.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));
+        MitigationDefinition mitigationDefinition = RequestTestHelper.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));
         JsonDataConverter jsonDataConverter = new JsonDataConverter();
         String mitigationDefinitionJsonString = jsonDataConverter.toData(mitigationDefinition);
         

@@ -10,6 +10,7 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyMapOf;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
@@ -21,22 +22,26 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.stubbing.Stubber;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
-import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
+import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MissingMitigationException400;
+import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
+import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
@@ -44,10 +49,10 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.Templat
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazon.lookout.test.common.util.AssertUtils;
+import com.amazon.lookout.test.common.util.MockUtils;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.AmazonServiceException.ErrorType;
@@ -55,14 +60,15 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.google.common.collect.ImmutableSet;
 
-public class DDBBasedDeleteRequestStorageHandlerTest {
-    private final String domain = "unit-test";
+public class DDBBasedEditRequestStorageHandlerTest {
+    private static final String domain = "unit-test";
     private static AmazonDynamoDBClient localDynamoDBClient;
     private static RequestTableTestHelper testTableHelper;
     
@@ -79,11 +85,14 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     }
     
     private AmazonDynamoDBClient spyDynamoDBClient;
-    private DDBBasedDeleteRequestStorageHandler storageHandler;
+    private TemplateBasedRequestValidator templateBasedValidator;
+    private DDBBasedEditRequestStorageHandler storageHandler;
     
     private CreateMitigationRequest existingRequest1;
+    private long existingRequest1WorkflowId;
     
     private CreateMitigationRequest existingRequest2;
+    private long existingRequest2WorkflowId;
     private DDBBasedCreateRequestStorageHandler createStorageHandler;
     
     @Before
@@ -102,7 +111,8 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         testTableHelper = new RequestTableTestHelper(new DynamoDB(localDynamoDBClient), domain);
         
         spyDynamoDBClient = spy(localDynamoDBClient);
-        storageHandler = spy(new DDBBasedDeleteRequestStorageHandler(spyDynamoDBClient, domain));
+        templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        storageHandler = spy(new DDBBasedEditRequestStorageHandler(spyDynamoDBClient, domain, templateBasedValidator));
 
         // Create a new TemplateBasedRequestValidator for the create so calls to it won't match any verifications
         // we might want to do on the verifier for storageHandler
@@ -111,22 +121,22 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
                 localDynamoDBClient, domain, createOnlytemplateBasedValidator);
         
         existingRequest1 = RequestTestHelper.generateCreateMitigationRequest(MITIGATION_1_NAME);
-        createStorageHandler.storeRequestForWorkflow(existingRequest1, defaultLocations, tsdMetrics);
+        existingRequest1WorkflowId = createStorageHandler.storeRequestForWorkflow(existingRequest1, defaultLocations, tsdMetrics);
         
         existingRequest2 = RequestTestHelper.generateCreateMitigationRequest(MITIGATION_2_NAME);
-        createStorageHandler.storeRequestForWorkflow(existingRequest2, defaultLocations, tsdMetrics);
+        existingRequest2WorkflowId = createStorageHandler.storeRequestForWorkflow(existingRequest2, defaultLocations, tsdMetrics);
     }
     
     private static MitigationRequestDescriptionWithLocations validateRequestInDDB(
-            DeleteMitigationFromAllLocationsRequest request, Set<String> locations, long workflowId) 
+            EditMitigationRequest request, Set<String> locations, long workflowId) 
     {
         return testTableHelper.validateRequestInDDB(
-                request, new MitigationDefinition(), request.getMitigationVersion() + 1, locations, workflowId);
+                request, request.getMitigationDefinition(), request.getMitigationVersion(), locations, workflowId);
     }
     
     @Test
-    public void testDeleteMitigation() {
-        DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
+    public void testEditMitigation() {
+        EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
         long workflowId = storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics);
 
@@ -134,10 +144,10 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     }
     
     @Test
-    public void testDeleteMitigationWithNewTemplate() {
+    public void testEditMitigationWithNewTemplate() {
         assertThat(existingRequest1.getMitigationTemplate(), equalTo(MitigationTemplate.Router_RateLimit_Route53Customer));
-        DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(
-                MitigationTemplate.Router_CountMode_Route53Customer, MITIGATION_1_NAME, 1);
+        EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(
+                MitigationTemplate.Router_CountMode_Route53Customer, MITIGATION_1_NAME, 2);
         
         IllegalArgumentException exception = AssertUtils.assertThrows(
                 IllegalArgumentException.class, 
@@ -149,8 +159,8 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     }
     
     @Test
-    public void testDeleteNonExistentMitigation() {
-        DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest("DoesNotExist", 1);
+    public void testEditNonExistentMitigation() {
+        EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest("DoesNotExist", 2);
         
         MissingMitigationException400 exception = AssertUtils.assertThrows(MissingMitigationException400.class,
                 () -> storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics));
@@ -159,8 +169,8 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     }
     
     @Test
-    public void testDeleteNonExistentMitigationWithSameNameOnDifferentDevice() {
-        DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(
+    public void testEditNonExistentMitigationWithSameNameOnDifferentDevice() {
+        EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(
                 MitigationTemplate.Blackhole_Mitigation_ArborCustomer,
                 existingRequest1.getMitigationName(),
                 existingRequest1.getServiceName(),
@@ -173,99 +183,16 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     }
     
     @Test
-    public void testDuplicateDelete() {
-        DeleteMitigationFromAllLocationsRequest request1 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
+    public void testDuplicateEdit() {
+        EditMitigationRequest request1 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
         long workflowId = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics);
 
         validateRequestInDDB(request1, defaultLocations, workflowId);
         
-        DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
+        EditMitigationRequest request2 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
         StaleRequestException400 exception = AssertUtils.assertThrows(StaleRequestException400.class,
-                () -> storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics));
-        
-        assertThat(exception.getMessage(), allOf(
-                containsString(request2.getMitigationName()), 
-                containsString("version to delete: " + request2.getMitigationVersion())));
-    }
-    
-    @Test
-    public void testRetryFailedDelete() {
-        DeleteMitigationFromAllLocationsRequest request1 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
-        
-        long workflowId = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics);
-        
-        validateRequestInDDB(request1, defaultLocations, workflowId);
-        
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request1.getMitigationTemplate());
-        
-        testTableHelper.setWorkflowStatus(deviceNameAndScope.getDeviceName().name(), workflowId, WorkflowStatus.FAILED);
-        
-        // Retrying the same request should be allowed
-        long newWorkflowId = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics);
-        
-        validateRequestInDDB(request1, defaultLocations, newWorkflowId);
-    }
-    
-    @Test
-    public void testRetryPartialSuccess() {
-        DeleteMitigationFromAllLocationsRequest request1 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
-        
-        long workflowId = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics);
-        
-        validateRequestInDDB(request1, defaultLocations, workflowId);
-        
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request1.getMitigationTemplate());
-        
-        testTableHelper.setWorkflowStatus(deviceNameAndScope.getDeviceName().name(), workflowId, WorkflowStatus.PARTIAL_SUCCESS);
-        
-        // Need a new request with an updated version
-        DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 2);
-        long newWorkflowId = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics);
-        
-        validateRequestInDDB(request2, defaultLocations, newWorkflowId);
-    }
-    
-    @Test
-    public void testRetryIndeterminate() {
-        DeleteMitigationFromAllLocationsRequest request1 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
-        
-        long workflowId = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics);
-        
-        validateRequestInDDB(request1, defaultLocations, workflowId);
-        
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request1.getMitigationTemplate());
-        
-        testTableHelper.setWorkflowStatus(deviceNameAndScope.getDeviceName().name(), workflowId, WorkflowStatus.INDETERMINATE);
-        
-        // Need a new request with an updated version
-        DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 2);
-        long newWorkflowId = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics);
-        
-        validateRequestInDDB(request2, defaultLocations, newWorkflowId);
-    }
-    
-    @Test
-    public void testRetrySuccess() {
-        DeleteMitigationFromAllLocationsRequest request1 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
-        
-        long workflowId = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics);
-        
-        validateRequestInDDB(request1, defaultLocations, workflowId);
-        
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request1.getMitigationTemplate());
-        
-        testTableHelper.setWorkflowStatus(deviceNameAndScope.getDeviceName().name(), workflowId, WorkflowStatus.SUCCEEDED);
-        
-        // New request with an updated version
-        DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 2);
-        
-        DuplicateRequestException400 exception = AssertUtils.assertThrows(DuplicateRequestException400.class,
                 () -> storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics));
         
         assertThat(exception.getMessage(), allOf(
@@ -275,18 +202,18 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     
     @Test
     public void testHigherMitigationVersion() {
-        DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 10);
+        EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 3);
         
-        StaleRequestException400 exception = AssertUtils.assertThrows(StaleRequestException400.class,
+        IllegalArgumentException exception = AssertUtils.assertThrows(IllegalArgumentException.class,
                 () -> storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics));
         
         assertThat(exception.getMessage(), containsString(request.getMitigationName()));
     }
     
     @Test
-    public void testConcurrentDelete() {
-        DeleteMitigationFromAllLocationsRequest request1 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
-        DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_2_NAME, 1);
+    public void testConcurrentEdit() {
+        EditMitigationRequest request1 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
+        EditMitigationRequest request2 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_2_NAME, 2);
         
         long workflowId2[] = new long[1];
         
@@ -312,9 +239,9 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     }
     
     @Test
-    public void testConcurrentDeleteOfSameMitigation() {
-        DeleteMitigationFromAllLocationsRequest request1 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
-        DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
+    public void testConcurrentEditOfSameMitigation() {
+        EditMitigationRequest request1 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
+        EditMitigationRequest request2 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
         long workflowId2[] = new long[1];
         
@@ -339,10 +266,10 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     }
     
     @Test
-    public void testConcurrentMixedDeletes() {
-        DeleteMitigationFromAllLocationsRequest request1 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
-        DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_2_NAME, 1);
-        DeleteMitigationFromAllLocationsRequest request3 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
+    public void testConcurrentMixedEdits() {
+        EditMitigationRequest request1 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
+        EditMitigationRequest request2 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_2_NAME, 2);
+        EditMitigationRequest request3 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
         long workflowId2[] = new long[1];
         long workflowId3[] = new long[1];
@@ -372,24 +299,24 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
                 any(TSDMetrics.class));
     }
     
-    /*@Test
-    public void testTooManyConcurrentDeletes() {
-        DeleteMitigationFromAllLocationsRequest firstRequest = 
-                RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 2);
+    @Test
+    public void testTooManyConcurrentEdits() {
+        EditMitigationRequest firstRequest = 
+                RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
         AtomicInteger mitigation2ExpectedVersion = new AtomicInteger(1);
         
         doAnswer(i -> {
-            DeleteMitigationFromAllLocationsRequest request = 
-                    RequestTestHelper.generateDeleteMitigationRequest(
+            EditMitigationRequest request = 
+                    RequestTestHelper.generateEditMitigationRequest(
                             MITIGATION_2_NAME, mitigation2ExpectedVersion.incrementAndGet());
             // Do the store for the other request first
             storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics);
             return i.callRealMethod(); 
         }).when(storageHandler).putItemInDDB(
                 MockUtils.argThatMatchesPredicate(map ->  
-                    map.containsKey(DDBRequestSerializer.MITIGATION_NAME_KEY) && 
-                    MITIGATION_1_NAME.equals(map.get(DDBRequestSerializer.MITIGATION_NAME_KEY).getS())
+                    map.containsKey(MitigationRequestsModel.MITIGATION_NAME_KEY) && 
+                    MITIGATION_1_NAME.equals(map.get(MitigationRequestsModel.MITIGATION_NAME_KEY).getS())
                 ),
                 anyMapOf(String.class, ExpectedAttributeValue.class), 
                 any(TSDMetrics.class));
@@ -400,16 +327,16 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         
         verify(storageHandler, times(DDBBasedRequestStorageHandler.DDB_ACTIVITY_MAX_ATTEMPTS)).putItemInDDB(
             MockUtils.argThatMatchesPredicate(map ->  
-                map.containsKey(DDBRequestSerializer.MITIGATION_NAME_KEY) && 
-                MITIGATION_1_NAME.equals(map.get(DDBRequestSerializer.MITIGATION_NAME_KEY).getS())
+                map.containsKey(MitigationRequestsModel.MITIGATION_NAME_KEY) && 
+                MITIGATION_1_NAME.equals(map.get(MitigationRequestsModel.MITIGATION_NAME_KEY).getS())
             ),
             anyMapOf(String.class, ExpectedAttributeValue.class), 
             any(TSDMetrics.class));
-    }*/
+    }
     
     @Test
-    public void testConcurrentDeleteAndCreate() {
-        DeleteMitigationFromAllLocationsRequest request1 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
+    public void testConcurrentEditAndCreate() {
+        EditMitigationRequest request1 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest("NewMitigation");
         
         long workflowId2[] = new long[1];
@@ -438,9 +365,133 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
                 any(TSDMetrics.class));
     }
     
+    private static void whenValidateCoexistence(
+            TemplateBasedRequestValidator templateBasedValidator, 
+            EditMitigationRequest newRequest, CreateMitigationRequest oldRequest,
+            Stubber stubber) 
+    {
+        whenValidateCoexistence(templateBasedValidator, 
+                newRequest, newRequest.getMitigationDefinition(),
+                oldRequest, oldRequest.getMitigationDefinition(), stubber);
+    }
+    
+    private static void whenValidateCoexistence(
+            TemplateBasedRequestValidator templateBasedValidator, 
+            EditMitigationRequest newRequest, EditMitigationRequest oldRequest,
+            Stubber stubber) 
+    {
+        whenValidateCoexistence(templateBasedValidator, 
+                newRequest, newRequest.getMitigationDefinition(),
+                oldRequest, oldRequest.getMitigationDefinition(), stubber);
+    }
+    
+    private static void whenValidateCoexistence(
+            TemplateBasedRequestValidator templateBasedValidator, 
+            MitigationModificationRequest newRequest, MitigationDefinition newDefinition,
+            MitigationModificationRequest oldRequest, MitigationDefinition oldDefinition,
+            Stubber stubber) 
+    {
+        stubber.when(templateBasedValidator).validateCoexistenceForTemplateAndDevice(
+                eq(newRequest.getMitigationTemplate()), eq(newRequest.getMitigationName()), eq(newDefinition),
+                eq(oldRequest.getMitigationTemplate()), eq(oldRequest.getMitigationName()), eq(oldDefinition), 
+                any(TSDMetrics.class));
+    }
+    
+    @Test
+    public void testMitigationCannotConflictWithItsOlderVersion() {
+        EditMitigationRequest editRequest = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
+        whenValidateCoexistence(templateBasedValidator, editRequest, existingRequest1, doThrow(
+                new DuplicateDefinitionException400("Should not be thrown")));
+        
+        long workflowId = storageHandler.storeRequestForWorkflow(editRequest, defaultLocations, tsdMetrics);
+
+        validateRequestInDDB(editRequest, defaultLocations, workflowId);
+    }
+    
+    @Test
+    public void testNewMitigationCreatesConflict() {
+        EditMitigationRequest editRequest = RequestTestHelper.generateEditMitigationRequest(MITIGATION_2_NAME, 2);
+        whenValidateCoexistence(templateBasedValidator, editRequest, existingRequest1, doThrow(
+                new DuplicateDefinitionException400("Conflicts")));
+
+        AssertUtils.assertThrows(
+                DuplicateDefinitionException400.class,
+                () -> storageHandler.storeRequestForWorkflow(editRequest, defaultLocations, tsdMetrics));
+    }
+    
+    @Test
+    public void testConcurrentEditCreatesConflict() {
+        EditMitigationRequest request1 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
+        EditMitigationRequest request2 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_2_NAME, 2);
+        
+        whenValidateCoexistence(templateBasedValidator, request1, request2, doThrow(
+                new DuplicateDefinitionException400("Conflicts")));
+        
+        long workflowId2[] = new long[1];
+        
+        RequestTableTestHelper.whenAnyPut(storageHandler, doAnswer(i -> {
+            // Restore the real call for the all the following calls
+            RequestTableTestHelper.whenAnyPut(storageHandler, doCallRealMethod());
+            // Do the store for request 2 first
+            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics);
+            return i.callRealMethod();
+        }));
+        
+        AssertUtils.assertThrows(DuplicateDefinitionException400.class, 
+                () -> storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics));
+        validateRequestInDDB(request2, defaultLocations, workflowId2[0]);
+        
+        // Should be called 2 times - 1 failed with condition not met + 1 actual. There should be no third
+        // as the conflict should have been detected
+        verify(storageHandler, times(2)).putItemInDDB(
+                anyMapOf(String.class, AttributeValue.class), 
+                anyMapOf(String.class, ExpectedAttributeValue.class), 
+                any(TSDMetrics.class));
+    }
+    
+    private void deleteRequest(
+            MitigationModificationRequest request, long requestWorkflowId,
+            int version, ImmutableSet<String> locations) 
+    {
+        DeviceNameAndScope deviceNameAndScope = 
+                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        long maxWorkflowId = storageHandler.getMaxWorkflowIdForDevice(
+                deviceNameAndScope.getDeviceName().toString(), deviceNameAndScope.getDeviceScope().toString(), null, tsdMetrics);
+        
+        // We shouldn't need to use another handler for this but the code is factored badly
+        DeleteMitigationFromAllLocationsRequest deleteRequest = new DeleteMitigationFromAllLocationsRequest();
+        deleteRequest.setMitigationName(request.getMitigationName());
+        deleteRequest.setMitigationTemplate(request.getMitigationTemplate());
+        deleteRequest.setServiceName(request.getServiceName());
+        deleteRequest.setMitigationActionMetadata(
+                MitigationActionMetadata.builder()
+                    .withDescription("Test")
+                    .withToolName("UnitTest")
+                    .withUser("TestUser")
+                    .build());
+        deleteRequest.setMitigationVersion(version);
+        long newWorkflowId = maxWorkflowId + 1;
+        storageHandler.storeRequestInDDB(
+                deleteRequest, null, locations, deviceNameAndScope, maxWorkflowId + 1, RequestType.DeleteRequest, 2, tsdMetrics);
+        
+        testTableHelper.setUpdateWorkflowId(deviceNameAndScope.getDeviceName().toString(), requestWorkflowId, newWorkflowId);
+    }
+    
+    @Test
+    public void testEditDeletedRequest() {
+        deleteRequest(existingRequest1, existingRequest1WorkflowId, 1, defaultLocations);
+        
+        EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 3);
+        
+        AssertUtils.assertThrows(
+                MissingMitigationException400.class,
+                () -> storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics));
+    }
+    
     @Test
     public void testQueryFails() {
-        DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
+        EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
         AmazonServiceException serviceException = new AmazonServiceException("Internal Error");
         serviceException.setErrorType(ErrorType.Service);
@@ -466,7 +517,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
 
     @Test
     public void testPutFails() {
-        DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
+        EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
         AmazonServiceException serviceException = new AmazonServiceException("Internal Error");
         serviceException.setErrorType(ErrorType.Service);
@@ -502,13 +553,13 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
                 deviceNameAndScope, deviceNameAndScope.getDeviceScope().getMaxWorkflowId() - 1, 
                 RequestType.EditRequest, 2, tsdMetrics);
         
-        DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_2_NAME, 1);
+        EditMitigationRequest request2 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_2_NAME, 2);
         
         long workflowId = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics);
         validateRequestInDDB(request2, defaultLocations, workflowId);
         assertEquals(deviceNameAndScope.getDeviceScope().getMaxWorkflowId(), workflowId);
         
-        DeleteMitigationFromAllLocationsRequest request3 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 2);
+        EditMitigationRequest request3 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_2_NAME, 3);
         
         AssertUtils.assertThrows(
                 InternalServerError500.class, 
@@ -518,7 +569,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     @SuppressWarnings("deprecation")
     @Test
     public void testUpdateRunIdForWorkflowRequest() {
-        DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
+        EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
         long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
@@ -531,5 +582,4 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
                 deviceNameAndScope.getDeviceName().toString(), workflowId, "FakeRunId", tsdMetrics);
         validateRequestInDDB(request, locations, workflowId);
     }
-
 }

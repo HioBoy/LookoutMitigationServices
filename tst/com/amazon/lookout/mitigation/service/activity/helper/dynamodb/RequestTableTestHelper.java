@@ -1,38 +1,58 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import static com.amazon.lookout.ddb.model.MitigationRequestsModel.*;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyMapOf;
 
+import java.util.HashSet;
 import java.util.Set;
 
-import lombok.Setter;
+import lombok.Data;
 
 import org.joda.time.DateTime;
+import org.mockito.stubbing.Stubber;
 
+import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.BlackWatchConfigBasedConstraint;
 import com.amazon.lookout.mitigation.service.DropAction;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
+import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
+import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
+import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
+import com.amazonaws.services.dynamodbv2.document.AttributeUpdate;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Expected;
+import com.amazonaws.services.dynamodbv2.document.Index;
 import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.KeyAttribute;
+import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
+import com.amazonaws.services.dynamodbv2.document.RangeKeyCondition;
 import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
+import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 import com.google.common.collect.Sets;
 
 public class RequestTableTestHelper {
-    public RequestTableTestHelper(DynamoDB dynamodb, String domain) {
-        this.dynamodb = dynamodb;
-        this.domain = domain;
-    }
-
-    private final DynamoDB dynamodb;
-    private final String domain;
+    private final Table requestsTable;
     
-    @Setter
+    public RequestTableTestHelper(DynamoDB dynamodb, String domain) {
+        this.requestsTable = dynamodb.getTable(MitigationRequestsModel.getInstance().getTableName(domain));
+    }
+    
+    @Data
     static class MitigationRequestItemCreator {
         private Table table;
         private String deviceName;
@@ -78,7 +98,7 @@ public class RequestTableTestHelper {
     public MitigationRequestItemCreator getItemCreator(String deviceName, String serviceName, String mitigationName,
             String deviceScope) {
         MitigationRequestItemCreator itemCreator = new MitigationRequestItemCreator();
-        itemCreator.setTable(dynamodb.getTable(MitigationRequestsModel.getInstance().getTableName(domain)));
+        itemCreator.setTable(requestsTable);
         itemCreator.setDeviceName(deviceName);
         itemCreator.setMitigationTemplate(MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer);
         itemCreator.setWorkflowStatus(WorkflowStatus.SUCCEEDED);
@@ -109,4 +129,63 @@ public class RequestTableTestHelper {
         mitigationDefinition.setConstraint(new BlackWatchConfigBasedConstraint());
     }
 
+    public MitigationRequestDescriptionWithLocations getRequestDescriptionWithLocations(String deviceName, long workflowId) {
+        Item item = requestsTable.getItem(DDBRequestSerializer.getPrimaryKey(deviceName, workflowId));
+        return DDBRequestSerializer.convertToRequestDescriptionWithLocations(item);
+    }
+    
+    public ItemCollection<QueryOutcome> getRequestsWithName(String deviceName, String mitigationName) {
+        Index index = requestsTable.getIndex(MitigationRequestsModel.MITIGATION_NAME_LSI);
+        return index.query(new QuerySpec()
+                        .withHashKey(new KeyAttribute(MitigationRequestsModel.DEVICE_NAME_KEY, deviceName))
+                        .withRangeKeyCondition(new RangeKeyCondition(MitigationRequestsModel.MITIGATION_NAME_KEY).eq(mitigationName)));
+    }
+    
+    public void setUpdateWorkflowId(String deviceName, long workflowId, long updateWorkflowId) {
+        requestsTable.updateItem(new UpdateItemSpec()
+            .withPrimaryKey(DDBRequestSerializer.getPrimaryKey(deviceName, workflowId))
+            .withExpected(new Expected(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY).eq(
+                    MitigationRequestsModel.UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS))
+            .withAttributeUpdate(new AttributeUpdate(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY).put(updateWorkflowId)));
+    }
+    
+    public void setWorkflowStatus(String deviceName, long workflowId, String status) {
+        requestsTable.updateItem(new UpdateItemSpec()
+            .withPrimaryKey(DDBRequestSerializer.getPrimaryKey(deviceName, workflowId))
+            .withExpected(new Expected(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY).eq(
+                    MitigationRequestsModel.UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS))
+            .withAttributeUpdate(new AttributeUpdate(MitigationRequestsModel.WORKFLOW_STATUS_KEY).put(status)));
+    }
+    
+    public MitigationRequestDescriptionWithLocations validateRequestInDDB(
+            MitigationModificationRequest request, MitigationDefinition mitigationDefinition, int mitigationVersion,
+            Set<String> locations, long workflowId) 
+    {
+        DeviceNameAndScope deviceNameAndScope = 
+                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        MitigationRequestDescriptionWithLocations storedDefinition = 
+                getRequestDescriptionWithLocations(
+                        deviceNameAndScope.getDeviceName().toString(), workflowId);
+        
+        MitigationRequestDescription storedDescription = storedDefinition.getMitigationRequestDescription();
+        assertEquals(mitigationDefinition, storedDescription.getMitigationDefinition());
+        assertEquals(request.getMitigationActionMetadata(), storedDescription.getMitigationActionMetadata());
+        assertEquals(request.getMitigationTemplate(), storedDescription.getMitigationTemplate());
+        assertEquals(mitigationVersion, storedDescription.getMitigationVersion());
+        if (workflowId != -1) {
+            assertEquals(workflowId, storedDescription.getJobId());
+        }
+        
+        assertEquals(locations, new HashSet<>(storedDefinition.getLocations()));
+        
+        return storedDefinition;
+    }
+    
+    public static void whenAnyPut(DDBBasedRequestStorageHandler handler, Stubber stubber) {
+        stubber.when(handler).putItemInDDB(
+                anyMapOf(String.class, AttributeValue.class), 
+                anyMapOf(String.class, ExpectedAttributeValue.class), 
+                any(TSDMetrics.class));
+    }
 }

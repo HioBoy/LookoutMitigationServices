@@ -19,7 +19,8 @@ import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
-import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
+import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -40,7 +41,8 @@ public class TemplateBasedLocationsHelperManagerTest {
         
         when(locationsHelper.getAllNonBlackwatchClassicPOPs()).thenReturn(nonBWLocations);
         
-        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
+        CreateMitigationRequest request = 
+                RequestTestHelper.generateCreateMitigationRequest(MitigationTemplate.Router_RateLimit_Route53Customer, "Name");
         List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");
         request.setLocations(requestLocations);
         
@@ -58,7 +60,8 @@ public class TemplateBasedLocationsHelperManagerTest {
         
         when(locationsHelper.getAllNonBlackwatchClassicPOPs()).thenReturn(nonBWLocations);
         
-        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
+        CreateMitigationRequest request = 
+                RequestTestHelper.generateCreateMitigationRequest(MitigationTemplate.Router_RateLimit_Route53Customer, "Name");
         List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");
         request.setLocations(requestLocations);
         request.setMitigationTemplate("SomeRandomTemplate");

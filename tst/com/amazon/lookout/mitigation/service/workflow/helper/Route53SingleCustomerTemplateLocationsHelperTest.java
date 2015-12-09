@@ -14,7 +14,8 @@ import org.junit.Test;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
-import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
+import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -34,7 +35,8 @@ public class Route53SingleCustomerTemplateLocationsHelperTest {
         when(locationsHelper.getAllNonBlackwatchClassicPOPs()).thenReturn(nonBWLocations);
         
         // RateLimit MitigationTemplate
-        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
+        CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest(
+                        MitigationTemplate.Router_RateLimit_Route53Customer, "Name");
         request.setLocations(Lists.newArrayList("SomePOP1", "SomePOP2"));
         
         Set<String> locations = helper.getLocationsForDeployment(request, mock(TSDMetrics.class));
@@ -43,7 +45,8 @@ public class Route53SingleCustomerTemplateLocationsHelperTest {
         assertEquals(locations, Sets.difference(nonBWLocations, ciscoLocations));
         
         // CountMode MitigationTemplate
-        request = DDBBasedCreateRequestStorageHandlerTest.generateCountModeMitigationRequest();
+        request = RequestTestHelper.generateCreateMitigationRequest(
+                MitigationTemplate.Router_CountMode_Route53Customer, "Name");
         request.setLocations(Lists.newArrayList("SomePOP1", "SomePOP2"));
         
         locations = helper.getLocationsForDeployment(request, mock(TSDMetrics.class));

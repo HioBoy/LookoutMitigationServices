@@ -20,7 +20,6 @@ import com.google.common.collect.Lists;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 
-import org.apache.log4j.Level;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -253,7 +252,7 @@ public class IPTablesEdgeCustomerValidatorTest {
         assertThat(actualError.getMessage(), containsString("Mitigation2"));
     }
 
-    private String elementTitle(String elementName) {
+    private static String elementTitle(String elementName) {
         return "\"" + elementName + "\":";
     }
 

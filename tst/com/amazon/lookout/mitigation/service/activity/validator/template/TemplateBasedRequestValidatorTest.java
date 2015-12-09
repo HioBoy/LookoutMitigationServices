@@ -17,6 +17,7 @@ import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
@@ -52,7 +53,7 @@ public class TemplateBasedRequestValidatorTest {
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
                 mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
                 mock(BlackWatchBorderLocationValidator.class));
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
+        MitigationModificationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         request.setPreDeploymentChecks(null);
         Throwable caughtException = null;
         try {
@@ -75,8 +76,8 @@ public class TemplateBasedRequestValidatorTest {
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
                 mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
                 mock(BlackWatchBorderLocationValidator.class));
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
-        request.setMitigationTemplate("BadTemplate");
+        MitigationModificationRequest request = 
+                RequestTestHelper.generateCreateMitigationRequest("BadTemplate", "Name");
         Throwable caughtException = null;
         try {
             templateBasedValidator.validateRequestForTemplate(request, tsdMetrics);
@@ -100,7 +101,7 @@ public class TemplateBasedRequestValidatorTest {
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
                 mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
                 mock(BlackWatchBorderLocationValidator.class));
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
+        MitigationModificationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         Throwable caughtException = null;
         try {
             templateBasedValidator.validateRequestForTemplate(request, tsdMetrics);
@@ -124,9 +125,9 @@ public class TemplateBasedRequestValidatorTest {
                 mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
                 mock(BlackWatchBorderLocationValidator.class));
         
-        MitigationDefinition definition1 = DDBBasedCreateRequestStorageHandlerTest.defaultCreateMitigationDefinition();
+        MitigationDefinition definition1 = RequestTestHelper.defaultMitigationDefinition();
         
-        MitigationDefinition definition2 = DDBBasedCreateRequestStorageHandlerTest.defaultCreateMitigationDefinition();
+        MitigationDefinition definition2 = RequestTestHelper.defaultMitigationDefinition();
         
         Throwable caughtException = null;
         try {

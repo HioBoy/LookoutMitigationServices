@@ -27,6 +27,7 @@ import org.junit.Test;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.ddb.model.MitigationInstancesModel;
+import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.LocationDeploymentInfo;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
@@ -45,11 +46,12 @@ import com.amazonaws.services.dynamodbv2.util.Tables;
 import com.google.common.collect.Sets;
 
 public class DDBBasedGetMitigationInfoHandlerTest {
-    private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
-    private static final String domain = "beta";
+    private static final String domain = "unit-test";
     private static AmazonDynamoDBClient dynamoDBClient;
     private static DynamoDB dynamodb;
     private static DDBBasedGetMitigationInfoHandler mitigationInfoHandler;
+    
+    private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
     
     @BeforeClass
     public static void setUpOnce() {
@@ -134,7 +136,7 @@ public class DDBBasedGetMitigationInfoHandlerTest {
         Map<String, AttributeValue> item = new HashMap<>();
         
         AttributeValue attributeValue = new AttributeValue("Mitigation-1");
-        item.put(DDBBasedRequestStorageHandler.MITIGATION_NAME_KEY, attributeValue);
+        item.put(MitigationRequestsModel.MITIGATION_NAME_KEY, attributeValue);
         
         
         return item;

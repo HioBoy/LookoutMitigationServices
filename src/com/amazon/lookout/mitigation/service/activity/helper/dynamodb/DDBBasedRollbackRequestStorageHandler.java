@@ -11,16 +11,20 @@ import lombok.NonNull;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
+import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.request.RollbackMitigationRequestInternal;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 
-public class DDBBasedRollbackRequestStorageHandler extends DDBBasedRequestStorageHandler implements RequestStorageHandler {
+public class DDBBasedRollbackRequestStorageHandler extends DDBBasedCreateAndEditRequestStorageHandler implements RequestStorageHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedRollbackRequestStorageHandler.class);
     private static final String FAILED_TO_STORE_ROLLBACK_REQUEST_KEY = "FailedToStoreRollbackRequest";
     
-    public DDBBasedRollbackRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain) {
-        super(dynamoDBClient, domain);
+    public DDBBasedRollbackRequestStorageHandler(
+            AmazonDynamoDBClient dynamoDBClient, String domain, 
+            TemplateBasedRequestValidator templateValidator) 
+    {
+        super(dynamoDBClient, domain, templateValidator);
     }
 
     /**
@@ -41,8 +45,11 @@ public class DDBBasedRollbackRequestStorageHandler extends DDBBasedRequestStorag
                 }
                 
                 RollbackMitigationRequestInternal rollbackRequest = (RollbackMitigationRequestInternal) request;
-                return storeUpdateMitigationRequest(request, rollbackRequest.getMitigationDefinition(),
-                        rollbackRequest.getMitigationVersion(), RequestType.RollbackRequest, locations, metrics);
+                
+                return storeRequestForWorkflow(
+                        RequestType.RollbackRequest, request, locations, rollbackRequest.getMitigationDefinition(), 
+                        rollbackRequest.getMitigationVersion(), UPDATE_REQUEST_STORAGE_FAILED_LOGSCAN_TOKEN, 
+                        subMetrics);
             } catch(Exception ex) {
                 subMetrics.addOne(FAILED_TO_STORE_ROLLBACK_REQUEST_KEY); 
                 throw ex;

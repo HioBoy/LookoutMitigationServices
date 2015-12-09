@@ -25,8 +25,8 @@ import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
-import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
@@ -602,10 +602,8 @@ public class RequestValidatorTest {
      */
     @Test
     public void testCreateRequestWithDuplicateRelatedTickets() {
-        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
-        request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
-        request.setServiceName(serviceName);
+        CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest(
+                rateLimitMitigationTemplate, mitigationName, serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -632,10 +630,8 @@ public class RequestValidatorTest {
      */
     @Test
     public void testCreateRequestWithInvalidRelatedTickets() {
-        CreateMitigationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
-        request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
-        request.setServiceName(serviceName);
+        CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest(
+                rateLimitMitigationTemplate, mitigationName, serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);

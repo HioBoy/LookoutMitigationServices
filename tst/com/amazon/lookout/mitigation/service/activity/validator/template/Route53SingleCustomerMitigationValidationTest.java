@@ -34,8 +34,8 @@ import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.RateLimitAction;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
-import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
@@ -68,7 +68,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         metadata.setDescription("why not?");
         request.setMitigationActionMetadata(metadata);
         
-        MitigationDefinition definition = DDBBasedCreateRequestStorageHandlerTest.defaultCreateMitigationDefinition();
+        MitigationDefinition definition = RequestTestHelper.defaultMitigationDefinition();
         request.setMitigationDefinition(definition);
         return request;
     }
@@ -85,7 +85,7 @@ public class Route53SingleCustomerMitigationValidationTest {
         metadata.setDescription("why not?");
         request.setMitigationActionMetadata(metadata);
         
-        MitigationDefinition definition = DDBBasedCreateRequestStorageHandlerTest.defaultCreateMitigationDefinition();
+        MitigationDefinition definition = RequestTestHelper.defaultMitigationDefinition();
         request.setMitigationDefinition(definition);
         return request;
     }
@@ -503,9 +503,9 @@ public class Route53SingleCustomerMitigationValidationTest {
         ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
-        MitigationDefinition definition1 = DDBBasedCreateRequestStorageHandlerTest.defaultCreateMitigationDefinition();
+        MitigationDefinition definition1 = RequestTestHelper.defaultMitigationDefinition();
         
-        MitigationDefinition definition2 = DDBBasedCreateRequestStorageHandlerTest.defaultCreateMitigationDefinition();
+        MitigationDefinition definition2 = RequestTestHelper.defaultMitigationDefinition();
         
         Throwable caughtException = null;
         try {
@@ -522,8 +522,8 @@ public class Route53SingleCustomerMitigationValidationTest {
         ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
         Route53SingleCustomerMitigationValidator route53SingleCustomerValidator = new Route53SingleCustomerMitigationValidator(subnetsMatcher);
         
-        MitigationDefinition definition1 = DDBBasedCreateRequestStorageHandlerTest.defaultCreateMitigationDefinition();
-        MitigationDefinition definition2 = DDBBasedCreateRequestStorageHandlerTest.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("9.8.7.6"));
+        MitigationDefinition definition1 = RequestTestHelper.defaultMitigationDefinition();
+        MitigationDefinition definition2 = RequestTestHelper.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("9.8.7.6"));
         
         Throwable caughtException = null;
         try {

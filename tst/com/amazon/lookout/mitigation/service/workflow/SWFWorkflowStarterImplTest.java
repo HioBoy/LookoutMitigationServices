@@ -17,17 +17,20 @@ import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.simpleworkflow.flow.StartWorkflowOptions;
+
 import org.apache.log4j.Level;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
 import com.amazon.lookout.workflow.LookoutMitigationWorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowType;
+
 import org.mockito.ArgumentCaptor;
 
 import java.util.HashSet;
@@ -45,7 +48,7 @@ public class SWFWorkflowStarterImplTest {
         SWFWorkflowClientProvider mockWorkflowClientProvider = mock(SWFWorkflowClientProvider.class);
         when(mockWorkflowClientProvider.getMitigationModificationWorkflowClient(anyString(), anyString(), anyLong())).thenReturn(mockWorkflowClient);
         
-        MitigationModificationRequest request = DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
+        MitigationModificationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         
         WorkflowExecution workflowExecution = new WorkflowExecution().withRunId("TestRunId").withWorkflowId("TestWorkflowId");
         WorkflowType workflowType = new WorkflowType().withName("TestWorkflowName").withVersion("TestVersion");
@@ -115,7 +118,7 @@ public class SWFWorkflowStarterImplTest {
     }
 
     private MitigationModificationRequest anyRequest() {
-        return DDBBasedCreateRequestStorageHandlerTest.generateCreateRateLimitMitigationRequest();
+        return RequestTestHelper.generateCreateMitigationRequest();
     }
 
     private LookoutMitigationWorkflowClientExternal workflowClientStub() {

@@ -18,6 +18,7 @@ import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.RequestTableTestHelper.MitigationRequestItemCreator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.request.RollbackMitigationRequestInternal;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
@@ -32,14 +33,15 @@ import static com.amazon.lookout.ddb.model.MitigationRequestsModel.*;
 
 public class DDBBasedRollbackRequestStorageHandlerTest {
 
-    private final TSDMetrics metrics = mock(TSDMetrics.class);
-    private final static String domain = "beta";
+    private static final String domain = "unit-test";
     
     private static AmazonDynamoDBClient dynamoDBClient;
     private static DynamoDB dynamodb;
     private static DDBBasedRollbackRequestStorageHandler ddbBasedRollbackRequestStorageHandler;
     private static RequestTableTestHelper requestTableTestHelper;
     private static String tableName = MitigationRequestsModel.getInstance().getTableName(domain);
+    
+    private final TSDMetrics metrics = mock(TSDMetrics.class);
     
     @BeforeClass
     public static void setUpOnce() {
@@ -58,7 +60,7 @@ public class DDBBasedRollbackRequestStorageHandlerTest {
         }
         dynamoDBClient.createTable(request);
         Tables.awaitTableToBecomeActive(dynamoDBClient, tableName);
-        ddbBasedRollbackRequestStorageHandler = new DDBBasedRollbackRequestStorageHandler(dynamoDBClient, domain);
+        ddbBasedRollbackRequestStorageHandler = new DDBBasedRollbackRequestStorageHandler(dynamoDBClient, domain, mock(TemplateBasedRequestValidator.class));
         requestTableTestHelper = new RequestTableTestHelper(dynamodb, domain);
     }
      

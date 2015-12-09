@@ -15,21 +15,15 @@ import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandl
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.simpleworkflow.flow.DataConverter;
-import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 
-public class DDBBasedEditRequestStorageHandler extends DDBBasedRequestStorageHandler implements RequestStorageHandler {
+public class DDBBasedEditRequestStorageHandler extends DDBBasedCreateAndEditRequestStorageHandler implements RequestStorageHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedEditRequestStorageHandler.class);
     
     private static final String FAILED_TO_STORE_EDIT_REQUEST_KEY = "FailedToStoreEditRequest";
-
-    private final DataConverter jsonDataConverter = new JsonDataConverter();
-    private final TemplateBasedRequestValidator templateBasedRequestValidator;
+    
 
     public DDBBasedEditRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain, @NonNull TemplateBasedRequestValidator templateBasedRequestValidator) {
-        super(dynamoDBClient, domain);
-
-        this.templateBasedRequestValidator = templateBasedRequestValidator;
+        super(dynamoDBClient, domain, templateBasedRequestValidator);
     }
 
     /**
@@ -54,30 +48,15 @@ public class DDBBasedEditRequestStorageHandler extends DDBBasedRequestStorageHan
                     throw new IllegalArgumentException(msg);
                 }
                 EditMitigationRequest editMitigationRequest = (EditMitigationRequest) request;
-
-                return storeUpdateMitigationRequest(request, editMitigationRequest.getMitigationDefinition(),
-                        editMitigationRequest.getMitigationVersion(), RequestType.EditRequest, locations, metrics);
+                
+                return storeRequestForWorkflow(
+                       RequestType.EditRequest, request, locations, editMitigationRequest.getMitigationDefinition(), 
+                       editMitigationRequest.getMitigationVersion(), UPDATE_REQUEST_STORAGE_FAILED_LOGSCAN_TOKEN, 
+                       subMetrics);
             } catch (Exception ex) {
                 subMetrics.addOne(FAILED_TO_STORE_EDIT_REQUEST_KEY);
                 throw ex;
             }
         }
-    }
-    
-    /**
-     * Helper to return a JSONDataConverter. We use the data converter provided by the SWF dependency.
-     * Protected for unit-testing.
-     * @return Instance of JSONDataConverter.
-     */
-    protected DataConverter getJSONDataConverter() {
-        return jsonDataConverter;
-    }
-    
-    /**
-     * Helper to return a TemplateBasedRequestValidator. Protected for unit-testing.
-     * @return Instance of TemplateBasedRequestValidator.
-     */
-    protected TemplateBasedRequestValidator getTemplateBasedValidator() {
-        return templateBasedRequestValidator;
     }
 }
