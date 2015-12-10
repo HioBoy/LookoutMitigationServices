@@ -120,7 +120,6 @@ package.LookoutMitigationService = {
             SpringCore = 4.0.x;
             SpringContext = 4.0.x;
             junit = 4.12;
-            Apache-HttpComponents-HttpCore = 4.4.x;
             JakartaCommons-httpclient = 3.1;
             JavaMail = 1.4.6;
             Joda-time = 2.x;
