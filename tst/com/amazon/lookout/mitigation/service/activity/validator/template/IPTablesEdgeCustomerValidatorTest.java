@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
+import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.google.common.collect.ImmutableList;
@@ -14,7 +15,6 @@ import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer.IPTablesJsonValidator;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
-import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.google.common.collect.Lists;
 
 import junitparams.JUnitParamsRunner;
@@ -28,6 +28,7 @@ import org.junit.runner.RunWith;
 import java.util.Collections;
 
 import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
+import static junitparams.JUnitParamsRunner.$;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
@@ -47,6 +48,28 @@ public class IPTablesEdgeCustomerValidatorTest {
         IPTablesEdgeCustomerValidator validator = createValidator();
 
         validator.validateRequestForTemplate(request, request.getMitigationTemplate(), mock(TSDMetrics.class));
+    }
+
+    @Test
+    @Parameters(method = "invalidLocations")
+    public void validateRequestForTemplateLocationsMustBeValid(String invalidLocation)
+            throws Exception {
+        CreateMitigationRequest request = generateCreateMitigationRequest(validIpTablesJson());
+        request.setLocations(Lists.newArrayList(invalidLocation));
+
+        IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, request);
+
+        assertThat(actualError.getMessage(), containsString("locations"));
+    }
+
+    @SuppressWarnings("unused")
+    private Object[] invalidLocations() {
+        return $(
+            Lists.newArrayList(""),
+            Lists.newArrayList("", ""),
+            Lists.newArrayList(StandardLocations.EDGE_WORLD_WIDE, StandardLocations.EDGE_WORLD_WIDE),
+            Lists.newArrayList("EdgeWorldWide-")
+        );
     }
 
     @Test
@@ -255,7 +278,7 @@ public class IPTablesEdgeCustomerValidatorTest {
         request.setMitigationName("TestIPTablesMitigation");
         request.setServiceName(ServiceName.Edge);
         request.setMitigationTemplate(MitigationTemplate.IPTables_Mitigation_EdgeCustomer);
-        request.setLocations(Lists.newArrayList(StandardLocations.EDGE_WORLD_WIDE));
+        request.setLocations(null);
 
         MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
         actionMetadata.setUser("username");

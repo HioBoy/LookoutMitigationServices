@@ -72,8 +72,8 @@ public class CreateMitigationActivityTest {
     }
 
     @Test
-    @Parameters(method = "defaultLocationForIPTablesMitigationRequestParameters")
-    public void defaultLocationForIPTablesMitigationRequest(List<String> locations) {
+    @Parameters(method = "locationForIPTablesMitigationRequestParameters")
+    public void locationForIPTablesMitigationRequest(List<String> locations) {
         RequestStorageManager requestStorageManagerMock = mock(RequestStorageManager.class);
         CreateMitigationActivity activity = createActivityWithValidators(requestStorageManagerMock);
         CreateMitigationRequest request = sampleCreateIPTablesMitigationRequest("TestIPTablesMitigation");
@@ -121,14 +121,11 @@ public class CreateMitigationActivityTest {
     }
 
     @SuppressWarnings("unused")
-    private Object[] defaultLocationForIPTablesMitigationRequestParameters() {
+    private Object[] locationForIPTablesMitigationRequestParameters() {
         return $(
                 new Object[] { null },
                 Lists.newArrayList(),
-                Lists.newArrayList((String) null),
-                Lists.newArrayList(""),
-                Lists.newArrayList("SomeOtherLocationName"),
-                Lists.newArrayList("SomeOtherLocationName1", "SomeOtherLocationName2")
+                Lists.newArrayList(StandardLocations.EDGE_WORLD_WIDE)
         );
     }
 
@@ -157,7 +154,7 @@ public class CreateMitigationActivityTest {
         request.setMitigationName(mitigationName);
         request.setServiceName(ServiceName.Edge);
         request.setMitigationTemplate(MitigationTemplate.IPTables_Mitigation_EdgeCustomer);
-        request.setLocations(Lists.newArrayList(StandardLocations.EDGE_WORLD_WIDE));
+        request.setLocations(null);
 
         MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
         actionMetadata.setUser("username");

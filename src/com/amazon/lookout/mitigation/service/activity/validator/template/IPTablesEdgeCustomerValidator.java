@@ -15,9 +15,11 @@ import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazonaws.services.simpleworkflow.flow.DataConverter;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 
+import com.amazonaws.util.CollectionUtils;
 import lombok.NonNull;
 
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
@@ -25,6 +27,7 @@ import org.apache.commons.lang3.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -51,8 +54,10 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
         validateMitigationName(request.getMitigationName());
 
         if (request instanceof CreateMitigationRequest) {
+            validateLocations(((CreateMitigationRequest) request).getLocations());
             validateCreateRequest((CreateMitigationRequest) request);
         } else if (request instanceof EditMitigationRequest) {
+            validateLocations(((EditMitigationRequest) request).getLocation());
             validateEditRequest((EditMitigationRequest) request);
         } else if (request instanceof DeleteMitigationFromAllLocationsRequest) {
             throw new IllegalArgumentException(
@@ -142,6 +147,22 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
             LOG.info(message);
             throw new IllegalArgumentException(message);
         }
+    }
+
+    private void validateLocations(List<String> locationsToDeploy) {
+        if (CollectionUtils.isNullOrEmpty(locationsToDeploy)) {
+            return;
+        }
+
+        if (locationsToDeploy.size() == 1 &&
+            StandardLocations.EDGE_WORLD_WIDE.equals(locationsToDeploy.get(0))) {
+            return;
+        }
+
+        throw new IllegalArgumentException(String.format(
+            "Mitigation locations for IPTables mitigation must be null or empty or " +
+            "contain a single %s location.",
+            StandardLocations.EDGE_WORLD_WIDE));
     }
 
     private void validateCreateRequest(CreateMitigationRequest request) {
