@@ -8,6 +8,7 @@ import java.util.Set;
 import lombok.NonNull;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
@@ -37,10 +38,18 @@ public class BlackWatchTemplateLocationHelper implements TemplateBasedLocationsH
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper
                 .getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
+        String serviceName = request.getServiceName();
+        String deviceName = deviceNameAndScope.getDeviceName().name();
+        String deviceScope = deviceNameAndScope.getDeviceScope().name();
+        String mitigationName = request.getMitigationName();
         List<MitigationRequestDescriptionWithLocations> mitigationDescriptions =
-                requestInfoHandler.getMitigationHistoryForMitigation(request.getServiceName(),
-                        deviceNameAndScope.getDeviceName().name(), deviceNameAndScope.getDeviceScope().name(),
-                        request.getMitigationName(), null, 1, tsdMetrics);
+                requestInfoHandler.getMitigationHistoryForMitigation(serviceName, deviceName, deviceScope,
+                        mitigationName, null, 1, tsdMetrics);
+        if (mitigationDescriptions.isEmpty()) {
+            throw new MissingMitigationException400("Can not find mitigation " + mitigationName 
+                    + " on device " + deviceName + ", with device scope " + deviceScope
+                    + ", service name " + serviceName);
+        }
         return new HashSet<>(mitigationDescriptions.get(0).getLocations());
     }
 }
