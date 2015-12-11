@@ -263,10 +263,25 @@
         <constructor-arg name="domain" value="${domain}"/>
         <constructor-arg name="realm" value="${realm}"/>
     </bean>
+    
+    <bean id="mitigationRequestTable" class="com.amazon.lookout.ddb.model.MitigationRequestsModel" factory-method="getInstance"/>
+    <bean id="mitigationInstanceTable" class="com.amazon.lookout.ddb.model.MitigationInstancesModel" factory-method="getInstance"/>
+    <bean id="activeMitigationTable" class="com.amazon.lookout.ddb.model.ActiveMitigationsModel" factory-method="getInstance"/>
+    <bean id="blackholeTable" factory-bean="blackholeMitigationHelper" factory-method="getBlackholeTableDefinition"/>
+    <bean id="transitProviderTable" factory-bean="blackholeMitigationHelper" factory-method="getTransitProviderTableDefinition"/>
 
     <bean id="tableCreatorHelper" class="com.amazon.lookout.ddb.model.TableCreatorHelper">
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
+        <constructor-arg name="tables">
+            <list>
+                <ref bean="mitigationRequestTable"/>
+                <ref bean="mitigationInstanceTable"/>
+                <ref bean="activeMitigationTable"/>
+                <ref bean="blackholeTable"/>
+                <ref bean="transitProviderTable"/>
+            </list>
+        </constructor-arg>
     </bean>
 </beans>
 
