@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.lang.builder.ReflectionToStringBuilder;
+
 import lombok.NonNull;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
@@ -38,17 +40,15 @@ public class BlackWatchTemplateLocationHelper implements TemplateBasedLocationsH
         DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper
                 .getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
         
-        String serviceName = request.getServiceName();
         String deviceName = deviceNameAndScope.getDeviceName().name();
         String deviceScope = deviceNameAndScope.getDeviceScope().name();
-        String mitigationName = request.getMitigationName();
         List<MitigationRequestDescriptionWithLocations> mitigationDescriptions =
-                requestInfoHandler.getMitigationHistoryForMitigation(serviceName, deviceName, deviceScope,
-                        mitigationName, null, 1, tsdMetrics);
+                requestInfoHandler.getMitigationHistoryForMitigation(request.getServiceName(), 
+                        deviceName, deviceScope, request.getMitigationName(), null, 1, tsdMetrics);
         if (mitigationDescriptions.isEmpty()) {
-            throw new MissingMitigationException400("Can not find mitigation " + mitigationName 
-                    + " on device " + deviceName + ", with device scope " + deviceScope
-                    + ", service name " + serviceName);
+            throw new MissingMitigationException400(
+                    "No active mitigation to delete found when querying for deviceName: " + deviceName + " deviceScope: " + deviceScope + 
+                    ", for request: " + ReflectionToStringBuilder.toString(request));
         }
         return new HashSet<>(mitigationDescriptions.get(0).getLocations());
     }
