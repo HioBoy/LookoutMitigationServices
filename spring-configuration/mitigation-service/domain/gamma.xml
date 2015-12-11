@@ -36,12 +36,14 @@
     
     <util:list id="gamma.fakeBlackWatchClassicLocations">
         <value>G-IAD55</value> 
+        <!-- for load testing we create one location for each test lab host -->
         <value>SEALAB-A</value>
         <value>SEALAB-B</value>
         <value>SEALAB-C</value>
         <value>SEALAB-D</value>
         <value>SEALAB-E</value>
         <value>SEALAB-F</value>
+        <!-- for functional testing we create one location for each person's cloud dev-desktop-->
         <value>DEV-DSK-SAVILLE</value>
         <value>DEV-DSK-ROMANTON</value>
         <value>DEV-DSK-BMBENSON</value>
@@ -52,6 +54,19 @@
         <value>DEV-DSK-YROBOT</value>
         <value>DEV-DSK-HUZI</value>
         <value>DEV-DSK-LAVIGNEN</value>
+        <!-- for load testing we create one location for each new G-IAD55 host with LOADTEST prefix-->
+        <value>LOADTEST-113</value>
+        <value>LOADTEST-114</value>
+        <value>LOADTEST-115</value>
+        <value>LOADTEST-116</value>
+        <value>LOADTEST-117</value>
+        <value>LOADTEST-118</value>
+        <value>LOADTEST-119</value>
+        <value>LOADTEST-120</value>
+        <value>LOADTEST-121</value>
+        <value>LOADTEST-122</value>
+        <value>LOADTEST-123</value>
+        <value>LOADTEST-124</value>
     </util:list>
     
     <bean id="gamma.edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
@@ -67,12 +82,14 @@
     <util:set id="gamma.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
         <value>BR-PDQ-1</value> 
         <value>G-IAD55</value> 
+        <!-- for load testing we create one location for each test lab host -->
         <value>SEALAB-A</value>
         <value>SEALAB-B</value>
         <value>SEALAB-C</value>
         <value>SEALAB-D</value>
         <value>SEALAB-E</value>
         <value>SEALAB-F</value>
+        <!-- for functional testing we create one location for each person's cloud dev-desktop-->
         <value>DEV-DSK-SAVILLE</value>
         <value>DEV-DSK-ROMANTON</value>
         <value>DEV-DSK-BMBENSON</value>
@@ -83,6 +100,19 @@
         <value>DEV-DSK-YROBOT</value>
         <value>DEV-DSK-HUZI</value>
         <value>DEV-DSK-LAVIGNEN</value>
+        <!-- for load testing we create one location for each new G-IAD55 host with LOADTEST prefix-->
+        <value>LOADTEST-113</value>
+        <value>LOADTEST-114</value>
+        <value>LOADTEST-115</value>
+        <value>LOADTEST-116</value>
+        <value>LOADTEST-117</value>
+        <value>LOADTEST-118</value>
+        <value>LOADTEST-119</value>
+        <value>LOADTEST-120</value>
+        <value>LOADTEST-121</value>
+        <value>LOADTEST-122</value>
+        <value>LOADTEST-123</value>
+        <value>LOADTEST-124</value>
     </util:set>
     
     <bean id="gamma.allowedLocationPrefix" class="java.lang.String">
