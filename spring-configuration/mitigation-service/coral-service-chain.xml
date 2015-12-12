@@ -99,11 +99,20 @@
             </map>
         </constructor-arg>
     </bean>
+    
+    <util:map id="authAccount">
+         <entry key="beta" value="017453561777"/> <!-- lookout-dev+mitigation-beta@amazon.com -->
+         <entry key="gamma" value="557458189618"/>  <!--  lookout-dev+lktmsvc+gamma@amazon.com -->
+         <entry key="bwbeta" value="398788397391"/> <!-- blackwatch-mitigation-beta@amazon.com -->
+         <entry key="systest" value="508612551773"/> <!-- lookout-dev-mitigation-service-test@amazon.com -->
+         <entry key="prod" value="693842253790"/> <!-- lookout-dev+lktmitsvc@amazon.com -->
+    </util:map>
 
     <!-- Strategy to employ for authorizing calls to LookoutMitigationService -->
     <bean id="AuthorizationStrategy" class="com.amazon.lookout.mitigation.service.authorization.AuthorizationStrategy">
         <constructor-arg ref="ArcConfig"/>
         <constructor-arg value="${realm}"/>
+        <constructor-arg value="#{authAccount['${domain}']}"/>
     </bean>
 
     <bean id="AuthRuntimeFactory" class="aws.auth.client.impl.AuthRuntimeClientFactory">

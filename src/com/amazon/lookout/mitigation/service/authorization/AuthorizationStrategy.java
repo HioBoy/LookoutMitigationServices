@@ -11,6 +11,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import lombok.Data;
 
 import org.apache.commons.lang.Validate;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -80,17 +81,22 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     // Constants used for generating ARN
     private static final String PARTITION = "aws";
     private static final String VENDOR = "lookout";
-    private static final String NAMESPACE = "";
     private static final String SEPARATOR = "-";
     
     // Some APIs do not concern with MitigationTemplate. In such cases we use ANY_TEMPLATE constant in the ARN. 
     protected static final String ANY_TEMPLATE = "ANY_TEMPLATE";
     
+    private final String ownerAccountId;
+    
     private final String arnPrefix;
     
-    public AuthorizationStrategy(Configuration arcConfig, String region) {
+    public AuthorizationStrategy(Configuration arcConfig, String region, String ownerAccountId) {
         super(arcConfig);
-        this.arnPrefix = "arn:" + PARTITION + ":" + VENDOR + ":" + region + ":" + NAMESPACE + ":";
+        Validate.notNull(arcConfig);
+        Validate.notEmpty(region);
+        Validate.notEmpty(ownerAccountId);
+        this.ownerAccountId = ownerAccountId;
+        this.arnPrefix = "arn:" + PARTITION + ":" + VENDOR + ":" + region + ":" + ownerAccountId + ":";
     }
     
     /**
@@ -113,12 +119,13 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      * in an authorizationInfo.
      */
     @Override
-    public List<AuthorizationInfo> getAuthorizationInfoList(final Context context, final Object request)
-            throws Throwable {
+    public List<AuthorizationInfo> getAuthorizationInfoList(final Context context, final Object request) 
+        throws AccessDeniedException
+    {
         
         RequestInfo requestInfo = getRequestInfo(context.getOperation().toString(), request);
-        if (requestInfo == null) {            
-            throw new AccessDeniedException("LookoutMitigationService did not recognize the incoming request: " + request);
+        if (requestInfo == null) {
+            throw new RuntimeException("Failed getting request info for request " + request);
         }
         
         String resourceName = arnPrefix + requestInfo.getRelativeArn();
@@ -131,7 +138,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         authorizationInfo.setResource(resourceName);
         // Principal identifier of the resource owner
         // associated with this authorization call
-        authorizationInfo.setResourceOwner(context.getIdentity().getAttribute(Identity.AWS_ACCOUNT));
+        authorizationInfo.setResourceOwner(ownerAccountId);
         // Any custom policies to include in the authorization check
         authorizationInfo.setPolicies(Collections.emptyList());
 
@@ -188,12 +195,21 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 MitigationModificationRequest.class,
                 (action, request) -> {
                     String mitigationTemplate = request.getMitigationTemplate();
-                    String serviceName = request.getServiceName();
+                    if (StringUtils.isEmpty(mitigationTemplate)) {
+                        throw new AccessDeniedException("Missing mitigationTemplate");
+                    }
+                    
                     DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
                     if (deviceNameAndScope == null) {
-                        return null;
+                        throw new AccessDeniedException("Unrecognized template " + mitigationTemplate);
                     }
                     String deviceName = deviceNameAndScope.getDeviceName().name();
+                    
+                    String serviceName = request.getServiceName();
+                    if (StringUtils.isEmpty(serviceName)) {
+                        throw new AccessDeniedException("Missing serviceName");
+                    }
+                    
                     return generateMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, serviceName, deviceName, mitigationTemplate);
                 });
         
@@ -248,7 +264,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
             .filter(e -> e.getKey().isInstance(request))
             .findFirst()
             .map(e -> e.getValue())
-            .orElse((a,r) -> null); // If not present use a function that always returns null
+            .orElseThrow(() -> new AccessDeniedException("Unrecognized action: " + request.getClass().getName()));
         
         requestInfoParsers.put(request.getClass(), function);
         
