@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.List;
 
 import lombok.NonNull;
+
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -18,6 +19,7 @@ import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
 import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
+import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
@@ -270,14 +272,10 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                     LOG.warn(msg);
                     throw new IllegalArgumentException(msg);
                 }
-                
+
                 // There must be only 1 mitigation with the same name for a device, regardless of which template they were created with.
-                if (!existingMitigationTemplate.equals(templateForMitigationToDelete)) {
-                    String msg = "Found an active mitigation: " + mitigationNameToDelete + " but for template: " + existingMitigationTemplate + " instead of the template: " + 
-                                 templateForMitigationToDelete + " passed in the request for device: " + deviceName + " in deviceScope: " + deviceScope;
-                    LOG.warn(msg);
-                    throw new IllegalArgumentException(msg);
-                }
+                RequestValidator.validateTemplateMatch(mitigationNameToDelete, existingMitigationTemplate,
+                        templateForMitigationToDelete, deviceName, deviceScope);
 
                 // If we notice an existing delete request for the same mitigationName and version, then throw back an exception.
                 if (existingRequestType.equals(RequestType.DeleteRequest.name())) {

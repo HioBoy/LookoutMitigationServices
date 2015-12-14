@@ -280,10 +280,15 @@ public class RequestValidator {
                 String.format(errorMessageTemplate, "deviceScope", request.getDeviceScope(),
                         mitigationRequestDescription.getDeviceScope()),
                         "device scope in rollback request does not match the one in roll back target.");
+        
+        validateTemplateMatch(request.getMitigationName(), mitigationRequestDescription.getMitigationTemplate(),
+                request.getMitigationTemplate(), request.getDeviceName(), request.getDeviceScope());
+        
         Validate.isTrue(mitigationRequestDescription.getMitigationTemplate().equals(request.getMitigationTemplate()),
                 String.format(errorMessageTemplate, "mitigationTemplate", request.getMitigationTemplate(),
                         mitigationRequestDescription.getMitigationTemplate()),
                         "mitigation template in rollback request does not match the one in roll back target.");
+        
         Validate.isTrue(!RequestType.DeleteRequest.toString().equals(mitigationRequestDescription.getRequestType()),
                 "Can not rollback to a delete request. To delete a mitigation, use delete mitigation API");
     }
@@ -741,6 +746,18 @@ public class RequestValidator {
                     "with length of at most " + maxLength + " characters.";
             LOG.info(message);
             throw new IllegalArgumentException(message);
+        }
+    }
+    
+    public static void validateTemplateMatch(String mitigationNameToChange, String existingMitigationTemplate,
+            String templateForMitigationToChange, String deviceName, String deviceScope) {
+        
+        if (!existingMitigationTemplate.equals(templateForMitigationToChange)) {
+            String msg = "Found an active mitigation: " + mitigationNameToChange + " but for template: "
+                    + existingMitigationTemplate + " instead of the template: " + templateForMitigationToChange
+                    + " passed in the request for device: " + deviceName + " in deviceScope: " + deviceScope; 
+            LOG.warn(msg);
+            throw new IllegalArgumentException(msg);
         }
     }
 }
