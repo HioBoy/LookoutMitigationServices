@@ -16,7 +16,7 @@ package.LookoutMitigationService = {
             HappierTrails = 3.3;
             # Build logic for spring integration
             CoralSpringLauncher = 4.0;
-            AWSSimpleWorkflowJavaFlowDeciderAPT = 3.2;
+            AWSSimpleWorkflowJavaFlowDeciderAPT = 3.3;
             CoralGenerator = 1.1;
         };
     };
@@ -37,7 +37,7 @@ package.LookoutMitigationService = {
             LookoutMitigationWorkFlowWorker = 1.0;
 
             CoralAwsAuthentication = 1.1; # To support authenticating/authorizing calls to LookoutMitigationService.
-            OdinAWSCredentials = 1.3;
+            OdinAWSCredentials = 1.4;
             
             AWS158Commons = 1.1;
             DaasControlAPIServiceJavaClient = 1.0;
@@ -112,9 +112,7 @@ package.LookoutMitigationService = {
             CoralSpringLauncher = 4.0;
             JakartaCommons-codec = 1;
             log4j = 1.2;
-            Lombok = 1.14.x;
             Mockito = 1.10.x;
-            OdinAWSCredentials = 1.3;
             Openssl = 1.0.x;
             SpringBeans = 4.0.x;
             SpringCore = 4.0.x;
