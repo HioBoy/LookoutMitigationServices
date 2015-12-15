@@ -123,6 +123,7 @@ package.LookoutMitigationService = {
             JakartaCommons-httpclient = 3.1;
             JavaMail = 1.4.6;
             Joda-time = 2.x;
+            JakartaCommons-lang = 2.6;
         };
     };
     
