@@ -41,7 +41,7 @@ import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceC
 public class GetLocationDeploymentHistoryActivity extends Activity {
     private static final Log LOG = LogFactory.getLog(GetLocationDeploymentHistoryActivity.class);
     private static final Integer DEFAULT_MAX_NUMBER_OF_HISTORY_TO_FETCH = 20;
-    private static final Integer MAX_NUMBER_OF_HISTORY_TO_FETCH = 200;
+    public static final Integer MAX_NUMBER_OF_HISTORY_TO_FETCH = 200;
     
     private enum GetLocationDeploymentHistoryExceptions {
         BadRequest,

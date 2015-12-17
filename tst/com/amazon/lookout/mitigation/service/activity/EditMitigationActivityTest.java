@@ -86,7 +86,9 @@ public class EditMitigationActivityTest {
 
     private EditMitigationActivity createActivityWithValidators(RequestStorageManager requestStorageManager) {
         return new EditMitigationActivity(
-            new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
+            new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
+                    mock(EdgeLocationsHelper.class),
+                    mock(BlackWatchBorderLocationValidator.class)),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
                     mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper(),
                     mock(BlackWatchBorderLocationValidator.class)),

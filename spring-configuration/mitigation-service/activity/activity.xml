@@ -29,6 +29,7 @@
 
     <bean class="com.amazon.lookout.mitigation.service.activity.RollbackMitigationActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
         <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
         <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
         <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
@@ -126,6 +127,8 @@
     <!-- All the beans required by the activities go here -->
     <bean id="requestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.RequestValidator">
         <constructor-arg name="serviceLocationsHelper" ref="serviceLocationsHelper"/>
+        <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
+        <constructor-arg name="blackWatchBorderLocationValidator" ref="blackWatchBorderLocationValidator"/>
     </bean>
     
     <bean id="serviceLocationsHelper" class="com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper">

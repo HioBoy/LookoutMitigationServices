@@ -36,6 +36,7 @@ import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
@@ -67,16 +68,19 @@ public class RollbackMitigationActivity extends Activity {
     private final RequestStorageManager requestStorageManager;
     private final SWFWorkflowStarter swfWorkflowStarter;
     private final RequestInfoHandler requestInfoHandler;
-
-    @ConstructorProperties({"requestValidator", "requestStorageManager", "swfWorkflowStarter", "requestInfoHandler"})
+    private final TemplateBasedRequestValidator templateBasedValidator;
+    
+    @ConstructorProperties({"requestValidator", "requestStorageManager", "swfWorkflowStarter",
+        "requestInfoHandler", "templateBasedValidator"})
     public RollbackMitigationActivity(@NonNull RequestValidator requestValidator,
             @NonNull RequestStorageManager requestStorageManager, @NonNull SWFWorkflowStarter swfWorkflowStarter,
-            @NonNull RequestInfoHandler requestInfoHandler) {
+            @NonNull RequestInfoHandler requestInfoHandler, @NonNull TemplateBasedRequestValidator templateBasedValidator) {
 
         this.requestValidator = requestValidator;
         this.requestStorageManager = requestStorageManager;
         this.swfWorkflowStarter = swfWorkflowStarter;
         this.requestInfoHandler = requestInfoHandler;
+        this.templateBasedValidator = templateBasedValidator;
     }
 
     @Validated
@@ -95,6 +99,7 @@ public class RollbackMitigationActivity extends Activity {
 
             // Step1. Validate this request.
             requestValidator.validateRollbackRequest(rollbackRequest);
+            templateBasedValidator.validateRequestForTemplate(rollbackRequest, tsdMetrics); 
             
             // Step2. Get original mitigation modification request 
             String deviceName = rollbackRequest.getDeviceName();

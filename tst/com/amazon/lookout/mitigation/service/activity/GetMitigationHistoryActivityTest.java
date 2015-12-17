@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -17,12 +18,19 @@ import com.amazon.lookout.mitigation.service.GetMitigationHistoryResponse;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocationAndStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
+import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
+import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
+import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.test.common.util.TestUtils;
 
 public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
 
-    private static final GetMitigationHistoryRequest request = new GetMitigationHistoryRequest();
-    static {
+    private GetMitigationHistoryRequest request;
+    
+    @Before
+    public void setup() {
+        request = new GetMitigationHistoryRequest();
         request.setDeviceName(deviceName);
         request.setDeviceScope(deviceScope);
         request.setMitigationName(mitigationName);
@@ -59,7 +67,7 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
     }
     
     @BeforeClass
-    public static void setup() {
+    public static void setupOnce() {
         TestUtils.configureLogging();
     }
 
@@ -118,5 +126,29 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
                 eq(exclusiveStartVersion), eq(maxNumberOfHistoryEntriesToFetch), isA(TSDMetrics.class));
         GetMitigationHistoryResponse response = getMitigationHistoryActivity.enact(request);
         assertTrue(response.getListOfMitigationRequestDescriptionsWithLocationAndStatus().isEmpty());
+    }
+    
+    /**
+     * Test history size larger than max
+     */
+    @Test(expected = BadRequest400.class)
+    public void testInvalidHistoryEntrySize() {
+        GetMitigationHistoryActivity getMitigationHistoryActivity = 
+                spy(new GetMitigationHistoryActivity(new RequestValidator(mock(ServiceLocationsHelper.class),
+                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler)); 
+        request.setMaxNumberOfHistoryEntriesToFetch(10000);
+        getMitigationHistoryActivity.enact(request); 
+    }
+    
+    /**
+     * Test negative history size
+     */
+    @Test(expected = BadRequest400.class)
+    public void testInvalidHistoryEntrySize2() {
+        GetMitigationHistoryActivity getMitigationHistoryActivity = 
+                spy(new GetMitigationHistoryActivity(new RequestValidator(mock(ServiceLocationsHelper.class),
+                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler)); 
+        request.setMaxNumberOfHistoryEntriesToFetch(-1);
+        getMitigationHistoryActivity.enact(request);  
     }
 }

@@ -30,6 +30,7 @@ public class BlackWatchPerTargetEdgeLocationTemplateValidator extends BlackWatch
         Validate.notEmpty(locations, "locations can not be empty");
         Validate.isTrue(locations.size() == 1, String.format("locations %s should have exactly one location.", locations));
         String location = locations.get(0);
+        Validate.notEmpty(location, "location can not be empty");
         // translate prod location style from E-MRS50 to MRS50, so it can be same style as the locations fetched from edge location helper
         Matcher prodLocationMatcher = PROD_LOCATION_PATTERN.matcher(location);
         if (prodLocationMatcher.find()) {

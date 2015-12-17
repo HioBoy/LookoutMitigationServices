@@ -10,6 +10,7 @@ import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazonaws.services.s3.AmazonS3;
@@ -42,10 +43,16 @@ public abstract class BlackWatchPerTargetMitigationTemplateValidator extends Bla
             validateEditRequest((EditMitigationRequest) request);
         } else if (request instanceof DeleteMitigationFromAllLocationsRequest) {
             validateDeleteRequest((DeleteMitigationFromAllLocationsRequest) request);
+        } else if (request instanceof RollbackMitigationRequest) {
+            validateRollbackRequest((RollbackMitigationRequest) request);
         } else {
             throw new IllegalArgumentException(
                     String.format("Not supported Request type for mitigation template %s", mitigationTemplate));
         }
+    }
+    
+    private void validateRollbackRequest(RollbackMitigationRequest request) {
+        validatePostDeploymentChecks(request.getPostDeploymentChecks());
     }
     
     private void validateDeleteRequest(

@@ -27,6 +27,8 @@ import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
+import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
@@ -46,6 +48,10 @@ public class RequestValidatorTest {
     private final String toolName = "TestToolName";
     private final String description = "TestDesc";
     
+    private RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
+            mock(EdgeLocationsHelper.class),
+            mock(BlackWatchBorderLocationValidator.class));
+    
     @BeforeClass
     public static void setUpOnce() {
         TestUtils.configureLogging();
@@ -54,6 +60,9 @@ public class RequestValidatorTest {
     @Before
     public void setUpBeforeTest() {
         when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
+        validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
+            mock(EdgeLocationsHelper.class),
+            mock(BlackWatchBorderLocationValidator.class));
     }
     
     /**
@@ -80,8 +89,6 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
-                
         validator.validateCreateRequest(request);
         
         // CountMode MitigationTemplate
@@ -112,8 +119,6 @@ public class RequestValidatorTest {
         MitigationDefinition definition = new MitigationDefinition();
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
-        
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -159,8 +164,6 @@ public class RequestValidatorTest {
         MitigationDefinition definition = new MitigationDefinition();
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
-        
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -245,8 +248,6 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
-        
         Throwable caughtException = null;
         try {
             validator.validateCreateRequest(request);
@@ -303,8 +304,6 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
-        
         Throwable caughtException = null;
         try {
             validator.validateCreateRequest(request);
@@ -357,8 +356,6 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
-        
         Throwable caughtException = null;
         try {
             validator.validateCreateRequest(request);
@@ -392,8 +389,6 @@ public class RequestValidatorTest {
         MitigationDefinition definition = new MitigationDefinition();
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
-        
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -441,8 +436,6 @@ public class RequestValidatorTest {
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
         
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
-        
         Throwable caughtException = null;
         try {
             validator.validateCreateRequest(request);
@@ -488,8 +481,6 @@ public class RequestValidatorTest {
         MitigationDefinition definition = new MitigationDefinition();
         definition.setConstraint(constraint);
         request.setMitigationDefinition(definition);
-        
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -547,8 +538,6 @@ public class RequestValidatorTest {
         metadata.setDescription("Test description");
         request.setMitigationActionMetadata(metadata);
         
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
-        
         validator.validateDeleteRequest(request);
         
         // CountMode MitigationTemplate
@@ -573,8 +562,6 @@ public class RequestValidatorTest {
         metadata.setToolName(toolName);
         metadata.setDescription("Test description");
         request.setMitigationActionMetadata(metadata);
-        
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         Throwable caughtException = null;
         try {
@@ -612,8 +599,6 @@ public class RequestValidatorTest {
         metadata.setRelatedTickets(Lists.newArrayList("Tkt1", "Tkt2", "Tkt2"));
         request.setMitigationActionMetadata(metadata);
         
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
-        
         Throwable caughtException = null;
         try {
             validator.validateCreateRequest(request);
@@ -640,8 +625,6 @@ public class RequestValidatorTest {
         metadata.setRelatedTickets(Lists.newArrayList("00123456789"));
         request.setMitigationActionMetadata(metadata);
         
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
-        
         List<String> relatedTickets = Lists.newArrayList();
         for (int index=0; index < 200; ++index) {
             relatedTickets.add("000001" + index);
@@ -660,7 +643,6 @@ public class RequestValidatorTest {
     @Test
     public void testListActiveMitigationsForService() {        
         ListActiveMitigationsForServiceRequest request = new ListActiveMitigationsForServiceRequest();
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)));
         
         // locations is optional
         request.setServiceName(serviceName);
@@ -730,8 +712,9 @@ public class RequestValidatorTest {
         assertNotNull(caughtException);
         
         EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
+        validator = new RequestValidator(new ServiceLocationsHelper(edgeLocationsHelper), mock(EdgeLocationsHelper.class),
+                mock(BlackWatchBorderLocationValidator.class));
         when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("alocation", "blocation", "clocations"));
-        validator = new RequestValidator(new ServiceLocationsHelper(edgeLocationsHelper));
         validator.validateListActiveMitigationsForServiceRequest(request);
     }
     
@@ -740,8 +723,9 @@ public class RequestValidatorTest {
         ReportInactiveLocationRequest request = new ReportInactiveLocationRequest();
         
         EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
+        validator = new RequestValidator(new ServiceLocationsHelper(edgeLocationsHelper), mock(EdgeLocationsHelper.class),
+                mock(BlackWatchBorderLocationValidator.class));
         when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("alocation", "blocation", "clocations"));
-        RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(edgeLocationsHelper));
         
         // locations is optional
         request.setServiceName(serviceName);

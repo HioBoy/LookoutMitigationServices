@@ -101,14 +101,12 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         // Extract mitigationDefinition and locations from Create/Edit Mitigation Requests only.
         if (request instanceof DeleteMitigationFromAllLocationsRequest) {
             return;
-        }
-        if (request instanceof CreateMitigationRequest) {
+        } else if (request instanceof CreateMitigationRequest) {
             locationsToApplyMitigation = ((CreateMitigationRequest) request).getLocations();
             mitigationDefinition = ((CreateMitigationRequest) request).getMitigationDefinition();
-        }
-        if (request instanceof EditMitigationRequest) {
-            locationsToApplyMitigation = ((EditMitigationRequest) request).getLocation();
-            mitigationDefinition = ((EditMitigationRequest) request).getMitigationDefinition();
+        } else {
+            throw new IllegalArgumentException(
+                    String.format("Mitigation template %s can not be modified, only created and deleted", mitigationTemplate));
         }
         
         Constraint mitigationConstraint = mitigationDefinition.getConstraint();

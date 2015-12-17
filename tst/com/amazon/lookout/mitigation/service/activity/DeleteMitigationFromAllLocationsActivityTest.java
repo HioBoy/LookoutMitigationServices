@@ -82,7 +82,9 @@ public class DeleteMitigationFromAllLocationsActivityTest {
 
     private DeleteMitigationFromAllLocationsActivity createActivityWithValidators(SWFWorkflowStarter workflowStarter) {
         return new DeleteMitigationFromAllLocationsActivity(
-            new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
+            new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
+                    mock(EdgeLocationsHelper.class),
+                    mock(BlackWatchBorderLocationValidator.class)),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
                     mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
                     mock(BlackWatchBorderLocationValidator.class)),

@@ -44,7 +44,7 @@ import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceC
 public class GetMitigationHistoryActivity extends Activity {
     private static final Log LOG = LogFactory.getLog(GetMitigationHistoryActivity.class);
     private static final Integer DEFAULT_MAX_NUMBER_OF_HISTORY_TO_FETCH = 20;
-    private static final Integer MAX_NUMBER_OF_HISTORY_TO_FETCH = 100;
+    public static final Integer MAX_NUMBER_OF_HISTORY_TO_FETCH = 100;
     
     private enum GetMitigationHistoryExceptions {
         BadRequest,

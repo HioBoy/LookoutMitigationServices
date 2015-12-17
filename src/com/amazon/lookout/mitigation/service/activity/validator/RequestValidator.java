@@ -1,7 +1,9 @@
 package com.amazon.lookout.mitigation.service.activity.validator;
 
+import java.beans.ConstructorProperties;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -42,12 +44,18 @@ import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.TransitProviderInfo;
 import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
+import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity;
+import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
+import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.model.RequestType;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -79,9 +87,16 @@ public class RequestValidator {
     private final Set<String> deviceNames;
     private final Set<String> deviceScopes;
     private final ServiceLocationsHelper serviceLocationsHelper;
+    private final EdgeLocationsHelper edgeLocationsHelper;
+    private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
     
-    public RequestValidator(@NonNull ServiceLocationsHelper serviceLocationsHelper) {
+    @ConstructorProperties({"serviceLocationsHelper", "edgeLocationsHelper", "blackWatchBorderLocationValidator"}) 
+    public RequestValidator(@NonNull ServiceLocationsHelper serviceLocationsHelper,
+            @NonNull EdgeLocationsHelper edgeLocationsHelper,
+            @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator) {
         this.serviceLocationsHelper = serviceLocationsHelper;
+        this.edgeLocationsHelper = edgeLocationsHelper;
+        this.blackWatchBorderLocationValidator = blackWatchBorderLocationValidator;
         
         this.deviceNames = new HashSet<>();
         for (DeviceName deviceName : DeviceName.values()) {
@@ -173,9 +188,8 @@ public class RequestValidator {
             throw new IllegalArgumentException(msg);
         }
         
-        validateDeviceName(request.getDeviceName());
-        validateServiceName(request.getServiceName());
         validateMitigationTemplate(request.getMitigationTemplate());
+        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
     }
     
     /**
@@ -184,10 +198,9 @@ public class RequestValidator {
      * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
      */
     public void validateGetMitigationInfoRequest(@NonNull GetMitigationInfoRequest request) {
-        validateServiceName(request.getServiceName());
-        validateDeviceName(request.getDeviceName());
         validateDeviceScope(request.getDeviceScope());
         validateMitigationName(request.getMitigationName());
+        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
     }
     
     /**
@@ -197,14 +210,15 @@ public class RequestValidator {
      */
     public void validateGetMitigationHistoryRequest(
             GetMitigationHistoryRequest request) {
-        validateDeviceName(request.getDeviceName());
-        validateServiceName(request.getServiceName());
+        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
         validateDeviceScope(request.getDeviceScope());
         validateMitigationName(request.getMitigationName());
         Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
+        int maxHistoryEntryCount = GetMitigationHistoryActivity.MAX_NUMBER_OF_HISTORY_TO_FETCH;
         if (maxNumberOfHistoryEntriesToFetch != null) {
-            Validate.isTrue(maxNumberOfHistoryEntriesToFetch > 0,
-                    "maxNumberOfHistoryEntriesToFetch should be larger than 0");
+            Validate.isTrue((maxNumberOfHistoryEntriesToFetch > 0) &&
+                    (maxNumberOfHistoryEntriesToFetch <= maxHistoryEntryCount),
+                    String.format("maxNumberOfHistoryEntriesToFetch should be larger than 0, and <= %s", maxHistoryEntryCount));
         }
         Integer startVersion = request.getExclusiveStartVersion();
         if (startVersion != null) {
@@ -218,13 +232,16 @@ public class RequestValidator {
      * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
      */
     public void validateGetLocationDeploymentHistoryRequest(GetLocationDeploymentHistoryRequest request) {
-        validateDeviceName(request.getDeviceName());
-        validateServiceName(request.getServiceName());
         validateLocation(request.getLocation());
+        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
+        validateLocationOnDeviceAndService(DeviceName.valueOf(request.getDeviceName()),
+                request.getServiceName(), request.getLocation());
         Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
+        int maxHistoryEntryCount = GetLocationDeploymentHistoryActivity.MAX_NUMBER_OF_HISTORY_TO_FETCH;
         if (maxNumberOfHistoryEntriesToFetch != null) {
-            Validate.isTrue(maxNumberOfHistoryEntriesToFetch > 0,
-                    "maxNumberOfHistoryEntriesToFetch should be larger than 0");
+            Validate.isTrue((maxNumberOfHistoryEntriesToFetch > 0) && 
+                    (maxNumberOfHistoryEntriesToFetch <= maxHistoryEntryCount),
+                    String.format("maxNumberOfHistoryEntriesToFetch should be larger than 0, and <= %d", maxHistoryEntryCount));
         }
         Long lastEvaluatedTimestamp = request.getExclusiveLastEvaluatedTimestamp();
         if (lastEvaluatedTimestamp != null) {
@@ -238,8 +255,7 @@ public class RequestValidator {
      * throw IllegalArgumentException if it is invalid
      */
     public void validateGetMitigationDefinitionRequest(GetMitigationDefinitionRequest request) {
-        validateDeviceName(request.getDeviceName());
-        validateServiceName(request.getServiceName());
+        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
         validateMitigationName(request.getMitigationName());
         Validate.isTrue(request.getMitigationVersion() > 0, "mitigationVersion should be larger than 0.");
     }
@@ -251,11 +267,10 @@ public class RequestValidator {
      */
     public void validateRollbackRequest(RollbackMitigationRequest request) {
         try {
-            validateDeviceName(request.getDeviceName());
+            validateDeviceAndService(request.getDeviceName(), request.getServiceName());
             validateMitigationName(request.getMitigationName());
             validateDeviceScope(request.getDeviceScope());
             validateMitigationTemplate(request.getMitigationTemplate());
-            validateServiceName(request.getServiceName());
             Validate.isTrue(request.getRollbackToMitigationVersion() > 0,
                    "rollback to mitigation version should be larger than 0");
         } catch (IllegalArgumentException ex) {
@@ -299,10 +314,14 @@ public class RequestValidator {
      * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
      */
     public void validateListActiveMitigationsForServiceRequest(@NonNull ListActiveMitigationsForServiceRequest request) {
-        String serviceName = request.getServiceName();
+        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
+        validateListOfLocations(request.getLocations(), request.getServiceName());
+    }
+    
+    private void validateDeviceAndService(String deviceName, String serviceName) {
         validateServiceName(serviceName);
-        validateListOfLocations(request.getLocations(), serviceName);
-        validateDeviceName(request.getDeviceName());
+        DeviceName device = validateDeviceName(deviceName);
+        validateDeviceMatchService(device, serviceName);
     }
     
     /**
@@ -311,10 +330,8 @@ public class RequestValidator {
      * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
      */
     public void validateReportInactiveLocation(@NonNull ReportInactiveLocationRequest request) {
-        String serviceName = request.getServiceName();
-        validateServiceName(serviceName);
-        validateDeviceName(request.getDeviceName());
-        validateListOfLocations(Lists.newArrayList(request.getLocation()), serviceName);
+        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
+        validateListOfLocations(Lists.newArrayList(request.getLocation()), request.getServiceName());
     }
     
     public void validateCreateBlackholeDeviceRequest(@NonNull CreateBlackholeDeviceRequest request) {
@@ -383,8 +400,6 @@ public class RequestValidator {
         
         validateMitigationTemplate(request.getMitigationTemplate());
         
-        validateServiceName(request.getServiceName());
-        
         MitigationActionMetadata actionMetadata = request.getMitigationActionMetadata();
         if (actionMetadata == null) {
             String msg = "No MitigationActionMetadata found! Passing the MitigationActionMetadata is mandatory for performing any actions using the MitigationService.";
@@ -399,9 +414,13 @@ public class RequestValidator {
         if (actionMetadata.getRelatedTickets() != null) {
             validateRelatedTickets(actionMetadata.getRelatedTickets());
         }
+        
+        String template = request.getMitigationTemplate();
+        DeviceName device = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(template).getDeviceName();
+        validateDeviceAndService(device.name(), request.getServiceName());
     }
     
-    private void validateDeviceName(String deviceName) {
+    private DeviceName validateDeviceName(String deviceName) {
         if (isInvalidFreeFormText(deviceName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
             String msg = "Invalid device name found! Valid device names: " + deviceNames;
             LOG.info(msg);
@@ -410,7 +429,7 @@ public class RequestValidator {
         
         // This will throw an exception if the deviceName is not defined within the DeviceName enum.
         try {
-            DeviceName.valueOf(deviceName);
+            return DeviceName.valueOf(deviceName);
         } catch (Exception ex) {
             String msg = "The device name that was provided, " + deviceName + ", is not a valid name. Valid deviceNames: " + deviceNames;
             LOG.info(msg);
@@ -758,6 +777,63 @@ public class RequestValidator {
                     + " passed in the request for device: " + deviceName + " in deviceScope: " + deviceScope; 
             LOG.warn(msg);
             throw new IllegalArgumentException(msg);
+        }
+    }
+     
+    private void validateLocationOnDeviceAndService(DeviceName device, String service, String location) {
+        validateLocationsOnDeviceAndService(device, service, ImmutableSet.of(location));
+    }
+    
+    private void validateDeviceMatchService(DeviceName device, String service) {
+        String errorMessage = String.format("Service %s does not match device %s", service, device);
+        switch (device) {
+        case POP_ROUTER:
+            Validate.isTrue(ServiceName.Route53.equals(service), errorMessage);
+            break;
+        case POP_HOSTS_IP_TABLES:
+            Validate.isTrue(ServiceName.Edge.equals(service), errorMessage);
+            break;
+        case ARBOR:
+            Validate.isTrue(ServiceName.Blackhole.equals(service), errorMessage);
+            break;
+        case BLACKWATCH_POP:
+            Validate.isTrue(ServiceName.Edge.equals(service), errorMessage);
+            break;
+        case BLACKWATCH_BORDER:
+            Validate.isTrue(ServiceName.AWS.equals(service), errorMessage);
+            break;
+        default:
+            throw new IllegalArgumentException("Unsupported device name " + device);
+        }
+    }
+    
+    private void validateLocationsOnDeviceAndService(DeviceName device, String service, Collection<String> locations) {
+        String errorMessage = String.format("Not all of the locations %s in request,"
+                + " are valid locations on device %s and service name %s.", locations, device, service);
+    
+        switch (device) {
+        case POP_ROUTER:
+            Validate.isTrue(edgeLocationsHelper.getAllClassicPOPs().containsAll(locations), errorMessage);
+            break;
+        case POP_HOSTS_IP_TABLES:
+            Validate.isTrue(ImmutableSet.of("EdgeWorldwide").containsAll(locations), errorMessage);
+            break;
+        case ARBOR:
+            Validate.isTrue(ImmutableSet.of("Arbor").containsAll(locations), errorMessage);
+            break;
+        case BLACKWATCH_POP:
+            Validate.isTrue(edgeLocationsHelper.getAllClassicPOPs().containsAll(locations), errorMessage);
+            break;
+        case BLACKWATCH_BORDER:
+            try {
+                blackWatchBorderLocationValidator.validateLocations(locations);
+            } catch (IllegalArgumentException ex) {
+                // make error message consistent
+                throw new IllegalArgumentException(errorMessage);
+            }
+            break;
+        default:
+            throw new IllegalArgumentException("Unsupported device name " + device);
         }
     }
 }

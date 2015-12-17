@@ -23,6 +23,8 @@ import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
@@ -30,6 +32,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
+import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
@@ -42,12 +45,13 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
     
     @Before
     public void setupMore() {
-        requestValidator = spy(new RequestValidator(mock(ServiceLocationsHelper.class)));
+        requestValidator = spy(new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
+                mock(EdgeLocationsHelper.class),
+                mock(BlackWatchBorderLocationValidator.class)));
         requestStorageManager = mock(RequestStorageManager.class);
         swfWorkflowStarter = mock(SWFWorkflowStarter.class);
-        
         rollbackMitigationActivity = new RollbackMitigationActivity(requestValidator,
-                requestStorageManager, swfWorkflowStarter, requestInfoHandler);
+                requestStorageManager, swfWorkflowStarter, requestInfoHandler, mock(TemplateBasedRequestValidator.class));
     }
     
     /**

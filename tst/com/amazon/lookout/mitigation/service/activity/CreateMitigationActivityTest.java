@@ -131,7 +131,9 @@ public class CreateMitigationActivityTest {
 
     private CreateMitigationActivity createActivityWithValidators() {
         return new CreateMitigationActivity(
-            new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
+            new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
+                    mock(EdgeLocationsHelper.class),
+                    mock(BlackWatchBorderLocationValidator.class)),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
                     mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper(),
                     mock(BlackWatchBorderLocationValidator.class)),
@@ -143,7 +145,9 @@ public class CreateMitigationActivityTest {
 
     private CreateMitigationActivity createActivityWithValidators(RequestStorageManager requestStorageManager) {
         return new CreateMitigationActivity(
-            new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class))),
+                new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
+                        mock(EdgeLocationsHelper.class),
+                        mock(BlackWatchBorderLocationValidator.class)),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
                     mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper(),
                     mock(BlackWatchBorderLocationValidator.class)),

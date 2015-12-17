@@ -29,6 +29,7 @@ import com.amazon.lookout.mitigation.service.ReportInactiveLocationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
@@ -36,7 +37,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 public class ReportInactiveLocationActivityTest {
-    
+    EdgeLocationsHelper mockEdgeLocationsHelper = mock(EdgeLocationsHelper.class);
+    BlackWatchBorderLocationValidator mockBlackWatchBorderLocationValidator = 
+            mock(BlackWatchBorderLocationValidator.class);
     @BeforeClass
     public static void setup() {
         TestUtils.configureLogging();
@@ -47,7 +50,8 @@ public class ReportInactiveLocationActivityTest {
         EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
         when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("TST1", "TST2", "TST3"));
         ServiceLocationsHelper serviceLocationsHelper = new ServiceLocationsHelper(edgeLocationsHelper);
-        RequestValidator requestValidator = new RequestValidator(serviceLocationsHelper);
+        RequestValidator requestValidator = new RequestValidator(serviceLocationsHelper,
+                mockEdgeLocationsHelper, mockBlackWatchBorderLocationValidator);
         
         ActiveMitigationInfoHandler activeMitigationInfoHandler = mock(ActiveMitigationInfoHandler.class);
         String domain = "prod";
@@ -75,8 +79,8 @@ public class ReportInactiveLocationActivityTest {
         EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
         when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("TST1", "TST2", "TST3"));
         ServiceLocationsHelper serviceLocationsHelper = new ServiceLocationsHelper(edgeLocationsHelper);
-        RequestValidator requestValidator = new RequestValidator(serviceLocationsHelper);
-        
+        RequestValidator requestValidator = new RequestValidator(serviceLocationsHelper,
+                mockEdgeLocationsHelper, mockBlackWatchBorderLocationValidator);
         ActiveMitigationInfoHandler activeMitigationInfoHandler = mock(ActiveMitigationInfoHandler.class);
         String domain = "tst";
         
@@ -131,7 +135,8 @@ public class ReportInactiveLocationActivityTest {
         EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
         when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("TST1", "TST2", "TST3"));
         ServiceLocationsHelper serviceLocationsHelper = new ServiceLocationsHelper(edgeLocationsHelper);
-        RequestValidator requestValidator = new RequestValidator(serviceLocationsHelper);
+        RequestValidator requestValidator = new RequestValidator(serviceLocationsHelper,
+                mockEdgeLocationsHelper, mockBlackWatchBorderLocationValidator);
         
         ActiveMitigationInfoHandler activeMitigationInfoHandler = mock(ActiveMitigationInfoHandler.class);
         String domain = "tst";
@@ -158,7 +163,8 @@ public class ReportInactiveLocationActivityTest {
         EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
         when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("TST1", "TST2", "TST3"));
         ServiceLocationsHelper serviceLocationsHelper = new ServiceLocationsHelper(edgeLocationsHelper);
-        RequestValidator requestValidator = new RequestValidator(serviceLocationsHelper);
+        RequestValidator requestValidator = new RequestValidator(serviceLocationsHelper,
+                mockEdgeLocationsHelper, mockBlackWatchBorderLocationValidator);
         
         ActiveMitigationInfoHandler activeMitigationInfoHandler = mock(ActiveMitigationInfoHandler.class);
         String domain = "tst";
