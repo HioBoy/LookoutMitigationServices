@@ -1,10 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
-import java.util.List;
 
 import lombok.NonNull;
 
@@ -20,7 +16,6 @@ import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
-import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBRequestSerializer.RequestSummary;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
@@ -28,13 +23,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
-import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
-import com.amazonaws.services.dynamodbv2.model.QueryResult;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Lists;
 
 /**
  * DDBBasedDeleteRequestStorageHandler is responsible for persisting delete requests into DDB.
@@ -106,9 +95,8 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                 
                 // Evaluate the currently active mitigations to get back a boolean flag indicating if the mitigation to delete exists.
                 // The evaluation will also throw a DuplicateRequestException in case it finds that this delete request is a duplicate.
-                latestRequestSummary = evaluateActiveMitigations(
-                        deviceName, deviceScope, mitigationName, mitigationTemplate, mitigationVersion, 
-                        prevMaxWorkflowId, latestRequestSummary, subMetrics);
+                latestRequestSummary = evaluateActiveMitigations(deviceName, deviceScope, mitigationName,
+                        mitigationTemplate, mitigationVersion, prevMaxWorkflowId, latestRequestSummary, subMetrics);
                 
                 long newWorkflowId = 0;
                 // If we didn't get any active workflows for the same deviceName and deviceScope or if we didn't find any mitigation corresponding to our delete request, throw back an exception.

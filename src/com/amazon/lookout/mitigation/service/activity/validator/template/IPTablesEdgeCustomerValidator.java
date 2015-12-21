@@ -1,9 +1,19 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import lombok.NonNull;
+
+import org.apache.commons.lang.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang3.Validate;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.Constraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
-import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
@@ -18,18 +28,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazonaws.services.simpleworkflow.flow.DataConverter;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
-
 import com.amazonaws.util.CollectionUtils;
-import lombok.NonNull;
-
-import org.apache.commons.lang.builder.ReflectionToStringBuilder;
-import org.apache.commons.lang3.Validate;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplateValidator {
     private static final Log LOG = LogFactory.getLog(IPTablesEdgeCustomerValidator.class);
@@ -59,7 +58,7 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
         } else if (request instanceof EditMitigationRequest) {
             validateLocations(((EditMitigationRequest) request).getLocation());
             validateEditRequest((EditMitigationRequest) request);
-        } else if (request instanceof DeleteMitigationFromAllLocationsRequest) {
+        } else {
             throw new IllegalArgumentException(
                     String.format("Delete not supported for mitigation template %s", mitigationTemplate));
         }
