@@ -60,7 +60,7 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
             validateEditRequest((EditMitigationRequest) request);
         } else {
             throw new IllegalArgumentException(
-                    String.format("Delete not supported for mitigation template %s", mitigationTemplate));
+                    String.format("request %s is not supported for mitigation template %s", request, mitigationTemplate));
         }
     }
 

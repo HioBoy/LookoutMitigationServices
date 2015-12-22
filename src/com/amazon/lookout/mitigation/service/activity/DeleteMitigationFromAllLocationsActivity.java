@@ -2,12 +2,16 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
+
 import lombok.NonNull;
+
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,7 +42,6 @@ import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
-import com.google.common.collect.Sets;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
@@ -54,10 +57,10 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
     
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
-    private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(Sets.newHashSet(DeleteExceptions.BadRequest.name(),
-                                                                                                      DeleteExceptions.DuplicateRequest.name(),
-                                                                                                      DeleteExceptions.MissingMitigation.name(),
-                                                                                                      DeleteExceptions.InternalError.name())); 
+    private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(
+            Arrays.stream(DeleteExceptions.values())
+            .map(e -> e.name())
+            .collect(Collectors.toSet()));
     
     private final RequestValidator requestValidator;
     private final TemplateBasedRequestValidator templateBasedValidator;

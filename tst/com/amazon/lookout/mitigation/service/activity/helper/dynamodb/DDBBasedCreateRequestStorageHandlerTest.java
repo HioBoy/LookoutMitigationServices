@@ -25,10 +25,14 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
+
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.stubbing.Stubber;
 
@@ -38,15 +42,19 @@ import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.DuplicateMitigationNameException400;
+import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
+import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazon.lookout.test.common.util.AssertUtils;
@@ -68,6 +76,7 @@ import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.google.common.collect.ImmutableSet;
 
+@RunWith(JUnitParamsRunner.class)
 public class DDBBasedCreateRequestStorageHandlerTest {
     private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
     private static final String domain = "unit-test";
@@ -146,7 +155,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
         long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
-        
+
         DuplicateMitigationNameException400 exception = AssertUtils.assertThrows(
                 DuplicateMitigationNameException400.class, 
                 () -> storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics));
@@ -198,8 +207,11 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                 () -> storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics));
     }
     
+    /**
+     * Test we can re-create a mitigation after it get successfully deleted, and the version is correctly bumped
+     */
     @Test
-    public void testRecreate() {
+    public void testRecreateSucceed() {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
@@ -212,20 +224,155 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         validateRequestInDDB(request, locations, workflowId);
         
         deleteRequest(storageHandler, request, workflowId, locations);
+        // set delete request to succeed.
+        testTableHelper.setWorkflowStatus(DeviceName.POP_ROUTER.name(), workflowId + 1, WorkflowStatus.SUCCEEDED);
         
         // Recreate
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest();
         request2.getMitigationActionMetadata().setDescription("RecreatedRequest");
         long newWorkflowId = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics);
+        assertEquals(newWorkflowId, 3);
+        testTableHelper.validateRequestInDDB(request2, request2.getMitigationDefinition(), 3, locations, newWorkflowId); 
+    }
+     
+    /**
+     * Test we can not re-create if a mitigation is deleted in progress
+     */
+    @Test
+    @Parameters({
+        WorkflowStatus.RUNNING,
+        WorkflowStatus.INDETERMINATE,
+        WorkflowStatus.PARTIAL_SUCCESS,
+    })
+    public void testRecreateFailed1(String deleteRequestWorkflowStatus) {
+        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
+                localDynamoDBClient, domain, templateBasedValidator);
         
-        validateRequestInDDB(request2, locations, newWorkflowId);
-        assertThat(newWorkflowId, greaterThan(workflowId));
+        CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         
+        ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        
+        validateRequestInDDB(request, locations, workflowId);
+        
+        deleteRequest(storageHandler, request, workflowId, locations);
+        // set delete request to succeed.
+        testTableHelper.setWorkflowStatus(DeviceName.POP_ROUTER.name(), workflowId + 1, deleteRequestWorkflowStatus);
+
+        // Recreate
+        CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest();
+        request2.getMitigationActionMetadata().setDescription("RecreatedRequest");
+
         AssertUtils.assertThrows(
                 DuplicateMitigationNameException400.class, 
-                () -> storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics));
+                () -> storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics));
     }
+     
+    /**
+     * Test we can not re-create if a mitigation is latest request is edit
+     */
+    @Test
+    @Parameters({
+        WorkflowStatus.RUNNING,
+        WorkflowStatus.INDETERMINATE,
+        WorkflowStatus.PARTIAL_SUCCESS,
+        WorkflowStatus.SUCCEEDED,
+    })
+    public void testRecreateFailed2(String editRequestWorkflowStatus) {
+        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
+                localDynamoDBClient, domain, templateBasedValidator);
+        
+        CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
+        
+        ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        
+        validateRequestInDDB(request, locations, workflowId);
+        
+        editRequest(storageHandler, request, workflowId, locations);
+        // set edit request status.
+        testTableHelper.setWorkflowStatus(DeviceName.POP_ROUTER.name(), workflowId + 1, editRequestWorkflowStatus);
 
+        // Recreate
+        CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest();
+        request2.getMitigationActionMetadata().setDescription("RecreatedRequest");
+
+        AssertUtils.assertThrows(
+                DuplicateMitigationNameException400.class, 
+                () -> storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics));
+    }
+    
+    /**
+     * Test we can not re-create if a mitigation is latest request is create
+     */
+    @Test
+    @Parameters({
+        WorkflowStatus.RUNNING,
+        WorkflowStatus.INDETERMINATE,
+        WorkflowStatus.PARTIAL_SUCCESS,
+        WorkflowStatus.SUCCEEDED,
+    })
+    public void testRecreateFailed3(String createRequestWorkflowStatus) {
+        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
+                localDynamoDBClient, domain, templateBasedValidator);
+        
+        CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
+        
+        ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        
+        validateRequestInDDB(request, locations, workflowId);
+        
+        // set edit request status.
+        testTableHelper.setWorkflowStatus(DeviceName.POP_ROUTER.name(), workflowId, createRequestWorkflowStatus);
+
+        // Recreate
+        CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest();
+        request2.getMitigationActionMetadata().setDescription("RecreatedRequest");
+
+        AssertUtils.assertThrows(
+                DuplicateMitigationNameException400.class, 
+                () -> storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics));
+    }
+    
+    /**
+     * Test we can not re-create if a mitigation is latest request is rollback
+     */
+    @Test
+    @Parameters({
+        WorkflowStatus.RUNNING,
+        WorkflowStatus.INDETERMINATE,
+        WorkflowStatus.PARTIAL_SUCCESS,
+        WorkflowStatus.SUCCEEDED,
+    })
+    public void testRecreateFailed4(String rollbackRequestWorkflowStatus) {
+        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
+                localDynamoDBClient, domain, templateBasedValidator);
+        
+        CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
+        
+        ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        
+        validateRequestInDDB(request, locations, workflowId);
+        
+        // set edit request status.
+        rollbackRequest(storageHandler, request, workflowId, locations);
+        testTableHelper.setWorkflowStatus(DeviceName.POP_ROUTER.name(), workflowId + 1, rollbackRequestWorkflowStatus);
+
+        // Recreate
+        CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest();
+        request2.getMitigationActionMetadata().setDescription("RecreatedRequest");
+
+        AssertUtils.assertThrows(
+                DuplicateMitigationNameException400.class, 
+                () -> storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics));
+    }
+    
     private void deleteRequest(
             DDBBasedRequestStorageHandler storeHandler, CreateMitigationRequest request, long requestWorkflowId,
             ImmutableSet<String> locations) 
@@ -251,6 +398,64 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         long newWorkflowId = maxWorkflowId + 1;
         storeHandler.storeRequestInDDB(
                 deleteRequest, null, locations, deviceNameAndScope, maxWorkflowId + 1, RequestType.DeleteRequest, 2, tsdMetrics);
+        
+        testTableHelper.setUpdateWorkflowId(deviceNameAndScope.getDeviceName().toString(), requestWorkflowId, newWorkflowId);
+    }
+     
+    private void editRequest(
+            DDBBasedRequestStorageHandler storeHandler, CreateMitigationRequest request, long requestWorkflowId,
+            ImmutableSet<String> locations) 
+    {
+        DeviceNameAndScope deviceNameAndScope = 
+                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        long maxWorkflowId = storeHandler.getMaxWorkflowIdForDevice(
+                deviceNameAndScope.getDeviceName().toString(), deviceNameAndScope.getDeviceScope().toString(), null, tsdMetrics);
+        
+        // We shouldn't need to use another handler for this but the code is factored badly
+        EditMitigationRequest editRequest = new EditMitigationRequest();
+        editRequest.setMitigationName(request.getMitigationName());
+        editRequest.setMitigationTemplate(request.getMitigationTemplate());
+        editRequest.setServiceName(request.getServiceName());
+        editRequest.setMitigationActionMetadata(
+                MitigationActionMetadata.builder()
+                    .withDescription("Test")
+                    .withToolName("UnitTest")
+                    .withUser("TestUser")
+                    .build());
+        editRequest.setMitigationVersion(DDBBasedRequestStorageHandler.INITIAL_MITIGATION_VERSION);
+        long newWorkflowId = maxWorkflowId + 1;
+        storeHandler.storeRequestInDDB(
+                editRequest, null, locations, deviceNameAndScope, maxWorkflowId + 1, RequestType.EditRequest, 2, tsdMetrics);
+        
+        testTableHelper.setUpdateWorkflowId(deviceNameAndScope.getDeviceName().toString(), requestWorkflowId, newWorkflowId);
+    }
+    
+    private void rollbackRequest(
+            DDBBasedRequestStorageHandler storeHandler, CreateMitigationRequest request, long requestWorkflowId,
+            ImmutableSet<String> locations) 
+    {
+        DeviceNameAndScope deviceNameAndScope = 
+                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        
+        long maxWorkflowId = storeHandler.getMaxWorkflowIdForDevice(
+                deviceNameAndScope.getDeviceName().toString(), deviceNameAndScope.getDeviceScope().toString(), null, tsdMetrics);
+        
+        // We shouldn't need to use another handler for this but the code is factored badly
+        RollbackMitigationRequest rollbackRequest = new RollbackMitigationRequest();
+        rollbackRequest.setMitigationName(request.getMitigationName());
+        rollbackRequest.setMitigationTemplate(request.getMitigationTemplate());
+        rollbackRequest.setServiceName(request.getServiceName());
+        rollbackRequest.setMitigationActionMetadata(
+                MitigationActionMetadata.builder()
+                    .withDescription("Test")
+                    .withToolName("UnitTest")
+                    .withUser("TestUser")
+                    .build());
+        rollbackRequest.setMitigationVersion(DDBBasedRequestStorageHandler.INITIAL_MITIGATION_VERSION);
+        long newWorkflowId = maxWorkflowId + 1;
+        storeHandler.storeRequestInDDB(
+                rollbackRequest, null, locations, deviceNameAndScope, maxWorkflowId + 1, RequestType.RollbackRequest, 2, tsdMetrics);
         
         testTableHelper.setUpdateWorkflowId(deviceNameAndScope.getDeviceName().toString(), requestWorkflowId, newWorkflowId);
     }

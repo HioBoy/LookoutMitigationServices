@@ -101,7 +101,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
         Long currMaxWorkflowId = null;
         RequestSummary latestRequestSummary = null;
         boolean isUpdate = (requestType != RequestType.CreateRequest);
-        boolean isEdit = (requestType != RequestType.EditRequest);
+        boolean isEdit = (requestType == RequestType.EditRequest);
         
         // Get the max workflowId for existing mitigations, increment it by 1 and store it in the DDB. Return back the new workflowId
         // if successful, else end the loop and throw back an exception.
@@ -122,13 +122,12 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
                 newWorkflowId = currMaxWorkflowId + 1;
                 sanityCheckWorkflowId(newWorkflowId, deviceNameAndScope);
             }
-            
+
+            // retrieve the current latest mitigation version for the same mitigation on the same device+scope
+            latestRequestSummary = getLatestRequestSummary(
+                    deviceName, deviceScope, mitigationName, latestRequestSummary, metrics);
+
             if (isUpdate) {
-                // If updating, retrieve the current latest mitigation version for the same
-                // mitigation on the same device+scope and validate it
-                latestRequestSummary = getLatestRequestSummary(
-                        deviceName, deviceScope, mitigationName, latestRequestSummary, metrics);
-                
                 // If we didn't get any version for the same deviceName, deviceScope and
                 // mitigation name, throw MissingMitigationException400.
                 if (latestRequestSummary == null || currMaxWorkflowId == null) {
@@ -160,6 +159,22 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
                     LOG.info(msg);
                     // TODO: Use a more specific exception
                     throw new IllegalArgumentException(msg);
+                }
+            } else {
+                // if found an existing mitigation, validate it is successfully deleted.
+                if (latestRequestSummary != null) {
+                    if (RequestType.DeleteRequest.name().equals(latestRequestSummary.getRequestType())
+                            && WorkflowStatus.SUCCEEDED.equals(latestRequestSummary.getWorkflowStatus())) {
+                        // if the existing mitigation has been deleted successfully from the system, it is safe to
+                        // re-create it again. If not, reject request
+                        mitigationVersion = latestRequestSummary.getMitigationVersion() + 1;
+                    } else {
+                        String msg = "Mitigation " + mitigationName + " for deviceName: " + deviceName 
+                                + " and deviceScope: " + deviceScope + " has already existed"
+                                + ". For request: " + requestToString(request);
+                        LOG.info(msg);
+                        throw new DuplicateMitigationNameException400(msg);
+                    }
                 }
             }
 

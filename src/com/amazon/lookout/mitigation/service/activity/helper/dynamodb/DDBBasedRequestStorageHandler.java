@@ -239,7 +239,8 @@ public class DDBBasedRequestStorageHandler {
      * @param mitigationName Mitigation Name corresponding to whom the latest mitigation version needs to be determined.
      * @param latestFromLastAttempt latest version and type from last attempt, could be null.
      * @param metrics
-     * @return Long representing the latest mitigation version that currently exist in the DDB tables.
+     * @return RequestSummary representing the latest mitigation version that currently exist in the DDB tables,
+     *      if mitigation does not exist, return null.
      */
     protected RequestSummary getLatestRequestSummary(
             @NonNull String deviceName, @NonNull String deviceScope, @NonNull String mitigationName, 

@@ -56,7 +56,7 @@ public class DeleteMitigationFromAllLocationsActivityTest {
 
         BadRequest400 actualError = assertThrows(BadRequest400.class, () -> activity.enact(request));
 
-        assertThat(actualError.getMessage(), containsString("Delete not supported"));
+        assertThat(actualError.getMessage(), containsString("not supported"));
         assertThat(actualError.getMessage(), containsString(MitigationTemplate.IPTables_Mitigation_EdgeCustomer));
     }
 

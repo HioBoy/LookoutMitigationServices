@@ -43,11 +43,15 @@ import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.collect.Sets;
 
 public class RequestTableTestHelper {
     private final Table requestsTable;
-    
+    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
     public RequestTableTestHelper(DynamoDB dynamodb, String domain) {
         this.requestsTable = dynamodb.getTable(MitigationRequestsModel.getInstance().getTableName(domain));
     }
@@ -170,7 +174,7 @@ public class RequestTableTestHelper {
         
         MitigationRequestDescription storedDescription = storedDefinition.getMitigationRequestDescription();
         assertEquals(mitigationDefinition, storedDescription.getMitigationDefinition());
-        assertEquals(request.getMitigationActionMetadata(), storedDescription.getMitigationActionMetadata());
+        assertEquals(toJson(request.getMitigationActionMetadata()), toJson(storedDescription.getMitigationActionMetadata()));
         assertEquals(request.getMitigationTemplate(), storedDescription.getMitigationTemplate());
         assertEquals(mitigationVersion, storedDescription.getMitigationVersion());
         if (workflowId != -1) {
@@ -180,6 +184,14 @@ public class RequestTableTestHelper {
         assertEquals(locations, new HashSet<>(storedDefinition.getLocations()));
         
         return storedDefinition;
+    }
+    
+    private static String toJson(Object obj) {
+        try {
+            return writer.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
     
     public static void whenAnyPut(DDBBasedRequestStorageHandler handler, Stubber stubber) {
