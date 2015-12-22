@@ -72,7 +72,8 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
      * @return the workflow id of the for the new request
      * 
      * @throws AmazonClientException if an attempt to read or write to DynamoDB failed too many times
-     * @throws MissingMitigationException400 if this is not a create request and the mitigation doesn't exist or has been deleted
+     * @throws MissingMitigationException400 if this is not a create request and the mitigation doesn't exist
+     *              or has been deleted for edit request.(allow rollback on deleted mitigation)
      * @throws DuplicateMitigationNameException400 on create if the mitigation already exists
      * @throws DuplicateDefinitionException400 if a conflicting mitigation already exists. The definition of conflicting 
      *   depends on the template type
@@ -100,6 +101,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
         Long currMaxWorkflowId = null;
         RequestSummary latestRequestSummary = null;
         boolean isUpdate = (requestType != RequestType.CreateRequest);
+        boolean isEdit = (requestType != RequestType.EditRequest);
         
         // Get the max workflowId for existing mitigations, increment it by 1 and store it in the DDB. Return back the new workflowId
         // if successful, else end the loop and throw back an exception.
@@ -128,7 +130,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
                         deviceName, deviceScope, mitigationName, latestRequestSummary, metrics);
                 
                 // If we didn't get any version for the same deviceName, deviceScope and
-                // mitigation name, throw IllegalArgumentException.
+                // mitigation name, throw MissingMitigationException400.
                 if (latestRequestSummary == null || currMaxWorkflowId == null) {
                     String msg = "No existing mitigation found in DDB for deviceName: " + deviceName
                                  + " and deviceScope: " + deviceScope + " and mitigationName: " + mitigationName
@@ -140,8 +142,8 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
                 checkMitigationVersion(
                         request, deviceNameAndScope, mitigationVersion, latestRequestSummary.getMitigationVersion());
                 
-                // TODO: Allow rollback of deleted mitigations?
-                if (latestRequestSummary.getRequestType().equals(RequestType.DeleteRequest.name())) {
+                // reject edit request that is editing a deleted request
+                if (latestRequestSummary.getRequestType().equals(RequestType.DeleteRequest.name()) && isEdit) {
                     String msg = "Mitigation " + mitigationName + " for deviceName: " + deviceName 
                             + " and deviceScope: " + deviceScope + " has already been deleted"
                             + ". For request: " + requestToString(request);

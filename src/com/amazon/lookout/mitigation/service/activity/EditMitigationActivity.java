@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Set;
 
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
+
 import lombok.NonNull;
+
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -23,6 +25,7 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
+import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.StaleRequestException400;
@@ -49,6 +52,7 @@ public class EditMitigationActivity extends Activity {
         BadRequest,
         StaleRequest,
         DuplicateDefinition,
+        MissingMitigation,
         InternalError
     }
 
@@ -163,6 +167,11 @@ public class EditMitigationActivity extends Activity {
             LOG.warn(String.format("Caught DuplicateDefinitionException400 in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
                     ReflectionToStringBuilder.toString(editRequest)), ex);
             tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.DuplicateDefinition.name());
+            throw ex;
+        } catch (MissingMitigationException400 ex) {
+            LOG.warn(String.format("Caught MissingMitigationException400 in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
+                    ReflectionToStringBuilder.toString(editRequest)), ex);
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.MissingMitigation.name());
             throw ex;
         } catch (Exception internalError) {
             String errMsg = String.format("Internal error while fulfilling request for EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, internalError.getMessage(),
