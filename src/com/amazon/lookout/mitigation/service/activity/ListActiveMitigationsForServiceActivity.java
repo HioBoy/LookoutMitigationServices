@@ -205,6 +205,9 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             case EditRequest:
                 mergeOngoingEditRequest(mergedMitigations, ongoingRequest);
                 break;
+            case RollbackRequest:
+                mergeOngoingRollbackRequest(mergedMitigations, ongoingRequest);
+                break;
             default:
                 String msg = "Currently the List API doesn't handle merging requests of type: " + ongoingRequestDescription.getRequestType() +
                              ". OngoingRequest: " + ongoingRequest;
@@ -313,73 +316,128 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
     /**
      * Helps merging an ongoing edit workflow request with the mitigations already identified as active.
      * The algorithm for merging is as follows:
-     * 1. Check if this mitigation being edited shows up in the list of merged mitigations (representing active mitigations). If it doesn't, then we missed fetching this mitigation
-     *    when querying for the active mitigations. It is possible, that it might be a timing issue, hence simply log a warn for it and just add this ongoing edit request 
-     *    to the mergedMitigations and return.
+     * 1. Check if this mitigation being edited shows up in the list of merged mitigations
+     *    (representing active mitigations). If it doesn't, then we missed fetching this
+     *    mitigation when querying for the active mitigations. It is possible, that it might
+     *    be a timing issue, hence simply log a warn for it and just add this ongoing edit
+     *    request to the mergedMitigations and return.
      * 2. Iterate over each instance's edit operation status:
-     *    2.1 If the edit operation is ongoing, then keep a track of the mitigation description in the edit request and this location's status in the editMitigationRequestDescToReturn structure.
-     *    2.2 If the edit operation has completed successfully, then keep a track of the mitigation description in the same editMitigationRequestDescToReturn structure mentioned above, but also
-     *        remove this location from the mitigation descriptions of the currently active ones.
-     *    2.3 If the edit operation has failed, then do nothing, since none of the existing state has changed.
-     * @param mergedMitigations Map of String (key formed using deviceName and mitigationName) to a list of MitigationRequestDescriptionWithStatuses instances, identifying mitigations which must be returned back to the caller.
-     *                          Note, the List exists in the value only to support the case where for the same key (deviceName and mitigationName), we might have an entry for an active mitigation
-     *                          and also an ongoing edit request for that same mitigation.
-     * @param ongoingEditRequest An instance of MitigationRequestDescriptionWithStatuses indicating an ongoing edit request.
+     *    2.1 If the edit operation is ongoing, then keep a track of the mitigation
+     *        description in the edit request and this location's status in the
+     *        editMitigationRequestDescToReturn structure.
+     *    2.2 If the edit operation has completed successfully, then keep a track of the
+     *        mitigation description in the same editMitigationRequestDescToReturn structure
+     *        mentioned above, but also remove this location from the mitigation descriptions
+     *        of the currently active ones.
+     *    2.3 If the edit operation has failed, then do nothing, since none of the existing
+     *        state has changed.
+ 
+     * @param mergedMitigations Map of String (key formed using deviceName and
+     *     mitigationName) to a list of MitigationRequestDescriptionWithStatuses instances,
+     *     identifying mitigations which must be returned back to the caller. Note, the List
+     *     exists in the value only to support the case where for the same key (deviceName and
+     *     mitigationName), we might have an entry for an active mitigation and also an ongoing
+     *     edit request for that same mitigation.
+ 
+     * @param ongoingEditRequest An instance of MitigationRequestDescriptionWithStatuses
+     *     indicating an ongoing edit request.
      */
-    private void mergeOngoingEditRequest(Map<String, List<MitigationRequestDescriptionWithStatuses>> mergedMitigations, MitigationRequestDescriptionWithStatuses ongoingEditRequest) {
-        String ongoingEditRequestKey = createDeviceAndMitigationNameKey(ongoingEditRequest);
+    private void mergeOngoingEditRequest(Map<String, List<MitigationRequestDescriptionWithStatuses>> mergedMitigations,
+            MitigationRequestDescriptionWithStatuses ongoingRequest) {
+        String requestKey = createDeviceAndMitigationNameKey(ongoingRequest);
         
-        if (!mergedMitigations.containsKey(ongoingEditRequestKey)) {
-            LOG.warn("Expected to see an active mitigation for the ongoing edit request: " + ongoingEditRequest);
-            mergedMitigations.put(ongoingEditRequestKey, Lists.newArrayList(ongoingEditRequest));
+        if (!mergedMitigations.containsKey(requestKey)) {
+            LOG.warn("Expected to see an active mitigation for the ongoing edit request: " + ongoingRequest);
+            // It is normal if we didn't see an active mitigation, as rollback can rollback a deleted mitigation.
+            mergedMitigations.put(requestKey, Lists.newArrayList(ongoingRequest));
             return;
         }
+        mergeOngoingUpdateRequest(mergedMitigations.get(requestKey), ongoingRequest, RequestType.EditRequest);
+    }
+    
+    /**
+     * Helps merging an ongoing edit workflow request with the mitigations already identified as active.
+     * The algorithm for merging is as follows:
+     * 1. Check if this mitigation being edited shows up in the list of merged mitigations
+     *    (representing active mitigations). If it doesn't, then we missed fetching this
+     *    mitigation when querying for the active mitigations. It is possible when rollback
+     *    to a deleted mitigation. Also add this ongoing edit request to the mergedMitigations and return.
+     * 2. Iterate over each instance's edit operation status:
+     *    2.1 If the edit operation is ongoing, then keep a track of the mitigation
+     *        description in the edit request and this location's status in the
+     *        editMitigationRequestDescToReturn structure.
+     *    2.2 If the edit operation has completed successfully, then keep a track of the
+     *        mitigation description in the same editMitigationRequestDescToReturn structure
+     *        mentioned above, but also remove this location from the mitigation descriptions
+     *        of the currently active ones.
+     *    2.3 If the edit operation has failed, then do nothing, since none of the existing
+     *        state has changed.
+ 
+     * @param mergedMitigations Map of String (key formed using deviceName and
+     *     mitigationName) to a list of MitigationRequestDescriptionWithStatuses instances,
+     *     identifying mitigations which must be returned back to the caller. Note, the List
+     *     exists in the value only to support the case where for the same key (deviceName and
+     *     mitigationName), we might have an entry for an active mitigation and also an ongoing
+     *     edit request for that same mitigation.
+ 
+     * @param ongoingEditRequest An instance of MitigationRequestDescriptionWithStatuses
+     *     indicating an ongoing edit request.
+     */
+    private void mergeOngoingRollbackRequest(Map<String, List<MitigationRequestDescriptionWithStatuses>> mergedMitigations,
+            MitigationRequestDescriptionWithStatuses ongoingRequest) {
+        String requestKey = createDeviceAndMitigationNameKey(ongoingRequest);
         
-        // Having more than 1 mitigation for the same mitigation metadata (key formed using deviceName and mitigationName) is an absolute edge-case:
-        // Where one of the instance is from the ActiveMitigations query.
-        // And we have another instance from an ongoing edit request (whose workflow status is still RUNNING, but some location has finished editing - in which case we add in the
-        // edited version of the mitigation for that location in this mergedMitigations data structure, under the same metadata key - since they refer to the same mitigation.
-        // However, since we are processing an ongoing edit request, we don't expect to have seen any other ongoing edit for the same mitigation. Thus if we see more than
-        // 1 of such a mitigation, we log an error.
-        List<MitigationRequestDescriptionWithStatuses> correspondingMergedMitigations = mergedMitigations.get(ongoingEditRequestKey);
+        if (!mergedMitigations.containsKey(requestKey)) {
+            // It is normal if we didn't see an active mitigation, as rollback can rollback a deleted mitigation.
+            mergedMitigations.put(requestKey, Lists.newArrayList(ongoingRequest));
+            return;
+        }
+        mergeOngoingUpdateRequest(mergedMitigations.get(requestKey), ongoingRequest, RequestType.RollbackRequest);
+    }
+
+    private void mergeOngoingUpdateRequest(
+            List<MitigationRequestDescriptionWithStatuses> correspondingMergedMitigations,
+            MitigationRequestDescriptionWithStatuses ongoingRequest, RequestType requestType) {
+         
+        // should not see more than one ongoing request for same mitigation
         if (correspondingMergedMitigations.size() > 1) {
-            LOG.error("Found: " + correspondingMergedMitigations.size() + " mitigations for the mitigation being deleted: " + ReflectionToStringBuilder.toString(ongoingEditRequest) +
-                      " however, we shouldn't see more than 1 of such at any time.");
+            LOG.error("Found: " + correspondingMergedMitigations.size() + " mitigations for the mitigation being updated: "
+                    + ReflectionToStringBuilder.toString(ongoingRequest) +
+                    " however, we shouldn't see more than 1 of such at any time.");
         }
         
-        MitigationRequestDescriptionWithStatuses editMitigationRequestDescToReturn = new MitigationRequestDescriptionWithStatuses();
-        editMitigationRequestDescToReturn.setMitigationRequestDescription(ongoingEditRequest.getMitigationRequestDescription());
-        editMitigationRequestDescToReturn.setInstancesStatusMap(new HashMap<String, MitigationInstanceStatus>());
+        MitigationRequestDescriptionWithStatuses requestDescToReturn = new MitigationRequestDescriptionWithStatuses();
+        requestDescToReturn.setMitigationRequestDescription(ongoingRequest.getMitigationRequestDescription());
+        String successStatus = MitigationInstanceStatusHelper.getOperationSuccessfulStatus(requestType);
+        String inProgressStatus = MitigationInstanceStatusHelper.getRunningStatus(requestType);
         
-        String editSuccessStatus = MitigationInstanceStatusHelper.getOperationSuccessfulStatus(RequestType.EditRequest);
-        String editInProgressStatus = MitigationInstanceStatusHelper.getRunningStatus(RequestType.EditRequest);
-        
-        // Flag to indicate if whether the requests which are being edited have been updated to have its updatedJobId set to the jobId of this edit request.
-        boolean originalRequestUpdated = false;
-        
-        for (MitigationInstanceStatus instanceStatus : ongoingEditRequest.getInstancesStatusMap().values()) {
-            if (instanceStatus.getMitigationStatus().equals(editSuccessStatus)) {
-                for (MitigationRequestDescriptionWithStatuses mergedMitigation : correspondingMergedMitigations) {
-                    mergedMitigation.getInstancesStatusMap().remove(instanceStatus.getLocation());
-                }
-                editMitigationRequestDescToReturn.getInstancesStatusMap().put(instanceStatus.getLocation(), instanceStatus);
+        boolean isUpdating = false;
+        Map<String, MitigationInstanceStatus> returnInstancesStatusMap = new HashMap<>();
+        // update instance status map for merged requests and on-going request
+        for (MitigationInstanceStatus instanceStatus : ongoingRequest.getInstancesStatusMap().values()) {
+            // if instance of on-going request is successful, then remove the same instance in merged requests
+            if (instanceStatus.getMitigationStatus().equals(successStatus)) {
+                correspondingMergedMitigations.forEach(
+                        mitigation -> mitigation.getInstancesStatusMap().remove(instanceStatus.getLocation()));
             }
-            
-            if (instanceStatus.getMitigationStatus().equals(editSuccessStatus) || instanceStatus.getMitigationStatus().equals(editInProgressStatus)) {
-                editMitigationRequestDescToReturn.getInstancesStatusMap().put(instanceStatus.getLocation(), instanceStatus);
-                
-                // If there is any instance being edited for this mitigation, mark the original mitigations' updateJobId to reflect this edit request's jobId.
-                if (!originalRequestUpdated) {
-                    for (MitigationRequestDescriptionWithStatuses originalMitigation : correspondingMergedMitigations) {
-                        originalMitigation.getMitigationRequestDescription().setUpdateJobId(ongoingEditRequest.getMitigationRequestDescription().getJobId());
-                    }
-                    originalRequestUpdated = true;
-                }
+            // if instance of on-going request is running or successful, then add the instance to return instance status map.
+            if (instanceStatus.getMitigationStatus().equals(successStatus) 
+                    || instanceStatus.getMitigationStatus().equals(inProgressStatus)) {
+                returnInstancesStatusMap.put(instanceStatus.getLocation(), instanceStatus);
+                isUpdating = true;
             }
         }
+        requestDescToReturn.setInstancesStatusMap(returnInstancesStatusMap);
+         
+        if (isUpdating) {
+            // If there is any instance being updated for this mitigation, update the merged requests' updateJobId.
+            correspondingMergedMitigations.forEach(
+                    mitigation -> mitigation.getMitigationRequestDescription().setUpdateJobId(
+                            ongoingRequest.getMitigationRequestDescription().getJobId()));
+        }
         
-        if (editMitigationRequestDescToReturn.getInstancesStatusMap().size() > 0) {
-            mergedMitigations.get(ongoingEditRequestKey).add(editMitigationRequestDescToReturn);
+        if (requestDescToReturn.getInstancesStatusMap().size() > 0) {
+            correspondingMergedMitigations.add(requestDescToReturn);
         }
     }
     
