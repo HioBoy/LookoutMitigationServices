@@ -10,6 +10,7 @@ import static org.mockito.Mockito.*;
 
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
@@ -30,6 +31,7 @@ public class ActivityTestHelper {
     protected static final int maxNumberOfHistoryEntriesToFetch = 20;
     protected static final String requestId = "1000001";
     protected static final List<String> locations = Arrays.asList("G-IAD55", "G-SFO5");
+    protected static final RequestStorageResponse requestStorageResponse = new RequestStorageResponse(workflowId, mitigationVersion);
 
     protected static RequestValidator requestValidator;
     protected static RequestInfoHandler requestInfoHandler;

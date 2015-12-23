@@ -121,10 +121,10 @@ public class DDBBasedEditRequestStorageHandlerTest {
                 localDynamoDBClient, domain, createOnlytemplateBasedValidator);
         
         existingRequest1 = RequestTestHelper.generateCreateMitigationRequest(MITIGATION_1_NAME);
-        existingRequest1WorkflowId = createStorageHandler.storeRequestForWorkflow(existingRequest1, defaultLocations, tsdMetrics);
+        existingRequest1WorkflowId = createStorageHandler.storeRequestForWorkflow(existingRequest1, defaultLocations, tsdMetrics).getWorkflowId();
         
         existingRequest2 = RequestTestHelper.generateCreateMitigationRequest(MITIGATION_2_NAME);
-        existingRequest2WorkflowId = createStorageHandler.storeRequestForWorkflow(existingRequest2, defaultLocations, tsdMetrics);
+        existingRequest2WorkflowId = createStorageHandler.storeRequestForWorkflow(existingRequest2, defaultLocations, tsdMetrics).getWorkflowId();
     }
     
     private static MitigationRequestDescriptionWithLocations validateRequestInDDB(
@@ -138,7 +138,7 @@ public class DDBBasedEditRequestStorageHandlerTest {
     public void testEditMitigation() {
         EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
-        long workflowId = storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics).getWorkflowId();
 
         validateRequestInDDB(request, defaultLocations, workflowId);
     }
@@ -186,7 +186,7 @@ public class DDBBasedEditRequestStorageHandlerTest {
     public void testDuplicateEdit() {
         EditMitigationRequest request1 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
-        long workflowId = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics).getWorkflowId();
 
         validateRequestInDDB(request1, defaultLocations, workflowId);
         
@@ -221,11 +221,11 @@ public class DDBBasedEditRequestStorageHandlerTest {
             // Restore the real call for the all the following calls
             RequestTableTestHelper.whenAnyPut(storageHandler, doCallRealMethod());
             // Do the store for request 2 first
-            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics);
+            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics).getWorkflowId();
             return i.callRealMethod();
         }));
         
-        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics);
+        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request1, defaultLocations, workflowId1);
         validateRequestInDDB(request2, defaultLocations, workflowId2[0]);
         
@@ -249,7 +249,7 @@ public class DDBBasedEditRequestStorageHandlerTest {
             // Restore the real call for the all the following calls
             RequestTableTestHelper.whenAnyPut(storageHandler, doCallRealMethod());
             // Do the store for request 2 first
-            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics);
+            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics).getWorkflowId();
             return i.callRealMethod();
         }));
         
@@ -276,12 +276,12 @@ public class DDBBasedEditRequestStorageHandlerTest {
         
         RequestTableTestHelper.whenAnyPut(storageHandler, doAnswer(i -> {
             // Do the store for request 2 first
-            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics);
+            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics).getWorkflowId();
             return i.callRealMethod();
         }).doCallRealMethod() // Allow the call for request 2 to complete normally
         .doAnswer( i-> { 
             // Intercept the retry of request 1 and do request 3 instead
-            workflowId3[0] = storageHandler.storeRequestForWorkflow(request3, defaultLocations, tsdMetrics);
+            workflowId3[0] = storageHandler.storeRequestForWorkflow(request3, defaultLocations, tsdMetrics).getWorkflowId();
             return i.callRealMethod();
         }).doCallRealMethod().doCallRealMethod()); // Calls for request 3 and final call for request 1
         
@@ -311,7 +311,7 @@ public class DDBBasedEditRequestStorageHandlerTest {
                     RequestTestHelper.generateEditMitigationRequest(
                             MITIGATION_2_NAME, mitigation2ExpectedVersion.incrementAndGet());
             // Do the store for the other request first
-            storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics);
+            storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics).getWorkflowId();
             return i.callRealMethod(); 
         }).when(storageHandler).putItemInDDB(
                 MockUtils.argThatMatchesPredicate(map ->  
@@ -345,11 +345,11 @@ public class DDBBasedEditRequestStorageHandlerTest {
             // Restore the real call for the all the following calls
             RequestTableTestHelper.whenAnyPut(storageHandler, doCallRealMethod());
             // Do the store for request 2 first
-            workflowId2[0] = createStorageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics);
+            workflowId2[0] = createStorageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics).getWorkflowId();
             return i.callRealMethod();
         }));
         
-        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics);
+        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request1, defaultLocations, workflowId1);
         testTableHelper.validateRequestInDDB(
                 request2, request2.getMitigationDefinition(), DDBBasedRequestStorageHandler.INITIAL_MITIGATION_VERSION,
@@ -403,7 +403,7 @@ public class DDBBasedEditRequestStorageHandlerTest {
         whenValidateCoexistence(templateBasedValidator, editRequest, existingRequest1, doThrow(
                 new DuplicateDefinitionException400("Should not be thrown")));
         
-        long workflowId = storageHandler.storeRequestForWorkflow(editRequest, defaultLocations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(editRequest, defaultLocations, tsdMetrics).getWorkflowId();
 
         validateRequestInDDB(editRequest, defaultLocations, workflowId);
     }
@@ -433,7 +433,7 @@ public class DDBBasedEditRequestStorageHandlerTest {
             // Restore the real call for the all the following calls
             RequestTableTestHelper.whenAnyPut(storageHandler, doCallRealMethod());
             // Do the store for request 2 first
-            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics);
+            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics).getWorkflowId();
             return i.callRealMethod();
         }));
         
@@ -555,7 +555,7 @@ public class DDBBasedEditRequestStorageHandlerTest {
         
         EditMitigationRequest request2 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_2_NAME, 2);
         
-        long workflowId = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request2, defaultLocations, workflowId);
         assertEquals(deviceNameAndScope.getDeviceScope().getMaxWorkflowId(), workflowId);
         
@@ -572,7 +572,7 @@ public class DDBBasedEditRequestStorageHandlerTest {
         EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
-        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
 
         DeviceNameAndScope deviceNameAndScope = 
                 MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());

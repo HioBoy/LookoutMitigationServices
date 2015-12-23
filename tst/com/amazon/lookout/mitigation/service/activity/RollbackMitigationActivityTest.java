@@ -323,7 +323,7 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
                 .getMitigationDefinition(eq(deviceName), eq(serviceName), eq(mitigationName),
                         eq(rollbackMitigationVersion), isA(TSDMetrics.class));
         
-        doReturn(workflowId).when(requestStorageManager).storeRequestForWorkflow(eq(request),
+        doReturn(requestStorageResponse).when(requestStorageManager).storeRequestForWorkflow(eq(request),
                 eq(new HashSet<>(locations)), eq(RequestType.RollbackRequest), isA(TSDMetrics.class));
  
         WorkflowClientExternal workflowClient = mock(WorkflowClientExternal.class);
@@ -368,7 +368,7 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
                 .getMitigationDefinition(eq(deviceName), eq(serviceName), eq(mitigationName),
                         eq(rollbackMitigationVersion), isA(TSDMetrics.class));
         
-        doReturn(workflowId).when(requestStorageManager).storeRequestForWorkflow(eq(request),
+        doReturn(requestStorageResponse).when(requestStorageManager).storeRequestForWorkflow(eq(request),
                 eq(new HashSet<>(locations)), eq(RequestType.RollbackRequest), isA(TSDMetrics.class));
  
         WorkflowClientExternal workflowClient = mock(WorkflowClientExternal.class);

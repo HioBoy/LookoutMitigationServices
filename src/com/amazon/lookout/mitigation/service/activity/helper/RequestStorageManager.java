@@ -12,7 +12,7 @@ import com.amazon.lookout.model.RequestType;
  */
 public interface RequestStorageManager {
     
-    public long storeRequestForWorkflow(MitigationModificationRequest request, Set<String> locations, RequestType requestType, TSDMetrics metrics);
+    public RequestStorageResponse storeRequestForWorkflow(MitigationModificationRequest request, Set<String> locations, RequestType requestType, TSDMetrics metrics);
     
     public void updateRunIdForWorkflowRequest(String deviceName, long workflowId, String runId, RequestType requestType, TSDMetrics metrics);
 }

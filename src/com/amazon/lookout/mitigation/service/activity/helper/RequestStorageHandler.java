@@ -12,7 +12,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
  */
 public interface RequestStorageHandler {
     
-    public long storeRequestForWorkflow(MitigationModificationRequest mitigationRequest, Set<String> locations, TSDMetrics metrics);
+    public RequestStorageResponse storeRequestForWorkflow(MitigationModificationRequest mitigationRequest, Set<String> locations, TSDMetrics metrics);
     
     /**
      * @deprecated We don't seem to use this anywhere

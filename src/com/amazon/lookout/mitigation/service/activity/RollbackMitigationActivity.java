@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 
 import lombok.NonNull;
 
@@ -120,16 +121,20 @@ public class RollbackMitigationActivity extends Activity {
                     rollbackRequest, mitigationRequestDescription.getMitigationDefinition());
             
             // Step4. Persist this request in DDB and get back the workflowId associated with this request.
-            long workflowId = requestStorageManager.storeRequestForWorkflow(internalRequest, locationsToDeploy, 
+            RequestStorageResponse requestStorageResponse = requestStorageManager.storeRequestForWorkflow(internalRequest, locationsToDeploy, 
                     RequestType.RollbackRequest, tsdMetrics);
+            
+            long workflowId = requestStorageResponse.getWorkflowId();
+            int storedMitigationVersion = requestStorageResponse.getMitigationVersion();
 
             // Step5. Create new workflow client to be used for running the workflow.
             WorkflowClientExternal workflowClient = swfWorkflowStarter.createMitigationModificationWorkflowClient(
                     workflowId, internalRequest, deviceName, tsdMetrics);
 
             // Step6. Start running the workflow.
-            swfWorkflowStarter.startMitigationModificationWorkflow(workflowId, internalRequest, locationsToDeploy, RequestType.RollbackRequest,
-                    internalRequest.getMitigationVersion(), deviceName, internalRequest.getDeviceScope(), workflowClient, tsdMetrics);
+            swfWorkflowStarter.startMitigationModificationWorkflow(workflowId, internalRequest, locationsToDeploy,
+                    RequestType.RollbackRequest, storedMitigationVersion, deviceName, internalRequest.getDeviceScope(),
+                    workflowClient, tsdMetrics);
 
             // Step7. Update the record for this workflow request and store the runId that SWF associates with this workflow.
             String swfRunId = workflowClient.getWorkflowExecution().getRunId();
@@ -138,7 +143,7 @@ public class RollbackMitigationActivity extends Activity {
             // Step8. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
             mitigationModificationResponse.setMitigationName(internalRequest.getMitigationName());
-            mitigationModificationResponse.setMitigationVersion(internalRequest.getMitigationVersion());
+            mitigationModificationResponse.setMitigationVersion(storedMitigationVersion);
             mitigationModificationResponse.setMitigationTemplate(internalRequest.getMitigationTemplate());
             mitigationModificationResponse.setDeviceName(deviceName);
             mitigationModificationResponse.setServiceName(serviceName);

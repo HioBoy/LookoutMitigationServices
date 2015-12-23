@@ -12,6 +12,7 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
@@ -31,10 +32,10 @@ public class DDBBasedEditRequestStorageHandler extends DDBBasedCreateAndEditRequ
      * @param request Request to be stored.
      * @param locations Set of String representing the locations where this request applies.
      * @param metrics
-     * @return The workflowId that this request was stored with, using the algorithm above.
+     * @return RequestStorageResponse which includes the workflowId, and new mitigation version that this request was stored with, using the algorithm above.
      */
     @Override
-    public long storeRequestForWorkflow(@NonNull MitigationModificationRequest request, Set<String> locations, @NonNull TSDMetrics metrics) {
+    public RequestStorageResponse storeRequestForWorkflow(@NonNull MitigationModificationRequest request, Set<String> locations, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(locations);
 
         try (TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedEditRequestStorageHandler.storeRequestForWorkflow")) {

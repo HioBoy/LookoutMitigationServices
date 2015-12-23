@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 import lombok.NonNull;
+
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,7 +28,7 @@ import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
-import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandler;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
@@ -116,14 +117,18 @@ public class CreateMitigationActivity extends Activity {
             Set<String> locationsToDeploy = templateBasedLocationsManager.getLocationsForDeployment(createRequest, tsdMetrics);
             
             // Step4. Persist this request in DDB and get back the workflowId associated with this request.
-            long workflowId = requestStorageManager.storeRequestForWorkflow(createRequest, locationsToDeploy, RequestType.CreateRequest, tsdMetrics);
+            RequestStorageResponse requestStorageResponse = requestStorageManager.storeRequestForWorkflow(
+                    createRequest, locationsToDeploy, RequestType.CreateRequest, tsdMetrics);
+            
+            long workflowId = requestStorageResponse.getWorkflowId();
+            int storedMitigationVersion = requestStorageResponse.getMitigationVersion();
             
             // Step5. Create new workflow client to be used for running the workflow.
             WorkflowClientExternal workflowClient = workflowStarter.createMitigationModificationWorkflowClient(workflowId, createRequest, deviceName, tsdMetrics);
             
             // Step6. Start running the workflow.
-            workflowStarter.startMitigationModificationWorkflow(workflowId, createRequest, locationsToDeploy, RequestType.CreateRequest,
-                                                                DDBBasedCreateRequestStorageHandler.INITIAL_MITIGATION_VERSION, deviceName, deviceScope, workflowClient, tsdMetrics);
+            workflowStarter.startMitigationModificationWorkflow(workflowId, createRequest, locationsToDeploy,
+                    RequestType.CreateRequest, storedMitigationVersion, deviceName, deviceScope, workflowClient, tsdMetrics);
             
             // Step7. Update the record for this workflow request and store the runId that SWF associates with this workflow.
             String swfRunId = workflowClient.getWorkflowExecution().getRunId();
@@ -132,7 +137,7 @@ public class CreateMitigationActivity extends Activity {
             // Step8. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
             mitigationModificationResponse.setMitigationName(createRequest.getMitigationName());
-            mitigationModificationResponse.setMitigationVersion(1);
+            mitigationModificationResponse.setMitigationVersion(storedMitigationVersion);
             mitigationModificationResponse.setMitigationTemplate(createRequest.getMitigationTemplate());
             mitigationModificationResponse.setDeviceName(deviceName);
             mitigationModificationResponse.setServiceName(serviceName);

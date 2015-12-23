@@ -16,6 +16,7 @@ import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBRequestSerializer.RequestSummary;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
@@ -34,13 +35,11 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
     
     // Num Attempts to get new workflowId + retry sleep configs.
     public static final int DDB_ACTIVITY_MAX_ATTEMPTS = 10;
-    private static final int DDB_ACTIVITY_RETRY_SLEEP_MILLIS_MULTIPLIER = 100;
     
     // Prefix tags for logging warnings to be monitored.
     public static final String DELETE_REQUEST_STORAGE_FAILED_LOG_PREFIX = "[DELETE_REQUEST_STORAGE_FAILED] ";
     
     // Keys for TSDMetric property.
-    private static final String NUM_ACTIVE_INSTANCES_FOR_MITIGATIONS = "NumActiveMitigationInstances";
     private static final String NUM_ATTEMPTS_TO_STORE_DELETE_REQUEST = "NumDeleteRequestStoreAttempts";
     
     public DDBBasedDeleteRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain) {
@@ -61,10 +60,10 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
      * @param request Request to be stored.
      * @param locations Set of String where this request applies.
      * @param metrics
-     * @return The workflowId that this request was stored with, using the algorithm above.
+     * @return RequestStorageResponse, include workflowId and new mitigation version that this request was stored with, using the algorithm above.
      */
     @Override
-    public long storeRequestForWorkflow(@NonNull MitigationModificationRequest request, @NonNull Set<String> locations, @NonNull TSDMetrics metrics) {
+    public RequestStorageResponse storeRequestForWorkflow(@NonNull MitigationModificationRequest request, @NonNull Set<String> locations, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(locations);
 
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedDeleteRequestStorageHandler.storeRequestForWorkflow");
@@ -117,7 +116,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                     storeRequestInDDB(
                             deleteRequest, null, locations, deviceNameAndScope, newWorkflowId, RequestType.DeleteRequest, 
                             deleteRequest.getMitigationVersion() + 1, subMetrics);
-                    return newWorkflowId;
+                    return new RequestStorageResponse(newWorkflowId, deleteRequest.getMitigationVersion() + 1);
                 } catch (ConditionalCheckFailedException ex) {
                     String baseMsg = "Another process created workflow " + newWorkflowId + " first for " + deviceName;
                     if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {

@@ -1,5 +1,28 @@
 package com.amazon.lookout.mitigation.service.activity;
 
+import static junitparams.JUnitParamsRunner.$;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anySet;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+import java.util.Collections;
+import java.util.List;
+
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
+
+import org.apache.log4j.Level;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.google.common.collect.ImmutableList;
 import com.amazon.lookout.mitigation.service.ApplyIPTablesRulesAction;
@@ -8,9 +31,11 @@ import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DropAction;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
+import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -30,26 +55,6 @@ import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.s3.AmazonS3;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
-
-import org.apache.log4j.Level;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import java.util.Collections;
-import java.util.List;
-
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static junitparams.JUnitParamsRunner.$;
 
 @RunWith(JUnitParamsRunner.class)
 public class CreateMitigationActivityTest {
@@ -130,6 +135,10 @@ public class CreateMitigationActivityTest {
     }
 
     private CreateMitigationActivity createActivityWithValidators() {
+        RequestStorageManager requestStorageManager = mock(RequestStorageManager.class);
+        Mockito.doReturn(new RequestStorageResponse(1, 1)).when(requestStorageManager)
+                .storeRequestForWorkflow(any(MitigationModificationRequest.class), anySet(), 
+                        eq(RequestType.CreateRequest), isA(TSDMetrics.class));
         return new CreateMitigationActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
                     mock(EdgeLocationsHelper.class),
@@ -137,13 +146,16 @@ public class CreateMitigationActivityTest {
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
                     mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper(),
                     mock(BlackWatchBorderLocationValidator.class)),
-            mock(RequestStorageManager.class),
+            requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class),
                     mock(BlackWatchTemplateLocationHelper.class)));
     }
 
     private CreateMitigationActivity createActivityWithValidators(RequestStorageManager requestStorageManager) {
+        Mockito.doReturn(new RequestStorageResponse(1, 1)).when(requestStorageManager)
+                .storeRequestForWorkflow(any(MitigationModificationRequest.class), anySet(), 
+                        eq(RequestType.CreateRequest), isA(TSDMetrics.class));
         return new CreateMitigationActivity(
                 new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
                         mock(EdgeLocationsHelper.class),

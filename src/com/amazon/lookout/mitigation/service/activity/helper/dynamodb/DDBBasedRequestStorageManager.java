@@ -7,6 +7,7 @@ import java.util.Set;
 import javax.annotation.concurrent.ThreadSafe;
 
 import lombok.NonNull;
+
 import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -18,6 +19,7 @@ import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
@@ -79,10 +81,11 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @param locations Set of String representing the locations where this request applies.
      * @param requestType Type of request (eg: Create/Edit/Delete).
      * @param metrics
-     * @return WorkflowId to be used to for processing this request, which was determined by the RequestStorageHandler based on the workflowId we recorded this request with.
+     * @return RequestStorageResponse to be used to for processing this request, 
+     *       which was determined by the RequestStorageHandler based on the workflowId we recorded this request with.
      */
     @Override
-    public long storeRequestForWorkflow(@NonNull MitigationModificationRequest request, @NonNull Set<String> locations, @NonNull RequestType requestType, @NonNull TSDMetrics metrics) {
+    public RequestStorageResponse storeRequestForWorkflow(@NonNull MitigationModificationRequest request, @NonNull Set<String> locations, @NonNull RequestType requestType, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(locations, "location is empty");
         
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageManager.storeRequestForWorkflow");

@@ -27,7 +27,6 @@ import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
-import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedCreateRequestStorageHandlerTest;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;

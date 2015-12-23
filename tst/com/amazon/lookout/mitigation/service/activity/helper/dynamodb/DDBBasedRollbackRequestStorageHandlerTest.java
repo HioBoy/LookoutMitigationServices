@@ -138,7 +138,7 @@ public class DDBBasedRollbackRequestStorageHandlerTest {
         itemCreator.addItem();
         
         assertEquals(maxWorkflowId + 1, ddbBasedRollbackRequestStorageHandler
-                .storeRequestForWorkflow(request, locations, metrics));
+                .storeRequestForWorkflow(request, locations, metrics).getWorkflowId());
         assertEquals(maxMitigationVersion + 1, dynamodb.getTable(tableName)
                 .getItem(DEVICE_NAME_KEY, deviceName, WORKFLOW_ID_KEY, maxWorkflowId + 1)
                 .getInt(MITIGATION_VERSION_KEY));

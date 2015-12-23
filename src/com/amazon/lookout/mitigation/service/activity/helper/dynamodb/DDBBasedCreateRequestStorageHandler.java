@@ -17,6 +17,7 @@ import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToFixedActionMapper;
 import com.amazon.lookout.model.RequestType;
@@ -53,10 +54,10 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedCreateAndEditRe
      * @param request Request to be stored.
      * @param locations Set of String representing the locations where this request applies.
      * @param metrics
-     * @return The workflowId that this request was stored with, using the algorithm above.
+     * @return RequestStorageResponse include workflowsId and new mitigation version, that this request was stored with, using the algorithm above.
      */
     @Override
-    public long storeRequestForWorkflow(@NonNull MitigationModificationRequest request, @NonNull Set<String> locations, @NonNull TSDMetrics metrics) {
+    public RequestStorageResponse storeRequestForWorkflow(@NonNull MitigationModificationRequest request, @NonNull Set<String> locations, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(locations);
         
         CreateMitigationRequest createMitigationRequest = (CreateMitigationRequest) request;

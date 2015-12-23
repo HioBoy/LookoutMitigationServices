@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.*;
 
 import org.junit.Before;
@@ -16,6 +15,7 @@ import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.coral.google.common.collect.Sets;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.model.RequestType;
 
 public class DDBBasedRequestStorageManagerTest {
@@ -42,12 +42,13 @@ public class DDBBasedRequestStorageManagerTest {
         when(storageManager.getRequestStorageHandler(RequestType.CreateRequest)).thenReturn(createRequestStorageHandler);
         
         long workflowIdToReturn = 1;
-        when(createRequestStorageHandler.storeRequestForWorkflow(any(MitigationModificationRequest.class), anySet(), any(TSDMetrics.class))).thenReturn(workflowIdToReturn);
+        when(createRequestStorageHandler.storeRequestForWorkflow(any(MitigationModificationRequest.class), anySet(),
+                any(TSDMetrics.class))).thenReturn(new RequestStorageResponse(workflowIdToReturn, 1));
         
         when(storageManager.storeRequestForWorkflow(any(MitigationModificationRequest.class), anySet(), any(RequestType.class), any(TSDMetrics.class))).thenCallRealMethod();
         
         CreateMitigationRequest request = new CreateMitigationRequest();
-        long workflowId = storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), RequestType.CreateRequest, tsdMetrics);
+        long workflowId = storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), RequestType.CreateRequest, tsdMetrics).getWorkflowId();
         assertEquals(workflowId, workflowIdToReturn);
     }
     
@@ -65,7 +66,7 @@ public class DDBBasedRequestStorageManagerTest {
         
         Throwable caughtException = null;
         try {
-            storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), requestType, tsdMetrics);
+            storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), requestType, tsdMetrics).getWorkflowId();
         } catch (Exception ex) {
             caughtException = ex;
         }
@@ -91,7 +92,7 @@ public class DDBBasedRequestStorageManagerTest {
         
         Throwable caughtException = null;
         try {
-            storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), requestType, tsdMetrics);
+            storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), requestType, tsdMetrics).getWorkflowId();
         } catch (Exception ex) {
             caughtException = ex;
         }

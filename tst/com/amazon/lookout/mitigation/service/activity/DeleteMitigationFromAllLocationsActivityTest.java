@@ -1,11 +1,29 @@
 package com.amazon.lookout.mitigation.service.activity;
 
+import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
+import static com.google.common.collect.Sets.newHashSet;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.assertThat;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anySet;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.mockito.Mockito;
+
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
+import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -23,22 +41,9 @@ import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustom
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
 import com.amazon.lookout.model.RequestType;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
-
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
-import static com.google.common.collect.Sets.newHashSet;
-import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 public class DeleteMitigationFromAllLocationsActivityTest {
 
@@ -81,6 +86,9 @@ public class DeleteMitigationFromAllLocationsActivityTest {
     }
 
     private DeleteMitigationFromAllLocationsActivity createActivityWithValidators(SWFWorkflowStarter workflowStarter) {
+        RequestStorageManager requestStorageManager = mock(RequestStorageManager.class);
+        Mockito.doReturn(new RequestStorageResponse(1l, MITIGATION_VERSION)).when(requestStorageManager).storeRequestForWorkflow(
+                any(MitigationModificationRequest.class), anySet(), eq(RequestType.DeleteRequest), isA(TSDMetrics.class));
         return new DeleteMitigationFromAllLocationsActivity(
             new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
                     mock(EdgeLocationsHelper.class),
@@ -88,7 +96,7 @@ public class DeleteMitigationFromAllLocationsActivityTest {
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
                     mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
                     mock(BlackWatchBorderLocationValidator.class)),
-            mock(RequestStorageManager.class),
+            requestStorageManager,
             workflowStarter,
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class),
                     mock(BlackWatchTemplateLocationHelper.class)));

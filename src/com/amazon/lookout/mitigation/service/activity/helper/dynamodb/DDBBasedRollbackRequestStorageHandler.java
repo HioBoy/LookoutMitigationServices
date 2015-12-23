@@ -11,6 +11,7 @@ import lombok.NonNull;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.request.RollbackMitigationRequestInternal;
 import com.amazon.lookout.model.RequestType;
@@ -31,7 +32,7 @@ public class DDBBasedRollbackRequestStorageHandler extends DDBBasedCreateAndEdit
      * Store the rollback request to request table
      */
     @Override
-    public long storeRequestForWorkflow(@NonNull MitigationModificationRequest request, Set<String> locations, @NonNull TSDMetrics metrics) {
+    public RequestStorageResponse storeRequestForWorkflow(@NonNull MitigationModificationRequest request, Set<String> locations, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(locations);
         try (TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRollbackRequestStorageHandler.storeRequestForWorkflow")) {
             try {

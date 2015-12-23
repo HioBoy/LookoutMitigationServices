@@ -115,7 +115,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
-        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
 
         validateRequestInDDB(request, locations, workflowId);
     }
@@ -154,7 +154,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
-        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
 
         DuplicateMitigationNameException400 exception = AssertUtils.assertThrows(
                 DuplicateMitigationNameException400.class, 
@@ -178,12 +178,12 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         CreateMitigationRequest request1 = RequestTestHelper.generateCreateMitigationRequest(
                 MitigationTemplate.Router_RateLimit_Route53Customer, "Name", ServiceName.Route53);
-        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics);
+        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request1, locations, workflowId1);
         
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest(
                 MitigationTemplate.Blackhole_Mitigation_ArborCustomer, "Mitigation2", ServiceName.Blackhole);
-        long workflowId2 = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics);
+        long workflowId2 = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request2, locations, workflowId2);
     }
     
@@ -196,7 +196,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         CreateMitigationRequest request1 = RequestTestHelper.generateCreateMitigationRequest(
                 MitigationTemplate.Router_RateLimit_Route53Customer, "Name", ServiceName.Route53);
-        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics);
+        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request1, locations, workflowId1);
         
         // There currently isn't a different service with the same template, or even device 
@@ -219,7 +219,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
-        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
         
         validateRequestInDDB(request, locations, workflowId);
         
@@ -230,7 +230,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         // Recreate
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest();
         request2.getMitigationActionMetadata().setDescription("RecreatedRequest");
-        long newWorkflowId = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics);
+        long newWorkflowId = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics).getWorkflowId();
         assertEquals(newWorkflowId, 3);
         testTableHelper.validateRequestInDDB(request2, request2.getMitigationDefinition(), 3, locations, newWorkflowId); 
     }
@@ -252,7 +252,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
-        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
         
         validateRequestInDDB(request, locations, workflowId);
         
@@ -287,7 +287,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
-        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
         
         validateRequestInDDB(request, locations, workflowId);
         
@@ -322,7 +322,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
-        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
         
         validateRequestInDDB(request, locations, workflowId);
         
@@ -356,7 +356,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
-        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
         
         validateRequestInDDB(request, locations, workflowId);
         
@@ -468,11 +468,11 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                 localDynamoDBClient, domain, templateBasedValidator);
         
         CreateMitigationRequest request1 = RequestTestHelper.generateCreateMitigationRequest();
-        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics);
+        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request1, locations, workflowId1);
         
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest("Mitigation2");
-        long workflowId2 = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics);
+        long workflowId2 = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request2, locations, workflowId2);
     }
     
@@ -496,7 +496,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request1 = RequestTestHelper.generateCreateMitigationRequest();
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
-        storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics);
+        storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics).getWorkflowId();
         
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest("ConflictingMitigation");
         
@@ -525,11 +525,11 @@ public class DDBBasedCreateRequestStorageHandlerTest {
             // Restore the real call for the all the following calls
             RequestTableTestHelper.whenAnyPut(storageHandler, doCallRealMethod());
             // Do the store for request 2 first
-            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics);
+            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics).getWorkflowId();
             return i.callRealMethod();
         }));
         
-        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics);
+        long workflowId1 = storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request1, locations, workflowId1);
         validateRequestInDDB(request2, locations, workflowId2[0]);
         
@@ -558,7 +558,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
             // Restore the real call for the all the following calls
             RequestTableTestHelper.whenAnyPut(storageHandler, doCallRealMethod());
             // Do the store for request 2 first
-            workflowId2[0] = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+            workflowId2[0] = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
             return i.callRealMethod();
         }));
         
@@ -588,7 +588,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
             // Restore the real call for the all the following calls
             RequestTableTestHelper.whenAnyPut(storageHandler, doCallRealMethod());
             // Do the store for request 2 first
-            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics);
+            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics).getWorkflowId();
             return i.callRealMethod();
         }));
         
@@ -620,12 +620,12 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         RequestTableTestHelper.whenAnyPut(storageHandler, doAnswer(i -> {
             // Do the store for request 2 first
-            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics);
+            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics).getWorkflowId();
             return i.callRealMethod();
         }).doCallRealMethod() // Allow the call for request 2 to complete normally
         .doAnswer( i-> { 
             // Intercept the retry of request 1 and do request 3 instead
-            workflowId3[0] = storageHandler.storeRequestForWorkflow(request3, locations, tsdMetrics);
+            workflowId3[0] = storageHandler.storeRequestForWorkflow(request3, locations, tsdMetrics).getWorkflowId();
             return i.callRealMethod();
         }).doCallRealMethod().doCallRealMethod()); // Calls for request 3 and final call for request 1
         
@@ -654,7 +654,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         doAnswer(i -> {
             CreateMitigationRequest newRequest = RequestTestHelper.generateCreateMitigationRequest("Request-" + requestCount.incrementAndGet());
             // Do the store for the other request first
-            storageHandler.storeRequestForWorkflow(newRequest, locations, tsdMetrics);
+            storageHandler.storeRequestForWorkflow(newRequest, locations, tsdMetrics).getWorkflowId();
             return i.callRealMethod(); 
         }).when(storageHandler).putItemInDDB(
                 MockUtils.argThatMatchesPredicate(map ->  
@@ -778,7 +778,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         for (int i = 0; i < 25; i++) {
             CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest("Mitigation" + i);
-            long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+            long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
             validateRequestInDDB(request, locations, workflowId);
         }
     }
@@ -806,7 +806,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                 tsdMetrics);
         
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest("Mitigation2");
-        long workflowId = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request2, locations, workflowId);
         assertEquals(deviceNameAndScope.getDeviceScope().getMaxWorkflowId(), workflowId);
         
@@ -830,7 +830,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
-        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics);
+        long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
 
         DeviceNameAndScope deviceNameAndScope = 
                 MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());

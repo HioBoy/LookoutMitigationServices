@@ -21,6 +21,7 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.StaleRequestException400;
+import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBRequestSerializer.RequestSummary;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
@@ -69,7 +70,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
      * @param version
      * @param validator a validator to validate the input before 
      * @param metrics
-     * @return the workflow id of the for the new request
+     * @return RequestStorageResponse includes the workflow id and mitigation version of the for the new request
      * 
      * @throws AmazonClientException if an attempt to read or write to DynamoDB failed too many times
      * @throws MissingMitigationException400 if this is not a create request and the mitigation doesn't exist
@@ -82,7 +83,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
      *  template type)
      * @throws InternalServerError500 for unexpected errors, e.g. we've hit the max workflow id
      */
-    protected long storeRequestForWorkflow(
+    protected RequestStorageResponse storeRequestForWorkflow(
             RequestType requestType, MitigationModificationRequest request, 
             Set<String> locations, MitigationDefinition definition, 
             int mitigationVersion, String errorTag, TSDMetrics metrics) 
@@ -185,7 +186,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
             try {
                 storeRequestInDDB(request, definition,
                        locations, deviceNameAndScope, newWorkflowId, requestType, mitigationVersion, metrics);
-                return newWorkflowId;
+                return new RequestStorageResponse(newWorkflowId, mitigationVersion);
             } catch (ConditionalCheckFailedException ex) {
                 String baseMsg = "Another process created workflow " + newWorkflowId + " first for " + deviceName;
                 if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
