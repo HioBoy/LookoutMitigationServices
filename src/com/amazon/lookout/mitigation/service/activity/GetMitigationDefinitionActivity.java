@@ -120,7 +120,7 @@ public class GetMitigationDefinitionActivity extends Activity {
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationDefinitionExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
         } catch (MissingMitigationVersionException404 ex) {
-            String msg = "Caught MissingMitigationVersionException404 in GetMitigationDefinitionActivity for requestId: " + requestId
+            String msg = "Caught " + ex.getClass().getSimpleName() + " in GetMitigationDefinitionActivity for requestId: " + requestId
                     + ", reason: " + ex.getMessage();
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationDefinitionExceptions.MissingMitigationVersion.name(), 1);

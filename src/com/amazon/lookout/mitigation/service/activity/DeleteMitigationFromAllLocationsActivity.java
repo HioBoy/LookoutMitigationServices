@@ -165,12 +165,12 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg);
         } catch (DuplicateRequestException400 ex) {
-            String msg = "Caught DuplicateDefinitionException in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
+            String msg = "Caught " + ex.getClass().getSimpleName() + " in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(deleteRequest), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.DuplicateRequest.name(), 1);
             throw new DuplicateRequestException400(msg);
         } catch (MissingMitigationException400 ex) {
-            String msg = "Caught MissingMitigationException in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
+            String msg = "Caught " + ex.getClass().getSimpleName() + " in DeleteMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(deleteRequest), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + DeleteExceptions.MissingMitigation.name(), 1);
             throw new MissingMitigationException400(msg);

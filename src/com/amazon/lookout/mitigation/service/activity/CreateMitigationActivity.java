@@ -2,9 +2,11 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import lombok.NonNull;
 
@@ -22,7 +24,7 @@ import com.amazon.coral.validate.Validated;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
-import com.amazon.lookout.mitigation.service.DuplicateRequestException400;
+import com.amazon.lookout.mitigation.service.DuplicateMitigationNameException400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
@@ -40,7 +42,6 @@ import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
-import com.google.common.collect.Sets;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
@@ -49,17 +50,17 @@ public class CreateMitigationActivity extends Activity {
     
     private enum CreateExceptions {
         BadRequest,
-        DuplicateRequest,
+        DuplicateName,
         DuplicateDefinition,
         InternalError
     }
     
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
-    private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(Sets.newHashSet(CreateExceptions.BadRequest.name(),
-                                                                                                      CreateExceptions.DuplicateRequest.name(),
-                                                                                                      CreateExceptions.DuplicateDefinition.name(),
-                                                                                                      CreateExceptions.InternalError.name())); 
+    private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(
+            Arrays.stream(CreateExceptions.values())
+            .map(e -> e.name())
+            .collect(Collectors.toSet()));
     
     private final RequestValidator requestValidator;
     private final TemplateBasedRequestValidator templateBasedValidator;
@@ -159,13 +160,14 @@ public class CreateMitigationActivity extends Activity {
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(createRequest), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg);
-        } catch (DuplicateRequestException400 ex) {
-            String msg = "Caught DuplicateRequestException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
+        } catch (DuplicateMitigationNameException400 ex) {
+            String msg = "Caught " + ex.getClass().getSimpleName() + " in CreateMitigationActivity for requestId: "
+                    + requestId + ", reason: " + ex.getMessage();
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(createRequest), ex);
-            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.DuplicateRequest.name(), 1);
-            throw new DuplicateRequestException400(msg);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.DuplicateName.name(), 1);
+            throw new DuplicateMitigationNameException400(msg);
         } catch (DuplicateDefinitionException400 ex) {
-            String msg = "Caught DuplicateDefinitionException in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
+            String msg = "Caught " + ex.getClass().getSimpleName() + " in CreateMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(createRequest), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + CreateExceptions.DuplicateDefinition.name(), 1);
             throw new DuplicateDefinitionException400(msg);

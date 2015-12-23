@@ -166,12 +166,12 @@ public class RollbackMitigationActivity extends Activity {
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + RollbackMitigationExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
         } catch (StaleRequestException400 ex) {
-            LOG.warn(String.format("Caught StaleRequestException in for StaleRequestException400 requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
+            LOG.warn(String.format("Caught " + ex.getClass().getSimpleName() + " in for StaleRequestException400 requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
                     ReflectionToStringBuilder.toString(rollbackRequest)), ex);
             tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + RollbackMitigationExceptions.StaleRequest.name());
             throw ex;
         } catch (MissingMitigationVersionException404 ex) {
-            String msg = "Caught MissingMitigationVersionException404 in RollbackMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
+            String msg = "Caught " + ex.getClass().getSimpleName() + " in RollbackMitigationActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(rollbackRequest), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + RollbackMitigationExceptions.MissingMitigationVersion.name(), 1);
             throw new MissingMitigationVersionException404(msg);

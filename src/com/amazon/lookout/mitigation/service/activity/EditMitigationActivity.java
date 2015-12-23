@@ -165,17 +165,17 @@ public class EditMitigationActivity extends Activity {
             tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.BadRequest.name());
             throw new BadRequest400(message);
         } catch (StaleRequestException400 ex) {
-            LOG.warn(String.format("Caught StaleRequestException in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
+            LOG.warn(String.format("Caught " + ex.getClass().getSimpleName() + " in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
                     ReflectionToStringBuilder.toString(editRequest)), ex);
             tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.StaleRequest.name());
             throw ex;
         } catch (DuplicateDefinitionException400 ex) {
-            LOG.warn(String.format("Caught DuplicateDefinitionException400 in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
+            LOG.warn(String.format("Caught " + ex.getClass().getSimpleName() + " in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
                     ReflectionToStringBuilder.toString(editRequest)), ex);
             tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.DuplicateDefinition.name());
             throw ex;
         } catch (MissingMitigationException400 ex) {
-            LOG.warn(String.format("Caught MissingMitigationException400 in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
+            LOG.warn(String.format("Caught " + ex.getClass().getSimpleName() + " in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(), 
                     ReflectionToStringBuilder.toString(editRequest)), ex);
             tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.MissingMitigation.name());
             throw ex;

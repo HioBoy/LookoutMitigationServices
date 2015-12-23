@@ -95,7 +95,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                 // Evaluate the currently active mitigations to get back a boolean flag indicating if the mitigation to delete exists.
                 // The evaluation will also throw a DuplicateRequestException in case it finds that this delete request is a duplicate.
                 latestRequestSummary = evaluateActiveMitigations(deviceName, deviceScope, mitigationName,
-                        mitigationTemplate, mitigationVersion, prevMaxWorkflowId, latestRequestSummary, subMetrics);
+                        mitigationTemplate, mitigationVersion, prevMaxWorkflowId, latestRequestSummary, deleteRequest, subMetrics);
                 
                 long newWorkflowId = 0;
                 // If we didn't get any active workflows for the same deviceName and deviceScope or if we didn't find any mitigation corresponding to our delete request, throw back an exception.
@@ -159,7 +159,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
     protected RequestSummary evaluateActiveMitigations(
             String deviceName, String deviceScope, String mitigationName, String mitigationTemplate, 
             int versionToDelete, Long maxWorkflowIdOnLastAttempt, RequestSummary latestFromLastAttempt, 
-            TSDMetrics metrics) 
+            DeleteMitigationFromAllLocationsRequest deleteRequest, TSDMetrics metrics) 
     {
         TSDMetrics subMetrics = metrics.newSubMetrics("evaluateActiveMitigations");
         try {
@@ -170,7 +170,8 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                 return null;
             }
             
-            if (latestRequestSummary.getMitigationVersion() > versionToDelete) {
+            if (!RequestType.DeleteRequest.name().equals(latestRequestSummary.getRequestType())
+                    && latestRequestSummary.getMitigationVersion() > versionToDelete) {
                 String msg = "Found an active version (" + latestRequestSummary.getMitigationVersion() + ") for mitigation: " + 
                         mitigationName + " greater than the version to delete: " + versionToDelete + " for device: " + deviceName + 
                         " in deviceScope: " + deviceScope + " corresponding to template: " + mitigationTemplate;
@@ -203,12 +204,21 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                             " corresponding to template: " + mitigationTemplate + " whose status is: " +
                              status + ". Hence not considering this existing delete request as a duplicate.");
                 } else {
-                    String msg = "Found an existing delete request with jobId: " + latestRequestSummary.getWorkflowId() + 
+                    if ((versionToDelete + 1) == latestRequestSummary.getMitigationVersion()) {
+                        // if version is same as the most recent delete request, then it is a duplicated request.
+                        String msg = "Found an existing delete request with jobId: " + latestRequestSummary.getWorkflowId() + 
                                 " for mitigation: " + mitigationName + " when requesting delete for " +
                                 "version: " + versionToDelete + " for device: " + deviceName + 
                                 " in deviceScope: " + deviceScope + " corresponding to template: " + mitigationTemplate;
-                    LOG.warn(msg);
-                    throw new DuplicateRequestException400(msg);
+                        LOG.warn(msg);
+                        throw new DuplicateRequestException400(msg);
+                    } else {
+                        String msg = "No active mitigation to delete found when querying for deviceName: " + deviceName
+                                + " deviceScope: " + deviceScope + ", for request: "
+                                + ReflectionToStringBuilder.toString(deleteRequest);
+                        LOG.warn(msg);
+                        throw new MissingMitigationException400(msg);
+                    }
                 }
             }
             

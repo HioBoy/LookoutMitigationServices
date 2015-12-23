@@ -173,7 +173,7 @@ public class RequestTableTestHelper {
                         deviceNameAndScope.getDeviceName().toString(), workflowId);
         
         MitigationRequestDescription storedDescription = storedDefinition.getMitigationRequestDescription();
-        assertEquals(mitigationDefinition, storedDescription.getMitigationDefinition());
+        assertEquals(toJson(mitigationDefinition), toJson(storedDescription.getMitigationDefinition()));
         assertEquals(toJson(request.getMitigationActionMetadata()), toJson(storedDescription.getMitigationActionMetadata()));
         assertEquals(request.getMitigationTemplate(), storedDescription.getMitigationTemplate());
         assertEquals(mitigationVersion, storedDescription.getMitigationVersion());

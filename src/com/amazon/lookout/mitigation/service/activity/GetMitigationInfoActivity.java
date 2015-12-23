@@ -121,9 +121,9 @@ public class GetMitigationInfoActivity extends Activity {
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationInfoExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
-        } catch (MissingMitigationException400 missingMitigationException) {
-            String msg = "Caught MissingMitigationException in GetMitigationInfoActivity for requestId: " + requestId + ", reason: " + missingMitigationException.getMessage();
-            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), missingMitigationException);
+        } catch (MissingMitigationException400 ex) {
+            String msg = "Caught " + ex.getClass().getSimpleName() + " in GetMitigationInfoActivity for requestId: " + requestId + ", reason: " + ex.getMessage();
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + GetMitigationInfoExceptions.MissingMitigation.name(), 1);
             throw new MissingMitigationException400(msg);
         } catch (Exception internalError) {
