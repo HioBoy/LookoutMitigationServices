@@ -288,22 +288,19 @@ public class RequestValidator {
      */
     public void validateRollbackRequest(RollbackMitigationRequest request,
             MitigationRequestDescription mitigationRequestDescription) {
-        String errorMessageTemplate = "rollback request field : %s, value \"%s\" does not match the one \"%s\" in system, request : "
-                + ReflectionToStringBuilder.toString(request, recursiveToStringStyle);
-        
         Validate.isTrue(mitigationRequestDescription.getDeviceScope().equals(request.getDeviceScope()),
-                String.format(errorMessageTemplate, "deviceScope", request.getDeviceScope(),
-                        mitigationRequestDescription.getDeviceScope()),
-                        "device scope in rollback request does not match the one in roll back target.");
-        
+                String.format("deviceScope %s in request does not match %s in system, request : %s",
+                        request.getDeviceScope(), mitigationRequestDescription.getDeviceScope(),
+                        ReflectionToStringBuilder.toString(request, recursiveToStringStyle)));
+
+        Validate.isTrue(mitigationRequestDescription.getMitigationTemplate().equals(request.getMitigationTemplate()),
+                String.format("mitigationTemplate %s in request does not match %s in system, request : %s",
+                        request.getMitigationTemplate(), mitigationRequestDescription.getMitigationTemplate(),
+                        ReflectionToStringBuilder.toString(request, recursiveToStringStyle)));
+
         validateTemplateMatch(request.getMitigationName(), mitigationRequestDescription.getMitigationTemplate(),
                 request.getMitigationTemplate(), request.getDeviceName(), request.getDeviceScope());
-        
-        Validate.isTrue(mitigationRequestDescription.getMitigationTemplate().equals(request.getMitigationTemplate()),
-                String.format(errorMessageTemplate, "mitigationTemplate", request.getMitigationTemplate(),
-                        mitigationRequestDescription.getMitigationTemplate()),
-                        "mitigation template in rollback request does not match the one in roll back target.");
-        
+
         Validate.isTrue(!RequestType.DeleteRequest.toString().equals(mitigationRequestDescription.getRequestType()),
                 "Can not rollback to a delete request. To delete a mitigation, use delete mitigation API");
     }
