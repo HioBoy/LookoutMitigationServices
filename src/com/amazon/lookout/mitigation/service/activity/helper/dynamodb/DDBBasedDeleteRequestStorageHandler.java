@@ -176,12 +176,12 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                         mitigationName + " greater than the version to delete: " + versionToDelete + " for device: " + deviceName + 
                         " in deviceScope: " + deviceScope + " corresponding to template: " + mitigationTemplate;
                 LOG.warn(msg);
-                throw new StaleRequestException400(msg);
+                throw new IllegalArgumentException(msg);
             } else if (latestRequestSummary.getMitigationVersion() < versionToDelete) {
                 String msg = "Delete was requested for version " + versionToDelete + " of " + mitigationName + 
                         " which is newer than the latest mitigation version of " + latestRequestSummary.getMitigationVersion();
                 LOG.warn(msg);
-                throw new StaleRequestException400(msg);
+                throw new IllegalArgumentException(msg);
             }
             
             // There must be only 1 mitigation with the same name for a device, regardless of which template they were created with.

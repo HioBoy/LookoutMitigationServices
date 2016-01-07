@@ -195,7 +195,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         
         DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
         
-        StaleRequestException400 exception = AssertUtils.assertThrows(StaleRequestException400.class,
+        IllegalArgumentException exception = AssertUtils.assertThrows(IllegalArgumentException.class,
                 () -> storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics));
         
         assertThat(exception.getMessage(), allOf(
@@ -314,7 +314,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     public void testHigherMitigationVersion() {
         DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 10);
         
-        StaleRequestException400 exception = AssertUtils.assertThrows(StaleRequestException400.class,
+        IllegalArgumentException exception = AssertUtils.assertThrows(IllegalArgumentException.class,
                 () -> storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics));
         
         assertThat(exception.getMessage(), containsString(request.getMitigationName()));
