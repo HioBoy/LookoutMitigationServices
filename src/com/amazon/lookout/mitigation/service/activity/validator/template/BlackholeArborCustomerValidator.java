@@ -12,19 +12,18 @@ import java.util.stream.Stream;
 
 import lombok.NonNull;
 
-import com.amazon.arbor.ArborUtils;
-import com.amazon.lookout.ddb.model.BlackholeDevice;
-import com.amazon.lookout.ddb.model.TransitProvider;
-import com.amazon.lookout.mitigation.arbor.model.ArborConstants;
-import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 
+import com.amazon.arbor.ArborUtils;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.net.IPUtils;
 import com.amazon.aws158.commons.net.IpCidr;
+import com.amazon.lookout.ddb.model.BlackholeDevice;
+import com.amazon.lookout.ddb.model.TransitProvider;
+import com.amazon.lookout.mitigation.arbor.model.ArborConstants;
+import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
 import com.amazon.lookout.mitigation.service.Constraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
@@ -32,7 +31,6 @@ import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
-import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
@@ -221,8 +219,8 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
 
         validateNoLocations(request.getLocations());
         validateMitigationConstraint(request.getMitigationDefinition().getConstraint(), metrics);
-        validateNoDeploymentChecks(request.getPreDeploymentChecks());
-        validateNoDeploymentChecks(request.getPostDeploymentChecks());
+        validateNoDeploymentChecks(request.getPreDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.PRE);
+        validateNoDeploymentChecks(request.getPostDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.POST);
     }
 
     private void validateEditRequest(@NonNull EditMitigationRequest request, @NonNull TSDMetrics metrics) {
@@ -232,8 +230,8 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
 
         validateNoLocations(request.getLocation());
         validateMitigationConstraint(request.getMitigationDefinition().getConstraint(), metrics);
-        validateNoDeploymentChecks(request.getPreDeploymentChecks());
-        validateNoDeploymentChecks(request.getPostDeploymentChecks());
+        validateNoDeploymentChecks(request.getPreDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.PRE);
+        validateNoDeploymentChecks(request.getPostDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.POST);
     }
 
     private static void validateMitigationName(String mitigationName) {
@@ -403,11 +401,4 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
             throw new IllegalArgumentException(msg);
         }
     }
-    
-    private static void validateNoDeploymentChecks(List<MitigationDeploymentCheck> deploymentChecks) {
-        if ((deploymentChecks != null) && !deploymentChecks.isEmpty()) {
-            String msg = "Expect not have any deployment checks to be performed.";
-            throw new IllegalArgumentException(msg);
-        }
-    } 
 }

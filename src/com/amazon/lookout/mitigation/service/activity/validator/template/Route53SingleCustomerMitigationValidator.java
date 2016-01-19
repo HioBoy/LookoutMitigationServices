@@ -27,7 +27,6 @@ import com.amazon.lookout.mitigation.service.ActionType;
 import com.amazon.lookout.mitigation.service.Constraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
-import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
@@ -329,10 +328,8 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     private void validatePreDeploymentChecks(@Nullable List<MitigationDeploymentCheck> preDeploymentChecks, @NonNull String mitigationTemplate) {
         switch (mitigationTemplate) {
         case MitigationTemplate.Router_RateLimit_Route53Customer:
-            validateNoDeploymentChecks(preDeploymentChecks, mitigationTemplate);
-            break;
         case MitigationTemplate.Router_CountMode_Route53Customer:
-            validateNoDeploymentChecks(preDeploymentChecks, mitigationTemplate);
+            validateNoDeploymentChecks(preDeploymentChecks, mitigationTemplate, DeploymentCheckType.PRE);
             break;
         default:
             throw new IllegalArgumentException("Mitigation template is not supported: " + mitigationTemplate);
@@ -342,21 +339,11 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
     private void validatePostDeploymentChecks(@Nullable List<MitigationDeploymentCheck> postDeploymentChecks, @NonNull String mitigationTemplate) {
         switch (mitigationTemplate) {
         case MitigationTemplate.Router_RateLimit_Route53Customer:
-            validateNoDeploymentChecks(postDeploymentChecks, mitigationTemplate);
-            break;
         case MitigationTemplate.Router_CountMode_Route53Customer:
-            validateNoDeploymentChecks(postDeploymentChecks, mitigationTemplate);
+            validateNoDeploymentChecks(postDeploymentChecks, mitigationTemplate, DeploymentCheckType.POST);
             break;
         default:
             throw new IllegalArgumentException("Mitigation template is not supported: " + mitigationTemplate);
         }
     }
-    
-    private void validateNoDeploymentChecks(List<MitigationDeploymentCheck> deploymentChecks, String mitigationTemplate) {
-        if ((deploymentChecks != null) && !deploymentChecks.isEmpty()) {
-            String msg = "For MitigationTemplate: " + mitigationTemplate + " we expect to not have any deployment checks to be performed.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-    }    
 }

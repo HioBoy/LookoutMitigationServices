@@ -51,6 +51,8 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
         Validate.notEmpty(mitigationTemplate);
 
         validateMitigationName(request.getMitigationName());
+        validateNoDeploymentChecks(request.getPreDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.PRE);
+        validateNoDeploymentChecks(request.getPostDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.POST);
 
         if (request instanceof CreateMitigationRequest) {
             validateLocations(((CreateMitigationRequest) request).getLocations());

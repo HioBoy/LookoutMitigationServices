@@ -52,12 +52,12 @@ public abstract class BlackWatchPerTargetMitigationTemplateValidator extends Bla
     }
     
     private void validateRollbackRequest(RollbackMitigationRequest request) {
-        validatePostDeploymentChecks(request.getPostDeploymentChecks());
+        validateDeploymentChecks(request);
     }
     
     private void validateDeleteRequest(
             DeleteMitigationFromAllLocationsRequest request) {
-        validatePostDeploymentChecks(request.getPostDeploymentChecks());
+        validateDeploymentChecks(request);
     }
 
     private void validateEditRequest(EditMitigationRequest request) {
@@ -65,7 +65,7 @@ public abstract class BlackWatchPerTargetMitigationTemplateValidator extends Bla
         
         validateLocation(request.getLocation());
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
-        validatePostDeploymentChecks(request.getPostDeploymentChecks());
+        validateDeploymentChecks(request);
     }
 
     private void validateCreateRequest(CreateMitigationRequest request) {
@@ -73,7 +73,7 @@ public abstract class BlackWatchPerTargetMitigationTemplateValidator extends Bla
         
         validateLocation(request.getLocations());
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
-        validatePostDeploymentChecks(request.getPostDeploymentChecks());
+        validateDeploymentChecks(request);
     }
 
     protected abstract void validateLocation(List<String> locations);

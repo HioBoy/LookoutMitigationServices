@@ -72,14 +72,16 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
         validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope, tsdMetric);
     }
     
-    protected void validatePostDeploymentChecks(List<MitigationDeploymentCheck> checks) {
-        if (checks == null ){
+    protected void validateDeploymentChecks(MitigationModificationRequest request) {
+        validateNoDeploymentChecks(request.getPreDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.PRE);
+        List<MitigationDeploymentCheck> postDeploymentChecks = request.getPostDeploymentChecks();
+        if (postDeploymentChecks == null ){
             throw new IllegalArgumentException("Missing post deployment for blackwatch mitigation deployment");
         }
 
-        Validate.notEmpty(checks, "Missing post deployment for blackwatch mitigation deployment");
+        Validate.notEmpty(postDeploymentChecks, "Missing post deployment for blackwatch mitigation deployment");
         
-        for (MitigationDeploymentCheck check : checks) {
+        for (MitigationDeploymentCheck check : postDeploymentChecks) {
             Validate.isTrue(check instanceof AlarmCheck, String.format("BlackWatch mitigation post deployment check "
                     + "only supports alarm check, but found %s", check));
             AlarmCheck alarmCheck = (AlarmCheck) check;

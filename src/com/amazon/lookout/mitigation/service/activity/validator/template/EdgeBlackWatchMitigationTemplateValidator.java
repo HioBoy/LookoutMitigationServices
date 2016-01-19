@@ -10,7 +10,6 @@ import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
-import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
@@ -58,12 +57,9 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
             validateCreateRequest((CreateMitigationRequest) request);
         } else if (request instanceof EditMitigationRequest) {
             validateEditRequest((EditMitigationRequest) request);
-        } else if (request instanceof DeleteMitigationFromAllLocationsRequest) {
-            throw new IllegalArgumentException(
-                    String.format("Delete not supported for mitigation template %s", mitigationTemplate));
         } else {
             throw new IllegalArgumentException(
-                    String.format("request %s is Not supported for mitigation template %s", request, mitigationTemplate));
+                    String.format("request %s is not supported for mitigation template %s", request, mitigationTemplate));
         }
     }
 
@@ -73,9 +69,9 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
         String location = findLocationFromMitigationName(request.getMitigationName());
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
         validateLocations(location, request.getMitigationName(), request.getLocations());
-        validatePostDeploymentChecks(request.getPostDeploymentChecks());
-    }   
-
+        validateDeploymentChecks(request);
+    }
+   
     private void validateEditRequest(EditMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
@@ -83,7 +79,7 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
         // TODO fix location to be locations in model in a separate commit
         validateLocations(location, request.getMitigationName(), request.getLocation());
-        validatePostDeploymentChecks(request.getPostDeploymentChecks());
+        validateDeploymentChecks(request);
     }
         
     private void validateLocations(String location, String mitigationName, List<String> locations) {
