@@ -22,7 +22,6 @@ import com.amazon.coral.service.AbstractAwsAuthorizationStrategy;
 import com.amazon.coral.service.AuthorizationInfo;
 import com.amazon.coral.service.BasicAuthorizationInfo;
 import com.amazon.coral.service.Context;
-import com.amazon.coral.service.Identity;
 import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;

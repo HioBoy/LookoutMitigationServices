@@ -191,6 +191,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
                 String baseMsg = "Another process created workflow " + newWorkflowId + " first for " + deviceName;
                 if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
                     LOG.warn(baseMsg + ". Attempt: " + numAttempts);
+                    sleepForPutRetry(numAttempts);
                 } else {
                     LOG.warn(errorTag + " - " + baseMsg + ". Giving up after " + numAttempts + " attempts to store " + 
                             requestType + ": " + ReflectionToStringBuilder.toString(request));
