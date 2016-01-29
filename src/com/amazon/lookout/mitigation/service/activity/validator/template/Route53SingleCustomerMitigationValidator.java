@@ -97,24 +97,22 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
         
         MitigationDefinition mitigationDefinition = null;
         List<String> locationsToApplyMitigation = null;
-        // Extract mitigationDefinition and locations from Create/Edit Mitigation Requests only.
-        if (request instanceof DeleteMitigationFromAllLocationsRequest) {
-            return;
-        } else if (request instanceof CreateMitigationRequest) {
+        // Extract mitigationDefinition and locations from Create Mitigation Requests only.
+        if (request instanceof CreateMitigationRequest) {
             locationsToApplyMitigation = ((CreateMitigationRequest) request).getLocations();
             mitigationDefinition = ((CreateMitigationRequest) request).getMitigationDefinition();
-        } else {
+
+            Constraint mitigationConstraint = mitigationDefinition.getConstraint();
+            ActionType mitigationAction = mitigationDefinition.getAction();
+
+            validateMitigationName(mitigationName, mitigationTemplate);
+            validateLocationsToApply(locationsToApplyMitigation, mitigationTemplate);
+            validateActionType(mitigationAction, mitigationTemplate);
+            validateMitigationConstraint(mitigationConstraint, mitigationTemplate);
+        } else if (! (request instanceof DeleteMitigationFromAllLocationsRequest)) {
             throw new IllegalArgumentException(
                     String.format("Mitigation template %s can not be modified, only created and deleted", mitigationTemplate));
         }
-        
-        Constraint mitigationConstraint = mitigationDefinition.getConstraint();
-        ActionType mitigationAction = mitigationDefinition.getAction();
-        
-        validateMitigationName(mitigationName, mitigationTemplate);
-        validateLocationsToApply(locationsToApplyMitigation, mitigationTemplate);
-        validateActionType(mitigationAction, mitigationTemplate);
-        validateMitigationConstraint(mitigationConstraint, mitigationTemplate);
         validatePreDeploymentChecks(request.getPreDeploymentChecks(), mitigationTemplate);
         validatePostDeploymentChecks(request.getPostDeploymentChecks(), mitigationTemplate);
     }

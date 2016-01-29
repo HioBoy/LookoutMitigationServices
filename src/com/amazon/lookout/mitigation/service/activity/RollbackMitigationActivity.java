@@ -38,7 +38,9 @@ import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
+import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
+import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.request.RollbackMitigationRequestInternal;
@@ -103,10 +105,16 @@ public class RollbackMitigationActivity extends Activity {
             templateBasedValidator.validateRequestForTemplate(rollbackRequest, tsdMetrics); 
             
             // Step2. Get original mitigation modification request 
-            String deviceName = rollbackRequest.getDeviceName();
             String mitigationName = rollbackRequest.getMitigationName();
             String serviceName = rollbackRequest.getServiceName();
             int rollbackToMitigationVersion = rollbackRequest.getRollbackToMitigationVersion();
+            
+            String mitigationTemplate = rollbackRequest.getMitigationTemplate();
+            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
+            String deviceName = deviceNameAndScope.getDeviceName().name();
+            ActivityHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
+            String deviceScope = deviceNameAndScope.getDeviceScope().name();
+            ActivityHelper.addDeviceScopeCountMetrics(deviceScope, tsdMetrics);
 
             MitigationRequestDescriptionWithLocations originalModificationRequest = requestInfoHandler.getMitigationDefinition(
                     deviceName, serviceName, mitigationName, rollbackToMitigationVersion, tsdMetrics);
@@ -133,7 +141,7 @@ public class RollbackMitigationActivity extends Activity {
 
             // Step6. Start running the workflow.
             swfWorkflowStarter.startMitigationModificationWorkflow(workflowId, internalRequest, locationsToDeploy,
-                    RequestType.RollbackRequest, storedMitigationVersion, deviceName, internalRequest.getDeviceScope(),
+                    RequestType.RollbackRequest, storedMitigationVersion, deviceName, deviceScope,
                     workflowClient, tsdMetrics);
 
             // Step7. Update the record for this workflow request and store the runId that SWF associates with this workflow.
@@ -142,9 +150,9 @@ public class RollbackMitigationActivity extends Activity {
 
             // Step8. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
-            mitigationModificationResponse.setMitigationName(internalRequest.getMitigationName());
+            mitigationModificationResponse.setMitigationName(mitigationName);
             mitigationModificationResponse.setMitigationVersion(storedMitigationVersion);
-            mitigationModificationResponse.setMitigationTemplate(internalRequest.getMitigationTemplate());
+            mitigationModificationResponse.setMitigationTemplate(mitigationTemplate);
             mitigationModificationResponse.setDeviceName(deviceName);
             mitigationModificationResponse.setServiceName(serviceName);
             mitigationModificationResponse.setJobId(workflowId);

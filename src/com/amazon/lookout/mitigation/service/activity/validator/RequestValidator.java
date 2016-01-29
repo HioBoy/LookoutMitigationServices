@@ -266,17 +266,9 @@ public class RequestValidator {
      * @throws IllegalArgumentException if it is invalid
      */
     public void validateRollbackRequest(RollbackMitigationRequest request) {
-        try {
-            validateDeviceAndService(request.getDeviceName(), request.getServiceName());
-            validateMitigationName(request.getMitigationName());
-            validateDeviceScope(request.getDeviceScope());
-            validateMitigationTemplate(request.getMitigationTemplate());
-            Validate.isTrue(request.getRollbackToMitigationVersion() > 0,
-                   "rollback to mitigation version should be larger than 0");
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException(ex.getMessage() + "; request : "
-                    + ReflectionToStringBuilder.toString(request, recursiveToStringStyle), ex);
-        }
+        validateCommonModificationRequestParameters(request);
+        Validate.isTrue(request.getRollbackToMitigationVersion() > 0,
+                "rollback to mitigation version should be larger than 0");
     }
     
     /**
@@ -288,18 +280,10 @@ public class RequestValidator {
      */
     public void validateRollbackRequest(RollbackMitigationRequest request,
             MitigationRequestDescription mitigationRequestDescription) {
-        Validate.isTrue(mitigationRequestDescription.getDeviceScope().equals(request.getDeviceScope()),
-                String.format("deviceScope %s in request does not match %s in system, request : %s",
-                        request.getDeviceScope(), mitigationRequestDescription.getDeviceScope(),
-                        ReflectionToStringBuilder.toString(request, recursiveToStringStyle)));
-
         Validate.isTrue(mitigationRequestDescription.getMitigationTemplate().equals(request.getMitigationTemplate()),
                 String.format("mitigationTemplate %s in request does not match %s in system, request : %s",
                         request.getMitigationTemplate(), mitigationRequestDescription.getMitigationTemplate(),
                         ReflectionToStringBuilder.toString(request, recursiveToStringStyle)));
-
-        validateTemplateMatch(request.getMitigationName(), mitigationRequestDescription.getMitigationTemplate(),
-                request.getMitigationTemplate(), request.getDeviceName(), request.getDeviceScope());
 
         Validate.isTrue(!RequestType.DeleteRequest.toString().equals(mitigationRequestDescription.getRequestType()),
                 "Can not rollback to a delete request. To delete a mitigation, use delete mitigation API");

@@ -94,8 +94,6 @@ public class DDBBasedRollbackRequestStorageHandlerTest {
     @Test(expected = NullPointerException.class)
     public void testInvalidParam4() {
         RollbackMitigationRequestInternal request = new RollbackMitigationRequestInternal();
-        request.setDeviceName(deviceName);
-        request.setDeviceScope(deviceScope);
         request.setMitigationName(mitigationName);
         
         ddbBasedRollbackRequestStorageHandler.storeRequestForWorkflow(request, locations, metrics);
@@ -107,8 +105,6 @@ public class DDBBasedRollbackRequestStorageHandlerTest {
     @Test
     public void testSuccessStore() {
         RollbackMitigationRequestInternal request = new RollbackMitigationRequestInternal();
-        request.setDeviceName(deviceName);
-        request.setDeviceScope(deviceScope);
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer);
         MitigationActionMetadata mitigationActionMetadata = new MitigationActionMetadata();
