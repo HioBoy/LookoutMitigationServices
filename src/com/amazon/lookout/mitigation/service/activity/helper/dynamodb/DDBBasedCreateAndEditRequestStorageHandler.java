@@ -329,14 +329,13 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
      * @param metrics
      * @return Max workflowId for existing mitigations for the same deviceName and deviceScope. Null if there are no such active mitigations.
      * 
-     * @throws DuplicateMitigationNameException400 if isUpdate is false and the mitigation already exists
      * @throws DuplicateDefinitionException400 if a conflicting mitigation already exists. The definition of conflicting 
      *   depends on the template type
      */
     private void checkForDuplicateAndConflictingRequestsInResult(String deviceName, QueryResult result, boolean isUpdate,
                                                    MitigationDefinition newDefinition, String newMitigationName, 
                                                    String newDefinitionTemplate, TSDMetrics metrics) 
-       throws DuplicateMitigationNameException400, DuplicateDefinitionException400
+       throws DuplicateDefinitionException400
     {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateAndEditRequestStorageHandler.checkForDuplicatesFromDDBResult");
         try {
@@ -351,10 +350,10 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
                         // Don't compare the old version with the new version of the same mitigation
                         continue;
                     } else {
-                        String msg = "MitigationName: " + existingMitigationName + " already exists for device: " + deviceName + ". Existing mitigation template: " + 
-                                     existingMitigationTemplate + ". New mitigation template: " + newDefinitionTemplate;
-                        LOG.warn(msg);
-                        throw new DuplicateMitigationNameException400(msg);
+                        // The dynamodb request store action will fail, as another request has already
+                        // successfully create the mitigation. So the workflowId has been changed. The next
+                        // retry will reject the request with DuplicateMitigationNameException400
+                        return;
                     }
                 }
 
