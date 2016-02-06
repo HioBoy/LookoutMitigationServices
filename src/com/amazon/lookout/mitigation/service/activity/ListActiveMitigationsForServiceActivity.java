@@ -401,9 +401,22 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
          
         // should not see more than one ongoing request for same mitigation
         if (correspondingMergedMitigations.size() > 1) {
-            LOG.error("Found: " + correspondingMergedMitigations.size() + " mitigations for the mitigation being updated: "
+            String errorMessage = "Found: " + correspondingMergedMitigations.size() + " mitigations for the mitigation being updated: "
                     + ReflectionToStringBuilder.toString(ongoingRequest) +
-                    " however, we shouldn't see more than 1 of such at any time.");
+                    " however, we shouldn't see more than 1 of such at any time.";
+            LOG.error(errorMessage);
+            throw new InternalServerError500(errorMessage);
+        }
+        
+        // check whether the active mitigation is same as the ongoing request.
+        if (correspondingMergedMitigations.size() == 1) {
+            MitigationRequestDescriptionWithStatuses currentActiveMitigation = correspondingMergedMitigations.get(0);
+            if (currentActiveMitigation.getMitigationRequestDescription().getMitigationVersion() == 
+                    ongoingRequest.getMitigationRequestDescription().getMitigationVersion()) {
+                // the ongoing request has already update the active mitigation table, so actually they are
+                // same request. so return the current active mitigation directly
+                return;
+            }
         }
         
         MitigationRequestDescriptionWithStatuses requestDescToReturn = new MitigationRequestDescriptionWithStatuses();

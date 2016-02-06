@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -262,6 +263,7 @@ public class ListActiveMitigationsForServiceActivityTest {
         editCommonMitigationDesc.setMitigationName("CommonMitigation");
         editCommonMitigationDesc.setDeviceName("TestDevice");
         editCommonMitigationDesc.setJobId(5);
+        editCommonMitigationDesc.setMitigationVersion(2);
         editCommonMitigationDesc.setRequestType(RequestType.EditRequest.name());
         ongoingRequestWithStatuses.setMitigationRequestDescription(editCommonMitigationDesc);
         ongoingRequestWithStatuses.setInstancesStatusMap(instancesStatus);
@@ -280,6 +282,7 @@ public class ListActiveMitigationsForServiceActivityTest {
         editMitigation1Desc.setMitigationName("EditMitigation1");
         editMitigation1Desc.setDeviceName("TestDevice");
         editMitigation1Desc.setJobId(3);
+        editMitigation1Desc.setMitigationVersion(2);
         editMitigation1Desc.setRequestType(RequestType.EditRequest.name());
         ongoingRequestWithStatuses.setMitigationRequestDescription(editMitigation1Desc);
         ongoingRequestWithStatuses.setInstancesStatusMap(instancesStatus);
@@ -304,6 +307,7 @@ public class ListActiveMitigationsForServiceActivityTest {
         commonMitigationDesc.setMitigationName("CommonMitigation");
         commonMitigationDesc.setDeviceName("TestDevice");
         commonMitigationDesc.setJobId(1);
+        commonMitigationDesc.setMitigationVersion(1);
         commonMitigationDesc.setRequestType(RequestType.CreateRequest.name());
         activeMitigationWithStatuses.setMitigationRequestDescription(commonMitigationDesc);
         activeMitigationWithStatuses.setInstancesStatusMap(instancesStatus);
@@ -327,12 +331,14 @@ public class ListActiveMitigationsForServiceActivityTest {
         activeMitigationDesc.setMitigationName("ActiveMitigation2");
         activeMitigationDesc.setDeviceName("TestDevice");
         activeMitigationDesc.setJobId(2);
+        activeMitigationDesc.setMitigationVersion(1);
         activeMitigationDesc.setRequestType(RequestType.CreateRequest.name());
         activeMitigationWithStatuses.setMitigationRequestDescription(activeMitigationDesc);
         activeMitigationWithStatuses.setInstancesStatusMap(instancesStatus);
         activeMitigations.add(activeMitigationWithStatuses);
         
-        Map<String, List<MitigationRequestDescriptionWithStatuses>> mergedMitigationsMap = activity.mergeOngoingRequests(ongoingRequests, activeMitigations);
+        Map<String, List<MitigationRequestDescriptionWithStatuses>> mergedMitigationsMap = 
+                activity.mergeOngoingRequests(ongoingRequests, activeMitigations);
         assertEquals(mergedMitigationsMap.size(), 3);
         
         MitigationRequestDescriptionWithStatuses commonMitigationResponse = null;
@@ -396,8 +402,7 @@ public class ListActiveMitigationsForServiceActivityTest {
         assertEquals(editMitigation1Response.getInstancesStatusMap().get("TST1").getMitigationStatus(), MitigationStatus.EDIT_SUCCEEDED);
         assertEquals(editMitigation1Response.getMitigationRequestDescription(), editMitigation1Desc);
     }
-    
-    
+
     /**
      * Test the case where some of the ongoing edit requests are part of the active ones, so we need to merge them.
      */
@@ -431,6 +436,7 @@ public class ListActiveMitigationsForServiceActivityTest {
         rollbackCommonMitigationDesc.setMitigationName("CommonMitigation");
         rollbackCommonMitigationDesc.setDeviceName("TestDevice");
         rollbackCommonMitigationDesc.setJobId(5);
+        rollbackCommonMitigationDesc.setMitigationVersion(2);
         rollbackCommonMitigationDesc.setRequestType(RequestType.RollbackRequest.name());
         ongoingRequestWithStatuses.setMitigationRequestDescription(rollbackCommonMitigationDesc);
         ongoingRequestWithStatuses.setInstancesStatusMap(instancesStatus);
@@ -449,6 +455,7 @@ public class ListActiveMitigationsForServiceActivityTest {
         rollbackMitigation1Desc.setMitigationName("RollbackMitigation1");
         rollbackMitigation1Desc.setDeviceName("TestDevice");
         rollbackMitigation1Desc.setJobId(3);
+        rollbackMitigation1Desc.setMitigationVersion(2);
         rollbackMitigation1Desc.setRequestType(RequestType.RollbackRequest.name());
         ongoingRequestWithStatuses.setMitigationRequestDescription(rollbackMitigation1Desc);
         ongoingRequestWithStatuses.setInstancesStatusMap(instancesStatus);
@@ -473,6 +480,7 @@ public class ListActiveMitigationsForServiceActivityTest {
         commonMitigationDesc.setMitigationName("CommonMitigation");
         commonMitigationDesc.setDeviceName("TestDevice");
         commonMitigationDesc.setJobId(1);
+        commonMitigationDesc.setMitigationVersion(1);
         commonMitigationDesc.setRequestType(RequestType.CreateRequest.name());
         activeMitigationWithStatuses.setMitigationRequestDescription(commonMitigationDesc);
         activeMitigationWithStatuses.setInstancesStatusMap(instancesStatus);
@@ -496,6 +504,7 @@ public class ListActiveMitigationsForServiceActivityTest {
         activeMitigationDesc.setMitigationName("ActiveMitigation2");
         activeMitigationDesc.setDeviceName("TestDevice");
         activeMitigationDesc.setJobId(2);
+        activeMitigationDesc.setMitigationVersion(1);
         activeMitigationDesc.setRequestType(RequestType.CreateRequest.name());
         activeMitigationWithStatuses.setMitigationRequestDescription(activeMitigationDesc);
         activeMitigationWithStatuses.setInstancesStatusMap(instancesStatus);
@@ -630,5 +639,55 @@ public class ListActiveMitigationsForServiceActivityTest {
         assertTrue(mitigationDescResponse.getInstancesStatusMap().containsKey("TST2"));
         assertEquals(mitigationDescResponse.getInstancesStatusMap().get("TST2").getMitigationStatus(), MitigationStatus.DEPLOY_SUCCEEDED);
         assertEquals(mitigationDescResponse.getMitigationRequestDescription(), desc);
+    }
+
+    /**
+     * test for rollback and edit request, if same mitigation appear in both active, and ongoing request, they will be 
+     * merged into a single request
+     */
+    @Test
+    public void testMergeActiveOngoingSameMitigation() {
+        List<RequestType> requestTypes = Arrays.asList(RequestType.RollbackRequest, RequestType.EditRequest);
+        for (RequestType testRequestType : requestTypes) {
+            ListActiveMitigationsForServiceActivity activity = mock(ListActiveMitigationsForServiceActivity.class);
+            doCallRealMethod().when(activity).mergeOngoingRequests(anyList(), anyList());
+
+            List<MitigationRequestDescriptionWithStatuses> ongoingRequests = new ArrayList<>();
+
+            // Create an ongoing request instance.
+            MitigationRequestDescriptionWithStatuses ongoingRequestWithStatuses = new MitigationRequestDescriptionWithStatuses();
+
+            Map<String, MitigationInstanceStatus> instancesStatus = new HashMap<>();
+            MitigationInstanceStatus status = new MitigationInstanceStatus();
+            status.setLocation("TST1");
+            status.setMitigationStatus(MitigationStatus.EDIT_SUCCEEDED);
+            instancesStatus.put("TST1", status);
+
+            status = new MitigationInstanceStatus();
+            status.setLocation("TST2");
+            status.setMitigationStatus(MitigationStatus.EDITING);
+            instancesStatus.put("TST2", status);
+
+            status = new MitigationInstanceStatus();
+            status.setLocation("TST3");
+            status.setMitigationStatus(MitigationStatus.EDIT_FAILED);
+            instancesStatus.put("TST3", status);
+
+            MitigationRequestDescription rollbackCommonMitigationDesc = new MitigationRequestDescription();
+            rollbackCommonMitigationDesc.setMitigationName("CommonMitigation");
+            rollbackCommonMitigationDesc.setDeviceName("TestDevice");
+            rollbackCommonMitigationDesc.setJobId(5);
+            rollbackCommonMitigationDesc.setMitigationVersion(2);
+            rollbackCommonMitigationDesc.setRequestType(testRequestType.name());
+            ongoingRequestWithStatuses.setMitigationRequestDescription(rollbackCommonMitigationDesc);
+            ongoingRequestWithStatuses.setInstancesStatusMap(instancesStatus);
+            ongoingRequests.add(ongoingRequestWithStatuses);
+
+            List<MitigationRequestDescriptionWithStatuses> activeMitigations = new ArrayList<>();
+            activeMitigations.add(ongoingRequestWithStatuses);
+
+            Map<String, List<MitigationRequestDescriptionWithStatuses>> mergedMitigationsMap = activity.mergeOngoingRequests(ongoingRequests, activeMitigations);
+            assertEquals(mergedMitigationsMap.size(), 1);
+        }
     }
 }
