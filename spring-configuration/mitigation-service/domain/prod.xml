@@ -15,7 +15,6 @@
     </bean>
     
     <util:set id="prod.popsWithCiscoRouter">
-        <value>DUB2</value>
         <value>EWR2</value>
         <value>HKG1</value>
     </util:set>
