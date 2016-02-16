@@ -36,16 +36,15 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
     private static final Log LOG = LogFactory.getLog(EdgeBlackWatchMitigationTemplateValidator.class);
 
     private static final String LOCATION_PATTERN = "[-_A-Za-z0-9]+";
-    private static final Pattern PROD_LOCATION_PATTERN = Pattern.compile(String.format("E-([A-Z0-9]+)"));
     private static final Pattern VALID_GLOBAL_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_GLOBAL_(%s)", LOCATION_PATTERN));
     private static final Pattern VALID_POP_OVERRIDE_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_OVERRIDE_(%s)", LOCATION_PATTERN));
-    private final EdgeLocationsHelper edgeLocationsHelper;
-
-   public EdgeBlackWatchMitigationTemplateValidator(AmazonS3 blackWatchConfigS3Client, EdgeLocationsHelper edgeLocationsHelper) {
+    private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
+    
+    public EdgeBlackWatchMitigationTemplateValidator(AmazonS3 blackWatchConfigS3Client, EdgeLocationsHelper edgeLocationsHelper) {
         super(blackWatchConfigS3Client);
-        this.edgeLocationsHelper = edgeLocationsHelper;
+        blackWatchEdgeLocationValidator = new BlackWatchEdgeLocationValidator(edgeLocationsHelper);
     }
-
+    
     @Override
     public void validateRequestForTemplateAndDevice(
             MitigationModificationRequest request, String mitigationTemplate,
@@ -87,13 +86,7 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
         Validate.isTrue(locations.size() == 1, String.format("locations %s should only contains 1 location.", locations));
         Validate.isTrue(location.equals(locations.get(0)), String.format("locations %s should match the location %s found in mitigation name.", locations, location));
 
-        // translate prod location style from E-MRS50 to MRS50, so it can be same style as the locations fetched from edge location helper
-        Matcher prodLocationMatcher = PROD_LOCATION_PATTERN.matcher(location);
-        if (prodLocationMatcher.find()) {
-            location = prodLocationMatcher.group(1);
-        }
-
-        Validate.isTrue(edgeLocationsHelper.getAllClassicPOPs().contains(location), String.format("location %s is not a valid edge location.", location));
+        blackWatchEdgeLocationValidator.validateLocation(location);
     }
 
     private String findLocationFromMitigationName(String mitigationName) {

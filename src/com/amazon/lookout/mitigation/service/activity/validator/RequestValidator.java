@@ -48,6 +48,7 @@ import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHisto
 import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
@@ -89,6 +90,7 @@ public class RequestValidator {
     private final ServiceLocationsHelper serviceLocationsHelper;
     private final EdgeLocationsHelper edgeLocationsHelper;
     private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
+    private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
     
     @ConstructorProperties({"serviceLocationsHelper", "edgeLocationsHelper", "blackWatchBorderLocationValidator"}) 
     public RequestValidator(@NonNull ServiceLocationsHelper serviceLocationsHelper,
@@ -97,6 +99,7 @@ public class RequestValidator {
         this.serviceLocationsHelper = serviceLocationsHelper;
         this.edgeLocationsHelper = edgeLocationsHelper;
         this.blackWatchBorderLocationValidator = blackWatchBorderLocationValidator;
+        this.blackWatchEdgeLocationValidator = new BlackWatchEdgeLocationValidator(edgeLocationsHelper);
         
         this.deviceNames = new HashSet<>();
         for (DeviceName deviceName : DeviceName.values()) {
@@ -803,15 +806,10 @@ public class RequestValidator {
             Validate.isTrue(ImmutableSet.of("Arbor").containsAll(locations), errorMessage);
             break;
         case BLACKWATCH_POP:
-            Validate.isTrue(edgeLocationsHelper.getAllClassicPOPs().containsAll(locations), errorMessage);
+            blackWatchEdgeLocationValidator.validateLocations(locations, errorMessage);
             break;
         case BLACKWATCH_BORDER:
-            try {
-                blackWatchBorderLocationValidator.validateLocations(locations);
-            } catch (IllegalArgumentException ex) {
-                // make error message consistent
-                throw new IllegalArgumentException(errorMessage);
-            }
+            blackWatchBorderLocationValidator.validateLocations(locations, errorMessage);
             break;
         default:
             throw new IllegalArgumentException("Unsupported device name " + device);
