@@ -42,10 +42,10 @@
     </bean>
     
     <util:set id="prod.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
-        <value>BR-SFO4-1</value> 
-        <value>BR-SFO4-2</value> 
-        <value>BR-SFO5-1</value> 
-        <value>BR-SFO5-2</value> 
+        <value>SFO4-1</value> 
+        <value>SFO4-2</value> 
+        <value>SFO5-1</value> 
+        <value>SFO5-2</value> 
     </util:set>
     
     <bean id="prod.allowedLocationPrefix" class="java.lang.String">
