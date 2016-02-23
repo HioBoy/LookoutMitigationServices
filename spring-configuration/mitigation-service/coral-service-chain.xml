@@ -140,18 +140,10 @@
         </constructor-arg>
     </bean>
 
-    <util:map id="authDomainMap">
-         <entry key="beta" value="prodPreview"/>
-         <entry key="gamma" value="prodPreview"/>
-         <entry key="bwbeta" value="prodPreview"/>
-         <entry key="systest" value="prod"/>
-         <entry key="prod" value="prod"/>
-    </util:map>
-
     <bean id="ArcConfig" class="aws.auth.client.config.Configuration">
         <!-- Set the qualifier for selecting the coral client config and ARS endpoint (S3 has a dedicated one, -->
         <!-- if your service does not have, simply put "${domain}.${realm}" -->
-        <property name="qualifier" value="#{authDomainMap['${domain}']}.${realm}"/>
+        <property name="qualifier" value="prod.${realm}"/>
         <!-- Set vendor name to scope the policies that ARS returns -->
         <property name="vendor" value="lookout"/>
         <!-- Increase number of retries for failed calls -->
