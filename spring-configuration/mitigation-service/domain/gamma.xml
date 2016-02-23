@@ -80,7 +80,7 @@
     </bean>
 
     <util:set id="gamma.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
-        <value>BR-PDQ-1</value> 
+        <value>BRG-PDQ-1</value> 
         <value>G-IAD55</value> 
         <!-- for load testing we create one location for each test lab host -->
         <value>SEALAB-A</value>
