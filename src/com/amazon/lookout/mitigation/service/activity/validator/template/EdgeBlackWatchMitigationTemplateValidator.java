@@ -82,7 +82,7 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
     }
         
     private void validateLocations(String location, String mitigationName, List<String> locations) {
-        Validate.notEmpty(locations, String.format("locations %s should not be empty.", locations));
+        Validate.notEmpty(locations, "locations should not be empty.");
         Validate.isTrue(locations.size() == 1, String.format("locations %s should only contains 1 location.", locations));
         Validate.isTrue(location.equals(locations.get(0)), String.format("locations %s should match the location %s found in mitigation name.", locations, location));
 
