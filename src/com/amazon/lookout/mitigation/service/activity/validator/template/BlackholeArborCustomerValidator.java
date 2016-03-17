@@ -388,8 +388,11 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
             throw new IllegalArgumentException("Blackholes can only work on /32s");
         }
 
+        // Check that it is a standard address but ignore the check for broadcast addresses. We want to be able to
+        // blackhole ips that end in .0 which is how we check for broadcast addresses. An example use case where we
+        // needed to blackhole a .0 address: https://tt.amazon.com/0073715563
         if (!IPUtils.isStandardAddress(destCidr.getAddress())) {
-            throw new IllegalArgumentException("Special (broadcast, multicast, etc) IP addresses are not supported");
+            throw new IllegalArgumentException("Special (Loopback, multicast, etc) IP addresses are not supported");
         }
     }
 
