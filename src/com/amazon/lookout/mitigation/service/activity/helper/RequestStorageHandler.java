@@ -14,9 +14,5 @@ public interface RequestStorageHandler {
     
     public RequestStorageResponse storeRequestForWorkflow(MitigationModificationRequest mitigationRequest, Set<String> locations, TSDMetrics metrics);
     
-    /**
-     * @deprecated We don't seem to use this anywhere
-     */
-    @Deprecated
     public void updateRunIdForWorkflowRequest(String deviceName, long workflowId, String runId, TSDMetrics metrics);
 }

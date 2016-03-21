@@ -330,14 +330,13 @@ public class DDBBasedRequestStorageHandler {
     /**
      * Responsible for recording the SWFRunId corresponding to the workflow request just created in DDB.
      * 
-     * @deprecated We don't seem to use the run id anywhere
+     * Used by reaper to match workflow run with same workflow ID
      * 
      * @param deviceName DeviceName corresponding to the workflow being run.
      * @param workflowId WorkflowId for the workflow being run.
      * @param runId SWF assigned runId for the running instance of this workflow.
      * @param metrics
      */
-    @Deprecated
     public void updateRunIdForWorkflowRequest(@NonNull String deviceName, long workflowId, @NonNull String runId, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(deviceName);
         Validate.isTrue(workflowId > 0);

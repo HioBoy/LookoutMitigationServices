@@ -8,9 +8,11 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.simpleworkflow.model.ListOpenWorkflowExecutionsRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfos;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -18,7 +20,8 @@ import com.google.common.util.concurrent.Uninterruptibles;
 import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
-import org.apache.commons.lang.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang3.builder.RecursiveToStringStyle;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.joda.time.DateTime;
@@ -88,6 +91,8 @@ public class RequestsReaper implements Runnable {
     private static final String FAILED_TO_START_WORKFLOW_METRIC_KEY = "FailedToStartWorkflow";
     private static final String NUM_REAPER_WORKFLOWS_STARTED_METRIC_KEY = "NumReaperWorkflows";
     private static final String PRE_EXISTING_REAPER_WORKFLOW_METRIC_KEY = "NumPreExistingReaperWorkflows";
+    
+    private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
     
     private final AmazonDynamoDBClient dynamoDBClient;
     private final AmazonSimpleWorkflowClient swfClient;
@@ -231,8 +236,8 @@ public class RequestsReaper implements Runnable {
                             
                             // SWF RunId could be null - for cases where a new request was persisted into DDB, but the SWF RunId was not yet updated.
                             String swfRunId = null;
-                            if (item.containsKey(MitigationRequestsModel.RUN_ID_KEY)) {
-                                swfRunId = item.get(MitigationRequestsModel.RUN_ID_KEY).getS();
+                            if (item.containsKey(MitigationRequestsModel.SWF_RUN_ID_KEY)) {
+                                swfRunId = item.get(MitigationRequestsModel.SWF_RUN_ID_KEY).getS();
                             }
                             
                             // If the workflow status is Running, check if it has been running for at least N seconds, if not, then skip this entry.
@@ -246,7 +251,7 @@ public class RequestsReaper implements Runnable {
                                 }
                                 
                                 // Query SWF to see if this workflow is still active or not. If it is still active, don't perform any further steps.
-                                if (!isWorkflowClosedInSWF(deviceName.name(), workflowIdStr, requestDateInMillis, subMetrics)) {
+                                if (!isWorkflowClosedInSWF(deviceName.name(), workflowIdStr, swfRunId, requestDateInMillis, subMetrics)) {
                                     LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
                                                 " at locations: " + locations + " with RequestDate: " + requestDateTime + " doesn't show as CLOSED in SWF, hence skipping any reaping activity.");
                                     continue;
@@ -374,7 +379,7 @@ public class RequestsReaper implements Runnable {
         
         request.setIndexName(MitigationRequestsModel.UNEDITED_MITIGATIONS_LSI_NAME);
         request.setConsistentRead(true);
-        request.setAttributesToGet(Lists.newArrayList(MitigationRequestsModel.WORKFLOW_ID_KEY, MitigationRequestsModel.RUN_ID_KEY, 
+        request.setAttributesToGet(Lists.newArrayList(MitigationRequestsModel.WORKFLOW_ID_KEY, MitigationRequestsModel.SWF_RUN_ID_KEY, 
                                                       MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, MitigationRequestsModel.WORKFLOW_STATUS_KEY, 
                                                       MitigationRequestsModel.DEVICE_SCOPE_KEY, MitigationRequestsModel.LOCATIONS_KEY, 
                                                       MitigationRequestsModel.MITIGATION_NAME_KEY, MitigationRequestsModel.MITIGATION_VERSION_KEY, 
@@ -455,17 +460,18 @@ public class RequestsReaper implements Runnable {
      * Responsible for querying SWF API to identify if the workflow run represented by the input parameters is considered Closed by SWF. Protected to allow unit-tests.
      * @param deviceName Device corresponding to the workflow run whose SWF status is being queried.
      * @param workflowIdStr WorkflowId represented as String
+     * @param swfRunId SWF run ID, represented as String, used for identify workflow run with same workflow id.
      * @param requestDateInMillis Timestamp in millis of when this request was created.
      * @param metrics
      * @return boolean flag indicating true if the workflow represented by the input parameters is considered Closed by SWF, false otherwise. 
      */
-    protected boolean isWorkflowClosedInSWF(@NonNull String deviceName, @NonNull String workflowIdStr, long requestDateInMillis, @NonNull TSDMetrics metrics) {
+    protected boolean isWorkflowClosedInSWF(@NonNull String deviceName, @NonNull String workflowIdStr, String swfRunId, long requestDateInMillis, @NonNull TSDMetrics metrics) {
         try (TSDMetrics subMetrics = metrics.newSubMetrics("isWorkflowClosedInSWF")) {
             DateTime now = new DateTime(DateTimeZone.UTC);
             String swfWorkflowId = deviceName + SWF_WORKFLOW_ID_KEY_SEPARATOR + workflowIdStr;
 
-            List<WorkflowExecutionInfo> openExecutions = getOpenExecutions(swfWorkflowId, requestDateInMillis);
-            List<WorkflowExecutionInfo> closedExecutions = getClosedExecutions(swfWorkflowId, requestDateInMillis);
+            List<WorkflowExecutionInfo> openExecutions = getOpenExecutions(swfWorkflowId, swfRunId, requestDateInMillis);
+            List<WorkflowExecutionInfo> closedExecutions = getClosedExecutions(swfWorkflowId, swfRunId, requestDateInMillis);
             
             if (closedExecutions.isEmpty()) {
                 // If no closed workflows found, then return false if the workflow is still open
@@ -496,7 +502,7 @@ public class RequestsReaper implements Runnable {
         }
     }
 
-    private List<WorkflowExecutionInfo> getClosedExecutions(@NonNull String swfWorkflowId, long requestDateInMillis) {
+    private List<WorkflowExecutionInfo> getClosedExecutions(@NonNull String swfWorkflowId, String swfRunId, long requestDateInMillis) {
         ListClosedWorkflowExecutionsRequest request = buildListClosedWorkflowExecutionsRequest(
                 swfWorkflowId,
                 requestDateInMillis);
@@ -505,16 +511,27 @@ public class RequestsReaper implements Runnable {
                 (previousRequest, nextPageToken) -> getSWFClient().listClosedWorkflowExecutions(
                         previousRequest.withNextPageToken(nextPageToken)));
 
-        LOG.debug("Got: " +
-                closedExecutions.size() +
-                " results when querying SWF for closed workflows using the listClosedWorkflowExecutions " +
-                "API with request: " +
-                ReflectionToStringBuilder.toString(request));
-
-        return closedExecutions;
+        return filterWithSWFRunId(closedExecutions, swfRunId, request);
+    }
+    
+    private List<WorkflowExecutionInfo> filterWithSWFRunId(List<WorkflowExecutionInfo> executions, String swfRunId,
+            AmazonWebServiceRequest request) {
+        // if swf run id is not null, filter the result with it.
+        if (swfRunId != null) {
+            executions = executions.stream()
+                    .filter(workflow -> swfRunId.equals(workflow.getExecution().getRunId()))
+                    .collect(Collectors.toList());
+        }
+        
+        LOG.debug("Got workflows : " +
+                ReflectionToStringBuilder.toString(executions, recursiveToStringStyle) +
+                ", when querying SWF for closed workflows using the list Workflow Executions API with request: " +
+                ReflectionToStringBuilder.toString(request, recursiveToStringStyle));
+        
+        return executions;
     }
 
-    private List<WorkflowExecutionInfo> getOpenExecutions(String swfWorkflowId, long requestDateInMillis) {
+    private List<WorkflowExecutionInfo> getOpenExecutions(String swfWorkflowId, String swfRunId, long requestDateInMillis) {
         ListOpenWorkflowExecutionsRequest request = buildListOpenWorkflowExecutionsRequest(
                 swfWorkflowId,
                 requestDateInMillis);
@@ -522,14 +539,7 @@ public class RequestsReaper implements Runnable {
                 request,
                 (previousRequest, nextPageToken) -> getSWFClient().listOpenWorkflowExecutions(
                         previousRequest.withNextPageToken(nextPageToken)));
-
-        LOG.debug("Got: " +
-                openExecutions.size() +
-                " results when querying SWF for closed workflows using the listOpenWorkflowExecutions " +
-                "API with request: " +
-                ReflectionToStringBuilder.toString(request));
-
-        return openExecutions;
+        return filterWithSWFRunId(openExecutions, swfRunId, request);
     }
 
     private ListClosedWorkflowExecutionsRequest buildListClosedWorkflowExecutionsRequest(String swfWorkflowId,
