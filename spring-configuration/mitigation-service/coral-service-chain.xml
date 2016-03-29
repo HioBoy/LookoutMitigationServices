@@ -140,10 +140,22 @@
         </constructor-arg>
     </bean>
 
+    <!-- for corp host(beta and bwbeta stack), we have to use prodPreview.us-east-1.
+      see wiki https://w.amazon.com/index.php/AWSAuth/Onboarding
+      "If you are running a TEST stack of a production service on the corporate network (including corp-attached
+      Amazon VPC (MAWS)) and want authentication: ARPS is not for you. Use ARS with qualifier prodPreview.us-east-1 instead."-->
+    <util:map id="authQualifierMap">
+        <entry key="beta" value="prodPreview.us-east-1"/>
+        <entry key="bwbeta" value="prodPreview.us-east-1"/>
+        <entry key="gamma" value="prod.${realm}"/>
+        <entry key="systest" value="prod.${realm}"/>
+        <entry key="prod" value="prod.${realm}"/>
+    </util:map>
+
     <bean id="ArcConfig" class="aws.auth.client.config.Configuration">
         <!-- Set the qualifier for selecting the coral client config and ARS endpoint (S3 has a dedicated one, -->
         <!-- if your service does not have, simply put "${domain}.${realm}" -->
-        <property name="qualifier" value="prod.${realm}"/>
+        <property name="qualifier" value="#{authQualifierMap['${domain}']}"/>
         <!-- Set vendor name to scope the policies that ARS returns -->
         <property name="vendor" value="lookout"/>
         <!-- Increase number of retries for failed calls -->
