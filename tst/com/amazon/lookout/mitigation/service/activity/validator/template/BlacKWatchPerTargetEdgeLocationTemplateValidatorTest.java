@@ -68,7 +68,7 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
         // mock TSDMetric
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
-        validator = new BlackWatchPerTargetEdgeLocationTemplateValidator(new BlackWatchEdgeLocationValidator(edgeLocationsHelper), s3Client);
+        validator = new BlackWatchPerTargetEdgeLocationTemplateValidator(new BlackWatchEdgeLocationValidator(edgeLocationsHelper, "^[GE]-([A-Z0-9]+)$"), s3Client);
         
         doReturn(new HashSet<String>(Arrays.asList("AMS1", "AMS50", "NRT54", "G-IAD55")))
                 .when(edgeLocationsHelper).getAllClassicPOPs();

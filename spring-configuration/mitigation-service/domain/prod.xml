@@ -40,7 +40,11 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
         <constructor-arg name="fakeBlackWatchClassicLocations" ref="prod.fakeBlackWatchClassicLocations"/>
     </bean>
-    
+     
+    <bean id="prod.edgeLocationPattern" class="java.lang.String">
+        <constructor-arg value="^[GE]-([A-Z0-9]+)$"/>
+    </bean>
+ 
     <util:set id="prod.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
         <value>BR-SFO4-1</value> 
         <value>BR-SFO4-2</value> 

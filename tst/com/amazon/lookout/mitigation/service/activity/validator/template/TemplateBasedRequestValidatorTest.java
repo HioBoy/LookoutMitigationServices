@@ -52,7 +52,8 @@ public class TemplateBasedRequestValidatorTest {
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
                 mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
-                mock(BlackWatchBorderLocationValidator.class));
+                mock(BlackWatchBorderLocationValidator.class),
+                mock(BlackWatchEdgeLocationValidator.class));
         MitigationModificationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         request.setPreDeploymentChecks(null);
         Throwable caughtException = null;
@@ -75,7 +76,8 @@ public class TemplateBasedRequestValidatorTest {
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
                 mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
-                mock(BlackWatchBorderLocationValidator.class));
+                mock(BlackWatchBorderLocationValidator.class),
+                mock(BlackWatchEdgeLocationValidator.class));
         MitigationModificationRequest request = 
                 RequestTestHelper.generateCreateMitigationRequest("BadTemplate", "Name");
         Throwable caughtException = null;
@@ -100,7 +102,8 @@ public class TemplateBasedRequestValidatorTest {
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
                 mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
-                mock(BlackWatchBorderLocationValidator.class));
+                mock(BlackWatchBorderLocationValidator.class),
+                mock(BlackWatchEdgeLocationValidator.class));
         MitigationModificationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         Throwable caughtException = null;
         try {
@@ -123,7 +126,8 @@ public class TemplateBasedRequestValidatorTest {
         
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(subnetsMatcher,
                 mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
-                mock(BlackWatchBorderLocationValidator.class));
+                mock(BlackWatchBorderLocationValidator.class),
+                mock(BlackWatchEdgeLocationValidator.class));
         
         MitigationDefinition definition1 = RequestTestHelper.defaultMitigationDefinition();
         

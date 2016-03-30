@@ -55,6 +55,10 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
         <constructor-arg name="fakeBlackWatchClassicLocations" ref="systest.fakeBlackWatchClassicLocations"/>
     </bean>
+  
+    <bean id="systest.edgeLocationPattern" class="java.lang.String">
+        <constructor-arg value="^fakerouter\d+$"/>
+    </bean>
     
     <util:set id="systest.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
         <value>BR-PDQ-1</value> 

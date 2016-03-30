@@ -39,6 +39,7 @@ public class TemplateBasedRequestValidator {
     private final AmazonS3 blackWatchS3Client;
     private final BlackholeMitigationHelper blackholeMitigationHelper;
     private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
+    private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
     
     // Map of templateName -> ServiceTemplateValidator which is responsible for validating this template.
     private final ImmutableMap<String, ServiceTemplateValidator> serviceTemplateValidatorMap;
@@ -48,17 +49,19 @@ public class TemplateBasedRequestValidator {
      *                              this matcher, in case they have to perform any subnet specific checks.
      */
     @ConstructorProperties({"serviceSubnetsMatcher", "edgeLocationsHelper", "blackWatchS3Client",
-        "blackholeMitigationHelper", "blackWatchBorderLocationValidator"})
+        "blackholeMitigationHelper", "blackWatchBorderLocationValidator", "blackWatchEdgeLocationValidator"})
     public TemplateBasedRequestValidator(@NonNull ServiceSubnetsMatcher serviceSubnetsMatcher,
             @NonNull EdgeLocationsHelper edgeLocationsHelper, @NonNull AmazonS3 blackWatchS3Client,
             @NonNull BlackholeMitigationHelper blackholeMitigationHelper,
-            @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator) 
+            @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator,
+            @NonNull BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator) 
     {
         
         this.blackWatchS3Client = blackWatchS3Client;
         this.edgeLocationsHelper = edgeLocationsHelper;
         this.blackholeMitigationHelper = blackholeMitigationHelper;
         this.blackWatchBorderLocationValidator = blackWatchBorderLocationValidator;
+        this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
         
         // this line should be the last line of constructor, as it might relies on the variable assigned before.
         this.serviceTemplateValidatorMap = getServiceTemplateValidatorMap(serviceSubnetsMatcher);
@@ -157,7 +160,7 @@ public class TemplateBasedRequestValidator {
     }
     
     private ServiceTemplateValidator getBlackWatchEdgeCustomerValidator() {
-    	return new EdgeBlackWatchMitigationTemplateValidator(blackWatchS3Client, edgeLocationsHelper);
+    	return new EdgeBlackWatchMitigationTemplateValidator(blackWatchS3Client, edgeLocationsHelper, blackWatchEdgeLocationValidator);
     }
     
     private ServiceTemplateValidator getBlackholeArborCustomerValidator() {
@@ -169,7 +172,7 @@ public class TemplateBasedRequestValidator {
     }
 
     private ServiceTemplateValidator getBlackWatchEdgeValidator() {
-    	return new BlackWatchPerTargetEdgeLocationTemplateValidator(new BlackWatchEdgeLocationValidator(edgeLocationsHelper), blackWatchS3Client);
+    	return new BlackWatchPerTargetEdgeLocationTemplateValidator(blackWatchEdgeLocationValidator, blackWatchS3Client);
     }
     
     /**

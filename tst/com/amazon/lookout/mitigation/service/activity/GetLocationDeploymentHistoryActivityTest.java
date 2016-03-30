@@ -21,6 +21,7 @@ import com.amazon.lookout.mitigation.service.LocationDeploymentInfo;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 
 public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper {
@@ -105,7 +106,8 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
     public void testInvalidHistoryEntrySize() {
         getLocationDeploymentHistoryActivity = 
                 spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(mock(ServiceLocationsHelper.class),
-                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class)), mitigationInstanceInfoHandler)); 
+                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
+                    mock(BlackWatchEdgeLocationValidator.class)), mitigationInstanceInfoHandler)); 
         request.setMaxNumberOfHistoryEntriesToFetch(10000);
         getLocationDeploymentHistoryActivity.enact(request); 
     }
@@ -117,7 +119,8 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
     public void testInvalidHistoryEntrySize2() {
         getLocationDeploymentHistoryActivity = 
                 spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(mock(ServiceLocationsHelper.class),
-                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class)), mitigationInstanceInfoHandler)); 
+                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
+                    mock(BlackWatchEdgeLocationValidator.class)), mitigationInstanceInfoHandler)); 
         request.setMaxNumberOfHistoryEntriesToFetch(-1);
         getLocationDeploymentHistoryActivity.enact(request); 
     }

@@ -129,6 +129,7 @@
         <constructor-arg name="serviceLocationsHelper" ref="serviceLocationsHelper"/>
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
         <constructor-arg name="blackWatchBorderLocationValidator" ref="blackWatchBorderLocationValidator"/>
+        <constructor-arg name="blackWatchEdgeLocationValidator" ref="blackWatchEdgeLocationValidator"/>
     </bean>
     
     <bean id="serviceLocationsHelper" class="com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper">
@@ -148,6 +149,12 @@
         <constructor-arg name="preDefinedLocations" ref="${domain}.preDefinedLocations"/>
         <constructor-arg name="allowedLocationPrefix" ref="${domain}.allowedLocationPrefix"/>
     </bean>
+
+    <bean id="blackWatchEdgeLocationValidator"
+            class="com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator">
+        <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
+        <constructor-arg name="edgeLocationPattern" ref="${domain}.edgeLocationPattern"/>
+    </bean>
     
     <bean id="templateBasedRequestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator">
         <constructor-arg name="serviceSubnetsMatcher" ref="serviceSubnetsMatcher"/>
@@ -155,6 +162,7 @@
         <constructor-arg name="blackWatchS3Client" ref="blackWatchS3Client"/>
         <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
         <constructor-arg name="blackWatchBorderLocationValidator" ref="blackWatchBorderLocationValidator"/>
+        <constructor-arg name="blackWatchEdgeLocationValidator" ref="blackWatchEdgeLocationValidator"/>
     </bean>
     
     <bean id="ddbBasedRequestStorageManager" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedRequestStorageManager">

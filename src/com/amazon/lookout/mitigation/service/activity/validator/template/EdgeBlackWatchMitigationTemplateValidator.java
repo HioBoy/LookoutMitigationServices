@@ -40,9 +40,10 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
     private static final Pattern VALID_POP_OVERRIDE_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_OVERRIDE_(%s)", LOCATION_PATTERN));
     private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
     
-    public EdgeBlackWatchMitigationTemplateValidator(AmazonS3 blackWatchConfigS3Client, EdgeLocationsHelper edgeLocationsHelper) {
+    public EdgeBlackWatchMitigationTemplateValidator(AmazonS3 blackWatchConfigS3Client,
+            EdgeLocationsHelper edgeLocationsHelper, BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator) {
         super(blackWatchConfigS3Client);
-        blackWatchEdgeLocationValidator = new BlackWatchEdgeLocationValidator(edgeLocationsHelper);
+        this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
     }
     
     @Override

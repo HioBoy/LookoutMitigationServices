@@ -28,6 +28,7 @@ import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
@@ -49,7 +50,8 @@ public class RequestValidatorTest {
     
     private RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
             mock(EdgeLocationsHelper.class),
-            mock(BlackWatchBorderLocationValidator.class));
+            mock(BlackWatchBorderLocationValidator.class),
+            mock(BlackWatchEdgeLocationValidator.class));
     
     @BeforeClass
     public static void setUpOnce() {
@@ -61,7 +63,8 @@ public class RequestValidatorTest {
         when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
         validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
             mock(EdgeLocationsHelper.class),
-            mock(BlackWatchBorderLocationValidator.class));
+            mock(BlackWatchBorderLocationValidator.class),
+            mock(BlackWatchEdgeLocationValidator.class));
     }
     
     /**
@@ -712,7 +715,8 @@ public class RequestValidatorTest {
         
         EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
         validator = new RequestValidator(new ServiceLocationsHelper(edgeLocationsHelper), mock(EdgeLocationsHelper.class),
-                mock(BlackWatchBorderLocationValidator.class));
+                mock(BlackWatchBorderLocationValidator.class),
+                mock(BlackWatchEdgeLocationValidator.class));
         when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("alocation", "blocation", "clocations"));
         validator.validateListActiveMitigationsForServiceRequest(request);
     }
@@ -723,7 +727,8 @@ public class RequestValidatorTest {
         
         EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
         validator = new RequestValidator(new ServiceLocationsHelper(edgeLocationsHelper), mock(EdgeLocationsHelper.class),
-                mock(BlackWatchBorderLocationValidator.class));
+                mock(BlackWatchBorderLocationValidator.class),
+                mock(BlackWatchEdgeLocationValidator.class));
         when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("alocation", "blocation", "clocations"));
         
         // locations is optional

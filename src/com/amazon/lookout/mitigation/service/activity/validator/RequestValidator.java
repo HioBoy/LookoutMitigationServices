@@ -92,14 +92,16 @@ public class RequestValidator {
     private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
     private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
     
-    @ConstructorProperties({"serviceLocationsHelper", "edgeLocationsHelper", "blackWatchBorderLocationValidator"}) 
+    @ConstructorProperties({"serviceLocationsHelper", "edgeLocationsHelper", "blackWatchBorderLocationValidator",
+        "blackWatchEdgeLocationValidator"}) 
     public RequestValidator(@NonNull ServiceLocationsHelper serviceLocationsHelper,
             @NonNull EdgeLocationsHelper edgeLocationsHelper,
-            @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator) {
+            @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator,
+            @NonNull BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator) {
         this.serviceLocationsHelper = serviceLocationsHelper;
         this.edgeLocationsHelper = edgeLocationsHelper;
         this.blackWatchBorderLocationValidator = blackWatchBorderLocationValidator;
-        this.blackWatchEdgeLocationValidator = new BlackWatchEdgeLocationValidator(edgeLocationsHelper);
+        this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
         
         this.deviceNames = new HashSet<>();
         for (DeviceName deviceName : DeviceName.values()) {

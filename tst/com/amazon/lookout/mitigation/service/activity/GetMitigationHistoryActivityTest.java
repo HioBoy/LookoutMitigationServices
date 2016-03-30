@@ -21,6 +21,7 @@ import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLoc
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.test.common.util.TestUtils;
 
@@ -135,7 +136,8 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
     public void testInvalidHistoryEntrySize() {
         GetMitigationHistoryActivity getMitigationHistoryActivity = 
                 spy(new GetMitigationHistoryActivity(new RequestValidator(mock(ServiceLocationsHelper.class),
-                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler)); 
+                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
+                    mock(BlackWatchEdgeLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler)); 
         request.setMaxNumberOfHistoryEntriesToFetch(10000);
         getMitigationHistoryActivity.enact(request); 
     }
@@ -147,7 +149,8 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
     public void testInvalidHistoryEntrySize2() {
         GetMitigationHistoryActivity getMitigationHistoryActivity = 
                 spy(new GetMitigationHistoryActivity(new RequestValidator(mock(ServiceLocationsHelper.class),
-                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler)); 
+                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
+                    mock(BlackWatchEdgeLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler)); 
         request.setMaxNumberOfHistoryEntriesToFetch(-1);
         getMitigationHistoryActivity.enact(request);  
     }

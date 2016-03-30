@@ -78,7 +78,11 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
         <constructor-arg name="fakeBlackWatchClassicLocations" ref="gamma.fakeBlackWatchClassicLocations"/>
     </bean>
-
+ 
+    <bean id="gamma.edgeLocationPattern" class="java.lang.String">
+        <constructor-arg value="^fakerouter-?\d+$|^G-([A-Z0-9]+)$"/>
+    </bean>
+ 
     <util:set id="gamma.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
         <value>BRG-PDQ-1</value> 
         <value>G-IAD55</value> 

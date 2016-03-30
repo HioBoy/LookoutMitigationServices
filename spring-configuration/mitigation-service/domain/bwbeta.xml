@@ -49,7 +49,11 @@
         <constructor-arg name="fakeBlackWatchClassicLocations" ref="bwbeta.fakeBlackWatchClassicLocations"/>
         <constructor-arg name="qualifier" value="Base.Bwbeta"/>
     </bean>
-    
+ 
+    <bean id="bwbeta.edgeLocationPattern" class="java.lang.String">
+        <constructor-arg value="^fakerouter-?\d+$"/>
+    </bean>
+   
     <util:set id="bwbeta.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
         <value>BR-PDQ-1</value> 
         <value>G-IAD55</value> 

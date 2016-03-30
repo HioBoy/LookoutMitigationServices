@@ -48,6 +48,10 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
         <constructor-arg name="fakeBlackWatchClassicLocations" ref="beta.fakeBlackWatchClassicLocations"/>
     </bean>
+
+    <bean id="beta.edgeLocationPattern" class="java.lang.String">
+        <constructor-arg value="^fakerouter-?\d+$"/>
+    </bean>
        
     <util:set id="beta.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
         <value>BR-PDQ-1</value> 

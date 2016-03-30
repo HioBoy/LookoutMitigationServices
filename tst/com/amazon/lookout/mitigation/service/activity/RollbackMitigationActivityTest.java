@@ -24,6 +24,7 @@ import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManag
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
+import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
@@ -48,7 +49,8 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
     public void setupMore() {
         requestValidator = spy(new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
                 mock(EdgeLocationsHelper.class),
-                mock(BlackWatchBorderLocationValidator.class)));
+                mock(BlackWatchBorderLocationValidator.class),
+                mock(BlackWatchEdgeLocationValidator.class)));
         requestStorageManager = mock(RequestStorageManager.class);
         swfWorkflowStarter = mock(SWFWorkflowStarter.class);
         rollbackMitigationActivity = new RollbackMitigationActivity(requestValidator,
