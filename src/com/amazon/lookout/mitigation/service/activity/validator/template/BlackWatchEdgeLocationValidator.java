@@ -1,8 +1,10 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
 import java.beans.ConstructorProperties;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang.Validate;
 
@@ -17,16 +19,22 @@ public class BlackWatchEdgeLocationValidator implements LocationValidator {
     private final EdgeLocationsHelper edgeLocationsHelper;
     private static final Pattern PROD_LOCATION_PATTERN = Pattern.compile("E-([A-Z0-9]+)");
     private final Pattern edgeLocationPattern;
+    private final Set<String> preDefinedLocations;
     
-    @ConstructorProperties({"edgeLocationsHelper", "edgeLocationPattern"}) 
-    public BlackWatchEdgeLocationValidator(EdgeLocationsHelper edgeLocationsHelper, String edgeLocationPattern) {
+    @ConstructorProperties({"edgeLocationsHelper", "edgeLocationPattern", "preDefinedLocations"}) 
+    public BlackWatchEdgeLocationValidator(EdgeLocationsHelper edgeLocationsHelper, String edgeLocationPattern, Set<String> preDefinedLocations) {
         this.edgeLocationsHelper = edgeLocationsHelper;
         this.edgeLocationPattern = Pattern.compile(edgeLocationPattern);
+        this.preDefinedLocations = preDefinedLocations.stream().map(String::toUpperCase).collect(Collectors.toSet());
     }
     
     @Override
     public boolean isValidLocation(String location) {
         Validate.notEmpty(location, "location can not be empty");
+        //predefined locations are always valid.
+        if (preDefinedLocations.contains(location)) {
+        	return true;
+        }
         Validate.isTrue(edgeLocationPattern.matcher(location).find(), "invalid location " + location
                 + ". edge location must exactly match pattern " + edgeLocationPattern.pattern());
  

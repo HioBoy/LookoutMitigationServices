@@ -154,6 +154,7 @@
             class="com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator">
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
         <constructor-arg name="edgeLocationPattern" ref="${domain}.edgeLocationPattern"/>
+        <constructor-arg name="preDefinedLocations" ref="${domain}.preDefinedLocations"/>
     </bean>
     
     <bean id="templateBasedRequestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator">
