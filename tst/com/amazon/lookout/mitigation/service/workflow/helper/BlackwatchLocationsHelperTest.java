@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
+import static com.amazon.aws158.commons.tst.TestUtils.newNopTsdMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -95,7 +96,7 @@ public class BlackwatchLocationsHelperTest {
         result.add(hostclassSearchResult);
         
         when(provider.search(anyString(), anyString(), anyInt(), anyList())).thenReturn(result);
-        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
+        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, newNopTsdMetrics());
         assertTrue(isBlackwatchPOP);
     }
     
@@ -129,7 +130,7 @@ public class BlackwatchLocationsHelperTest {
         result.add(hostclassSearchResult);
         
         when(provider.search(anyString(), anyString(), anyInt(), anyList())).thenReturn(result);
-        boolean isBlackwatchPOP = helper.isBlackwatchPOP(NON_BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
+        boolean isBlackwatchPOP = helper.isBlackwatchPOP(NON_BLACKWATCH_POP, newNopTsdMetrics());
         assertFalse(isBlackwatchPOP);
     }
     
@@ -158,7 +159,7 @@ public class BlackwatchLocationsHelperTest {
         List<Map<String, List<Object>>> result = new ArrayList<>();
         
         when(provider.search(anyString(), anyString(), anyInt(), anyList())).thenReturn(result);
-        boolean isBlackwatchPOP = helper.isBlackwatchPOP(NON_BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
+        boolean isBlackwatchPOP = helper.isBlackwatchPOP(NON_BLACKWATCH_POP, newNopTsdMetrics());
         assertFalse(isBlackwatchPOP);
     }
     
@@ -229,7 +230,7 @@ public class BlackwatchLocationsHelperTest {
         result.add(hostclassSearchResult);
         
         when(provider.search(anyString(), anyString(), anyInt(), anyList())).thenThrow(new RuntimeException()).thenThrow(new RuntimeException()).thenReturn(result);
-        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
+        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, newNopTsdMetrics());
         assertTrue(isBlackwatchPOP);
         verify(provider, times(3)).search(anyString(), anyString(), anyInt(), anyList());
     }
@@ -271,7 +272,7 @@ public class BlackwatchLocationsHelperTest {
         MonitoringQueryClientProvider monitoringQueryClientProvider = new MockMonitoringQueryClientProvider(odinCredsProvider, mockMonitoringQueryClient);
         BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider, true, monitoringQueryClientProvider, "Prod", "Total_Mitigated_Packets_RX", 5);
         
-        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
+        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, newNopTsdMetrics());
         assertTrue(isBlackwatchPOP);
         verify(provider, times(1)).search(anyString(), anyString(), anyInt(), anyList());
         verify(mockMonitoringQueryClient, times(2)).requestResponse(Matchers.<MWSRequest<Void>>any());
@@ -320,7 +321,7 @@ public class BlackwatchLocationsHelperTest {
         MonitoringQueryClientProvider monitoringQueryClientProvider = new MockMonitoringQueryClientProvider(odinCredsProvider, mockMonitoringQueryClient);
         BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider, true, monitoringQueryClientProvider, "Prod", "Total_Mitigated_Packets_RX", 5);
         
-        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
+        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, newNopTsdMetrics());
         assertFalse(isBlackwatchPOP);
         verify(provider, times(1)).search(anyString(), anyString(), anyInt(), anyList());
         verify(mockMonitoringQueryClient, times(1)).requestResponse(Matchers.<MWSRequest<Void>>any());
@@ -369,7 +370,7 @@ public class BlackwatchLocationsHelperTest {
         MonitoringQueryClientProvider monitoringQueryClientProvider = new MockMonitoringQueryClientProvider(odinCredsProvider, mockMonitoringQueryClient);
         BlackwatchLocationsHelper helper = new BlackwatchLocationsHelper(provider, true, monitoringQueryClientProvider, "Prod", "Total_Mitigated_Packets_RX", 5);
         
-        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
+        boolean isBlackwatchPOP = helper.isBlackwatchPOP(BLACKWATCH_POP, newNopTsdMetrics());
         assertFalse(isBlackwatchPOP);
         verify(provider, times(1)).search(anyString(), anyString(), anyInt(), anyList());
         verify(mockMonitoringQueryClient, times(1)).requestResponse(Matchers.<MWSRequest<Void>>any());
@@ -395,7 +396,7 @@ public class BlackwatchLocationsHelperTest {
         
         Throwable caughtException = null;
         try {
-            helper.isBlackwatchPOP(BLACKWATCH_POP, TestUtils.newNopTsdMetrics());
+            helper.isBlackwatchPOP(BLACKWATCH_POP, newNopTsdMetrics());
         } catch (Exception ex) {
             caughtException = ex;
         }

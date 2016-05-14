@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
+import static com.amazon.aws158.commons.tst.TestUtils.getTempDataPath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -562,7 +563,7 @@ public class EdgeLocationsHelperTest {
         
         Set<String> expectedPOPs = Sets.newHashSet("POP1", "POP5");
         
-        String tempDir = TestUtils.getTempDataPath(EdgeLocationsHelper.class);
+        String tempDir = getTempDataPath(EdgeLocationsHelper.class);
         EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, tempDir, new NullMetricsFactory(), new ArrayList<String>());
         Set<String> allClassicPOPs = locationsHelper.getAllClassicPOPs();
         assertEquals(expectedPOPs, allClassicPOPs);

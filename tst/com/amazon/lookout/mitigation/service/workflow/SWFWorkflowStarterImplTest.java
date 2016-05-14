@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow;
 
+import static com.amazon.aws158.commons.tst.TestUtils.newNopTsdMetrics;
 import static com.google.common.collect.Sets.newHashSet;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
@@ -56,7 +57,7 @@ public class SWFWorkflowStarterImplTest {
         when(mockWorkflowClient.getWorkflowType()).thenReturn(workflowType);
         
         SWFWorkflowStarterImpl workflowStarterImpl = new SWFWorkflowStarterImpl(mockWorkflowClientProvider);
-        WorkflowClientExternal workflowClient = workflowStarterImpl.createMitigationModificationWorkflowClient(1, request, "TestDevice", TestUtils.newNopTsdMetrics());
+        WorkflowClientExternal workflowClient = workflowStarterImpl.createMitigationModificationWorkflowClient(1, request, "TestDevice", newNopTsdMetrics());
         String swfRunId = workflowClient.getWorkflowExecution().getRunId();
         assertNotNull(swfRunId);
         assertEquals(swfRunId, "TestRunId");
@@ -90,7 +91,7 @@ public class SWFWorkflowStarterImplTest {
                 deviceName.name(),
                 DeviceScope.GLOBAL.name(),
                 workflowClientSpy,
-                TestUtils.newNopTsdMetrics());
+                newNopTsdMetrics());
 
         ArgumentCaptor<StartWorkflowOptions> startWorkflowOptionsCaptor =
                 ArgumentCaptor.forClass(StartWorkflowOptions.class);

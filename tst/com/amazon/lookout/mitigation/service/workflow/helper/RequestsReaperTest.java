@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
+import static com.amazon.aws158.commons.tst.TestUtils.newNopTsdMetrics;
 import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
@@ -138,7 +139,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
         
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, TestUtils.newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
     }
 
@@ -163,7 +164,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class)))
                 .thenReturn(openWorkflowExecutions);
 
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, TestUtils.newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
     }
 
@@ -186,7 +187,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class)))
                 .thenReturn(openWorkflowExecutions);
 
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, TestUtils.newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
         assertTrue(isWorkflowClosedInSWF);
     }
     
@@ -208,7 +209,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
 
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, TestUtils.newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
         assertTrue(isWorkflowClosedInSWF);
         verify(swfClient, times(2)).listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class));
     }
@@ -236,7 +237,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
 
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, TestUtils.newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
     }
 
@@ -261,7 +262,7 @@ public class RequestsReaperTest {
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
 
         RuntimeException actualException = assertThrows(RuntimeException.class, () ->
-                reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, TestUtils.newNopTsdMetrics()));
+                reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics()));
         assertThat(actualException.getMessage(),
                 containsString("Got more than 1 WorkflowExecution when querying status in SWF"));
     }
@@ -683,15 +684,15 @@ public class RequestsReaperTest {
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
         
         // if swf run id is null, it will not filter result
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, TestUtils.newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
         
         // swf run id matches result
-        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID1", 12345, TestUtils.newNopTsdMetrics());
+        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID1", 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
          
         // swf run id does not match result
-        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID2", 12345, TestUtils.newNopTsdMetrics());
+        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID2", 12345, newNopTsdMetrics());
         assertTrue(isWorkflowClosedInSWF);
         
         
@@ -708,15 +709,15 @@ public class RequestsReaperTest {
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
          
         // if swf run id is null, it will not filter result
-        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, TestUtils.newNopTsdMetrics());
+        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
         
         // swf run id matches result
-        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID1", 12345, TestUtils.newNopTsdMetrics());
+        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID1", 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
          
         // swf run id does not match result
-        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID2", 12345, TestUtils.newNopTsdMetrics());
+        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID2", 12345, newNopTsdMetrics());
         assertTrue(isWorkflowClosedInSWF);
     }
 }
