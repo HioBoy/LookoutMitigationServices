@@ -31,7 +31,7 @@ package.LookoutMitigationService = {
             CoralSpring = 4.0;
             JakartaCommons-logging-api = 1.1;
             JakartaCommons-lang3 = 3.x;
-            FindBugsAnnotations = 1.3.7;
+            FindBugsAnnotations = 2.0.3;
             
             AWSJavaSDKExternalRelease = 1.10;
             LookoutMitigationWorkFlowWorker = 1.0;
