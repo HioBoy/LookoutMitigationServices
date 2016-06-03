@@ -30,6 +30,7 @@ import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsReq
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest;
+import com.amazon.lookout.mitigation.service.GetLocationHostStatusRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationDefinitionRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
@@ -274,6 +275,15 @@ public class RequestValidator {
         validateCommonModificationRequestParameters(request);
         Validate.isTrue(request.getRollbackToMitigationVersion() > 0,
                 "rollback to mitigation version should be larger than 0");
+    }
+    
+    /**
+     * Validates if the request object passed to the GetLocationHostStatus API is valid
+     * @param An instance of GetLocationHostStatusRequest representing the input to the GetLocationHostStatus API
+     * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
+     */
+    public void validateGetLocationHostStatusRequest(GetLocationHostStatusRequest request) {
+        validateLocation(request.getLocation());
     }
     
     /**

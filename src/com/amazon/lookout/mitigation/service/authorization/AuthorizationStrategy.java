@@ -26,6 +26,7 @@ import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest;
+import com.amazon.lookout.mitigation.service.GetLocationHostStatusRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationDefinitionRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
@@ -38,6 +39,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
+import com.amazon.lookout.mitigation.service.activity.GetLocationHostStatusActivity;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
@@ -79,19 +81,19 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      */
     private static final String WRITE_OPERATION_PREFIX = "write";
     private static final String READ_OPERATION_PREFIX = "read";
-    
+
     // Constants used for generating ARN
     private static final String PARTITION = "aws";
     private static final String VENDOR = "lookout";
     private static final String SEPARATOR = "-";
-    
+
     // Some APIs do not concern with MitigationTemplate. In such cases we use ANY_TEMPLATE constant in the ARN. 
     protected static final String ANY_TEMPLATE = "ANY_TEMPLATE";
-    
+
     private final String ownerAccountId;
-    
+
     private final String arnPrefix;
-    
+
     public AuthorizationStrategy(Configuration arcConfig, String region, String ownerAccountId) {
         super(arcConfig);
         Validate.notNull(arcConfig);
@@ -100,7 +102,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         this.ownerAccountId = ownerAccountId;
         this.arnPrefix = "arn:" + PARTITION + ":" + VENDOR + ":" + region + ":" + ownerAccountId + ":";
     }
-    
+
     /**
      * (non-Javadoc)
      * @see {@link com.amazon.coral.service.AbstractAwsAuthorizationStrategy#getAuthorizationInfoList(com.amazon.coral.service.Context, java.lang.Object)
@@ -122,17 +124,17 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      */
     @Override
     public List<AuthorizationInfo> getAuthorizationInfoList(final Context context, final Object request) 
-        throws AccessDeniedException
-    {
-        
+            throws AccessDeniedException
+            {
+
         RequestInfo requestInfo = getRequestInfo(context.getOperation().toString(), request);
         if (requestInfo == null) {
             throw new RuntimeException("Failed getting request info for request " + request);
         }
-        
+
         String resourceName = arnPrefix + requestInfo.getRelativeArn();
         LOG.debug("Action: " + requestInfo.getAction() + " ; " + "Resource (ARN): " + resourceName);        
-        
+
         BasicAuthorizationInfo authorizationInfo = new BasicAuthorizationInfo();
         // Action that need to be authorized
         authorizationInfo.setAction(requestInfo.getAction());
@@ -148,20 +150,20 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         authInfoList.add(authorizationInfo);
 
         return authInfoList;
-    }
-    
+            }
+
     @Data
     static class RequestInfo {
         private final String action;
         private final String relativeArn;
     }
-    
+
     interface RequestInfoFunction<T> {
         public RequestInfo getRequestInfo(String action, T request);
     }
-    
+
     private static Map<Class<?>, RequestInfoFunction<Object>> requestInfoParsers;
-    
+
     @SuppressWarnings("unchecked")
     private static <T> void addRequestInfoParser(Class<T> clazz, RequestInfoFunction<T> function) {
         if (requestInfoParsers.containsKey(clazz)) {
@@ -169,7 +171,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         }
         requestInfoParsers.put(clazz, (RequestInfoFunction<Object>) function);
     }
-    
+
     private static RequestInfo generateMitigationRequestInfo(
             String action, String prefix, String serviceName, String deviceName, String mitigationTemplate)
     {
@@ -177,21 +179,28 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 generateActionName(action, prefix), 
                 getMitigationRelativeId(serviceName, deviceName, mitigationTemplate));
     }
-    
+
+    private static RequestInfo generateHostStatusRequestInfo(String action, String prefix, String locationName)
+    {
+        return new RequestInfo(
+                generateActionName(action, prefix),
+                getLocationRelativeId(locationName));
+    }
+
     private static RequestInfo generateMetadataRequestInfo(
             String action, String prefix, String metadataType)
     {
         Validate.notNull(metadataType);
         Validate.notNull(prefix);
-        
+
         return new RequestInfo(
                 generateActionName(action, prefix), 
                 "metadata" + "/" + metadataType);
     }
-    
+
     static {
         requestInfoParsers = new ConcurrentHashMap<>();
-        
+
         // All MitigationModificationRequests share authorization policy
         addRequestInfoParser(
                 MitigationModificationRequest.class,
@@ -200,98 +209,103 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                     if (StringUtils.isEmpty(mitigationTemplate)) {
                         throw new AccessDeniedException("Missing mitigationTemplate");
                     }
-                    
+
                     DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
                     if (deviceNameAndScope == null) {
                         throw new AccessDeniedException("Unrecognized template " + mitigationTemplate);
                     }
                     String deviceName = deviceNameAndScope.getDeviceName().name();
-                    
+
                     String serviceName = request.getServiceName();
                     if (StringUtils.isEmpty(serviceName)) {
                         throw new AccessDeniedException("Missing serviceName");
                     }
-                    
+
                     return generateMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, serviceName, deviceName, mitigationTemplate);
                 });
-        
+
         addRequestInfoParser(
                 GetRequestStatusRequest.class, 
                 (action, request) -> 
-                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
-        
+                generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+
         addRequestInfoParser(
                 ListActiveMitigationsForServiceRequest.class, 
                 (action, request) -> 
-                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
-        
+                generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+
         addRequestInfoParser(
                 GetMitigationInfoRequest.class, 
                 (action, request) -> 
-                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
-        
+                generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+
         addRequestInfoParser(
                 ReportInactiveLocationRequest.class, 
                 (action, request) -> 
-                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
-         
+                generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+
         addRequestInfoParser(
                 GetMitigationDefinitionRequest.class, 
                 (action, request) -> 
-                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
-         
+                generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+
         addRequestInfoParser(
                 GetMitigationHistoryRequest.class, 
                 (action, request) -> 
-                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
-         
+                generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+
         addRequestInfoParser(
                 GetLocationDeploymentHistoryRequest.class, 
                 (action, request) -> 
-                    generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
-        
+                generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
+
+        addRequestInfoParser(
+                GetLocationHostStatusRequest.class, 
+                (action, request) -> 
+                generateHostStatusRequestInfo(action, READ_OPERATION_PREFIX, request.getLocation()));
+
         for (Class<?> clazz : new Class[]{ListBlackholeDevicesRequest.class, GetBlackholeDeviceRequest.class} ) {
             addRequestInfoParser(
                     clazz, (action, request) -> generateMetadataRequestInfo(action, READ_OPERATION_PREFIX, "blackhole-device"));
         }
-        
+
         for (Class<?> clazz : new Class[]{CreateBlackholeDeviceRequest.class, UpdateBlackholeDeviceRequest.class} ) {
             addRequestInfoParser(
                     clazz, (action, request) -> generateMetadataRequestInfo(action, WRITE_OPERATION_PREFIX, "blackhole-device"));
         }
-        
+
         for (Class<?> clazz : new Class[]{ListTransitProvidersRequest.class, GetTransitProviderRequest.class} ) {
             addRequestInfoParser(
                     clazz, (action, request) -> generateMetadataRequestInfo(action, READ_OPERATION_PREFIX, "transit-provider"));
         }
-        
+
         for (Class<?> clazz : new Class[]{CreateTransitProviderRequest.class, UpdateTransitProviderRequest.class} ) {
             addRequestInfoParser(
                     clazz, (action, request) -> generateMetadataRequestInfo(action, WRITE_OPERATION_PREFIX, "transit-provider"));
         }
     }
-    
+
     private static RequestInfoFunction<Object> getRequestInfoFunction(Object request) {
         RequestInfoFunction<Object> function = requestInfoParsers.get(request.getClass());
         if (function != null) {
             return function;
         }
-        
+
         function = requestInfoParsers.entrySet().stream()
-            .filter(e -> e.getKey().isInstance(request))
-            .findFirst()
-            .map(e -> e.getValue())
-            .orElseThrow(() -> new AccessDeniedException("Unrecognized action: " + request.getClass().getName()));
-        
+                .filter(e -> e.getKey().isInstance(request))
+                .findFirst()
+                .map(e -> e.getValue())
+                .orElseThrow(() -> new AccessDeniedException("Unrecognized action: " + request.getClass().getName()));
+
         requestInfoParsers.put(request.getClass(), function);
-        
+
         return function;
     }
-    
+
     static RequestInfo getRequestInfo(String action, Object request) {
         return getRequestInfoFunction(request).getRequestInfo(action, request);
     }
-        
+
     /**
      * serviceName+deviceName+mitigationTemplate combination is included in the relative identifier as: 
      * mitigationTemplate/serviceName-deviceName if mitigationTemplate is not null, else as: serviceName-deviceName.
@@ -308,19 +322,34 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
              */
             deviceName = DeviceName.ANY_DEVICE.name();
         }
-        
+
         if (mitigationTemplate == null) {
             mitigationTemplate = ANY_TEMPLATE;
         }
         StringBuilder relativeidBuilder = new StringBuilder();
         relativeidBuilder.append(mitigationTemplate)
-                         .append("/")        
-                         .append(serviceName)
-                         .append(SEPARATOR)
-                         .append(deviceName);
+        .append("/")        
+        .append(serviceName)
+        .append(SEPARATOR)
+        .append(deviceName);
 
         return relativeidBuilder.toString();
     }
+
+    /**
+     * locationName is included in the relative identifier as: 
+     * LOCATION/locationName
+     *
+     * locationName should be non-null
+     */
+    static String getLocationRelativeId(String locationName) {
+        StringBuilder relativeidBuilder = new StringBuilder();
+        relativeidBuilder.append("LOCATION")
+        .append("/")        
+        .append(locationName);
+
+        return relativeidBuilder.toString();
+    }    
     
     /**
      * Generate action name with the following structure:
@@ -329,16 +358,16 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     static String generateActionName(final String operationName, String prefix) {
         Validate.notNull(operationName);
         Validate.notNull(prefix);
-        
+
         StringBuilder actionName = new StringBuilder();
         actionName.append(VENDOR)
-                  .append(":")
-                  .append(prefix)
-                  .append(SEPARATOR)
-                  .append(operationName);
+        .append(":")
+        .append(prefix)
+        .append(SEPARATOR)
+        .append(operationName);
         return actionName.toString();
     }
-    
+
     @Override
     public String getStrategyName() {
         return this.getClass().getName();

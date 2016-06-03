@@ -31,6 +31,7 @@ import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
+import com.amazon.lookout.mitigation.service.GetLocationHostStatusRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
@@ -68,6 +69,7 @@ public class AuthorizationStrategyTest {
     private GetRequestStatusRequest getRequestStatusRequest;
     private ListActiveMitigationsForServiceRequest listMitigationsRequest;
     private GetMitigationInfoRequest getMitigationInfoRequest;
+    private GetLocationHostStatusRequest getLocationHostStatusRequest;
      
     /**
      * Note: At this moment LookoutMitigationService supports just one mitigation template
@@ -80,6 +82,7 @@ public class AuthorizationStrategyTest {
     private static final String route53ServiceName = "Route53";
     private static final String popRouterDeviceName = "POP_ROUTER";
     private static final int mitigationVersion = 1;
+    private static final String location = "test-location";
     private static final List<String> locations = new LinkedList<String>();
     
     private final String deviceName = "SomeDevice";
@@ -115,6 +118,9 @@ public class AuthorizationStrategyTest {
         getMitigationInfoRequest.setDeviceName(popRouterDeviceName);
         getMitigationInfoRequest.setDeviceScope(DeviceScope.GLOBAL.name());
         getMitigationInfoRequest.setMitigationName(mitigationName);
+        
+        getLocationHostStatusRequest = new GetLocationHostStatusRequest();
+        getLocationHostStatusRequest.setLocation(location);
     }
 
     private static CreateMitigationRequest generateCreateRequest() {
@@ -309,6 +315,19 @@ public class AuthorizationStrategyTest {
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
     }
     
+    // validate the authorization info generated from GetLocationHostStatusRequest
+    @Test
+    public void testForGetLocationHostStatusRequest() throws Throwable {
+        setOperationNameForContext("GetLocationHostStatus");
+        List<AuthorizationInfo> authInfoList = authStrategy.getAuthorizationInfoList(context, getLocationHostStatusRequest);
+        assertTrue(authInfoList.size() == 1);
+        
+        BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
+        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:read-GetLocationHostStatus", 
+                EXPECTED_ARN_PREFIX + "LOCATION/" + location);
+        assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
+    }
+    
     @Test
     public void testUnrecornizedRequest() {
         // Request from completely the wrong service
@@ -332,8 +351,12 @@ public class AuthorizationStrategyTest {
 
         relativeId = AuthorizationStrategy.getMitigationRelativeId(serviceName, deviceName, mitigationTemplate);
         assertEquals(mitigationTemplate + "/" + serviceName + "-" + deviceName, relativeId);
+        
+        // test Location Relative ID
+        String locationRelativeId = AuthorizationStrategy.getLocationRelativeId(location);
+        assertEquals("LOCATION" + "/" + location, locationRelativeId);
     }
-    
+
     @SuppressWarnings("unused")
     private static Object[][] getBlackholeDeviceOperations() {
         return new Object[][] {

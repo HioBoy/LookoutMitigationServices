@@ -86,7 +86,12 @@
         <constructor-arg name="activeMitigationInfoHandler" ref="ddbBasedRequestInfoHandler"/>
         <constructor-arg name="domain" value="${domain}"/>
     </bean>
-    
+	
+    <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationHostStatusActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="hostStatusHandler" ref="ddbBasedHostStatusInfoHandler"/>
+    </bean>
+        
     <bean id="blackholeMetadataActivityBase" abstract="true">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
@@ -187,7 +192,13 @@
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
     </bean>
-    
+
+    <bean id="ddbBasedHostStatusInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedHostStatusInfoHandler">
+        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
+        <constructor-arg name="domain" value="${domain}"/>
+        <constructor-arg name="realm" value="${realm}"/>
+	</bean>
+        
     <bean id="swfWorkflowStarter" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl">
         <constructor-arg name="swfWorkflowProvider" ref="swfWorkflowClientProvider"/>
     </bean>
