@@ -14,6 +14,8 @@ package.LookoutMitigationService = {
         1.0 = {
             JDK8 = 1.0;
             HappierTrails = 3.3;
+            Lombok = 1.16.x;
+            LombokUtils = 1.1;
             # Build logic for spring integration
             CoralSpringLauncher = 4.0;
             AWSSimpleWorkflowJavaFlowDeciderAPT = 3.3;

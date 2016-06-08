@@ -1,7 +1,6 @@
 package com.amazon.lookout.mitigation.service.authorization;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.hamcrest.Matchers.containsString;
@@ -10,8 +9,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.LinkedList;
 import java.util.List;
-
-import javax.annotation.concurrent.ThreadSafe;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -45,7 +42,6 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
-import com.amazon.lookout.mitigation.service.authorization.AuthorizationStrategy.RequestInfo;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
