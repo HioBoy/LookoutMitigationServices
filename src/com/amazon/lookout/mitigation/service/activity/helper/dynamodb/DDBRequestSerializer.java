@@ -153,6 +153,10 @@ public class DDBRequestSerializer {
         
         attributeValue = new AttributeValue().withN(String.valueOf(updateWorkflowId));
         attributesInItemToStore.put(UPDATE_WORKFLOW_ID_KEY, attributeValue);
+
+        //Abort Deployment Flag, default to false
+        attributeValue = new AttributeValue().withBOOL(false);
+        attributesInItemToStore.put(ABORT_FLAG_KEY, attributeValue);
         
         return attributesInItemToStore;
     }
@@ -352,6 +356,13 @@ public class DDBRequestSerializer {
         descriptionWithLocations.setMitigationRequestDescription(convertToRequestDescription(item));
         descriptionWithLocations.setLocations(item.get(LOCATIONS_KEY).getSS());
         return descriptionWithLocations;
+    }
+    
+    //get the abort flag from DDB item. 
+    public static Boolean getRequestAbortFlag(
+            @NonNull Item item) 
+    {
+        return item.getBoolean(ABORT_FLAG_KEY);
     }
     
     public static MitigationRequestDescriptionWithLocations convertToRequestDescriptionWithLocations(@NonNull Item item) {

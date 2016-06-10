@@ -39,6 +39,8 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
 
     private final ImmutableMap<RequestType, RequestStorageHandler> requestTypeToStorageHandler;
     
+    private final DDBBasedRequestStorageHandler baseRequestStorageHandler;
+    
     @ConstructorProperties({"dynamoDBClient", "domain","templateBasedValidator"})
     public DDBBasedRequestStorageManager(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull String domain,
                                          @NonNull TemplateBasedRequestValidator templateBasedValidator) {
@@ -46,6 +48,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
         Validate.notEmpty(domain);
         
         requestTypeToStorageHandler = getRequestTypeToStorageHandlerMap(dynamoDBClient, domain, templateBasedValidator);
+        baseRequestStorageHandler = createBaseRequestStorageHandler(dynamoDBClient, domain);
     }
     
     /**
@@ -123,6 +126,23 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
     }
     
     /**
+     * Helper method to create an instance of DDBBasedRequestStorageHandler.
+     * @param dynamoDBClient: client to operate on DyanmoDB tables.
+     * @param domain: Domain where this service runs, we have separate DDB tables for beta/gamma/prod, domain helps us identify the correct tableName.
+     * @return an instance of DDBBasedRequestStorageHandler
+     */
+    private DDBBasedRequestStorageHandler createBaseRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain) {
+        return new DDBBasedRequestStorageHandler(dynamoDBClient, domain);
+    }
+    
+    /**
+     * Helper method to get the instance of DDBBasedRequestStorageHandler.
+     */
+    protected DDBBasedRequestStorageHandler getBaseRequestStorageHandler() {
+        return baseRequestStorageHandler;
+    }
+    
+    /**
      * Responsible for recording the SWFRunId corresponding to the workflow request just created in DDB.
      * @param deviceName DeviceName corresponding to the workflow being run.
      * @param workflowId WorkflowId for the workflow being run.
@@ -138,6 +158,19 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
         
         RequestStorageHandler handler = getRequestStorageHandler(requestType);
         handler.updateRunIdForWorkflowRequest(deviceName, workflowId, runId, metrics);
+    }
+    
+    /**
+     * Responsible for setting the abort flag of the request in DDB.
+     * @param deviceName: DeviceName corresponding to the workflow being run.
+     * @param workflowId: WorkflowId for the workflow being run.
+     * @param metrics
+     */
+    public void requestAbortForWorkflowRequest(@NonNull String deviceName, long workflowId, @NonNull TSDMetrics metrics) {
+        Validate.notEmpty(deviceName);
+        Validate.isTrue(workflowId > 0);
+        
+        getBaseRequestStorageHandler().updateAbortFlagForWorkflowRequest(deviceName, workflowId, true, metrics);
     }
     
     /**

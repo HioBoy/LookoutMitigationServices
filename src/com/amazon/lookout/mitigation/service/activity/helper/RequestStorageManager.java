@@ -15,4 +15,6 @@ public interface RequestStorageManager {
     public RequestStorageResponse storeRequestForWorkflow(MitigationModificationRequest request, Set<String> locations, RequestType requestType, TSDMetrics metrics);
     
     public void updateRunIdForWorkflowRequest(String deviceName, long workflowId, String runId, RequestType requestType, TSDMetrics metrics);
+    
+    public void requestAbortForWorkflowRequest(String deviceName, long workflowId, TSDMetrics metrics);
 }

@@ -133,6 +133,11 @@ public class RequestTableTestHelper {
         mitigationDefinition.setConstraint(new BlackWatchConfigBasedConstraint());
     }
 
+    public Boolean getRequestAbortFlag(String deviceName, long workflowId) {
+        Item item = requestsTable.getItem(DDBRequestSerializer.getPrimaryKey(deviceName, workflowId));
+        return DDBRequestSerializer.getRequestAbortFlag(item);
+    }
+    
     public MitigationRequestDescriptionWithLocations getRequestDescriptionWithLocations(String deviceName, long workflowId) {
         Item item = requestsTable.getItem(DDBRequestSerializer.getPrimaryKey(deviceName, workflowId));
         return DDBRequestSerializer.convertToRequestDescriptionWithLocations(item);

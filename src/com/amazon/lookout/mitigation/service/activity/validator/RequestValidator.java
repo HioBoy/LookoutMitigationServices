@@ -22,6 +22,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
 
 import com.amazon.lookout.ddb.model.TransitProvider;
+import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.BlackholeDeviceInfo;
 import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
@@ -195,6 +196,22 @@ public class RequestValidator {
         }
         
         validateMitigationTemplate(request.getMitigationTemplate());
+        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
+    }
+
+    /**
+     * Validates if the request object passed to the AbortDeployment API is valid
+     * @param A AbortDeploymentRequest object representing the input to the AbortDeployment API
+     * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
+     */
+    public void validateAbortDeploymentRequest(@NonNull AbortDeploymentRequest request) {
+        if (request.getJobId() < 1) {
+            String msg = "Job IDs should be >= 1, instead found: " + request.getJobId();
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        validateBlackWatchMitigationTemplate(request.getMitigationTemplate());
         validateDeviceAndService(request.getDeviceName(), request.getServiceName());
     }
     
@@ -481,6 +498,16 @@ public class RequestValidator {
         
         if (!mitigationTemplates.contains(mitigationTemplate)) {
             String msg = "Invalid mitigation template found: " + mitigationTemplate + ". Valid mitigation templates are: " + mitigationTemplates;
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+
+    private void validateBlackWatchMitigationTemplate(String mitigationTemplate) {
+    	validateMitigationTemplate(mitigationTemplate);
+    	Set<String> blackwatchMitigationTemplates = Sets.newHashSet(MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer, MitigationTemplate.BlackWatchPOP_EdgeCustomer, MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer);
+        if (!blackwatchMitigationTemplates.contains(mitigationTemplate)) {
+            String msg = "None BlackWatch mitigation template found: " + mitigationTemplate + ". only support blackwatch mitigation template: " + blackwatchMitigationTemplates;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }

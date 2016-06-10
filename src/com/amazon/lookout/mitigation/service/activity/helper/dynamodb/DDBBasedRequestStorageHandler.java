@@ -386,6 +386,58 @@ public class DDBBasedRequestStorageHandler {
          }
     }
 
+    /**
+     * Responsible for updating the abortflag of the request in DDB.
+     * 
+     * Used by the abort deployment activity. 
+     * 
+     * @param deviceName DeviceName corresponding to the workflow being run.
+     * @param workflowId WorkflowId for the workflow being run.
+     * @param abortFlag true if we want to abort the workflow, false otherwise.
+     * @param metrics
+     */
+    public void updateAbortFlagForWorkflowRequest(@NonNull String deviceName, long workflowId, boolean abortFlag , @NonNull TSDMetrics metrics) {
+        Validate.notEmpty(deviceName);
+        Validate.isTrue(workflowId > 0);
+        Validate.notNull(metrics);
+        
+        try (TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.updateAbortFlagForWorkflowRequest")) {
+            Map<String, AttributeValue> key = DDBRequestSerializer.getKey(deviceName, workflowId);
+            
+            Map<String, AttributeValueUpdate> attributeUpdates = new HashMap<>();
+            attributeUpdates.put(MitigationRequestsModel.ABORT_FLAG_KEY, new AttributeValueUpdate(new AttributeValue().withBOOL(abortFlag), AttributeAction.PUT));
+
+            Map<String, ExpectedAttributeValue> expected = new HashMap<>();
+            
+            // Attempt to update DDB for a fixed number of times.
+            int numAttempts = 0;
+            while (true) {
+                subMetrics.addOne(NUM_DDB_UPDATE_ITEM_ATTEMPTS_KEY);
+                try {
+                    updateItemInDynamoDB(attributeUpdates, key, expected, metrics);
+                    return;
+                } catch (ConditionalCheckFailedException ex) {
+                    String msg = "For workflowId: " + workflowId + "  device: " + deviceName + " attempted update abortFlag to: " + abortFlag + 
+                                 ", but caught a ConditionalCheckFailed exception";
+                    LOG.error(msg, ex);
+                    throw ex;
+                } catch (AmazonClientException ex) {
+                    if (numAttempts < DDB_UPDATE_ITEM_MAX_ATTEMPTS) {
+                        String msg = "Caught Exception when updating abortFlag to :" + abortFlag + " for device: " + deviceName + 
+                                     " workflowId: " + workflowId + ". # of Attempts so far: " + numAttempts;
+                        LOG.warn(msg, ex);
+        
+                        sleepForUpdateRetry(numAttempts);
+                    } else {
+                        String msg = "Failed to update abortFlag to :" + abortFlag + " for device: " + deviceName + 
+                                " workflowId: " + workflowId + " after " + numAttempts + " number of attempts.";
+                        LOG.warn(msg, ex);
+                        throw ex;
+                    }
+                }
+            }
+         }
+    }
     /* Called by the concrete implementations of this StorageHandler to query DDB.
      * @param request QueryRequest keys containing the information to use for querying.
      * @param metrics

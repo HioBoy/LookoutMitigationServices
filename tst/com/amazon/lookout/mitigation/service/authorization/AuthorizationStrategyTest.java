@@ -25,6 +25,7 @@ import com.amazon.coral.service.AuthorizationInfo;
 import com.amazon.coral.service.BasicAuthorizationInfo;
 import com.amazon.coral.service.Context;
 import com.amazon.coral.service.Identity;
+import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
@@ -70,7 +71,7 @@ public class AuthorizationStrategyTest {
     private ListActiveMitigationsForServiceRequest listMitigationsRequest;
     private GetMitigationInfoRequest getMitigationInfoRequest;
     private GetLocationHostStatusRequest getLocationHostStatusRequest;
-     
+
     /**
      * Note: At this moment LookoutMitigationService supports just one mitigation template
      * and these unit tests are written assuming just its existence. Some of this code would
@@ -418,5 +419,24 @@ public class AuthorizationStrategyTest {
     @Test
     public void testGetStrategyName() {
         assertEquals("com.amazon.lookout.mitigation.service.authorization.AuthorizationStrategy", authStrategy.getStrategyName());
+    }
+    
+    @Test
+    public void testValidAbortDeploymentRequest() throws Throwable {
+        setOperationNameForContext("AbortDeployment");
+        AbortDeploymentRequest abortRequest = new AbortDeploymentRequest();
+        abortRequest.setServiceName(route53ServiceName);
+        abortRequest.setDeviceName(popRouterDeviceName);
+        abortRequest.setMitigationTemplate(route35RateLimitMitigationTemplate);
+        abortRequest.setJobId((long) 1);
+        
+        List<AuthorizationInfo> authInfoList = authStrategy.getAuthorizationInfoList(context, abortRequest);
+        assertTrue(authInfoList.size() == 1);
+         
+        BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
+        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:write-" + "AbortDeployment", 
+                EXPECTED_ARN_PREFIX + route35RateLimitMitigationTemplate + "/" + route53ServiceName + "-" + popRouterDeviceName);
+        
+        assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
     }
 }

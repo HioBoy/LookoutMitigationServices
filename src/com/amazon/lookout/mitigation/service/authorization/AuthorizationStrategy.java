@@ -22,6 +22,7 @@ import com.amazon.coral.service.AbstractAwsAuthorizationStrategy;
 import com.amazon.coral.service.AuthorizationInfo;
 import com.amazon.coral.service.BasicAuthorizationInfo;
 import com.amazon.coral.service.Context;
+import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
@@ -221,6 +222,26 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                         throw new AccessDeniedException("Missing serviceName");
                     }
 
+                    return generateMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, serviceName, deviceName, mitigationTemplate);
+                });
+
+        // abort deployment authorization policy
+        addRequestInfoParser(
+        		AbortDeploymentRequest.class,
+                (action, request) -> {
+                    String mitigationTemplate = request.getMitigationTemplate();
+                    if (StringUtils.isEmpty(mitigationTemplate)) {
+                        throw new AccessDeniedException("Missing mitigationTemplate");
+                    }
+                    DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
+                    if (deviceNameAndScope == null) {
+                        throw new AccessDeniedException("Unrecognized template " + mitigationTemplate);
+                    }
+                    String deviceName = deviceNameAndScope.getDeviceName().name();
+                    String serviceName = request.getServiceName();
+                    if (StringUtils.isEmpty(serviceName)) {
+                        throw new AccessDeniedException("Missing serviceName");
+                    }
                     return generateMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, serviceName, deviceName, mitigationTemplate);
                 });
 

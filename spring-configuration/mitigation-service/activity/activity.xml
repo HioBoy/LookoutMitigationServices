@@ -11,6 +11,13 @@
     <context:annotation-config/>
     
     <!-- All the activities go here -->
+    
+    <bean class="com.amazon.lookout.mitigation.service.activity.AbortDeploymentActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
+        <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
+    </bean>
+    
     <bean class="com.amazon.lookout.mitigation.service.activity.CreateMitigationActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>

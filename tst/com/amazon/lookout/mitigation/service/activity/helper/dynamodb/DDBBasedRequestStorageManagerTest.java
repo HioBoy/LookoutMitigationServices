@@ -9,6 +9,7 @@ import static org.mockito.Mockito.*;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.test.common.util.TestUtils;
@@ -17,6 +18,7 @@ import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.model.RequestType;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 
 public class DDBBasedRequestStorageManagerTest {
     private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
@@ -93,6 +95,46 @@ public class DDBBasedRequestStorageManagerTest {
         Throwable caughtException = null;
         try {
             storageManager.storeRequestForWorkflow(request, Sets.newHashSet("TST1"), requestType, tsdMetrics).getWorkflowId();
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+    }
+    
+    /**
+     * Test the happy case we successfully update the abort flag. 
+     */
+    @Test
+    public void testrequestAbortForWorkflowRequestSucceed() {
+        DDBBasedRequestStorageManager storageManager = mock(DDBBasedRequestStorageManager.class);
+        
+        DDBBasedRequestStorageHandler baseRequestStorageHandler = mock(DDBBasedRequestStorageHandler.class);
+        
+        when(storageManager.getBaseRequestStorageHandler()).thenReturn(baseRequestStorageHandler);
+        Mockito.doNothing().when(baseRequestStorageHandler).updateAbortFlagForWorkflowRequest(anyString(), anyLong(), anyBoolean(), any(TSDMetrics.class));
+        
+        Mockito.doCallRealMethod().when(storageManager).requestAbortForWorkflowRequest(anyString(), anyLong(), any(TSDMetrics.class));
+
+        storageManager.requestAbortForWorkflowRequest("device", 1, tsdMetrics);
+    }
+    
+    /**
+     * Test the case updateAbortFlagForWorkflowRequest throws exception. 
+     */
+    @Test
+    public void testrequestAbortForWorkflowRequestException() {
+        DDBBasedRequestStorageManager storageManager = mock(DDBBasedRequestStorageManager.class);
+        
+        DDBBasedRequestStorageHandler baseRequestStorageHandler = mock(DDBBasedRequestStorageHandler.class);
+        
+        when(storageManager.getBaseRequestStorageHandler()).thenReturn(baseRequestStorageHandler);
+        Mockito.doThrow(new RuntimeException()).when(baseRequestStorageHandler).updateAbortFlagForWorkflowRequest(anyString(), anyLong(), anyBoolean(), any(TSDMetrics.class));
+
+        Mockito.doCallRealMethod().when(storageManager).requestAbortForWorkflowRequest(anyString(), anyLong(), any(TSDMetrics.class));
+        
+        Throwable caughtException = null;
+        try {
+        	storageManager.requestAbortForWorkflowRequest("device", 1, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }

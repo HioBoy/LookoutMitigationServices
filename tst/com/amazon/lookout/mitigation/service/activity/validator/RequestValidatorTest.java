@@ -18,6 +18,7 @@ import org.junit.Test;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.lookout.test.common.util.TestUtils;
+import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
@@ -35,6 +36,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+
 
 public class RequestValidatorTest {
     
@@ -65,6 +67,33 @@ public class RequestValidatorTest {
             mock(EdgeLocationsHelper.class),
             mock(BlackWatchBorderLocationValidator.class),
             mock(BlackWatchEdgeLocationValidator.class));
+    }
+    
+
+    @Test
+    public void testValidateAbortDeploymentRequest() {
+
+    	String[] validBWTemplates = {MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer, MitigationTemplate.BlackWatchPOP_EdgeCustomer, MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer};
+    	AbortDeploymentRequest abortRequest = new AbortDeploymentRequest();
+    	abortRequest.setJobId(1);
+    	abortRequest.setServiceName(ServiceName.Edge);
+    	abortRequest.setDeviceName(DeviceName.BLACKWATCH_POP .name());
+    	//valid template
+    	for (String template : validBWTemplates) {
+    		abortRequest.setMitigationTemplate(template);
+    		validator.validateAbortDeploymentRequest(abortRequest);
+    	}
+    	
+    	//invalid non-bw template
+        Throwable caughtException = null;
+        abortRequest.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
+        try {
+            validator.validateAbortDeploymentRequest(abortRequest);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+            assertTrue(ex.getMessage().startsWith("None BlackWatch mitigation template found"));
+        }
+        assertNotNull(caughtException);
     }
     
     /**
@@ -776,4 +805,6 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtException);
     }
+    
+
 }
