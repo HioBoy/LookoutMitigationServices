@@ -41,6 +41,8 @@ import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.activity.GetLocationHostStatusActivity;
+import com.amazon.lookout.mitigation.service.activity.ListBlackWatchLocationsActivity;
+import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
@@ -188,6 +190,12 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 getLocationRelativeId(locationName));
     }
 
+    private static RequestInfo generateLocationStateRequestInfo(String action, String prefix) {
+        return new RequestInfo(
+                generateActionName(action, prefix),
+                null);
+    }
+    
     private static RequestInfo generateMetadataRequestInfo(
             String action, String prefix, String metadataType)
     {
@@ -285,6 +293,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 (action, request) -> 
                 generateHostStatusRequestInfo(action, READ_OPERATION_PREFIX, request.getLocation()));
 
+        addRequestInfoParser(
+                ListBlackWatchLocationsRequest.class, 
+                (action, request) -> 
+                generateLocationStateRequestInfo(action, READ_OPERATION_PREFIX));
+        
         for (Class<?> clazz : new Class[]{ListBlackholeDevicesRequest.class, GetBlackholeDeviceRequest.class} ) {
             addRequestInfoParser(
                     clazz, (action, request) -> generateMetadataRequestInfo(action, READ_OPERATION_PREFIX, "blackhole-device"));

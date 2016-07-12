@@ -98,6 +98,11 @@
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="hostStatusHandler" ref="ddbBasedHostStatusInfoHandler"/>
     </bean>
+    
+    <bean class="com.amazon.lookout.mitigation.service.activity.ListBlackWatchLocationsActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
+    </bean>
         
     <bean id="blackholeMetadataActivityBase" abstract="true">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
@@ -205,7 +210,13 @@
         <constructor-arg name="domain" value="${domain}"/>
         <constructor-arg name="realm" value="${realm}"/>
 	</bean>
-        
+
+    <bean id="ddbBasedLocationStateInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedLocationStateInfoHandler">
+        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
+        <constructor-arg name="domain" value="${domain}"/>
+        <constructor-arg name="realm" value="${realm}"/>
+    </bean>
+            
     <bean id="swfWorkflowStarter" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl">
         <constructor-arg name="swfWorkflowProvider" ref="swfWorkflowClientProvider"/>
     </bean>
