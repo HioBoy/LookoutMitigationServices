@@ -12,23 +12,22 @@ import org.mockito.Mockito;
 import static org.mockito.Mockito.*;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsResponse;
-import com.amazon.lookout.mitigation.service.BlackWatchLocations;
+import com.amazon.lookout.mitigation.service.BlackWatchLocation;
 import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
 
 public class ListBlackWatchLocationsActivityTest extends ActivityTestHelper {
-    private static final String location = "location1";
     private ListBlackWatchLocationsRequest request;
     
-    private ListBlackWatchLocationsActivity listBlackWatchLocationsActivity;
+    private ListBlackWatchLocationsActivity listBlackWatchLocationActivity;
     
     @Before
     public void setup() {
-        listBlackWatchLocationsActivity = 
-                spy(new ListBlackWatchLocationsActivity(locationStateInfoHandler));
+        listBlackWatchLocationActivity = 
+                spy(new ListBlackWatchLocationsActivity(requestValidator, locationStateInfoHandler));
         
         request = new ListBlackWatchLocationsRequest();
+        request.setRegion("region");
     }
 
     /**
@@ -36,34 +35,35 @@ public class ListBlackWatchLocationsActivityTest extends ActivityTestHelper {
      */
     @Test
     public void testLocationHostStatus() {
-        Mockito.doReturn(requestId).when(listBlackWatchLocationsActivity).getRequestId();
+        Mockito.doReturn(requestId).when(listBlackWatchLocationActivity).getRequestId();
         
-        List<BlackWatchLocations> listOfBlackWatchLocations = new ArrayList<>();
-        BlackWatchLocations blackWatchLocations = new BlackWatchLocations();
+        List<BlackWatchLocation> listOfBlackWatchLocation = new ArrayList<>();
+        BlackWatchLocation blackWatchLocations = new BlackWatchLocation();
         blackWatchLocations.setLocation("location1");
         blackWatchLocations.setAdminIn(true);
-        listOfBlackWatchLocations.add(blackWatchLocations);
+        listOfBlackWatchLocation.add(blackWatchLocations);
         
-        blackWatchLocations = new BlackWatchLocations();
+        blackWatchLocations = new BlackWatchLocation();
         blackWatchLocations.setLocation("location2");
         blackWatchLocations.setAdminIn(false);
-        listOfBlackWatchLocations.add(blackWatchLocations);
+        listOfBlackWatchLocation.add(blackWatchLocations);
         
-        Mockito.doReturn(listOfBlackWatchLocations).when(locationStateInfoHandler).getBlackWatchLocations(isA(TSDMetrics.class));
+        Mockito.doReturn(listOfBlackWatchLocation).when(locationStateInfoHandler).getBlackWatchLocation(eq("region"), isA(TSDMetrics.class));
         
-        ListBlackWatchLocationsResponse response = listBlackWatchLocationsActivity.enact(request);
+        ListBlackWatchLocationsResponse response = listBlackWatchLocationActivity.enact(request);
 
-        assertEquals(listOfBlackWatchLocations, response.getListOfLocationsAndAdminState());
+        assertEquals(listOfBlackWatchLocation, response.getListOfLocationsAndAdminState());
         assertEquals(requestId, response.getRequestId());
     }
+    
     /**
      * Test empty list of host status retrieval works
      */
     @Test
     public void testEmptyLocationHostStatus() {
-       List<BlackWatchLocations> listOfBlackWatchLocations = new ArrayList<>();
-        Mockito.doReturn(listOfBlackWatchLocations).when(locationStateInfoHandler).getBlackWatchLocations(isA(TSDMetrics.class));
-        ListBlackWatchLocationsResponse response = listBlackWatchLocationsActivity.enact(request);
+       List<BlackWatchLocation> listOfBlackWatchLocation = new ArrayList<>();
+        Mockito.doReturn(listOfBlackWatchLocation).when(locationStateInfoHandler).getBlackWatchLocation(eq("region"), isA(TSDMetrics.class));
+        ListBlackWatchLocationsResponse response = listBlackWatchLocationActivity.enact(request);
         assertTrue(response.getListOfLocationsAndAdminState ().isEmpty());
     }
 }

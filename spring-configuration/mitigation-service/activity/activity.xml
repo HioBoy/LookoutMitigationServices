@@ -95,15 +95,20 @@
     </bean>
 	
     <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationHostStatusActivity">
-        <constructor-arg name="requestValidator" ref="requestValidator"/>
+	   <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="hostStatusHandler" ref="ddbBasedHostStatusInfoHandler"/>
     </bean>
-    
+
     <bean class="com.amazon.lookout.mitigation.service.activity.ListBlackWatchLocationsActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
     </bean>
-        
+
+    <bean class="com.amazon.lookout.mitigation.service.activity.UpdateBlackWatchLocationStateActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
+    </bean>
+
     <bean id="blackholeMetadataActivityBase" abstract="true">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
@@ -212,11 +217,18 @@
 	</bean>
 
     <bean id="ddbBasedLocationStateInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedLocationStateInfoHandler">
+        <constructor-arg name="locationStateDynamoDBHelper" ref="locationStateDynamoDBHelper"/>
+    </bean>
+
+    <bean id="locationStateDynamoDBHelper" class="com.amazon.blackwatch.location.state.storage.LocationStateDynamoDBHelper">
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
         <constructor-arg name="realm" value="${realm}"/>
+        <constructor-arg name="readCapacityUnits" ref="${domain}.LocationState.readCapacityUnits"/>
+        <constructor-arg name="writeCapacityUnits" ref="${domain}.LocationState.writeCapacityUnits"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
-            
+
     <bean id="swfWorkflowStarter" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl">
         <constructor-arg name="swfWorkflowProvider" ref="swfWorkflowClientProvider"/>
     </bean>

@@ -2,6 +2,7 @@ package com.amazon.lookout.mitigation.service.activity.validator;
 
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashSet;
@@ -38,6 +39,7 @@ import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
+import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
@@ -46,6 +48,7 @@ import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.TransitProviderInfo;
 import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
 import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
@@ -61,7 +64,7 @@ import com.amazon.lookout.model.RequestType;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
+import com.amazon.blackwatch.location.state.model.LocationType;
 /**
  * RequestValidator is a basic validator for requests to ensure the requests are well-formed and contain all the required inputs.
  * This validator performs template-agnostic validation - it doesn't dive deep into specific requirements of each template, the TemplateBasedRequestValidator
@@ -301,6 +304,32 @@ public class RequestValidator {
      */
     public void validateGetLocationHostStatusRequest(GetLocationHostStatusRequest request) {
         validateLocation(request.getLocation());
+    }
+
+    /**
+     * Validates if the request object passed to the UpdateBlackWatchLocationState API is valid
+     * @param An instance of UpdateBlackWatchLocationStateRequest representing the input to the UpdateBlackWatchLocationState API
+     * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
+     */
+    public void validateListBlackWatchLocationsRequest(ListBlackWatchLocationsRequest request) {
+        String region = request.getRegion();
+        // if the string is not empty and does not match the regex, then its an invalid region
+        if (!region.trim().equals("") && !region.matches("[a-zA-Z]{2}-[a-zA-Z]+-[1-9]")) {
+            String msg = "Invalid region name found!";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    /**
+     * Validates if the request object passed to the UpdateBlackWatchLocationState API is valid
+     * @param An instance of UpdateBlackWatchLocationStateRequest representing the input to the UpdateBlackWatchLocationState API
+     * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
+     */
+    public void validateUpdateBlackWatchLocationStateRequest(UpdateBlackWatchLocationStateRequest request) {
+        validateLocation(request.getLocation());
+        validateChangeReason(request.getReason());
+        validateLocationType(request.getLocationType());
     }
     
     /**
@@ -604,6 +633,33 @@ public class RequestValidator {
             String msg = "Invalid location name found! A valid location name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private void validateChangeReason(String reason) {
+        if (isInvalidFreeFormText(reason, false, DEFAULT_MAX_LENGTH_DESCRIPTION)) {
+            String msg = "Invalid change reason found! A valid change reason must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_DESCRIPTION + " ascii-printable characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private void validateLocationType(String locationType) {
+        if (locationType != null && !locationType.equals("")) {
+            if (checkLocationTypeInEnum(locationType) == false) {
+                String msg = "Invalid location type found! A valid location type must be one of " + Arrays.toString(LocationType.values());
+                LOG.info(msg);
+                throw new IllegalArgumentException(msg);
+            }
+        }
+    }
+    
+    private boolean checkLocationTypeInEnum(String locationType) {
+        try {
+            LocationType.valueOf(locationType);
+            return true;
+        } catch (IllegalArgumentException argumentException) {
+            return false;
         }
     }
     

@@ -40,8 +40,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
-import com.amazon.lookout.mitigation.service.activity.GetLocationHostStatusActivity;
-import com.amazon.lookout.mitigation.service.activity.ListBlackWatchLocationsActivity;
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
@@ -297,6 +296,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 ListBlackWatchLocationsRequest.class, 
                 (action, request) -> 
                 generateLocationStateRequestInfo(action, READ_OPERATION_PREFIX));
+        
+        addRequestInfoParser(
+                UpdateBlackWatchLocationStateRequest.class, 
+                (action, request) -> 
+                generateLocationStateRequestInfo(action, WRITE_OPERATION_PREFIX));
         
         for (Class<?> clazz : new Class[]{ListBlackholeDevicesRequest.class, GetBlackholeDeviceRequest.class} ) {
             addRequestInfoParser(
