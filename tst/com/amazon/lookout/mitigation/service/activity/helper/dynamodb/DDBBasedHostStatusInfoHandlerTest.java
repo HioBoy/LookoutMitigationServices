@@ -52,7 +52,7 @@ public class DDBBasedHostStatusInfoHandlerTest {
         TestUtils.configureLogging();
         dynamoDBClient = DynamoDBTestUtil.get().getClient();
         hostStatusInfoHandler = new DDBBasedHostStatusInfoHandler(dynamoDBClient, domain, realm);
-        hostStatusDynamoDBHelper = new HostStatusDynamoDBHelper(dynamoDBClient, realm, domain, 51, 51);
+        hostStatusDynamoDBHelper = new HostStatusDynamoDBHelper(dynamoDBClient, realm, domain, 51, 51, metricsFactory);
 
         // mock TSDMetric
         Mockito.doReturn(metrics).when(metricsFactory).newMetrics();
