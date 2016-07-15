@@ -49,7 +49,11 @@
         <value>BR-SFO4-1</value> 
         <value>BR-SFO4-2</value> 
         <value>BR-SFO5-1</value> 
-        <value>BR-SFO5-2</value> 
+        <value>BR-SFO5-2</value>
+        <value>BR-SYD1-1</value> 
+        <value>BR-SYD1-2</value>
+        <value>BR-SYD4-1</value> 
+        <value>BR-SYD4-2</value> 
     </util:set>
     
     <bean id="prod.allowedLocationPrefix" class="java.lang.String">

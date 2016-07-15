@@ -13,4 +13,20 @@
     <bean id="us-east-1.swfCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
         <constructor-arg value="com.amazon.lookout.swf.mitigationservice.${domain}"/>
     </bean>
+    
+    <bean id="authAccount.us-east-1.beta" class="java.lang.String">
+        <constructor-arg value="017453561777"/> <!-- lookout-dev+mitigation-beta@amazon.com -->
+    </bean>
+    <bean id="authAccount.us-east-1.bwbeta" class="java.lang.String">
+        <constructor-arg value="398788397391"/> <!-- blackwatch-mitigation-beta@amazon.com -->
+    </bean>
+    <bean id="authAccount.us-east-1.gamma" class="java.lang.String">
+        <constructor-arg value="557458189618"/> <!--  lookout-dev+lktmsvc+gamma@amazon.com -->
+    </bean>
+    <bean id="authAccount.us-east-1.systest" class="java.lang.String">
+        <constructor-arg value="508612551773"/> <!-- lookout-dev-mitigation-service-test@amazon.com -->
+    </bean>
+    <bean id="authAccount.us-east-1.prod" class="java.lang.String">
+        <constructor-arg value="693842253790"/> <!-- lookout-dev+lktmitsvc@amazon.com -->
+    </bean>
 </beans>
