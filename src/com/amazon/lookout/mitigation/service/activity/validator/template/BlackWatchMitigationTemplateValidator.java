@@ -107,6 +107,45 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
         }
     }
     
+    static void validateS3Object(S3Object s3Object, String usageDescription) {
+        Validate.notNull(s3Object);
+        
+        if (s3Object.getBucket() != null) {
+            // BlackWatchAgentPython allows an s3 object's bucket to be missing,
+            // in which case it downloads the object from the same S3 bucket it
+            // downloads mitigation definitions from, but it cannot be set to an
+            // empty value.
+            Validate.notEmpty(s3Object.getBucket(),
+                    String.format("%s S3 object [%s] empty value for s3 bucket",
+                            usageDescription, ReflectionToStringBuilder.toString(s3Object)));
+        }
+        
+        Validate.notEmpty(s3Object.getKey(),
+                String.format("%s S3 object [%s] missing s3 key",
+                        usageDescription, ReflectionToStringBuilder.toString(s3Object)));
+        
+        if (s3Object.isEnableRefresh()) {
+            Validate.isTrue(s3Object.getMd5() == null,
+                    String.format("%s S3 object [%s] with refresh enabled has object md5 checksum set",
+                            usageDescription, ReflectionToStringBuilder.toString(s3Object)));
+            
+            if (s3Object.getRefreshInterval() != null) {
+                Validate.isTrue(s3Object.getRefreshInterval() > 0,
+                        String.format("%s S3 object [%s] refresh interval [%s] is not greater than 0",
+                                usageDescription, ReflectionToStringBuilder.toString(s3Object),
+                                s3Object.getRefreshInterval()));
+            }
+        } else {
+            Validate.notEmpty(s3Object.getMd5(),
+                    String.format("%s S3 object [%s] missing object md5 checksum",
+                            usageDescription, ReflectionToStringBuilder.toString(s3Object)));
+            
+            Validate.isTrue(s3Object.getRefreshInterval() == null,
+                    String.format("%s S3 object [%s] with refresh disabled has refresh interval set",
+                            usageDescription, ReflectionToStringBuilder.toString(s3Object)));
+        }
+    }
+    
     protected void validateBlackWatchConfigBasedConstraint(Constraint constraint) {
         Validate.isTrue(constraint instanceof BlackWatchConfigBasedConstraint,
                 "BlackWatch mitigationDefinition must contain single constraint of type BlackWatchConfigBasedConstraint.");
@@ -114,22 +153,11 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
         BlackWatchConfigBasedConstraint blackWatchConfig = (BlackWatchConfigBasedConstraint)constraint;
         
         S3Object config = blackWatchConfig.getConfig();
-        Validate.notNull(config);
-        Validate.notEmpty(config.getBucket(), "BlackWatch Config S3 object missing s3 bucket");
-        Validate.notEmpty(config.getKey(), "BlackWatch Config S3 object missing s3 object key");
-        Validate.notEmpty(config.getMd5(), "BlackWatch Config S3 object missing s3 object md5 checksum");
+        validateS3Object(config, "BlackWatch Config");
         
         if (blackWatchConfig.getConfigData() != null) {
             for (S3Object configData : blackWatchConfig.getConfigData()) {
-                Validate.notEmpty(configData.getBucket(), 
-                        String.format("BlackWatch Config Data S3 object [%s] missing s3 bucket",
-                                ReflectionToStringBuilder.toString(configData)));
-                Validate.notEmpty(configData.getKey(), 
-                        String.format("BlackWatch Config Data S3 object [%s] missing s3 object key",
-                                ReflectionToStringBuilder.toString(configData)));
-                Validate.notEmpty(configData.getMd5(), 
-                        String.format("BlackWatch Config Data S3 object [%s] missing s3 object md5 checksum",
-                                ReflectionToStringBuilder.toString(configData)));
+                validateS3Object(configData, "BlackWatch Config Data");
                 
                 if (configData.getKey().contains(BLACKWATCH_TRAFFIC_FILTER)) {
                     validateBlackWatchTrafficFilterConfig(configData);
