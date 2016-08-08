@@ -122,4 +122,12 @@
     <bean id="gamma.allowedLocationPrefix" class="java.lang.String">
         <constructor-arg value="fakerouter"/>
     </bean>
+    
+    <bean id="gamma.LocationState.readCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
+
+    <bean id="gamma.LocationState.writeCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
 </beans>

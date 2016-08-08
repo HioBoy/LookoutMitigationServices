@@ -73,8 +73,16 @@
         <value>DEV-DSK-HUZI</value>
         <value>DEV-DSK-LAVIGNEN</value>
     </util:set>
-    
+
     <bean id="beta.allowedLocationPrefix" class="java.lang.String">
         <constructor-arg value="fakerouter"/>
     </bean> 
+
+    <bean id="beta.LocationState.readCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
+
+    <bean id="beta.LocationState.writeCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
 </beans>

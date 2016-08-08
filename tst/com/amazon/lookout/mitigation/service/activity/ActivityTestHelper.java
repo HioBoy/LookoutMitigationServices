@@ -10,6 +10,7 @@ import static org.mockito.Mockito.*;
 
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.activity.helper.HostStatusInfoHandler;
+import com.amazon.lookout.mitigation.service.activity.helper.LocationStateInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
@@ -46,6 +47,7 @@ public class ActivityTestHelper {
     protected static RequestInfoHandler requestInfoHandler;
     protected static MitigationInstanceInfoHandler mitigationInstanceInfoHandler;
     protected static HostStatusInfoHandler hostStatusInfoHandler;
+    protected static LocationStateInfoHandler locationStateInfoHandler;
     @BeforeClass
     public static void setupOnce() {
         TestUtils.configureLogging();
@@ -57,5 +59,6 @@ public class ActivityTestHelper {
         requestInfoHandler = mock(RequestInfoHandler.class);
         mitigationInstanceInfoHandler = mock(MitigationInstanceInfoHandler.class);
         hostStatusInfoHandler = mock(HostStatusInfoHandler.class);
+        locationStateInfoHandler = mock(LocationStateInfoHandler.class);
     }
 }

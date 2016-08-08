@@ -78,4 +78,12 @@
     <bean id="bwbeta.allowedLocationPrefix" class="java.lang.String">
         <constructor-arg value="fakerouter"/>
     </bean>
+	
+    <bean id="bwbeta.LocationState.readCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
+
+    <bean id="bwbeta.LocationState.writeCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
 </beans>

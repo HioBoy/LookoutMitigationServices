@@ -59,4 +59,13 @@
     <bean id="prod.allowedLocationPrefix" class="java.lang.String">
         <constructor-arg value=""/>
     </bean>
+
+    <bean id="prod.LocationState.readCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="200"/>
+    </bean>
+
+    <bean id="prod.LocationState.writeCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
+    
 </beans>

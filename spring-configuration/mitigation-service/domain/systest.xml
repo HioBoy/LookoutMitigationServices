@@ -84,4 +84,12 @@
     <bean id="systest.allowedLocationPrefix" class="java.lang.String">
         <constructor-arg value="fakerouter"/>
     </bean>
+
+    <bean id="systest.LocationState.readCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
+
+    <bean id="systest.LocationState.writeCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
 </beans>
