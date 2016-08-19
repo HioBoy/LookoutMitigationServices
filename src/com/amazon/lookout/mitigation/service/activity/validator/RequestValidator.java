@@ -29,6 +29,7 @@ import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
+import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest;
@@ -178,6 +179,18 @@ public class RequestValidator {
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
+    }
+
+    /**
+     * Validates if the request object passed to the
+     * DeactivateBlackWatchMitigation is valid.
+     * @param request Instance of DeactivateBlackWatchMitigationRequest representing the input to the DeactivateBlackWatchMitigation.
+     * @return void. Doesn't return any values. Will throw back an IllegalArgumentException if any of the input parameters aren't considered valid.
+     */
+    public void validateDeactivateBlackWatchMitigationRequest(@NonNull DeactivateBlackWatchMitigationRequest request) {
+        validateUserName(request.getMitigationActionMetadata().getUser());
+        validateToolName(request.getMitigationActionMetadata().getToolName());
+        validateMitigationId(request.getMitigationId());
     }
     
     public void validateListBlackWatchMitigationsRequest(@NonNull ListBlackWatchMitigationsRequest request) {

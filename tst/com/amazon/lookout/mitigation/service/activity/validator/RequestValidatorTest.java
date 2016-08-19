@@ -20,6 +20,7 @@ import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
+import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
@@ -897,4 +898,42 @@ public class RequestValidatorTest {
         assertTrue(caughtException.getMessage().startsWith("Invalid maxNumberOfEntriesToFetch"));        
     }
     
+   @Test
+    public void testvalidateDeactivateBlackWatchMitigationRequest() {
+        DeactivateBlackWatchMitigationRequest request = new DeactivateBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Khaleesi").withToolName("JUnit")
+                .withDescription("Test Descr")
+                .withRelatedTickets(Arrays.asList("1234,5655")).build());
+
+        Throwable caughtException = null;
+        
+        //invalid request with only the MitigationActionMetadata, all other fields are null.
+        try {
+            validator.validateDeactivateBlackWatchMitigationRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+ 
+        String validMitigationId = "US-WEST-1_2016-02-05T00:43:04.6767Z_55";
+        //valid mitigationid
+        request.setMitigationId(validMitigationId);
+        validator.validateDeactivateBlackWatchMitigationRequest(request);
+ 
+        //Invalid mitigationId;
+        char invalidChar = 0x00;
+        request.setMitigationId(validMitigationId + String.valueOf(invalidChar));
+        try {
+            validator.validateDeactivateBlackWatchMitigationRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        assertTrue(caughtException.getMessage().startsWith("Invalid mitigation ID"));
+        request.setMitigationId(validMitigationId);
+        
+    }
+
 }

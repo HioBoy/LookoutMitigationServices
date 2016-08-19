@@ -12,6 +12,8 @@ import org.apache.commons.lang.Validate;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.google.common.collect.ImmutableMap;
+
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
@@ -20,7 +22,9 @@ import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigatio
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBSaveExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
 
@@ -124,4 +128,23 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         }
     }
 
+    public void deactivateMitigation(String mitigationId) {
+            // Get current state
+            String To_Delete_State = MitigationState.State.To_Delete.name();
+            MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+            if (state == null) {
+                throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
+            }
+            state.setState(To_Delete_State);
+            DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
+            ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
+                    new AttributeValue(To_Delete_State));
+            expectedValue.setComparisonOperator(ComparisonOperator.NE);
+            Map<String, ExpectedAttributeValue> expectedAttributes = 
+                    ImmutableMap.<String, ExpectedAttributeValue>builder().
+                    put(MitigationState.STATE_KEY, expectedValue).
+                    build();
+            condition.setExpected(expectedAttributes);
+            mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
+    }
 }
