@@ -182,6 +182,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
     @Test
     public void testDeactivateBlackWatchMitigationNonExistant() throws IOException {
+
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         Throwable caughtException = null;
         try {
