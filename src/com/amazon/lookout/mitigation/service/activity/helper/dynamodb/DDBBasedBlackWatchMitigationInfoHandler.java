@@ -20,6 +20,7 @@ import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
+
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBSaveExpression;
