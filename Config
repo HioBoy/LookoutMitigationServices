@@ -50,6 +50,7 @@ package.LookoutMitigationService = {
             LookoutMitigationServiceModel = 1.0;
             HostStatusCommon = 1.0;
             BlackWatchLocationStateCommons = 1.0;
+            BlackWatchMitigationCommons = 1.0;
             
             JavaAmazonLdapUtils = 1.2;
             CoralSpringLauncher = 4.0;

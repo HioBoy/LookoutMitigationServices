@@ -40,6 +40,7 @@ import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
+import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
@@ -51,6 +52,7 @@ import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
 import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
+import com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
@@ -82,6 +84,13 @@ public class RequestValidator {
     private final Set<String> serviceNames = Sets.newHashSet(ServiceName.values());
     
     private static final int DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS = 100;
+    
+    private static final int DEFAULT_MAX_LENGTH_MITIGATION_ID = 100;
+    private static final int DEFAULT_MAX_LENGTH_RESOURCE_ID = 50;
+    private static final int DEFAULT_MAX_LENGTH_RESOURCE_TYPE = 20;
+    private static final int DEFAULT_MAX_LENGTH_OWNER_ARN = 100;
+
+    
     private static final int DEFAULT_MAX_LENGTH_DESCRIPTION = 500;
     private static final int MAX_LENGTH_BLACKHOLE_DEVICE = 50;
     
@@ -169,6 +178,48 @@ public class RequestValidator {
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
+    }
+    
+    public void validateListBlackWatchMitigationsRequest(@NonNull ListBlackWatchMitigationsRequest request) {
+        MitigationActionMetadata actionMetadata = request.getMitigationActionMetadata();
+        if (actionMetadata == null) {
+            String msg = "No MitigationActionMetadata found! Passing the MitigationActionMetadata is mandatory for list blackwatch mitigation.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        
+        validateUserName(actionMetadata.getUser());
+        validateToolName(actionMetadata.getToolName());
+        validateMitigationDescription(actionMetadata.getDescription());        
+        
+        String mitigationId = request.getMitigationId();
+        String resourceId = request.getResourceId();
+        String resourceType = request.getResourceType();
+        String ownerARN = request.getOwnerARN();
+        if (mitigationId != null) {
+            validateMitigationId(mitigationId);
+        }
+        
+        if (resourceId != null) {
+            validateResourceId(resourceId);
+        }
+        
+        if (resourceType != null) {
+            validateResourceType(resourceType);
+        }
+        
+        if (ownerARN != null) {
+            validateUserARN(ownerARN);
+        }
+        
+        Long maxNumberOfEntriesToFetch = request.getMaxResults();
+        Long maxEntryCount = ListBlackWatchMitigationsActivity.MAX_NUMBER_OF_ENTRIES_TO_FETCH;
+        if (maxNumberOfEntriesToFetch != null) {
+            Validate.isTrue((maxNumberOfEntriesToFetch > 0) && 
+                    (maxNumberOfEntriesToFetch <= maxEntryCount),
+                    String.format("Invalid maxNumberOfEntriesToFetch, valid number should >0, and <= %d", maxEntryCount));
+        }
+
     }
     
     /**
@@ -545,6 +596,39 @@ public class RequestValidator {
     private static void validateUserName(String userName) {
         if (isInvalidFreeFormText(userName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
             String msg = "Invalid user name found! A valid user name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    
+    private static void validateMitigationId(String mitigationId) {
+        if (isInvalidFreeFormText(mitigationId, false, DEFAULT_MAX_LENGTH_MITIGATION_ID)) {
+            String msg = "Invalid mitigation ID! A valid mitigation ID must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_MITIGATION_ID + " ascii-printable characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private static void validateResourceId(String resourceId) {
+        if (isInvalidFreeFormText(resourceId, false, DEFAULT_MAX_LENGTH_RESOURCE_ID)) {
+            String msg = "Invalid resource ID! A valid resource ID must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_RESOURCE_ID + " ascii-printable characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+    
+    private static void validateUserARN(String userARN) {
+        if (isInvalidFreeFormText(userARN, false, DEFAULT_MAX_LENGTH_OWNER_ARN)) {
+            String msg = "Invalid user ARN found! A valid user name ARN contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_OWNER_ARN + " ascii-printable characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+
+    private static void validateResourceType(String resourceType) {
+        if (isInvalidFreeFormText(resourceType, false, DEFAULT_MAX_LENGTH_RESOURCE_TYPE)) {
+            String msg = "Invalid resource type found! A valid resource type must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_RESOURCE_TYPE + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }

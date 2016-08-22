@@ -37,6 +37,8 @@ import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
+import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
+import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
 import com.amazon.lookout.mitigation.service.ListBlackholeDevicesRequest;
 import com.amazon.lookout.mitigation.service.ListTransitProvidersRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
@@ -71,6 +73,7 @@ public class AuthorizationStrategyTest {
     private ListActiveMitigationsForServiceRequest listMitigationsRequest;
     private GetMitigationInfoRequest getMitigationInfoRequest;
     private GetLocationHostStatusRequest getLocationHostStatusRequest;
+    private ListBlackWatchMitigationsRequest listBlackWatchMitigationsRequest;
 
     /**
      * Note: At this moment LookoutMitigationService supports just one mitigation template
@@ -88,8 +91,7 @@ public class AuthorizationStrategyTest {
     
     private final String deviceName = "SomeDevice";
     private final String serviceName = "SomeService";
-    private final String mitigationTemplate = "SomeMitigationTemplate";
-    
+    private final String mitigationTemplate = "SomeMitigationTemplate";    
     private Identity identity;
          
     @Before
@@ -122,6 +124,7 @@ public class AuthorizationStrategyTest {
         
         getLocationHostStatusRequest = new GetLocationHostStatusRequest();
         getLocationHostStatusRequest.setLocation(location);
+        listBlackWatchMitigationsRequest = new ListBlackWatchMitigationsRequest();
     }
 
     private static CreateMitigationRequest generateCreateRequest() {
@@ -329,6 +332,19 @@ public class AuthorizationStrategyTest {
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
     }
     
+    // validate the authorization info generated from ListBlackWatchMitigationsRequest
+    @Test
+    public void testForListBlackWatchMitigationsRequest() throws Throwable {
+        setOperationNameForContext("ListBlackWatchMitigations");
+        List<AuthorizationInfo> authInfoList = authStrategy.getAuthorizationInfoList(context, listBlackWatchMitigationsRequest);
+        assertTrue(authInfoList.size() == 1);
+        
+        BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
+        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:read-ListBlackWatchMitigations", 
+                EXPECTED_ARN_PREFIX + "BLACKWATCH_API/BLACKWATCH_MITIGATION");
+        assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
+    }
+    
     @Test
     public void testUnrecornizedRequest() {
         // Request from completely the wrong service
@@ -356,6 +372,10 @@ public class AuthorizationStrategyTest {
         // test Location Relative ID
         String locationRelativeId = AuthorizationStrategy.getLocationRelativeId(location);
         assertEquals("LOCATION" + "/" + location, locationRelativeId);
+        
+        // test BW API Relateive ID
+        String bwMitigationRelativeId = AuthorizationStrategy.getBlackWatchAPIRelativeId();
+        assertEquals("BLACKWATCH_API/BLACKWATCH_MITIGATION", bwMitigationRelativeId);
     }
 
     @SuppressWarnings("unused")

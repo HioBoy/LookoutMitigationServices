@@ -34,6 +34,7 @@ import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
+import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
 import com.amazon.lookout.mitigation.service.ListBlackholeDevicesRequest;
 import com.amazon.lookout.mitigation.service.ListTransitProvidersRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
@@ -83,6 +84,9 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      */
     private static final String WRITE_OPERATION_PREFIX = "write";
     private static final String READ_OPERATION_PREFIX = "read";
+
+    private static final String BLACKWATCH_API_RESOURCE_PREFIX = "BLACKWATCH_API";
+    private static final String BLACKWATCH_MITIGATION_RESOURCE_PREFIX = "BLACKWATCH_MITIGATION";
 
     // Constants used for generating ARN
     private static final String PARTITION = "aws";
@@ -189,6 +193,13 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 getLocationRelativeId(locationName));
     }
 
+    private static RequestInfo generateListBlackWatchMitigationRequestInfo(String action, String prefix)
+    {
+        return new RequestInfo(
+                generateActionName(action, prefix),
+                getBlackWatchAPIRelativeId());
+    }
+    
     private static RequestInfo generateLocationStateRequestInfo(String action, String prefix) {
         return new RequestInfo(
                 generateActionName(action, prefix),
@@ -293,6 +304,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 generateHostStatusRequestInfo(action, READ_OPERATION_PREFIX, request.getLocation()));
 
         addRequestInfoParser(
+                ListBlackWatchMitigationsRequest.class, 
+                (action, request) -> 
+                generateListBlackWatchMitigationRequestInfo(action, READ_OPERATION_PREFIX));
+        
+        addRequestInfoParser(
                 ListBlackWatchLocationsRequest.class, 
                 (action, request) -> 
                 generateLocationStateRequestInfo(action, READ_OPERATION_PREFIX));
@@ -388,6 +404,20 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
         return relativeidBuilder.toString();
     }    
+    
+    /**
+     * the relative identifier: 
+     * BLACKWATCH_MITIGATION/MITIGATION_STATE
+     *
+     */
+    static String getBlackWatchAPIRelativeId() {
+        StringBuilder relativeidBuilder = new StringBuilder();
+        relativeidBuilder.append(BLACKWATCH_API_RESOURCE_PREFIX)
+        .append("/")        
+        .append(BLACKWATCH_MITIGATION_RESOURCE_PREFIX);
+
+        return relativeidBuilder.toString();
+    } 
     
     /**
      * Generate action name with the following structure:

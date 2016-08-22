@@ -68,4 +68,11 @@
         <constructor-arg value="50"/>
     </bean>
     
+    <bean id="prod.MitigationState.readCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="200"/>
+    </bean>
+
+    <bean id="prod.MitigationState.writeCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="200"/>
+    </bean>    
 </beans>
