@@ -92,4 +92,12 @@
     <bean id="systest.LocationState.writeCapacityUnits" class="java.lang.Long">
         <constructor-arg value="50"/>
     </bean>
+    
+    <bean id="systest.MitigationState.readCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
+
+    <bean id="systest.MitigationState.writeCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
 </beans>

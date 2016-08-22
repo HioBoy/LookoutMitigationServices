@@ -109,6 +109,11 @@
         <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
     </bean>
 
+    <bean class="com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="blackwatchMitigationInfoHandler" ref="ddbBasedBlackWatchMitigationInfoHandler"/>
+    </bean>
+    
     <bean id="blackholeMetadataActivityBase" abstract="true">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
@@ -229,6 +234,24 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
 
+    <bean id="mitigationStateDynamoDBHelper" class="com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper">
+        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
+        <constructor-arg name="domain" value="${domain}"/>
+        <constructor-arg name="realm" value="${realm}"/>
+        <constructor-arg name="readCapacityUnits" ref="${domain}.MitigationState.readCapacityUnits"/>
+        <constructor-arg name="writeCapacityUnits" ref="${domain}.MitigationState.writeCapacityUnits"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+    </bean>
+    
+    <bean id="mitigationStateParallelScanSegments" class="java.lang.Integer">
+        <constructor-arg value="4"/>
+    </bean>
+    
+    <bean id="ddbBasedBlackWatchMitigationInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedBlackWatchMitigationInfoHandler">
+        <constructor-arg name="mitigationStateDynamoDBHelper" ref="mitigationStateDynamoDBHelper"/>
+        <constructor-arg name="parallelScanSegments" ref="mitigationStateParallelScanSegments"/>
+    </bean>
+    
     <bean id="swfWorkflowStarter" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl">
         <constructor-arg name="swfWorkflowProvider" ref="swfWorkflowClientProvider"/>
     </bean>

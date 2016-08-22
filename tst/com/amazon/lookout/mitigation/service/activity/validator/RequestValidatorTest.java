@@ -22,6 +22,7 @@ import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
+import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
@@ -806,5 +807,94 @@ public class RequestValidatorTest {
         assertNotNull(caughtException);
     }
     
+    @Test
+    public void testvalidateListBlackWatchMitigationsRequest() {
+        ListBlackWatchMitigationsRequest request = new ListBlackWatchMitigationsRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Khaleesi").withToolName("JUnit")
+                .withDescription("Test Descr")
+                .withRelatedTickets(Arrays.asList("1234,5655")).build());
+        
+        //valid request with only the MitigationActionMetadata, all other fields are null.
+        validator.validateListBlackWatchMitigationsRequest(request);
 
+        String validMitigationId = "US-WEST-1_2016-02-05T00:43:04.6767Z_55";
+        String validResourceId = "192.168.0.1";
+        String validResourceType = "EC2";
+        String validOwnerARN = "arn:aws:iam::005436146250:user/blackwatch_host_status_updator_blackwatch_pop_pro";
+        //valid mitigationid, resourceid, resourcetype, ownerarn.
+        request.setMitigationId(validMitigationId);
+        request.setResourceId(validResourceId);
+        request.setResourceType(validResourceType);
+        request.setOwnerARN(validOwnerARN);
+        validator.validateListBlackWatchMitigationsRequest(request);
+        request.setMaxResults(5L);
+        validator.validateListBlackWatchMitigationsRequest(request);
+
+        //Invalid mitigationId;
+        Throwable caughtException = null;
+        char invalidChar = 0x00;
+        request.setMitigationId(validMitigationId + String.valueOf(invalidChar));
+        try {
+            validator.validateListBlackWatchMitigationsRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        assertTrue(caughtException.getMessage().startsWith("Invalid mitigation ID"));
+        request.setMitigationId(validMitigationId);
+        
+        //invalid resource id
+        caughtException = null;
+        request.setResourceId(validResourceId + String.valueOf(invalidChar));
+        try {
+            validator.validateListBlackWatchMitigationsRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        assertTrue(caughtException.getMessage().startsWith("Invalid resource ID"));
+        request.setResourceId(validResourceId);
+
+        //invalid resource type
+        caughtException = null;
+        request.setResourceType(validResourceType + String.valueOf(invalidChar));
+        try {
+            validator.validateListBlackWatchMitigationsRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        assertTrue(caughtException.getMessage().startsWith("Invalid resource type"));
+        request.setResourceType(validResourceType);
+        
+        //invalid user ARN
+        caughtException = null;
+        request.setOwnerARN(validOwnerARN + String.valueOf(invalidChar));
+        try {
+            validator.validateListBlackWatchMitigationsRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        assertTrue(caughtException.getMessage().startsWith("Invalid user ARN"));
+        request.setOwnerARN(validOwnerARN);
+        
+        //invalid max result
+        caughtException = null;
+        request.setMaxResults(0L);
+        try {
+            validator.validateListBlackWatchMitigationsRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        assertTrue(caughtException.getMessage().startsWith("Invalid maxNumberOfEntriesToFetch"));        
+    }
+    
 }

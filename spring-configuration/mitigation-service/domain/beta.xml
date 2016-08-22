@@ -85,4 +85,12 @@
     <bean id="beta.LocationState.writeCapacityUnits" class="java.lang.Long">
         <constructor-arg value="50"/>
     </bean>
+    
+    <bean id="beta.MitigationState.readCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
+
+    <bean id="beta.MitigationState.writeCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
 </beans>
