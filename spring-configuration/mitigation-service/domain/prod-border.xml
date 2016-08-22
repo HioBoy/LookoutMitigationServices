@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <import resource="file:${spring.config.root}/domain/prod.xml"/>
+
+    <alias name="prod.daasControlAPIServiceURL" alias="prod-border.daasControlAPIServiceURL"/>
+
+    <alias name="prod.edgeOperatorServiceURL" alias="prod-border.edgeOperatorServiceURL"/>
+
+    <alias name="prod.mwsCredentialsProvider" alias="prod-border.mwsCredentialsProvider"/>
+
+    <alias name="prod.blackwatchMWSMetricDataset" alias="prod-border.blackwatchMWSMetricDataset"/>
+
+    <util:set id="prod-border.defaultPOPsForEdgeLocationsHelper"/>
+
+    <alias name="prod.edgeLocationsHelper" alias="prod-border.edgeLocationsHelper"/>
+
+    <alias name="prod.edgeLocationPattern" alias="prod-border.edgeLocationPattern"/>
+
+    <alias name="prod.popsWithCiscoRouter" alias="prod-border.popsWithCiscoRouter"/>
+
+    <util:set id="prod-border.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
+        <value>BR-IAD2-1</value>
+        <value>BR-IAD2-2</value>
+        <value>BR-IAD4-1</value>
+        <value>BR-IAD4-2</value>
+    </util:set>
+
+    <alias name="prod.allowedLocationPrefix" alias="prod-border.allowedLocationPrefix"/>
+
+    <alias name="prod.LocationState.readCapacityUnits" alias="prod-border.LocationState.readCapacityUnits"/>
+
+    <alias name="prod.LocationState.writeCapacityUnits" alias="prod-border.LocationState.writeCapacityUnits"/>
+
+</beans>

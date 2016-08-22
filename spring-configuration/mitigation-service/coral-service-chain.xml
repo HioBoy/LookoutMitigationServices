@@ -143,6 +143,7 @@
         <entry key="gamma" value="prod.${realm}"/>
         <entry key="systest" value="prod.${realm}"/>
         <entry key="prod" value="prod.${realm}"/>
+        <entry key="prod-border" value="prod.${realm}"/>
     </util:map>
 
     <bean id="ArcConfig" class="aws.auth.client.config.Configuration">
