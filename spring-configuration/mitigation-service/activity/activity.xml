@@ -238,8 +238,13 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
     
+    <bean id="mitigationStateParallelScanSegments" class="java.lang.Integer">
+        <constructor-arg value="4"/>
+    </bean>
+    
     <bean id="ddbBasedBlackWatchMitigationInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedBlackWatchMitigationInfoHandler">
         <constructor-arg name="mitigationStateDynamoDBHelper" ref="mitigationStateDynamoDBHelper"/>
+        <constructor-arg name="parallelScanSegments" ref="mitigationStateParallelScanSegments"/>
     </bean>
     
     <bean id="swfWorkflowStarter" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl">

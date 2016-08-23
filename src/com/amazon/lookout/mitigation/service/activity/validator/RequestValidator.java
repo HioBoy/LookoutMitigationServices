@@ -215,9 +215,7 @@ public class RequestValidator {
         Long maxNumberOfEntriesToFetch = request.getMaxResults();
         Long maxEntryCount = ListBlackWatchMitigationsActivity.MAX_NUMBER_OF_ENTRIES_TO_FETCH;
         if (maxNumberOfEntriesToFetch != null) {
-            Validate.isTrue((maxNumberOfEntriesToFetch > 0) && 
-                    (maxNumberOfEntriesToFetch <= maxEntryCount),
-                    String.format("Invalid maxNumberOfEntriesToFetch, valid number should >0, and <= %d", maxEntryCount));
+            validMaxNumberOfEntriesToFetch(maxNumberOfEntriesToFetch, 0, maxEntryCount);
         }
 
     }
@@ -632,6 +630,12 @@ public class RequestValidator {
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
+    }
+    
+    private static void validMaxNumberOfEntriesToFetch(long value, long min, long max) {
+        Validate.isTrue((value > min) && 
+                (value <= max),
+                String.format("Invalid maxNumberOfEntriesToFetch found, valid number should > %d, and <= %d", min, max));
     }
     
     private static void validateToolName(String toolName) {

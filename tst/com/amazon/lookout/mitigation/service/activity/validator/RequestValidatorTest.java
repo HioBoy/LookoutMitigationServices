@@ -828,6 +828,8 @@ public class RequestValidatorTest {
         request.setResourceType(validResourceType);
         request.setOwnerARN(validOwnerARN);
         validator.validateListBlackWatchMitigationsRequest(request);
+        request.setMaxResults(5L);
+        validator.validateListBlackWatchMitigationsRequest(request);
 
         //Invalid mitigationId;
         Throwable caughtException = null;
@@ -892,8 +894,7 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("Invalid maxNumberOfEntriesToFetch"));
+        assertTrue(caughtException.getMessage().startsWith("Invalid maxNumberOfEntriesToFetch"));        
     }
     
-
 }

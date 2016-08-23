@@ -27,14 +27,15 @@ import com.amazonaws.services.dynamodbv2.model.Condition;
 public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitigationInfoHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedBlackWatchMitigationInfoHandler.class);
 
-    private final int totalSegments = 4;
-
+    private int parallelScanSegments;
     private MitigationStateDynamoDBHelper mitigationStateDynamoDBHelper;
     private static final String QUERY_BLACKWATCH_MITIGATION_FAILURE = "QUERY_BLACKWATCH_MITIGATION_FAILED";
 
-    @ConstructorProperties({ "mitigationStateDynamoDBHelper" })
-    public DDBBasedBlackWatchMitigationInfoHandler(@NonNull MitigationStateDynamoDBHelper mitigationStateDynamoDBHelper) {
+    @ConstructorProperties({ "mitigationStateDynamoDBHelper", "parallelScanSegments" })
+    public DDBBasedBlackWatchMitigationInfoHandler(@NonNull MitigationStateDynamoDBHelper mitigationStateDynamoDBHelper,
+            int parallelScanSegments) {
         this.mitigationStateDynamoDBHelper = mitigationStateDynamoDBHelper;
+        this.parallelScanSegments = parallelScanSegments;
     }
 
     private LocationMitigationStateSettings convertLocationStateSettings(MitigationState.Setting mitigationSettins) {
@@ -45,6 +46,10 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 .build();
     }
     
+    //TODO: 
+    // we need change this method when we decide the strategy for nextToken
+    // 1. need pass nextToken as a parameter, parse it and use the parsed result in the db scan request
+    // 2. need construct a new nextToken and return it to the caller, so it knows if all items were returned or maxResults was hit.
     @Override
     public List<BlackWatchMitigationDefinition> getBlackWatchMitigations(String mitigationId, String resourceId,
             String resourceType, String ownerARN, long maxNumberOfEntriesToReturn, TSDMetrics tsdMetrics) {
@@ -73,7 +78,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                                 .withAttributeValueList(new AttributeValue().withS(resourceType)));
                 }
                 
-                List<MitigationState> mitigationStates = mitigationStateDynamoDBHelper.getMitigationState(scanExpression, totalSegments);
+                List<MitigationState> mitigationStates = mitigationStateDynamoDBHelper.getMitigationState(scanExpression, parallelScanSegments);
                 
                 for (MitigationState ms : mitigationStates) {
                     MitigationActionMetadata mitigationActionMetadata = MitigationActionMetadata.builder()

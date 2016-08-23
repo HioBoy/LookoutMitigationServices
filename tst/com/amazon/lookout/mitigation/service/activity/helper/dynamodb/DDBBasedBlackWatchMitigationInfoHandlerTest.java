@@ -69,7 +69,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         TestUtils.configureLogging();
         dynamoDBClient = DynamoDBTestUtil.get().getClient();
         mitigationStateDynamoDBHelper = new MitigationStateDynamoDBHelper(dynamoDBClient, realm, domain, 51, 51, metricsFactory);
-        blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper);
+        blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 4);
 
         // mock TSDMetric
         Mockito.doReturn(metrics).when(metricsFactory).newMetrics();
@@ -158,7 +158,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
 
     @Test
-    public void testGetBlackWatchMitigations() throws IOException {
+    public void testGetBlackWatchMitigationsNoFilter() throws IOException {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
 
         //no filter, should return all mitigations
@@ -169,7 +169,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
     
     @Test
-    public void testGetBlackWatchMitigations2() throws IOException {
+    public void testGetBlackWatchMitigationsFilterByMitigationId() throws IOException {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         
         //filter by mitigation id
@@ -179,7 +179,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
     
     @Test
-    public void testGetBlackWatchMitigations3() throws IOException {
+    public void testGetBlackWatchMitigationsFiterByResourceId() throws IOException {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         //filter by resource id
         List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler.getBlackWatchMitigations(null, testResourceId2, null, null, 5, tsdMetrics);
@@ -188,7 +188,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
     
     @Test
-    public void testGetBlackWatchMitigations4() throws IOException {
+    public void testGetBlackWatchMitigationsFiterByResourceType() throws IOException {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         //filter by resource type, both mitigations match the resource type, return both
         List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler.getBlackWatchMitigations(null, null, testResourceType, null, 5, tsdMetrics);
@@ -198,7 +198,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
     
     @Test
-    public void testGetBlackWatchMitigations5() throws IOException {
+    public void testGetBlackWatchMitigationsFilterByAllOptions() throws IOException {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         //filter by mitigation id, resource id, resource type, only one match
         List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler.getBlackWatchMitigations(testMitigation1, testResourceId1, testResourceType, null, 5, tsdMetrics);
@@ -207,7 +207,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
     
     @Test
-    public void testGetBlackWatchMitigations6() throws IOException {
+    public void testGetBlackWatchMitigationsFilterByAllOptionsNoMatch() throws IOException {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2));  
         //filter by mitigation id, resource id, resource type, no match
         List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler.getBlackWatchMitigations(testMitigation1, testResourceId2, testResourceType, null, 5, tsdMetrics);
@@ -215,7 +215,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
     
     @Test
-    public void testGetBlackWatchMitigations7() throws IOException {
+    public void testGetBlackWatchMitigationsFilterByMaxEntry() throws IOException {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         //set max # of entries to return to be 1, we should only return 1 mitigaiton. 
         List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler.getBlackWatchMitigations(null, null, null, null, 1, tsdMetrics);
