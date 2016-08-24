@@ -109,6 +109,11 @@
         <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
     </bean>
 
+    <bean class="com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="blackwatchMitigationInfoHandler" ref="ddbBasedBlackWatchMitigationInfoHandler"/>
+    </bean>
+    
     <bean id="blackholeMetadataActivityBase" abstract="true">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
