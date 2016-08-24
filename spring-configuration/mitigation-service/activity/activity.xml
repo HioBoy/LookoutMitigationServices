@@ -114,6 +114,11 @@
         <constructor-arg name="blackwatchMitigationInfoHandler" ref="ddbBasedBlackWatchMitigationInfoHandler"/>
     </bean>
     
+    <bean class="com.amazon.lookout.mitigation.service.activity.ChangeBlackWatchMitigationOwnerARNActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="blackwatchMitigationInfoHandler" ref="ddbBasedBlackWatchMitigationInfoHandler"/>
+    </bean>
+    
     <bean class="com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="blackwatchMitigationInfoHandler" ref="ddbBasedBlackWatchMitigationInfoHandler"/>

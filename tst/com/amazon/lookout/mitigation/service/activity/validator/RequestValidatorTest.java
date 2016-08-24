@@ -20,6 +20,7 @@ import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
+import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;
 import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
@@ -898,7 +899,7 @@ public class RequestValidatorTest {
         assertTrue(caughtException.getMessage().startsWith("Invalid maxNumberOfEntriesToFetch"));        
     }
     
-   @Test
+    @Test
     public void testvalidateDeactivateBlackWatchMitigationRequest() {
         DeactivateBlackWatchMitigationRequest request = new DeactivateBlackWatchMitigationRequest();
         request.setMitigationActionMetadata(MitigationActionMetadata.builder()
@@ -936,4 +937,70 @@ public class RequestValidatorTest {
         
     }
 
+    @Test
+    public void testChangeOwnerARNRequestvalidation() {
+        ChangeBlackWatchMitigationOwnerARNRequest request = new ChangeBlackWatchMitigationOwnerARNRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Khaleesi").withToolName("JUnit")
+                .withDescription("Test Descr")
+                .withRelatedTickets(Arrays.asList("1234,5655")).build());
+
+        Throwable caughtException = null;
+        
+        //invalid request with only the MitigationActionMetadata, all other fields are null.
+        try {
+            validator.validateChangeBlackWatchMitigationOwnerARNRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+ 
+        String validMitigationId = "US-WEST-1_2016-02-05T00:43:04.6767Z_55";
+        String validOwnerARN = "arn:aws:iam::005436146250:user/blackwatch_host_status_updator_blackwatch_pop_pro";
+        char invalidChar = 0x00;
+
+        //valid 
+        request.setMitigationId(validMitigationId);
+        request.setExpectedOwnerARN(validOwnerARN);
+        request.setNewOwnerARN(validOwnerARN);
+        validator.validateChangeBlackWatchMitigationOwnerARNRequest(request);
+        try {
+            validator.validateChangeBlackWatchMitigationOwnerARNRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+ 
+        //Invalid mitigationId;
+        request.setMitigationId(validMitigationId + String.valueOf(invalidChar));
+        try {
+            validator.validateChangeBlackWatchMitigationOwnerARNRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        assertTrue(caughtException instanceof IllegalArgumentException);
+        assertTrue(caughtException.getMessage().startsWith("Invalid mitigation ID"));
+        request.setMitigationId(validMitigationId);
+        
+        //Invalid newOwnerARN;
+        request.setNewOwnerARN(validOwnerARN + String.valueOf(invalidChar));
+        try {
+            validator.validateChangeBlackWatchMitigationOwnerARNRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        request.setNewOwnerARN(validOwnerARN);
+        
+        //Invalid expectedOwnerARN;
+        request.setExpectedOwnerARN(validOwnerARN + String.valueOf(invalidChar));
+        try {
+            validator.validateChangeBlackWatchMitigationOwnerARNRequest(request);
+        } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        request.setExpectedOwnerARN(validOwnerARN);
+    }
 }

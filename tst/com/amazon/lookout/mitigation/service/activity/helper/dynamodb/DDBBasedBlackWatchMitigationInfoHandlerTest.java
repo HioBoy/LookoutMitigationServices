@@ -182,7 +182,6 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
     @Test
     public void testDeactivateBlackWatchMitigationNonExistant() throws IOException {
-
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         Throwable caughtException = null;
         try {
@@ -192,6 +191,41 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         }
         assertNotNull(caughtException);
         mitigationState1.setState(MitigationState.State.Active.name());
+    }
+
+    @Test
+    public void testChangeOwnerARN() throws IOException {
+        String newOwnerARN  = "new" + testOwnerARN;
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
+        blackWatchMitigationInfoHandler.changeOwnerARN(mitigationState1.getMitigationId(), newOwnerARN, testOwnerARN);
+        MitigationState newMitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationState1.getMitigationId());
+        assertEquals(newOwnerARN, newMitigationState.getOwnerARN());
+    }
+
+    @Test
+    public void testChangeOwnerARNFail() throws IOException {
+        String newOwnerARN  = "new" + testOwnerARN;
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
+        Throwable caughtException = null;
+        try {
+            blackWatchMitigationInfoHandler.changeOwnerARN(mitigationState1.getMitigationId(), newOwnerARN, newOwnerARN);
+        } catch (ConditionalCheckFailedException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+    }
+
+    @Test
+    public void testChangeOwnerARNFailNonExistant() throws IOException {
+        String newOwnerARN  = "new" + testOwnerARN;
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
+        Throwable caughtException = null;
+        try {
+            blackWatchMitigationInfoHandler.changeOwnerARN("Fail" + mitigationState1.getMitigationId(), newOwnerARN, newOwnerARN);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
     }
 
     @Test

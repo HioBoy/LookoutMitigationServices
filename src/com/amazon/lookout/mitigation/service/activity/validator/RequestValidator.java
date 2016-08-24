@@ -25,6 +25,7 @@ import org.springframework.util.CollectionUtils;
 import com.amazon.lookout.ddb.model.TransitProvider;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.BlackholeDeviceInfo;
+import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;
 import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
@@ -193,6 +194,14 @@ public class RequestValidator {
         validateMitigationId(request.getMitigationId());
     }
     
+    public void validateChangeBlackWatchMitigationOwnerARNRequest(@NonNull ChangeBlackWatchMitigationOwnerARNRequest request) {
+        validateUserName(request.getMitigationActionMetadata().getUser());
+        validateToolName(request.getMitigationActionMetadata().getToolName());
+        validateMitigationId(request.getMitigationId());
+        validateUserARN(request.getNewOwnerARN());
+        validateUserARN(request.getExpectedOwnerARN());
+    }
+
     public void validateListBlackWatchMitigationsRequest(@NonNull ListBlackWatchMitigationsRequest request) {
         MitigationActionMetadata actionMetadata = request.getMitigationActionMetadata();
         if (actionMetadata == null) {

@@ -20,7 +20,6 @@ import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
-
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBSaveExpression;
@@ -148,4 +147,23 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             condition.setExpected(expectedAttributes);
             mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
     }
+
+     public void changeOwnerARN(String mitigationId, String newOwnerARN, String expectedOwnerARN) {
+             // Get current state
+             MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+            if (state == null) {
+                throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
+            }
+             state.setOwnerARN(newOwnerARN);
+             DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
+             ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
+                     new AttributeValue(expectedOwnerARN));
+             expectedValue.setComparisonOperator(ComparisonOperator.EQ);
+             Map<String, ExpectedAttributeValue> expectedAttributes = 
+                     ImmutableMap.<String, ExpectedAttributeValue>builder().
+                     put(MitigationState.OWNER_ARN_KEY, expectedValue).
+                     build();
+             condition.setExpected(expectedAttributes);
+             mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
+     }
 }
