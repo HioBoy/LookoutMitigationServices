@@ -29,4 +29,7 @@
     <bean id="authAccount.us-east-1.prod" class="java.lang.String">
         <constructor-arg value="693842253790"/> <!-- lookout-dev+lktmitsvc@amazon.com -->
     </bean>
+    <bean id="authAccount.us-east-1.prod-border" class="java.lang.String">
+        <constructor-arg value="166925780237"/> <!-- lookout-dev+lktmitsvc+iad@amazon.com -->
+    </bean>
 </beans>
