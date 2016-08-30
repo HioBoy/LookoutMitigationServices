@@ -99,6 +99,63 @@ public class BlackWatchMitigationTemplateValidatorTest {
     }
     
     /**
+     * S3Object valid with bucket, key and sha256.
+     */
+    @Test
+    public void testValidateS3ObjectValidWithBucket_SHA256() {
+        BlackWatchMitigationTemplateValidator.validateS3Object(
+                S3Object.builder()
+                .withBucket("test_bucket")
+                .withKey("test_key")
+                .withSha256("8d777f385d3dfec8815d20f7496026dc")
+                .build(), "Test");
+    }
+    
+    /**
+     * S3Object valid with bucket, key and both md5 and sha256.
+     */
+    @Test
+    public void testValidateS3ObjectValidWithBucket_SHA256_MD5() {
+        BlackWatchMitigationTemplateValidator.validateS3Object(
+                S3Object.builder()
+                .withBucket("test_bucket")
+                .withKey("test_key")
+                .withSha256("8d777f385d3dfec8815d20f7496026dc")
+                .withMd5("8d777f385d3dfec8815d20f7496026dc")
+                .build(), "Test");
+    }
+    
+    
+    /**
+     * S3Object invalid with refresh enabled and sha256 set.
+     */
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateS3ObjectValidWithRefreshedBucket_SHA256() {
+        BlackWatchMitigationTemplateValidator.validateS3Object(
+                S3Object.builder()
+                .withBucket("test_bucket")
+                .withKey("test_key")
+                .withSha256("8d777f385d3dfec8815d20f7496026dc")
+                .withEnableRefresh(true)
+                .build(), "Test");
+    }
+    
+    /**
+     * S3Object invalid with refresh enabled and both md5 and sha256 set.
+     */
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateS3ObjectValidWithRefreshedBucket_SHA256_MD5() {
+        BlackWatchMitigationTemplateValidator.validateS3Object(
+                S3Object.builder()
+                .withBucket("test_bucket")
+                .withKey("test_key")
+                .withSha256("8d777f385d3dfec8815d20f7496026dc")
+                .withMd5("8d777f385d3dfec8815d20f7496026dc")
+                .withEnableRefresh(true)                
+                .build(), "Test");
+    }
+    
+    /**
      * S3Object valid with bucket, key and enable_refresh=true.
      */
     @Test

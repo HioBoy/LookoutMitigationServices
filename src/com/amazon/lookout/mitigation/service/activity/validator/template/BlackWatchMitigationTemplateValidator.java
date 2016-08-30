@@ -128,6 +128,9 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
             Validate.isTrue(s3Object.getMd5() == null,
                     String.format("%s S3 object [%s] with refresh enabled has object md5 checksum set",
                             usageDescription, ReflectionToStringBuilder.toString(s3Object)));
+            Validate.isTrue(s3Object.getSha256() == null,
+                    String.format("%s S3 object [%s] with refresh enabled has object sha256 checksum set",
+                            usageDescription, ReflectionToStringBuilder.toString(s3Object)));
             
             if (s3Object.getRefreshInterval() != null) {
                 Validate.isTrue(s3Object.getRefreshInterval() > 0,
@@ -136,8 +139,9 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
                                 s3Object.getRefreshInterval()));
             }
         } else {
-            Validate.notEmpty(s3Object.getMd5(),
-                    String.format("%s S3 object [%s] missing object md5 checksum",
+            //must have either md5 or sha256 set.
+            Validate.isTrue((s3Object.getMd5() != null || s3Object.getSha256() != null), 
+                    String.format("%s S3 object [%s] missing both md5 and sha256 checksum",
                             usageDescription, ReflectionToStringBuilder.toString(s3Object)));
             
             Validate.isTrue(s3Object.getRefreshInterval() == null,
