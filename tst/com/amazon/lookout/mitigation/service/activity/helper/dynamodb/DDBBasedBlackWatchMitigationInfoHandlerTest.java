@@ -20,6 +20,7 @@ import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazon.blackwatch.mitigation.state.model.MitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState.Setting;
@@ -91,7 +92,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 .ownerARN(testOwnerARN)
                 .recordedResources(recordedResourcesMap)
                 .locationMitigationState(locationMitigationState)
-                .state("ACTIVE")
+                .state(MitigationState.State.Active.name())
                 .ppsRate(1121L)
                 .bpsRate(2323L)
                 .mitigationSettingsJSON("{ \"IncludeEC2NetworkACLs\":\"True\", \"ip_validation\": \"DROP\"}")
@@ -113,7 +114,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 .ownerARN(testOwnerARN)
                 .recordedResources(recordedResourcesMap)
                 .locationMitigationState(locationMitigationState)
-                .state("ACTIVE")
+                .state(MitigationState.State.Active.name())
                 .ppsRate(1121L)
                 .bpsRate(2323L)
                 .mitigationSettingsJSON("{ \"IncludeEC2NetworkACLs\":\"True\", \"ip_validation\": \"DROP\"}")
@@ -155,6 +156,76 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
             assertEquals(locationMitigationStateSettings.get(key).getMitigationSettingsJSONChecksum(), locationMitigationStateSettingsExpected.get(key).getMitigationSettingsJSONChecksum());
         }
 
+    }
+
+    @Test
+    public void testDeactivateBlackWatchMitigation() throws IOException {
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
+        blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId());
+        MitigationState newMitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationState1.getMitigationId());
+        assertEquals(MitigationState.State.To_Delete.name(), newMitigationState.getState());
+    }
+
+    @Test
+    public void testDeactivateBlackWatchMitigationFail() throws IOException {
+        mitigationState1.setState(MitigationState.State.To_Delete.name());
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
+        Throwable caughtException = null;
+        try {
+            blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId());
+        } catch (ConditionalCheckFailedException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        mitigationState1.setState(MitigationState.State.Active.name());
+    }
+
+    @Test
+    public void testDeactivateBlackWatchMitigationNonExistant() throws IOException {
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
+        Throwable caughtException = null;
+        try {
+            blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId() + "Fail");
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+        mitigationState1.setState(MitigationState.State.Active.name());
+    }
+
+    @Test
+    public void testChangeOwnerARN() throws IOException {
+        String newOwnerARN  = "new" + testOwnerARN;
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
+        blackWatchMitigationInfoHandler.changeOwnerARN(mitigationState1.getMitigationId(), newOwnerARN, testOwnerARN);
+        MitigationState newMitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationState1.getMitigationId());
+        assertEquals(newOwnerARN, newMitigationState.getOwnerARN());
+    }
+
+    @Test
+    public void testChangeOwnerARNFail() throws IOException {
+        String newOwnerARN  = "new" + testOwnerARN;
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
+        Throwable caughtException = null;
+        try {
+            blackWatchMitigationInfoHandler.changeOwnerARN(mitigationState1.getMitigationId(), newOwnerARN, newOwnerARN);
+        } catch (ConditionalCheckFailedException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+    }
+
+    @Test
+    public void testChangeOwnerARNFailNonExistant() throws IOException {
+        String newOwnerARN  = "new" + testOwnerARN;
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
+        Throwable caughtException = null;
+        try {
+            blackWatchMitigationInfoHandler.changeOwnerARN("Fail" + mitigationState1.getMitigationId(), newOwnerARN, newOwnerARN);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
     }
 
     @Test

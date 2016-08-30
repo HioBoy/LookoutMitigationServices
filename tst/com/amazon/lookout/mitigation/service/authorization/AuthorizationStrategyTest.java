@@ -29,6 +29,7 @@ import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
+import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;

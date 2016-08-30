@@ -23,8 +23,10 @@ import com.amazon.coral.service.AuthorizationInfo;
 import com.amazon.coral.service.BasicAuthorizationInfo;
 import com.amazon.coral.service.Context;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
+import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;
 import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
+import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetLocationHostStatusRequest;
@@ -308,6 +310,18 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 (action, request) -> 
                 generateListBlackWatchMitigationRequestInfo(action, READ_OPERATION_PREFIX));
         
+        addRequestInfoParser(
+                DeactivateBlackWatchMitigationRequest.class, 
+                (action, request) -> 
+                new RequestInfo(generateActionName(action, WRITE_OPERATION_PREFIX),
+                    getBlackWatchAPIRelativeId()));
+
+        addRequestInfoParser(
+                ChangeBlackWatchMitigationOwnerARNRequest.class, 
+                (action, request) -> 
+                new RequestInfo(generateActionName(action, WRITE_OPERATION_PREFIX),
+                    getBlackWatchAPIRelativeId()));
+
         addRequestInfoParser(
                 ListBlackWatchLocationsRequest.class, 
                 (action, request) -> 
