@@ -47,7 +47,7 @@ public class ChangeBlackWatchMitigationOwnerARNActivity extends Activity {
             .collect(Collectors.toSet())); 
     
     @NonNull private final RequestValidator requestValidator;
-    @NonNull private final BlackWatchMitigationInfoHandler mitigationStateHandler;
+    @NonNull private final BlackWatchMitigationInfoHandler blackwatchMitigationInfoHandler;
     
     @Validated
     @Operation("ChangeBlackWatchMitigationOwnerARN")
@@ -66,7 +66,7 @@ public class ChangeBlackWatchMitigationOwnerARNActivity extends Activity {
             requestValidator.validateChangeBlackWatchMitigationOwnerARNRequest(request);
 
             // Deactivate
-            mitigationStateHandler.changeOwnerARN(mitigationId,
+            blackwatchMitigationInfoHandler.changeOwnerARN(mitigationId,
                     request.getExpectedOwnerARN(), request.getNewOwnerARN());
 
             // Create the response object to return back to the client.

@@ -47,8 +47,8 @@ public class DeactivateBlackWatchMitigationActivity extends Activity {
             .collect(Collectors.toSet())); 
     
     @NonNull private final RequestValidator requestValidator;
-    @NonNull private final BlackWatchMitigationInfoHandler mitigationStateHandler;
-    
+    @NonNull private final BlackWatchMitigationInfoHandler blackwatchMitigationInfoHandler;
+
     @Validated
     @Operation("DeactivateBlackWatchMitigation")
     @Documentation("DeactivateBlackWatchMitigation")
@@ -66,7 +66,7 @@ public class DeactivateBlackWatchMitigationActivity extends Activity {
             requestValidator.validateDeactivateBlackWatchMitigationRequest(request);
 
             // Deactivate
-            mitigationStateHandler.deactivateMitigation(mitigationId);
+            blackwatchMitigationInfoHandler.deactivateMitigation(mitigationId);
 
             // Create the response object to return back to the client.
             DeactivateBlackWatchMitigationResponse response = new DeactivateBlackWatchMitigationResponse();
