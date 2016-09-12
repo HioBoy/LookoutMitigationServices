@@ -54,6 +54,12 @@
         <value>BR-SYD1-2</value>
         <value>BR-SYD4-1</value> 
         <value>BR-SYD4-2</value>
+        <!-- CMH -->
+        <value>BR-ORD50-1</value>
+        <value>BR-ORD50-2</value>
+        <value>BR-ORD51-1</value>
+        <value>BR-ORD51-2</value>
+        <!-- CMH -->
     </util:set>
     
     <bean id="prod.allowedLocationPrefix" class="java.lang.String">
