@@ -205,7 +205,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     private static RequestInfo generateLocationStateRequestInfo(String action, String prefix) {
         return new RequestInfo(
                 generateActionName(action, prefix),
-                null);
+                getBlackWatchAPIRelativeId());
     }
     
     private static RequestInfo generateMetadataRequestInfo(
