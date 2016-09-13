@@ -75,7 +75,7 @@ public class UpdateBlackWatchLocationStateActivity extends Activity {
             // Step 1. Validate this request
             requestValidator.validateUpdateBlackWatchLocationStateRequest(request);
 
-            String location = request.getLocation();
+            String location = request.getLocation().toLowerCase();
             String reason = request.getReason();
             boolean adminIn = request.isAdminIn();
             String locationType = request.getLocationType();

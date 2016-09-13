@@ -757,7 +757,7 @@ public class RequestValidator {
     private void validateLocationType(String locationType) {
         if (locationType != null && !locationType.equals("")) {
             if (checkLocationTypeInEnum(locationType) == false) {
-                String msg = "Invalid location type found! A valid location type must be one of " + Arrays.toString(LocationType.values());
+                String msg = "Invalid location type found - " + locationType +". A valid location type must be one of " + Arrays.toString(LocationType.values());
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
             }
