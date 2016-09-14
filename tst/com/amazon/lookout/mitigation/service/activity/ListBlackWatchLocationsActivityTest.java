@@ -41,11 +41,19 @@ public class ListBlackWatchLocationsActivityTest extends ActivityTestHelper {
         BlackWatchLocation blackWatchLocations = new BlackWatchLocation();
         blackWatchLocations.setLocation("location1");
         blackWatchLocations.setAdminIn(true);
+        blackWatchLocations.setInService(true);
+        blackWatchLocations.setChangeUser("bobTheBuilder");
+        blackWatchLocations.setChangeTime(4442342434l);
+        blackWatchLocations.setChangeReason("Can we fix it?");
         listOfBlackWatchLocation.add(blackWatchLocations);
         
         blackWatchLocations = new BlackWatchLocation();
         blackWatchLocations.setLocation("location2");
         blackWatchLocations.setAdminIn(false);
+        blackWatchLocations.setInService(false);
+        blackWatchLocations.setChangeUser("bobTheBuilder");
+        blackWatchLocations.setChangeTime(444234241232l);
+        blackWatchLocations.setChangeReason("Yes we can!");
         listOfBlackWatchLocation.add(blackWatchLocations);
         
         Mockito.doReturn(listOfBlackWatchLocation).when(locationStateInfoHandler).getBlackWatchLocation(eq("region"), isA(TSDMetrics.class));

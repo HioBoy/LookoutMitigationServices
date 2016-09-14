@@ -30,7 +30,7 @@ import com.amazon.lookout.mitigation.service.activity.helper.LocationStateInfoHa
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 /**
- * Get all BlackWatch Locations with their AdminIn state.
+ * Get all BlackWatch Locations with their AdminIn state, change reason, change time, change user and InService state.
  * */
 @Service("LookoutMitigationService")
 public class ListBlackWatchLocationsActivity extends Activity {
