@@ -25,7 +25,13 @@
         <property name="handlers">
             <list>
                 <bean class="com.amazon.coral.service.Log4jAwareRequestIdHandler"/>
-                
+
+                <!-- JLBRelay: See https://tiny.amazon.com/o8ck0f0x/wamazindeJLBROnbo22xa22_H -->
+                <bean class="com.amazon.coral.support.service.SslProxySupportHandler">
+                    <!-- HTTP port used to receive proxied traffic. This should match the HttpServer.httpRegularPort OpConfig -->
+                    <constructor-arg value="${apollo.OCF.HttpServer.httpRegularPort}" />
+                </bean>
+
                 <bean class="com.amazon.coral.service.HttpHandler"/>
                 <bean class="com.amazon.coral.service.PingHandler"/>
                 
