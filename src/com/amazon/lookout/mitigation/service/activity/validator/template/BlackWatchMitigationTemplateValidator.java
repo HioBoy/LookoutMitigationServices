@@ -26,6 +26,7 @@ import com.amazon.lookout.mitigation.service.S3Object;
 import com.amazon.lookout.mitigation.service.activity.helper.blackwatch.TrafficFilterConfiguration;
 import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
+import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazonaws.AmazonServiceException.ErrorType;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
@@ -75,7 +76,11 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
     protected void validateDeploymentChecks(MitigationModificationRequest request) {
         validateNoDeploymentChecks(request.getPreDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.PRE);
         List<MitigationDeploymentCheck> postDeploymentChecks = request.getPostDeploymentChecks();
-        if (postDeploymentChecks == null ){
+        if (postDeploymentChecks == null || postDeploymentChecks.isEmpty()){
+            //we allow post deployment check to be empty for the blackwatch border template
+            if (request.getMitigationTemplate().equals(MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer)) {
+                return;
+            }
             throw new IllegalArgumentException("Missing post deployment for blackwatch mitigation deployment");
         }
 
