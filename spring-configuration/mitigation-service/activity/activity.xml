@@ -96,12 +96,16 @@
 	
     <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationHostStatusActivity">
 	   <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="hostStatusHandler" ref="ddbBasedHostStatusInfoHandler"/>
+       <constructor-arg name="hostStatusHandler" ref="ddbBasedHostStatusInfoHandler"/>
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.ListBlackWatchLocationsActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
+    </bean>
+
+    <bean id="consolidatedMetadataMaterialSet" class="java.lang.String">
+        <constructor-arg value="com.amazon.lookout.prefixes.metadata.reader.${domain}" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.UpdateBlackWatchLocationStateActivity">
@@ -160,7 +164,7 @@
     <bean class="com.amazon.lookout.mitigation.service.activity.ListTransitProvidersActivity">
         <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
     </bean>
-    
+
     <!-- All the beans required by the activities go here -->
     <bean id="requestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.RequestValidator">
         <constructor-arg name="serviceLocationsHelper" ref="serviceLocationsHelper"/>
@@ -172,7 +176,7 @@
     <bean id="serviceLocationsHelper" class="com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper">
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
     </bean>
-    
+
     <bean id="s3OdinCredential" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
         <constructor-arg value="com.amazon.lookout.mitigationservice.s3.fullaccess.${realm}.${domain}"/>
     </bean>
@@ -323,6 +327,23 @@
        <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
     </bean>
 
+    <bean id="amazonPrefixesMetadataTracker" class="com.amazon.lookout.util.prefixes.AmazonPrefixesMetadataTracker.AllPrefixesTracker"/>
+
+    <bean id="awsDogfishPrefixesMetadataFetcher" class="com.amazon.lookout.mitigation.service.activity.helper.AwsDogfishPrefixesMetadataFetcher">
+        <constructor-arg name="pathToDiskCache" value="${root}/var/prefixes"/>
+        <constructor-arg name="fileName" value="dogfish.json"/>
+        <constructor-arg name="syncAlarmThresholdMinutes" value="90"/> <!-- 1.5 hours -->
+        <constructor-arg name="acceptableAgeOfCachedContentMinutes" value="180"/> <!-- 3 hours -->
+        <constructor-arg value="${domain}"/>
+        <constructor-arg name="materialSet" ref="consolidatedMetadataMaterialSet"/>
+        <constructor-arg name="reportees">
+            <list>
+                <ref bean="amazonPrefixesMetadataTracker"/>
+            </list>
+        </constructor-arg>
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+    </bean>
+    
     <!-- New coral Activities are created per request, by creating a pool here, we ensure Spring shuts down this pool during shutdown sequence and all Activity instances share the same singleton ThreadPool instance. -->
     <bean id="listMitigationsActivityThreadPool" class="java.util.concurrent.Executors" factory-method="newFixedThreadPool">
         <constructor-arg index="0"><value>15</value></constructor-arg>

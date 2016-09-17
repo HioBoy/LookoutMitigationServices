@@ -34,6 +34,11 @@
                     <property name="period" value="30"/>
                     <property name="timeUnit" ref="seconds"/>
                 </bean>
+                <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
+                    <property name="runnable" ref="dogFishMetadataProvider"/>
+                    <property name="period" value="180"/>
+                    <property name="timeUnit" ref="seconds"/>
+                </bean>
             </set>
         </property>
     </bean>
@@ -49,4 +54,8 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
 
+    <bean id="dogFishMetadataProvider" class="com.amazon.lookout.mitigation.service.workflow.helper.DogFishMetadataProvider">
+        <constructor-arg name="dogfishFetcher" ref="awsDogfishPrefixesMetadataFetcher"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+    </bean>
 </beans>
