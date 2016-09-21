@@ -37,4 +37,7 @@
 
     <alias name="prod.LocationState.writeCapacityUnits" alias="prod-border.LocationState.writeCapacityUnits"/>
 
+    <alias name="prod.MitigationState.readCapacityUnits" alias="prod-border.MitigationState.readCapacityUnits"/>
+
+    <alias name="prod.MitigationState.writeCapacityUnits" alias="prod-border.MitigationState.writeCapacityUnits"/>
 </beans>
