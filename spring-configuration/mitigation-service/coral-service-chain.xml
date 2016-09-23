@@ -20,6 +20,10 @@
         <constructor-arg value="120000"/> 
     </bean>
 
+    <bean id="ShowExplorer" class="java.lang.Boolean">
+        <constructor-arg value="#{'${domain}' != 'prod' and '${domain}' != 'prod-border'}"/>
+    </bean>
+
     <!-- Configure the Chain which contains the list of Handlers to apply -->
     <bean id="chain" class="com.amazon.coral.service.helper.ChainHelper" depends-on="logger">
         <property name="handlers">
@@ -38,10 +42,13 @@
                 <!-- Here are protocol handlers. You need at least one.-->
                 <bean class="com.amazon.coral.service.http.HttpBindingHandler"/>
                 <bean class="com.amazon.coral.service.HttpRpcHandler"/>
-                
+
                 <!-- ContentHandler has to be before the AuthenticationHandler to be able to use the Explorer. -->
-                <bean class="com.amazon.coral.service.http.ContentHandler"/>
-                
+                <bean class="com.amazon.coral.service.http.ContentHandler">
+                    <!-- Do not show explorer in prod domains -->
+                    <property name="serviceContent" ref="ShowExplorer"/>
+                </bean>
+
                 <ref bean="AuthenticationHandler"/>
                 <ref bean="AuthorizationHandler"/>
                 
