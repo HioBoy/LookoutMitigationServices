@@ -51,10 +51,9 @@
 
                 <ref bean="AuthenticationHandler"/>
                 <ref bean="AuthorizationHandler"/>
-                
-                <bean class="com.amazon.coral.service.ModelHandler"/>
+
                 <bean class="com.amazon.coral.validate.ValidationHandler"/>
-                
+
                 <!-- This always comes last.-->
                 <bean class="com.amazon.coral.spring.SpringActivityHandler">
                     <property name="globalInterceptorClassNames">
