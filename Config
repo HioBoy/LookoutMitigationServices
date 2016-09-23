@@ -17,7 +17,7 @@ package.LookoutMitigationService = {
             Lombok = 1.16.x;
             LombokUtils = 1.1;
             # Build logic for spring integration
-            CoralSpringLauncher = 4.0;
+            CoralSpringLauncher = 4.2;
             AWSSimpleWorkflowJavaFlowDeciderAPT = 3.3;
             CoralGenerator = 1.1;
         };
@@ -30,12 +30,12 @@ package.LookoutMitigationService = {
     dependencies = {
         1.0 = {
             CoralActivity = 1.0;
-            CoralSpring = 4.0;
+            CoralSpring = 4.2;
             JakartaCommons-logging-api = 1.1;
             JakartaCommons-lang3 = 3.x;
             FindBugsAnnotations = 2.0.3;
             
-            AWSJavaSDKExternalRelease = 1.10;
+            AWSJavaSDKExternalRelease = 1.11.x;
             LookoutMitigationWorkFlowWorker = 1.0;
 
             CoralAwsAuthentication = 1.1; # To support authenticating/authorizing calls to LookoutMitigationService.
@@ -53,7 +53,7 @@ package.LookoutMitigationService = {
             BlackWatchMitigationCommons = 1.0;
             
             JavaAmazonLdapUtils = 1.2;
-            CoralSpringLauncher = 4.0;
+            CoralSpringLauncher = 4.2;
             CoralClientHttp = 1.0;
 
             LookoutMitigationServiceExplorer = 1.0;
@@ -74,8 +74,8 @@ package.LookoutMitigationService = {
             JDK8 = 1.0;
             # Runtime dependencies for coral
             JakartaCommons-logging-adapters = 1.1;
-            Bobcat = 2.0;
-            CoralSpringDirector = 1.0;
+            Bobcat = 2.1;
+            CoralSpringDirector = 4.2;
             
             CoralService = 1.0;
             CoralMetricsQuerylogReporter = 1.0;            
@@ -116,15 +116,18 @@ package.LookoutMitigationService = {
 
     resolves-conflict-dependencies = {
         1.0 = {
-            CoralSpring = 4.0;
-            CoralSpringLauncher = 4.0;
+            JakartaCommons-logging = 1.2;
+            CoralSpring = 4.2;
+            CoralSpringLauncher = 4.2;
             JakartaCommons-codec = 1;
             log4j = 1.2;
+            Log4j-api = 2.x;
             Mockito = 1.10.x;
             Openssl = 1.0.x;
-            SpringBeans = 4.0.x;
-            SpringCore = 4.0.x;
-            SpringContext = 4.0.x;
+            SpringBeans = 4.3.x;
+            SpringCore = 4.3.x;
+            SpringContext = 4.3.x;
+            SpringAOP = 4.3.x;
             junit = 4.12;
             Apache-HttpComponents-HttpCore = 4.4.x;
             JakartaCommons-httpclient = 3.1;

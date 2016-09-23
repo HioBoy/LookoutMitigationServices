@@ -26,7 +26,8 @@ import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.util.Tables;
+import com.amazonaws.services.dynamodbv2.model.DeleteTableRequest;
+import com.amazonaws.services.dynamodbv2.util.TableUtils;
 
 import static com.amazon.lookout.mitigation.service.activity.helper.dynamodb.RequestTableTestHelper.*;
 import static com.amazon.lookout.ddb.model.MitigationRequestsModel.*;
@@ -55,11 +56,9 @@ public class DDBBasedRollbackRequestStorageHandlerTest {
     public void setUpBeforeTest() throws InterruptedException {
         when(metrics.newSubMetrics(anyString())).thenReturn(metrics);
         CreateTableRequest request = MitigationRequestsModel.getInstance().getCreateTableRequest(tableName);
-        if (Tables.doesTableExist(dynamoDBClient, tableName)) {
-            dynamoDBClient.deleteTable(tableName);
-        }
+        TableUtils.deleteTableIfExists(dynamoDBClient, new DeleteTableRequest(tableName));
         dynamoDBClient.createTable(request);
-        Tables.awaitTableToBecomeActive(dynamoDBClient, tableName);
+        TableUtils.waitUntilActive(dynamoDBClient, tableName);
         ddbBasedRollbackRequestStorageHandler = new DDBBasedRollbackRequestStorageHandler(dynamoDBClient, domain, mock(TemplateBasedRequestValidator.class));
         requestTableTestHelper = new RequestTableTestHelper(dynamodb, domain);
     }

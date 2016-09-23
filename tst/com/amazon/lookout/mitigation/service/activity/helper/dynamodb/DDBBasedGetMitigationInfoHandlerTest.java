@@ -40,9 +40,10 @@ import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.DeleteTableRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
-import com.amazonaws.services.dynamodbv2.util.Tables;
+import com.amazonaws.services.dynamodbv2.util.TableUtils;
 import com.google.common.collect.Sets;
 
 public class DDBBasedGetMitigationInfoHandlerTest {
@@ -67,9 +68,7 @@ public class DDBBasedGetMitigationInfoHandlerTest {
         when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
         String tableName = MitigationInstancesModel.getInstance().getTableName(domain);
         CreateTableRequest request = MitigationInstancesModel.getInstance().getCreateTableRequest(tableName);
-        if (Tables.doesTableExist(dynamoDBClient, tableName)) {
-            dynamoDBClient.deleteTable(tableName);
-        }
+        TableUtils.deleteTableIfExists(dynamoDBClient, new DeleteTableRequest(tableName));
         dynamoDBClient.createTable(request);
     }
     
