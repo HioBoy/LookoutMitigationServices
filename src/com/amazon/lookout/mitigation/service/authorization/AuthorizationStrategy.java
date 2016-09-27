@@ -23,6 +23,7 @@ import com.amazon.coral.service.AuthorizationInfo;
 import com.amazon.coral.service.BasicAuthorizationInfo;
 import com.amazon.coral.service.Context;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
+import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;
 import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
@@ -41,6 +42,7 @@ import com.amazon.lookout.mitigation.service.ListBlackholeDevicesRequest;
 import com.amazon.lookout.mitigation.service.ListTransitProvidersRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
@@ -132,8 +134,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      */
     @Override
     public List<AuthorizationInfo> getAuthorizationInfoList(final Context context, final Object request) 
-            throws AccessDeniedException
-            {
+            throws AccessDeniedException {
 
         RequestInfo requestInfo = getRequestInfo(context.getOperation().toString(), request);
         if (requestInfo == null) {
@@ -158,7 +159,8 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         authInfoList.add(authorizationInfo);
 
         return authInfoList;
-            }
+    }
+    
 
     @Data
     static class RequestInfo {
@@ -181,22 +183,31 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     }
 
     private static RequestInfo generateMitigationRequestInfo(
-            String action, String prefix, String serviceName, String deviceName, String mitigationTemplate)
-    {
+            String action, String prefix, String serviceName, String deviceName, String mitigationTemplate) {
         return new RequestInfo(
                 generateActionName(action, prefix), 
                 getMitigationRelativeId(serviceName, deviceName, mitigationTemplate));
     }
 
-    private static RequestInfo generateHostStatusRequestInfo(String action, String prefix, String locationName)
-    {
+    private static RequestInfo generateHostStatusRequestInfo(String action, String prefix, String locationName) {
         return new RequestInfo(
                 generateActionName(action, prefix),
                 getLocationRelativeId(locationName));
     }
 
-    private static RequestInfo generateListBlackWatchMitigationRequestInfo(String action, String prefix)
-    {
+    private static RequestInfo generateListBlackWatchMitigationRequestInfo(String action, String prefix) {
+        return new RequestInfo(
+                generateActionName(action, prefix),
+                getBlackWatchAPIRelativeId());
+    }
+    
+    private static RequestInfo generateApplyBlackWatchMitigationRequestInfo(String action, String prefix) {
+        return new RequestInfo(
+                generateActionName(action, prefix),
+                getBlackWatchAPIRelativeId());
+    }
+    
+    private static RequestInfo generateUpdateBlackWatchMitigationRequestInfo(String action, String prefix) {
         return new RequestInfo(
                 generateActionName(action, prefix),
                 getBlackWatchAPIRelativeId());
@@ -208,9 +219,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 getBlackWatchAPIRelativeId());
     }
     
-    private static RequestInfo generateMetadataRequestInfo(
-            String action, String prefix, String metadataType)
-    {
+    private static RequestInfo generateMetadataRequestInfo(String action, String prefix, String metadataType) {
         Validate.notNull(metadataType);
         Validate.notNull(prefix);
 
@@ -321,7 +330,19 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 (action, request) -> 
                 new RequestInfo(generateActionName(action, WRITE_OPERATION_PREFIX),
                     getBlackWatchAPIRelativeId()));
-
+        
+        addRequestInfoParser(
+                ApplyBlackWatchMitigationRequest.class, 
+                (action, request) -> 
+                new RequestInfo(generateActionName(action, WRITE_OPERATION_PREFIX),
+                    getBlackWatchAPIRelativeId()));
+        
+        addRequestInfoParser(
+                UpdateBlackWatchMitigationRequest.class, 
+                (action, request) -> 
+                new RequestInfo(generateActionName(action, WRITE_OPERATION_PREFIX),
+                    getBlackWatchAPIRelativeId()));
+        
         addRequestInfoParser(
                 ListBlackWatchLocationsRequest.class, 
                 (action, request) -> 

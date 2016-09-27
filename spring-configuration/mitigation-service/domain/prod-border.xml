@@ -40,4 +40,9 @@
     <alias name="prod.MitigationState.readCapacityUnits" alias="prod-border.MitigationState.readCapacityUnits"/>
 
     <alias name="prod.MitigationState.writeCapacityUnits" alias="prod-border.MitigationState.writeCapacityUnits"/>
+    
+    <alias name="prod.ResourceAllocationState.readCapacityUnits" alias="prod-border.ResourceAllocationState.readCapacityUnits"/>
+
+    <alias name="prod.ResourceAllocationState.writeCapacityUnits" alias="prod-border.ResourceAllocationState.writeCapacityUnits"/>
+    
 </beans>

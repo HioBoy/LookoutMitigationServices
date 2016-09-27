@@ -18,7 +18,6 @@ import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.model.RequestType;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 
 public class DDBBasedRequestStorageManagerTest {
     private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);

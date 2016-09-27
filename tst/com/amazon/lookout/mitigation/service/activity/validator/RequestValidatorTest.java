@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -19,6 +21,7 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
+import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;
 import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
@@ -29,6 +32,7 @@ import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
+import com.amazon.lookout.mitigation.service.activity.ApplyBlackWatchMitigationActivity;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
@@ -822,7 +826,7 @@ public class RequestValidatorTest {
 
         String validMitigationId = "US-WEST-1_2016-02-05T00:43:04.6767Z_55";
         String validResourceId = "192.168.0.1";
-        String validResourceType = "EC2";
+        String validResourceType = "IPAddress";
         String validOwnerARN = "arn:aws:iam::005436146250:user/blackwatch_host_status_updator_blackwatch_pop_pro";
         //valid mitigationid, resourceid, resourcetype, ownerarn.
         request.setMitigationId(validMitigationId);
@@ -936,14 +940,114 @@ public class RequestValidatorTest {
         request.setMitigationId(validMitigationId);
         
     }
+    
+    @Test
+    public void testApplyMitigationRequestValidator() {
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Khaleesi")
+                .withToolName("Dragons")
+                .withDescription("MOD butt kicking.")
+                .withRelatedTickets(Arrays.asList("1234,5655"))
+                .build());
+        char invalidChar = 0x00;
+        
+        Throwable caughtExcepion = null;
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch_host_status_updator_blackwatch_pop_pro";
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("Invalid resource ID"));
+        caughtExcepion = null;
+        
+        String resourceId = "IPList1234";
+        request.setResourceId(resourceId);
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("Invalid resource type"));
+        caughtExcepion = null;
+        
+        String resourceType = "IPAddressXYZZZZ";
+        request.setResourceType(resourceType);
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("Unsupported resource type"));
+        caughtExcepion = null;
+        
+        resourceType = "IPAddressList";
+        request.setResourceType(resourceType);
+        
+        String JSON = "XHHSHS";
+        request.setMitigationSettingsJSON(JSON);
+        
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("Could not parse"));
+        caughtExcepion = null;
+        
+        JSON="{\"test\":\"jsonValue\", \"test_array\":[\"A\", \"B\", \"C\"]}";
+        request.setMitigationSettingsJSON(JSON);
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, "ABABA" + String.valueOf(invalidChar));
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("Invalid user ARN"));
+        caughtExcepion = null;
+        
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, "");
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("Invalid user ARN"));
+        caughtExcepion = null;
+        
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, null);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("Invalid user ARN"));
+        caughtExcepion = null;
+    }
 
     @Test
     public void testChangeOwnerARNRequestvalidation() {
         ChangeBlackWatchMitigationOwnerARNRequest request = new ChangeBlackWatchMitigationOwnerARNRequest();
         request.setMitigationActionMetadata(MitigationActionMetadata.builder()
-                .withUser("Khaleesi").withToolName("JUnit")
+                .withUser("Khaleesi")
+                .withToolName("JUnit")
                 .withDescription("Test Descr")
-                .withRelatedTickets(Arrays.asList("1234,5655")).build());
+                .withRelatedTickets(Arrays.asList("1234,5655"))
+                .build());
 
         Throwable caughtException = null;
         
@@ -954,6 +1058,7 @@ public class RequestValidatorTest {
             caughtException = ex;
         }
         assertNotNull(caughtException);
+        caughtException = null;
  
         String validMitigationId = "US-WEST-1_2016-02-05T00:43:04.6767Z_55";
         String validOwnerARN = "arn:aws:iam::005436146250:user/blackwatch_host_status_updator_blackwatch_pop_pro";
@@ -964,12 +1069,6 @@ public class RequestValidatorTest {
         request.setExpectedOwnerARN(validOwnerARN);
         request.setNewOwnerARN(validOwnerARN);
         validator.validateChangeBlackWatchMitigationOwnerARNRequest(request);
-        try {
-            validator.validateChangeBlackWatchMitigationOwnerARNRequest(request);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
  
         //Invalid mitigationId;
         request.setMitigationId(validMitigationId + String.valueOf(invalidChar));
@@ -991,6 +1090,8 @@ public class RequestValidatorTest {
             caughtException = ex;
         }
         assertNotNull(caughtException);
+        caughtException = null;
+        
         request.setNewOwnerARN(validOwnerARN);
         
         //Invalid expectedOwnerARN;
