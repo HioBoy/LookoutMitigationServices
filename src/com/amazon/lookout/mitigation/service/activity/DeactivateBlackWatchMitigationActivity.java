@@ -66,7 +66,7 @@ public class DeactivateBlackWatchMitigationActivity extends Activity {
             requestValidator.validateDeactivateBlackWatchMitigationRequest(request);
 
             // Deactivate
-            blackwatchMitigationInfoHandler.deactivateMitigation(mitigationId);
+            blackwatchMitigationInfoHandler.deactivateMitigation(mitigationId, request.getMitigationActionMetadata());
 
             // Create the response object to return back to the client.
             DeactivateBlackWatchMitigationResponse response = new DeactivateBlackWatchMitigationResponse();

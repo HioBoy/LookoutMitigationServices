@@ -128,7 +128,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         }
     }
 
-    public void deactivateMitigation(String mitigationId) {
+    public void deactivateMitigation(String mitigationId, MitigationActionMetadata actionMetadata) {
             // Get current state
             String To_Delete_State = MitigationState.State.To_Delete.name();
             MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
@@ -136,6 +136,14 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
             }
             state.setState(To_Delete_State);
+            com.amazon.blackwatch.mitigation.state.model.MitigationActionMetadata actionMetadataBlackWatch = 
+                com.amazon.blackwatch.mitigation.state.model.MitigationActionMetadata.builder()
+                .user(actionMetadata.getUser())
+                .toolName(actionMetadata.getToolName())
+                .description(actionMetadata.getDescription())
+                .relatedTickets(actionMetadata.getRelatedTickets())
+                .build();
+            state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
             DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
             ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
                     new AttributeValue(To_Delete_State));
@@ -148,13 +156,21 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
     }
 
-     public void changeOwnerARN(String mitigationId, String newOwnerARN, String expectedOwnerARN) {
+     public void changeOwnerARN(String mitigationId, String newOwnerARN, String expectedOwnerARN, MitigationActionMetadata actionMetadata) {
              // Get current state
              MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
             if (state == null) {
                 throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
             }
-             state.setOwnerARN(newOwnerARN);
+            state.setOwnerARN(newOwnerARN);
+            com.amazon.blackwatch.mitigation.state.model.MitigationActionMetadata actionMetadataBlackWatch = 
+                com.amazon.blackwatch.mitigation.state.model.MitigationActionMetadata.builder()
+                .user(actionMetadata.getUser())
+                .toolName(actionMetadata.getToolName())
+                .description(actionMetadata.getDescription())
+                .relatedTickets(actionMetadata.getRelatedTickets())
+                .build();
+            state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
              DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
              ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
                      new AttributeValue(expectedOwnerARN));

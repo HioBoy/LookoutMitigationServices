@@ -160,19 +160,35 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
     @Test
     public void testDeactivateBlackWatchMitigation() throws IOException {
+        com.amazon.lookout.mitigation.service.MitigationActionMetadata requestMetadata = com.amazon.lookout.mitigation.service.MitigationActionMetadata.builder()
+            .withUser("Khaleesi_update")
+            .withToolName("JUnit_update")
+            .withDescription("Test Descr_update")
+            .withRelatedTickets(Arrays.asList("4321"))
+            .build();
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
-        blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId());
+        blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId(), requestMetadata);
         MitigationState newMitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationState1.getMitigationId());
         assertEquals(MitigationState.State.To_Delete.name(), newMitigationState.getState());
+        assertEquals(requestMetadata.getUser(), newMitigationState.getLatestMitigationActionMetadata().getUser());
+        assertEquals(requestMetadata.getToolName(), newMitigationState.getLatestMitigationActionMetadata().getToolName());
+        assertEquals(requestMetadata.getDescription(), newMitigationState.getLatestMitigationActionMetadata().getDescription());
+        assertEquals(requestMetadata.getRelatedTickets(), newMitigationState.getLatestMitigationActionMetadata().getRelatedTickets());
     }
 
     @Test
     public void testDeactivateBlackWatchMitigationFail() throws IOException {
+        com.amazon.lookout.mitigation.service.MitigationActionMetadata requestMetadata = com.amazon.lookout.mitigation.service.MitigationActionMetadata.builder()
+            .withUser("Khaleesi_update")
+            .withToolName("JUnit_update")
+            .withDescription("Test Descr_update")
+            .withRelatedTickets(Arrays.asList("4321"))
+            .build();
         mitigationState1.setState(MitigationState.State.To_Delete.name());
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         Throwable caughtException = null;
         try {
-            blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId());
+            blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId(), requestMetadata);
         } catch (ConditionalCheckFailedException ex) {
             caughtException = ex;
         }
@@ -184,8 +200,14 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testDeactivateBlackWatchMitigationNonExistant() throws IOException {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         Throwable caughtException = null;
+        com.amazon.lookout.mitigation.service.MitigationActionMetadata requestMetadata = com.amazon.lookout.mitigation.service.MitigationActionMetadata.builder()
+            .withUser("Khaleesi_update")
+            .withToolName("JUnit_update")
+            .withDescription("Test Descr_update")
+            .withRelatedTickets(Arrays.asList("4321"))
+            .build();
         try {
-            blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId() + "Fail");
+            blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId() + "Fail", requestMetadata);
         } catch (IllegalArgumentException ex) {
             caughtException = ex;
         }
@@ -195,20 +217,36 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
     @Test
     public void testChangeOwnerARN() throws IOException {
+        com.amazon.lookout.mitigation.service.MitigationActionMetadata requestMetadata = com.amazon.lookout.mitigation.service.MitigationActionMetadata.builder()
+            .withUser("Khaleesi_update")
+            .withToolName("JUnit_update")
+            .withDescription("Test Descr_update")
+            .withRelatedTickets(Arrays.asList("4321"))
+            .build();
         String newOwnerARN  = "new" + testOwnerARN;
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
-        blackWatchMitigationInfoHandler.changeOwnerARN(mitigationState1.getMitigationId(), newOwnerARN, testOwnerARN);
+        blackWatchMitigationInfoHandler.changeOwnerARN(mitigationState1.getMitigationId(), newOwnerARN, testOwnerARN, requestMetadata);
         MitigationState newMitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationState1.getMitigationId());
         assertEquals(newOwnerARN, newMitigationState.getOwnerARN());
+        assertEquals(requestMetadata.getUser(), newMitigationState.getLatestMitigationActionMetadata().getUser());
+        assertEquals(requestMetadata.getToolName(), newMitigationState.getLatestMitigationActionMetadata().getToolName());
+        assertEquals(requestMetadata.getDescription(), newMitigationState.getLatestMitigationActionMetadata().getDescription());
+        assertEquals(requestMetadata.getRelatedTickets(), newMitigationState.getLatestMitigationActionMetadata().getRelatedTickets());
     }
 
     @Test
     public void testChangeOwnerARNFail() throws IOException {
+        com.amazon.lookout.mitigation.service.MitigationActionMetadata requestMetadata = com.amazon.lookout.mitigation.service.MitigationActionMetadata.builder()
+            .withUser("Khaleesi_update")
+            .withToolName("JUnit_update")
+            .withDescription("Test Descr_update")
+            .withRelatedTickets(Arrays.asList("4321"))
+            .build();
         String newOwnerARN  = "new" + testOwnerARN;
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         Throwable caughtException = null;
         try {
-            blackWatchMitigationInfoHandler.changeOwnerARN(mitigationState1.getMitigationId(), newOwnerARN, newOwnerARN);
+            blackWatchMitigationInfoHandler.changeOwnerARN(mitigationState1.getMitigationId(), newOwnerARN, newOwnerARN, requestMetadata);
         } catch (ConditionalCheckFailedException ex) {
             caughtException = ex;
         }
@@ -217,11 +255,17 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
     @Test
     public void testChangeOwnerARNFailNonExistant() throws IOException {
+        com.amazon.lookout.mitigation.service.MitigationActionMetadata requestMetadata = com.amazon.lookout.mitigation.service.MitigationActionMetadata.builder()
+            .withUser("Khaleesi_update")
+            .withToolName("JUnit_update")
+            .withDescription("Test Descr_update")
+            .withRelatedTickets(Arrays.asList("4321"))
+            .build();
         String newOwnerARN  = "new" + testOwnerARN;
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         Throwable caughtException = null;
         try {
-            blackWatchMitigationInfoHandler.changeOwnerARN("Fail" + mitigationState1.getMitigationId(), newOwnerARN, newOwnerARN);
+            blackWatchMitigationInfoHandler.changeOwnerARN("Fail" + mitigationState1.getMitigationId(), newOwnerARN, newOwnerARN, requestMetadata);
         } catch (IllegalArgumentException ex) {
             caughtException = ex;
         }

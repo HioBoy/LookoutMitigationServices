@@ -67,7 +67,8 @@ public class ChangeBlackWatchMitigationOwnerARNActivity extends Activity {
 
             // Deactivate
             blackwatchMitigationInfoHandler.changeOwnerARN(mitigationId,
-                    request.getNewOwnerARN(), request.getExpectedOwnerARN());
+                    request.getNewOwnerARN(), request.getExpectedOwnerARN(),
+                    request.getMitigationActionMetadata());
 
             // Create the response object to return back to the client.
             ChangeBlackWatchMitigationOwnerARNResponse response = new ChangeBlackWatchMitigationOwnerARNResponse();
