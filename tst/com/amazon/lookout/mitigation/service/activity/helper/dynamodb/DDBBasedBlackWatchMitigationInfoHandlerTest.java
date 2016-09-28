@@ -18,10 +18,11 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
+import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
-import com.amazon.blackwatch.mitigation.state.model.MitigationActionMetadata;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState.Setting;
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
@@ -98,7 +99,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 .mitigationSettingsJSON("{ \"IncludeEC2NetworkACLs\":\"True\", \"ip_validation\": \"DROP\"}")
                 .mitigationSettingsJSONChecksum("ABABABABA")
                 .minutesToLive(100)
-                .latestMitigationActionMetadata(MitigationActionMetadata.builder()
+                .latestMitigationActionMetadata(BlackWatchMitigationActionMetadata.builder()
                         .user("Khaleesi")
                         .toolName("JUnit")
                         .description("Test Descr")
@@ -120,7 +121,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 .mitigationSettingsJSON("{ \"IncludeEC2NetworkACLs\":\"True\", \"ip_validation\": \"DROP\"}")
                 .mitigationSettingsJSONChecksum("ABABABABA")
                 .minutesToLive(100)
-                .latestMitigationActionMetadata(MitigationActionMetadata.builder()
+                .latestMitigationActionMetadata(BlackWatchMitigationActionMetadata.builder()
                         .user("Khaleesi")
                         .toolName("JUnit")
                         .description("Test Descr")
@@ -178,7 +179,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
     @Test
     public void testDeactivateBlackWatchMitigationFail() throws IOException {
-        com.amazon.lookout.mitigation.service.MitigationActionMetadata requestMetadata = com.amazon.lookout.mitigation.service.MitigationActionMetadata.builder()
+        MitigationActionMetadata requestMetadata = MitigationActionMetadata.builder()
             .withUser("Khaleesi_update")
             .withToolName("JUnit_update")
             .withDescription("Test Descr_update")
@@ -200,7 +201,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testDeactivateBlackWatchMitigationNonExistant() throws IOException {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         Throwable caughtException = null;
-        com.amazon.lookout.mitigation.service.MitigationActionMetadata requestMetadata = com.amazon.lookout.mitigation.service.MitigationActionMetadata.builder()
+        MitigationActionMetadata requestMetadata = MitigationActionMetadata.builder()
             .withUser("Khaleesi_update")
             .withToolName("JUnit_update")
             .withDescription("Test Descr_update")

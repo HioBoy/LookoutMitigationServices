@@ -13,12 +13,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.google.common.collect.ImmutableMap;
-
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
@@ -136,8 +136,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
             }
             state.setState(To_Delete_State);
-            com.amazon.blackwatch.mitigation.state.model.MitigationActionMetadata actionMetadataBlackWatch = 
-                com.amazon.blackwatch.mitigation.state.model.MitigationActionMetadata.builder()
+            BlackWatchMitigationActionMetadata actionMetadataBlackWatch = BlackWatchMitigationActionMetadata.builder()
                 .user(actionMetadata.getUser())
                 .toolName(actionMetadata.getToolName())
                 .description(actionMetadata.getDescription())
@@ -163,8 +162,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
             }
             state.setOwnerARN(newOwnerARN);
-            com.amazon.blackwatch.mitigation.state.model.MitigationActionMetadata actionMetadataBlackWatch = 
-                com.amazon.blackwatch.mitigation.state.model.MitigationActionMetadata.builder()
+            BlackWatchMitigationActionMetadata actionMetadataBlackWatch = BlackWatchMitigationActionMetadata.builder()
                 .user(actionMetadata.getUser())
                 .toolName(actionMetadata.getToolName())
                 .description(actionMetadata.getDescription())
