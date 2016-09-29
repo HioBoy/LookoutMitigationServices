@@ -2,6 +2,8 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -20,6 +22,7 @@ import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
+import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -42,7 +45,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         this.parallelScanSegments = parallelScanSegments;
     }
 
-    private LocationMitigationStateSettings convertLocationStateSettings(MitigationState.Setting mitigationSettins) {
+    private LocationMitigationStateSettings convertLocationStateSettings(MitigationStateSetting mitigationSettins) {
         return LocationMitigationStateSettings.builder()
                 .withBPS(mitigationSettins.getBPS())
                 .withPPS(mitigationSettins.getPPS())
@@ -94,7 +97,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     
                     Map<String, LocationMitigationStateSettings> locationMitigationState = ms.getLocationMitigationState().entrySet().stream()
                             .collect(Collectors.toMap(p -> p.getKey(), p -> convertLocationStateSettings(p.getValue())));
-                            
+                    
                     BlackWatchMitigationDefinition mitigationDefinition = BlackWatchMitigationDefinition.builder()
                             .withMitigationId(ms.getMitigationId())
                             .withResourceId(ms.getResourceId())

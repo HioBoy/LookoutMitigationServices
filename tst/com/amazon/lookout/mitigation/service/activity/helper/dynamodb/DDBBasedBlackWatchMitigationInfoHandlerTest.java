@@ -6,8 +6,10 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -24,10 +26,11 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
-import com.amazon.blackwatch.mitigation.state.model.MitigationState.Setting;
+import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
 import com.amazon.coral.metrics.Metrics;
 import com.amazon.coral.metrics.MetricsFactory;
+import com.google.common.collect.ImmutableSet;
 
 public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final String domain = "unit-test-domain";
@@ -53,9 +56,9 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final String testResourceType = "testResourceType";
 
     
-    private static final Map<String, List<String>> recordedResourcesMap = new HashMap<String, List<String>>();
-    private static final Setting setting = new Setting();  
-    private static final Map<String, Setting> locationMitigationState = new HashMap<String, Setting> ();
+    private static final Map<String, Set<String>> recordedResourcesMap = new HashMap<String, Set<String>>();
+    private static final MitigationStateSetting setting = new MitigationStateSetting();  
+    private static final Map<String, MitigationStateSetting> locationMitigationState = new HashMap<String, MitigationStateSetting> ();
 
     private static MitigationState mitigationState1;
     private static MitigationState mitigationState2;
@@ -78,8 +81,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         Mockito.doReturn(metrics).when(metrics).newMetrics();
         tsdMetrics = new TSDMetrics(metricsFactory);
         
-        recordedResourcesMap.put("ELB", Arrays.asList("ELB-18181"));
-        recordedResourcesMap.put("EC2", Arrays.asList("EC2-55858"));
+        recordedResourcesMap.put("ELB", ImmutableSet.of("ELB-18181"));
+        recordedResourcesMap.put("EC2", ImmutableSet.of("EC2-55858"));
 
         setting.setMitigationSettingsJSONChecksum("234534dfgdfg3344");
         setting.setPPS(151515L);
@@ -149,7 +152,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         assertEquals(bwMitigationDefinition.getLatestMitigationActionMetadata().getRelatedTickets(), ms.getLatestMitigationActionMetadata().getRelatedTickets());
         
         Map<String, LocationMitigationStateSettings> locationMitigationStateSettings = bwMitigationDefinition.getLocationMitigationState();
-        Map<String, Setting> locationMitigationStateSettingsExpected = ms.getLocationMitigationState();
+        Map<String, MitigationStateSetting> locationMitigationStateSettingsExpected = ms.getLocationMitigationState();
         assertEquals(locationMitigationStateSettings.keySet(), locationMitigationStateSettingsExpected.keySet());
         for (String key : locationMitigationStateSettings.keySet()) {
             assertEquals(locationMitigationStateSettings.get(key).getBPS(), locationMitigationStateSettingsExpected.get(key).getBPS());
