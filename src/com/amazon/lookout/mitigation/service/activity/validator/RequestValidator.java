@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.validator;
 
 import java.beans.ConstructorProperties;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -14,8 +15,8 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import lombok.NonNull;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.Validate;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.builder.RecursiveToStringStyle;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
@@ -23,7 +24,9 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
 
 import com.amazon.lookout.ddb.model.TransitProvider;
+import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
+import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.BlackholeDeviceInfo;
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;
 import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
@@ -49,6 +52,7 @@ import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.TransitProviderInfo;
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
@@ -65,6 +69,9 @@ import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.model.RequestType;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -91,7 +98,16 @@ public class RequestValidator {
     private static final int DEFAULT_MAX_LENGTH_RESOURCE_ID = 50;
     private static final int DEFAULT_MAX_LENGTH_RESOURCE_TYPE = 20;
     private static final int DEFAULT_MAX_LENGTH_OWNER_ARN = 100;
-
+    //Thirty days max
+    private static final int MAX_MINUTES_TO_LIVE_DAYS = 30;
+    private static final int MAX_MINUTES_TO_LIVE = MAX_MINUTES_TO_LIVE_DAYS*24*60;
+    
+    //50 locations at 320Gbps per
+    private static final long MAX_BPS = (long) (320L * 1e9 * 50);
+    //84Bytes is the min frame size including preamble and interframe gap.
+    private static final long MIN_FRAME_BITS = 8*84;
+    //10Gbps = 14.88Mpps
+    private static final long MAX_PPS = MAX_BPS/MIN_FRAME_BITS;
     
     private static final int DEFAULT_MAX_LENGTH_DESCRIPTION = 500;
     private static final int MAX_LENGTH_BLACKHOLE_DEVICE = 50;
@@ -100,6 +116,8 @@ public class RequestValidator {
     private static final int MAX_NUMBER_OF_TICKETS = 10;
     
     private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
+    
+    private static final ObjectReader jsonReader = new ObjectMapper().reader();
     
     private final Set<String> deviceNames;
     private final Set<String> deviceScopes;
@@ -639,8 +657,10 @@ public class RequestValidator {
     }
     
     private static void validateUserARN(String userARN) {
-        if (isInvalidFreeFormText(userARN, false, DEFAULT_MAX_LENGTH_OWNER_ARN)) {
-            String msg = "Invalid user ARN found! A valid user name ARN contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_OWNER_ARN + " ascii-printable characters.";
+        if (userARN == null || 
+                isInvalidFreeFormText(userARN, false, DEFAULT_MAX_LENGTH_OWNER_ARN)) {
+            String msg = "Invalid user ARN found! A valid user name ARN must not be null and contain more than 0 "
+                    + "and less than: " + DEFAULT_MAX_LENGTH_OWNER_ARN + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
@@ -651,6 +671,14 @@ public class RequestValidator {
             String msg = "Invalid resource type found! A valid resource type must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_RESOURCE_TYPE + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
+        }
+        try {
+            BlackWatchMitigationResourceType.valueOf(resourceType);
+        }  catch (IllegalArgumentException illestEx) {
+            //Catch the exception and throw a new one with a better message.
+            String message = String.format("Unsupported resource type specified:%s  Acceptable values:%s", 
+                    resourceType, Arrays.toString(BlackWatchMitigationResourceType.values()));
+            throw new IllegalArgumentException(message);
         }
     }
     
@@ -1018,6 +1046,77 @@ public class RequestValidator {
             break;
         default:
             throw new IllegalArgumentException("Unsupported device name " + device);
+        }
+    }
+
+    public void validateUpdateBlackWatchMitigationRequest(@NonNull UpdateBlackWatchMitigationRequest request, 
+            @NonNull String userARN) {       
+        validateUserName(request.getMitigationActionMetadata().getUser());
+        validateToolName(request.getMitigationActionMetadata().getToolName());
+        validateMitigationId(request.getMitigationId());
+        validateMinutesToLive(request.getMinutesToLive());
+        validatePacketsPerSecond(request.getGlobalPPS());
+        validateBitsPerSecond(request.getGlobalBPS());
+        validateMitigationSettingsJSON(request.getMitigationSettingsJSON());
+        validateUserARN(userARN);
+    }  
+
+    public void validateApplyBlackWatchMitigationRequest(@NonNull ApplyBlackWatchMitigationRequest request,
+            String userARN) {
+        validateUserName(request.getMitigationActionMetadata().getUser());
+        validateToolName(request.getMitigationActionMetadata().getToolName());
+        validateResourceId(request.getResourceId());
+        validateResourceType(request.getResourceType());
+        validateMinutesToLive(request.getMinutesToLive());
+        validatePacketsPerSecond(request.getGlobalPPS());
+        validateBitsPerSecond(request.getGlobalBPS());
+        validateMitigationSettingsJSON(request.getMitigationSettingsJSON());
+        validateUserARN(userARN);
+    }
+    
+    private void validateMinutesToLive(Integer minutesToLive) {
+        //Allow null and zero to be overridden.
+        if (minutesToLive != null && minutesToLive != 0) {
+            Validate.inclusiveBetween(1, MAX_MINUTES_TO_LIVE, minutesToLive, 
+                    String.format("Minutes to live must be between 1 and %d (%d days) Invalid value:%d",
+                            MAX_MINUTES_TO_LIVE, MAX_MINUTES_TO_LIVE_DAYS, minutesToLive));
+        }
+    }
+    
+    private void validatePacketsPerSecond(Long pps) {
+        if (pps != null) {
+            Validate.inclusiveBetween(0, MAX_PPS, pps, 
+                    String.format("PPS (packets per second) must be between 0 and %d Invalid value:%d",
+                            MAX_PPS, pps));
+        }
+    }
+    
+    private void validateBitsPerSecond(Long bps) {
+        if (bps != null) {
+            Validate.inclusiveBetween(0, MAX_BPS, bps, 
+                    String.format("BPS (bits per second) must be between 0 and %d Invalid value:%d",
+                            MAX_BPS, bps));
+        }
+    }
+
+    private void validateMitigationSettingsJSON(@NonNull String mitigationSettingsJSON) {
+        //For now, just validate it is properly formatted JSON.
+        try {
+            jsonReader.readTree(mitigationSettingsJSON);
+        } catch (JsonProcessingException e) {
+            String message;
+            if (mitigationSettingsJSON.isEmpty()) {
+                message = "Can not parse empty mitigation settings JSON.  To clear the values, specify an empty JSON"
+                        + " document IE: \"{}\"";
+            } else {
+                message = String.format("Could not parse mitigation settings JSON: %s", 
+                        ReflectionToStringBuilder.toString(e));
+            }
+            throw new IllegalArgumentException(message);
+        } catch (IOException e) {
+            LOG.warn(String.format("Caught unexpected IOException while parsing json. %s", 
+                    ReflectionToStringBuilder.toString(e)));
+            throw new RuntimeException("Caught unexpected Exception while parsing json.");
         }
     }
 }

@@ -138,4 +138,12 @@
     <bean id="gamma.MitigationState.writeCapacityUnits" class="java.lang.Long">
         <constructor-arg value="50"/>
     </bean>
+    
+    <bean id="gamma.ResourceAllocationState.readCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
+
+    <bean id="gamma.ResourceAllocationState.writeCapacityUnits" class="java.lang.Long">
+        <constructor-arg value="50"/>
+    </bean>
 </beans>

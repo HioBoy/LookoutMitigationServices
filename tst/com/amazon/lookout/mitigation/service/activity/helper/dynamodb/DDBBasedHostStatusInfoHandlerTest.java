@@ -17,7 +17,6 @@ import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.mitigation.service.HostStatusInLocation;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazon.blackwatch.host.status.model.HostStatus;
 import com.amazon.blackwatch.host.status.model.HostType;
 import com.amazon.blackwatch.host.status.storage.HostStatusDynamoDBHelper;

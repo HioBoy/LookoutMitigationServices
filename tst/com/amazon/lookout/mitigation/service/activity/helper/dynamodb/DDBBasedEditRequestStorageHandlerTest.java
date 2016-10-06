@@ -566,7 +566,6 @@ public class DDBBasedEditRequestStorageHandlerTest {
                 () -> storageHandler.storeRequestForWorkflow(request3, defaultLocations, tsdMetrics));
     }
     
-    @SuppressWarnings("deprecation")
     @Test
     public void testUpdateRunIdForWorkflowRequest() {
         EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);

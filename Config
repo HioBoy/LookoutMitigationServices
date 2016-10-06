@@ -41,6 +41,7 @@ package.LookoutMitigationService = {
             CoralAwsAuthentication = 1.1; # To support authenticating/authorizing calls to LookoutMitigationService.
             OdinAWSCredentials = 1.4;
             
+            LookoutIpMath = 1.0;
             AWS158Commons = 1.1;
             DaasControlAPIServiceJavaClient = 1.0;
             EdgeOperatorServiceJavaClient = 1.0;

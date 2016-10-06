@@ -1,55 +1,70 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
-import java.beans.ConstructorProperties;
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 
-import org.apache.commons.lang.Validate;
+import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.google.common.collect.ImmutableMap;
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
+import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator;
+import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
+import com.amazon.blackwatch.mitigation.state.model.ResourceAllocationState;
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
+import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationHelper;
+import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDynamoDBHelper;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBSaveExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBSaveExpression;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
 
+@RequiredArgsConstructor
 public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitigationInfoHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedBlackWatchMitigationInfoHandler.class);
-
-    private int parallelScanSegments;
-    private MitigationStateDynamoDBHelper mitigationStateDynamoDBHelper;
+    private static final int DEFAULT_MINUTES_TO_LIVE = 180;
+    
+    private final MitigationStateDynamoDBHelper mitigationStateDynamoDBHelper;
+    private final ResourceAllocationStateDynamoDBHelper resourceAllocationStateDynamoDBHelper;
+    private final ResourceAllocationHelper resourceAllocationHelper;
+    private final Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeValidator> resourceTypeValidatorMap;
+    private final int parallelScanSegments;
+    
     private static final String QUERY_BLACKWATCH_MITIGATION_FAILURE = "QUERY_BLACKWATCH_MITIGATION_FAILED";
 
-    @ConstructorProperties({ "mitigationStateDynamoDBHelper", "parallelScanSegments" })
-    public DDBBasedBlackWatchMitigationInfoHandler(@NonNull MitigationStateDynamoDBHelper mitigationStateDynamoDBHelper,
-            int parallelScanSegments) {
-        this.mitigationStateDynamoDBHelper = mitigationStateDynamoDBHelper;
-        this.parallelScanSegments = parallelScanSegments;
-    }
-
-    private LocationMitigationStateSettings convertLocationStateSettings(MitigationStateSetting mitigationSettins) {
+    private static final int CHECKSUM_HEX_DIGITS = 64;
+    private static final String CHECKSUM_ALGORITHM = "SHA-256";
+    private static final String JSON_ENCODING_CHARSET = "UTF-8";
+    
+    private LocationMitigationStateSettings convertMitSSToLocMSS(MitigationStateSetting mitigationSettings) {
         return LocationMitigationStateSettings.builder()
-                .withBPS(mitigationSettins.getBPS())
-                .withPPS(mitigationSettins.getPPS())
-                .withMitigationSettingsJSONChecksum(mitigationSettins.getMitigationSettingsJSONChecksum())
+                .withBPS(mitigationSettings.getBPS())
+                .withPPS(mitigationSettings.getPPS())
+                .withMitigationSettingsJSONChecksum(mitigationSettings.getMitigationSettingsJSONChecksum())
                 .build();
     }
     
@@ -62,7 +77,8 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             String resourceType, String ownerARN, long maxNumberOfEntriesToReturn, TSDMetrics tsdMetrics) {
         
         Validate.notNull(tsdMetrics);
-        try(TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler.getBlackWatchMitigations")) {
+        try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler"
+                + ".getBlackWatchMitigations")) {
             List<BlackWatchMitigationDefinition> listOfBlackWatchMitigations = new ArrayList<>();
             try {
                 DynamoDBScanExpression scanExpression = new DynamoDBScanExpression();
@@ -85,18 +101,20 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                                 .withAttributeValueList(new AttributeValue().withS(resourceType)));
                 }
                 
-                List<MitigationState> mitigationStates = mitigationStateDynamoDBHelper.getMitigationState(scanExpression, parallelScanSegments);
+                List<MitigationState> mitigationStates = mitigationStateDynamoDBHelper
+                        .getMitigationState(scanExpression, parallelScanSegments);
                 
                 for (MitigationState ms : mitigationStates) {
-                    MitigationActionMetadata mitigationActionMetadata = MitigationActionMetadata.builder()
-                            .withUser(ms.getLatestMitigationActionMetadata().getUser())
-                            .withToolName(ms.getLatestMitigationActionMetadata().getToolName())
-                            .withDescription(ms.getLatestMitigationActionMetadata().getDescription())
-                            .withRelatedTickets(ms.getLatestMitigationActionMetadata().getRelatedTickets())
-                            .build();
+                    //Opted for a different POJO between the service layer and the DB layer.  Unfortunately it creates 
+                    //this dirt.
+                    MitigationActionMetadata mitigationActionMetadata = 
+                            bwMetadataToCoralMetadata(ms.getLatestMitigationActionMetadata());
                     
-                    Map<String, LocationMitigationStateSettings> locationMitigationState = ms.getLocationMitigationState().entrySet().stream()
-                            .collect(Collectors.toMap(p -> p.getKey(), p -> convertLocationStateSettings(p.getValue())));
+                    Map<String, MitigationStateSetting> locState = ObjectUtils.defaultIfNull(
+                            ms.getLocationMitigationState(), new HashMap<String, MitigationStateSetting>());
+                    Map<String, LocationMitigationStateSettings> locationMitigationState = 
+                            locState.entrySet().stream().collect(Collectors
+                                    .toMap(p -> p.getKey(), p -> convertMitSSToLocMSS(p.getValue())));
                     
                     BlackWatchMitigationDefinition mitigationDefinition = BlackWatchMitigationDefinition.builder()
                             .withMitigationId(ms.getMitigationId())
@@ -121,7 +139,8 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     }
                 }
             } catch (Exception ex) {
-                String msg = String.format("Caught exception when querying blackwatch mitigations with mitigationId: %s, resourceId: %s, resourceType: %s, ownerARN: %s",
+                String msg = String.format("Caught exception when querying blackwatch mitigations with "
+                        + "mitigationId: %s, resourceId: %s, resourceType: %s, ownerARN: %s",
                         mitigationId, resourceId, resourceType, ownerARN);
                 LOG.error(msg, ex);
                 subMetrics.addOne(QUERY_BLACKWATCH_MITIGATION_FAILURE);
@@ -129,6 +148,226 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             }
             return listOfBlackWatchMitigations;
         }
+    }
+    
+
+    /**
+     * Method to return the checksum of the input represented as a zero padded Hex string.
+     * @param inputString - String to run the checksum on
+     * @return null is inputString is null, otherwise returns the strings checksum in hex.
+     */
+    String getHexStringChecksum(String inputString) {
+        try {
+            if (inputString == null) {
+                return null;
+            }
+            MessageDigest md = MessageDigest.getInstance(CHECKSUM_ALGORITHM);
+            md.update(inputString.getBytes(JSON_ENCODING_CHARSET));
+            byte[] digest = md.digest();
+            return String.format("%0"+ CHECKSUM_HEX_DIGITS + "x", new java.math.BigInteger(1, digest));
+        }  catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
+            LOG.error("Unexpected error occurred while generating checksum " + ReflectionToStringBuilder.toString(e));
+            throw new RuntimeException("Unexpected exception occurred while generating checksum.");
+        }
+    }
+    
+    
+    @Override
+    public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId, Long globalPPS,
+            Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata, String mitigationSettingsJSON,
+            String userARN, TSDMetrics tsdMetrics) {
+        Validate.notNull(mitigationId);
+        Validate.notNull(userARN);
+        Validate.notNull(tsdMetrics);
+        try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler"
+                + ".updateBlackWatchMitigation")) {
+            
+            MitigationState mitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+            if (mitigationState == null) {
+                String message = String.format("MitigationId:%s could not be found in MitigationState table.", 
+                        mitigationId);
+                subMetrics.addOne("BadMitigationId");
+                throw new IllegalArgumentException(message);
+            }
+            subMetrics.addZero("BadMitigationId");
+            String resourceId = mitigationState.getResourceId();
+            String resourceTypeString = mitigationState.getResourceType();
+            BlackWatchMitigationResourceType resourceType = BlackWatchMitigationResourceType.valueOf(resourceTypeString);
+            BlackWatchResourceTypeValidator typeValidator = resourceTypeValidatorMap.get(resourceType);
+            if (typeValidator == null) {
+                String msg = String.format("Resource type specific validator could not be found! Type:%s", 
+                        resourceTypeString);
+                throw new IllegalArgumentException(msg);
+            }
+            String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
+            Map<BlackWatchMitigationResourceType, Set<String>> resourceMap = 
+                    typeValidator.getCanonicalMapOfResources(resourceId, mitigationSettingsJSON);
+            LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
+                    canonicalResourceId, ReflectionToStringBuilder.toString(resourceMap)));
+            String previousOwnerARN = mitigationState.getOwnerARN();
+            mitigationState.setChangeTime(System.currentTimeMillis());
+            mitigationState.setPpsRate(globalPPS);
+            mitigationState.setBpsRate(globalBPS);
+            mitigationState.setOwnerARN(userARN);
+            mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
+            mitigationState.setMitigationSettingsJSONChecksum(getHexStringChecksum(mitigationSettingsJSON));
+            mitigationState.setMinutesToLive(minsToLive);
+            BlackWatchMitigationActionMetadata bwMetadata = coralMetadataToBWMetadata(metadata);
+            mitigationState.setLatestMitigationActionMetadata(bwMetadata);
+            saveMitigationState(mitigationState, false, subMetrics);
+            
+            UpdateBlackWatchMitigationResponse response = new UpdateBlackWatchMitigationResponse();
+            response.setMitigationId(mitigationId);
+            response.setPreviousOwnerARN(previousOwnerARN);
+            return response;
+        }
+    }
+    
+    @Override
+    public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceTypeString,
+            Long globalPPS, Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata,
+            String mitigationSettingsJSON, String userARN, TSDMetrics tsdMetrics) {
+        Validate.notNull(resourceId);
+        Validate.notNull(resourceTypeString);
+        Validate.notNull(userARN);
+        Validate.notNull(tsdMetrics);
+        try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler"
+                + ".applyBlackWatchMitigation")) {
+        
+            boolean newMitigationCreated = false;
+            String mitigationId;
+            
+            BlackWatchMitigationResourceType resourceType = BlackWatchMitigationResourceType.valueOf(resourceTypeString);
+            BlackWatchResourceTypeValidator typeValidator = resourceTypeValidatorMap.get(resourceType);
+            if (typeValidator == null) {
+                String msg = String.format("Resource type specific validator could not be found! Type:%s", 
+                        resourceTypeString);
+                LOG.error(msg);
+                throw new IllegalArgumentException(msg);
+            }
+
+            String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
+            Map<BlackWatchMitigationResourceType, Set<String>> resourceMap = 
+                    typeValidator.getCanonicalMapOfResources(resourceId, mitigationSettingsJSON);
+            LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
+                    canonicalResourceId, ReflectionToStringBuilder.toString(resourceMap)));
+            
+            ResourceAllocationState resourceState = resourceAllocationStateDynamoDBHelper
+                    .getResourceAllocationState(canonicalResourceId);
+            
+            MitigationState mitigationState;
+            if (resourceState != null) {
+                Validate.isTrue(resourceState.getResourceType().equals(resourceTypeString), String.format(
+                        "Recorded resourceId:%s with type:%s does not match the specified type:%s", canonicalResourceId,
+                        resourceState.getResourceType(), resourceTypeString));
+                newMitigationCreated = false;
+                mitigationId = resourceState.getMitigationId();
+                mitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+                if (mitigationState == null) {
+                    String message = String.format("MitigationId:%s returned from the resource does not exist!", 
+                            mitigationId);
+                    throw new IllegalArgumentException(message);
+                }
+                if (!mitigationState.getOwnerARN().equals(userARN)) {
+                    String message = String.format("Cannot apply update to mitigationId:%s as the calling owner:%s "
+                            + "does not match the recorded owner:%s", mitigationId, userARN, mitigationState.getOwnerARN());
+                    throw new IllegalArgumentException(message);
+                }
+            } else {
+                newMitigationCreated = true;
+                mitigationId = generateMitigationId();
+                mitigationState = MitigationState.builder()
+                        .mitigationId(mitigationId)
+                        .resourceId(canonicalResourceId)
+                        .resourceType(resourceTypeString)
+                        .state(MitigationState.State.Active.name())
+                        .ownerARN(userARN)
+                        .build();
+            }            
+            mitigationState.setChangeTime(System.currentTimeMillis());
+            mitigationState.setPpsRate(globalPPS);
+            mitigationState.setBpsRate(globalBPS);
+            mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
+            mitigationState.setMitigationSettingsJSONChecksum(getHexStringChecksum(mitigationSettingsJSON));
+            mitigationState.setMinutesToLive(minsToLive);
+            BlackWatchMitigationActionMetadata bwMetadata = coralMetadataToBWMetadata(metadata);
+            mitigationState.setLatestMitigationActionMetadata(bwMetadata);
+            saveMitigationState(mitigationState, newMitigationCreated, subMetrics);
+            
+            if (newMitigationCreated) {
+                boolean allocationProposalSuccess = resourceAllocationHelper.proposeNewMitigationResourceAllocation(
+                        mitigationId, resourceId, resourceTypeString);
+                if (!allocationProposalSuccess) {
+                    String msg = String.format("Could not complete resource allocation for mitigationId:%s "
+                            + "resourceId:%s resourceType:%s", mitigationId, resourceId, resourceType);
+                    mitigationStateDynamoDBHelper.deleteMitigationState(mitigationState);
+                    throw new IllegalArgumentException(msg);
+                }
+            }
+    
+            ApplyBlackWatchMitigationResponse response = new ApplyBlackWatchMitigationResponse();
+            response.setNewMitigationCreated(newMitigationCreated);
+            response.setMitigationId(mitigationId);
+            return response;
+        }
+    }
+    
+
+    private void saveMitigationState(MitigationState mitigationState, boolean newMitigationCreated, 
+            TSDMetrics subMetrics) {
+        
+        Integer minsToLive = mitigationState.getMinutesToLive();
+        if (minsToLive == null || minsToLive == 0) {
+            mitigationState.setMinutesToLive(DEFAULT_MINUTES_TO_LIVE);
+        }
+        DynamoDBSaveExpression saveExpression = new DynamoDBSaveExpression();
+        Map<String, ExpectedAttributeValue> expectedAttributes = new HashMap<String, ExpectedAttributeValue>();
+        if (newMitigationCreated) {
+            ExpectedAttributeValue doesNotExistValue = new ExpectedAttributeValue(false);
+            expectedAttributes.put(MitigationState.MITIGATION_ID_KEY, doesNotExistValue);
+        } else {
+            //Don't allow updates on mitigations that are being deleted.
+            ExpectedAttributeValue expectedAttribute = new ExpectedAttributeValue(new AttributeValue(
+                    MitigationState.State.To_Delete.name()));
+            expectedAttribute.setComparisonOperator(ComparisonOperator.NE);
+            expectedAttributes.put(MitigationState.STATE_KEY, expectedAttribute);
+        }
+        saveExpression.setExpected(expectedAttributes);
+        try {
+            mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(mitigationState, saveExpression);
+        } catch (ConditionalCheckFailedException conEx) {
+            String msg;;
+            if (newMitigationCreated) {
+                msg = "Could not save MitigationState due to conditional failure! "
+                        + "Conflicting MitigationId on a new mitigation.";
+            } else {
+                msg = String.format("Could not save MitigationState due to conditional failure! "
+                        + "MitigationState must not be: %s", MitigationState.State.To_Delete.name());
+            }
+            LOG.error(msg);
+            throw new IllegalArgumentException(msg);
+        } finally {
+            subMetrics.addCount("NewMitgationCreated", newMitigationCreated ? 1 : 0);
+            subMetrics.addCount("ExistingMitgationModified", newMitigationCreated ? 0 : 1);
+        }
+    }
+
+    private BlackWatchMitigationActionMetadata coralMetadataToBWMetadata(MitigationActionMetadata metadata) {
+        return BlackWatchMitigationActionMetadata.builder()
+                .user(metadata.getUser())
+                .toolName(metadata.getToolName())
+                .description(metadata.getDescription())
+                .relatedTickets(metadata.getRelatedTickets())
+                .build();
+    }
+    
+    private MitigationActionMetadata bwMetadataToCoralMetadata(BlackWatchMitigationActionMetadata metadata) {
+        return MitigationActionMetadata.builder()
+                .withUser(metadata.getUser())
+                .withToolName(metadata.getToolName())
+                .withDescription(metadata.getDescription())
+                .withRelatedTickets(metadata.getRelatedTickets())
+                .build();
     }
 
     public void deactivateMitigation(String mitigationId, MitigationActionMetadata actionMetadata) {
@@ -139,47 +378,34 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
             }
             state.setState(To_Delete_State);
-            BlackWatchMitigationActionMetadata actionMetadataBlackWatch = BlackWatchMitigationActionMetadata.builder()
-                .user(actionMetadata.getUser())
-                .toolName(actionMetadata.getToolName())
-                .description(actionMetadata.getDescription())
-                .relatedTickets(actionMetadata.getRelatedTickets())
-                .build();
+            BlackWatchMitigationActionMetadata actionMetadataBlackWatch = coralMetadataToBWMetadata(actionMetadata);
             state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
             DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
             ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
                     new AttributeValue(To_Delete_State));
             expectedValue.setComparisonOperator(ComparisonOperator.NE);
             Map<String, ExpectedAttributeValue> expectedAttributes = 
-                    ImmutableMap.<String, ExpectedAttributeValue>builder().
-                    put(MitigationState.STATE_KEY, expectedValue).
-                    build();
+                    ImmutableMap.of(MitigationState.STATE_KEY, expectedValue);
             condition.setExpected(expectedAttributes);
             mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
     }
 
-     public void changeOwnerARN(String mitigationId, String newOwnerARN, String expectedOwnerARN, MitigationActionMetadata actionMetadata) {
+     public void changeOwnerARN(String mitigationId, String newOwnerARN, String expectedOwnerARN, 
+             MitigationActionMetadata actionMetadata) {
              // Get current state
              MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
             if (state == null) {
                 throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
             }
             state.setOwnerARN(newOwnerARN);
-            BlackWatchMitigationActionMetadata actionMetadataBlackWatch = BlackWatchMitigationActionMetadata.builder()
-                .user(actionMetadata.getUser())
-                .toolName(actionMetadata.getToolName())
-                .description(actionMetadata.getDescription())
-                .relatedTickets(actionMetadata.getRelatedTickets())
-                .build();
+            BlackWatchMitigationActionMetadata actionMetadataBlackWatch = coralMetadataToBWMetadata(actionMetadata);
             state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
              DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
              ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
                      new AttributeValue(expectedOwnerARN));
              expectedValue.setComparisonOperator(ComparisonOperator.EQ);
              Map<String, ExpectedAttributeValue> expectedAttributes = 
-                     ImmutableMap.<String, ExpectedAttributeValue>builder().
-                     put(MitigationState.OWNER_ARN_KEY, expectedValue).
-                     build();
+                     ImmutableMap.of(MitigationState.OWNER_ARN_KEY, expectedValue);
              condition.setExpected(expectedAttributes);
              mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
      }

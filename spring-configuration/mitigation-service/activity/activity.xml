@@ -128,6 +128,16 @@
         <constructor-arg name="blackwatchMitigationInfoHandler" ref="ddbBasedBlackWatchMitigationInfoHandler"/>
     </bean>
     
+    <bean class="com.amazon.lookout.mitigation.service.activity.UpdateBlackWatchMitigationActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="blackwatchMitigationInfoHandler" ref="ddbBasedBlackWatchMitigationInfoHandler"/>
+    </bean>
+    
+    <bean class="com.amazon.lookout.mitigation.service.activity.ApplyBlackWatchMitigationActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="blackwatchMitigationInfoHandler" ref="ddbBasedBlackWatchMitigationInfoHandler"/>
+    </bean>
+    
     <bean id="blackholeMetadataActivityBase" abstract="true">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
@@ -257,12 +267,40 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
     
+    <bean id="resourceAllocationStateDynamoDBHelper" class="com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDynamoDBHelper">
+        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
+        <constructor-arg name="realm" value="${realm}"/>
+        <constructor-arg name="domain" value="${domain}"/>
+        <constructor-arg name="readCapacityUnits" ref="${domain}.ResourceAllocationState.readCapacityUnits"/>
+        <constructor-arg name="writeCapacityUnits" ref="${domain}.ResourceAllocationState.writeCapacityUnits"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+    </bean>
+    
+    <bean id="resourceAllocationHelper" class="com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationHelper">
+        <constructor-arg name="mitigationStateDDBHelper" ref="mitigationStateDynamoDBHelper"/>
+        <constructor-arg name="resourceAllocationDDBHelper" ref="resourceAllocationStateDynamoDBHelper"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+    </bean>
+    
     <bean id="mitigationStateParallelScanSegments" class="java.lang.Integer">
         <constructor-arg value="4"/>
     </bean>
     
+    <bean id="IPAddressTypeValidator" class="com.amazon.lookout.mitigation.blackwatch.model.IPAddressResourceTypeValidator" />
+    <bean id="IPAddressListTypeValidator" class="com.amazon.lookout.mitigation.blackwatch.model.IPAddressListResourceTypeValidator" />
+    
+    <util:map id="resourceTypeValidatorMap" 
+        key-type="com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType" 
+        value-type="com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator">
+        <entry key="IPAddress" value-ref="IPAddressTypeValidator"/>
+        <entry key="IPAddressList" value-ref="IPAddressListTypeValidator"/>
+    </util:map>
+
     <bean id="ddbBasedBlackWatchMitigationInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedBlackWatchMitigationInfoHandler">
         <constructor-arg name="mitigationStateDynamoDBHelper" ref="mitigationStateDynamoDBHelper"/>
+        <constructor-arg name="resourceAllocationStateDynamoDBHelper" ref="resourceAllocationStateDynamoDBHelper"/>
+        <constructor-arg name="resourceAllocationHelper" ref="resourceAllocationHelper"/>
+        <constructor-arg name="resourceTypeValidatorMap" ref="resourceTypeValidatorMap"/>
         <constructor-arg name="parallelScanSegments" ref="mitigationStateParallelScanSegments"/>
     </bean>
     
@@ -310,7 +348,6 @@
             <list>
                 <ref bean="route53SubnetFetcher"/>
                 <ref bean="cloudFrontFMSSubnetsFetcher"/>
-                <ref bean="cloudFrontExternalVipsSubnetsFetcher"/>
             </list>
         </constructor-arg>
     </bean>

@@ -551,7 +551,6 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
                 () -> storageHandler.storeRequestForWorkflow(request3, defaultLocations, tsdMetrics));
     }
     
-    @SuppressWarnings("deprecation")
     @Test
     public void testUpdateRunIdForWorkflowRequest() {
         DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);

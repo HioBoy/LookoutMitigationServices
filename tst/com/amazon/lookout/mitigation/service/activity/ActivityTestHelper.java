@@ -8,6 +8,7 @@ import org.junit.BeforeClass;
 
 import static org.mockito.Mockito.*;
 
+import com.amazon.coral.service.Identity;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.HostStatusInfoHandler;
@@ -34,6 +35,7 @@ public class ActivityTestHelper {
     protected static final long workflowId = 1000;
     protected static final int maxNumberOfHistoryEntriesToFetch = 20;
     protected static final String requestId = "1000001";
+    protected static final Identity identity = new Identity();
     protected static final List<String> locations = Arrays.asList("G-IAD55", "G-SFO5");
     protected static final RequestStorageResponse requestStorageResponse = new RequestStorageResponse(workflowId, mitigationVersion);
     protected static final MitigationActionMetadata mitigationActionMetadata = new MitigationActionMetadata();
