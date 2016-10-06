@@ -17,4 +17,8 @@
     <bean id="authAccount.us-west-2.gamma" class="java.lang.String">
         <constructor-arg value="557458189618"/> <!-- lookout-dev+lktmsvc+gamma@amazon.com -->
     </bean>
+
+    <bean id="authAccount.us-west-2.prod" class="java.lang.String">
+        <constructor-arg value="498998024121"/> <!-- lookout-dev+lktmitsvc+pdx@amazon.com -->
+    </bean>
 </beans>
