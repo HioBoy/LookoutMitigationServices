@@ -71,10 +71,10 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final String testIPAddressListResourceType = BlackWatchMitigationResourceType.IPAddressList.name();
     private static final String testLocation = "BR-SFO5-1";
     private static final String testResourceType = "testResourceType";
-    private static final String testValidJSON = "{\"mitigation_settings_metadata\":{\"ip_list\":[]}";
+    private static final String testValidJSON = "{\"destinations\":[]}";
     //Generated with: echo -n $ESCAPED_STRING | sha256sum
-    private static final String validJSONChecksum = "8537290d6f3f41e06440768da1c6be972c804d6ccc5681c5561144e1a9045711";
-    private static final String ipListTemplate = "{\"mitigation_settings_metadata\":{\"ip_list\":[%s]}}";
+    private static final String validJSONChecksum = "df02fe14833a568f9c4f87a40ed316398617b768b4901d8e03499f52f2e20bc4";
+    private static final String ipListTemplate = "{\"destinations\":[%s]}";
     
     private static BlackWatchMitigationActionMetadata testBWMetadata;
     private static MitigationActionMetadata testMetadata;
