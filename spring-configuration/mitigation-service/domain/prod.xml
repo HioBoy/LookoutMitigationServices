@@ -60,6 +60,12 @@
         <value>BR-ORD51-1</value>
         <value>BR-ORD51-2</value>
         <!-- CMH -->
+        <!-- PDX -->
+        <value>BR-SEA19-1</value>
+        <value>BR-SEA19-2</value>
+        <value>BR-SEA4-1</value>
+        <value>BR-SEA4-2</value>
+        <!-- PDX -->
     </util:set>
     
     <bean id="prod.allowedLocationPrefix" class="java.lang.String">
