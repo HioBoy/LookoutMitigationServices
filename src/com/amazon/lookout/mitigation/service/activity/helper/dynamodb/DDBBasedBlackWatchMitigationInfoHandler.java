@@ -5,6 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,6 +29,7 @@ import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
+import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
@@ -51,6 +53,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     private final MitigationStateDynamoDBHelper mitigationStateDynamoDBHelper;
     private final ResourceAllocationStateDynamoDBHelper resourceAllocationStateDynamoDBHelper;
     private final ResourceAllocationHelper resourceAllocationHelper;
+    private final DogFishValidationHelper dogfishHelper;
     private final Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeValidator> resourceTypeValidatorMap;
     private final int parallelScanSegments;
     
@@ -59,6 +62,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     private static final int CHECKSUM_HEX_DIGITS = 64;
     private static final String CHECKSUM_ALGORITHM = "SHA-256";
     private static final String JSON_ENCODING_CHARSET = "UTF-8";
+    private static final int MAX_BW_IPADDRESSES = 256;
     
     private LocationMitigationStateSettings convertMitSSToLocMSS(MitigationStateSetting mitigationSettings) {
         return LocationMitigationStateSettings.builder()
@@ -204,6 +208,8 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     typeValidator.getCanonicalMapOfResources(resourceId, mitigationSettingsJSON);
             LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
                     canonicalResourceId, ReflectionToStringBuilder.toString(resourceMap)));
+            validateResources(resourceMap);
+            
             String previousOwnerARN = mitigationState.getOwnerARN();
             mitigationState.setChangeTime(System.currentTimeMillis());
             mitigationState.setPpsRate(globalPPS);
@@ -223,6 +229,18 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         }
     }
     
+    /**
+     * Validate the resource Sets
+     * @param resourceMap Map of ResourceType to Set of resources.
+     */
+    private void validateResources(Map<BlackWatchMitigationResourceType, Set<String>> resourceMap) {
+        //For now, only validate IPAddresses.
+        Set<String> ipAddresses = resourceMap.getOrDefault(BlackWatchMitigationResourceType.IPAddress, 
+                new HashSet<String>());
+        Validate.inclusiveBetween(0, MAX_BW_IPADDRESSES, ipAddresses.size());
+        ipAddresses.forEach(f -> dogfishHelper.validateCIDRInRegion(f));
+    }
+
     @Override
     public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceTypeString,
             Long globalPPS, Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata,
@@ -251,7 +269,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     typeValidator.getCanonicalMapOfResources(resourceId, mitigationSettingsJSON);
             LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
                     canonicalResourceId, ReflectionToStringBuilder.toString(resourceMap)));
-            
+            validateResources(resourceMap);
             ResourceAllocationState resourceState = resourceAllocationStateDynamoDBHelper
                     .getResourceAllocationState(canonicalResourceId);
             

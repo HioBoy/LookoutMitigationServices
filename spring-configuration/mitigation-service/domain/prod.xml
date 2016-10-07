@@ -19,6 +19,14 @@
         <value>HKG1</value>
     </util:set>
     
+    <util:map id="prod.regionEndpointsMap">
+        <entry key="IAD" value="lookout-mitigation-service-prod.us-east-1.amazonaws.com"/>
+    </util:map>
+    
+    <bean id="prod.masterRegion" class="java.lang.String">
+        <constructor-arg value="IAD"/>
+    </bean>
+    
     <util:list id="prod.fakeBlackWatchClassicLocations"/>
     
     <bean id="prod.mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">

@@ -19,6 +19,14 @@
         <value>G-SEA19</value>
     </util:set>
     
+    <util:map id="bwbeta.regionEndpointsMap">
+        <entry key="IAD" value="lookout-mitigation-service-us-east-1-bwbeta.corp.amazon.com"/>
+    </util:map>
+    
+    <bean id="bwbeta.masterRegion" class="java.lang.String">
+        <constructor-arg value="IAD"/>
+    </bean>
+    
     <bean id="bwbeta.mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
         <constructor-arg value="com.amazon.lookout.mws.mitigationservice.beta"/>
     </bean>

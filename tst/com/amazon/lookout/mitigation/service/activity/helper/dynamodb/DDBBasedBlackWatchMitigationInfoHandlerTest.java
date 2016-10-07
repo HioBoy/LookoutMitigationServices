@@ -27,6 +27,9 @@ import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
+import com.amazon.lookout.mitigation.service.workflow.helper.DogFishMetadataProvider;
+import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
+import com.amazon.lookout.models.prefixes.DogfishIPPrefix;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
@@ -39,6 +42,7 @@ import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationHelper;
 import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDynamoDBHelper;
 import com.amazon.coral.metrics.Metrics;
 import com.amazon.coral.metrics.MetricsFactory;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 public class DDBBasedBlackWatchMitigationInfoHandlerTest {
@@ -63,6 +67,10 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final String testMitigation1 = "testMitigation-20160818";
     private static final String testMitigation2 = "testMitigation-20160819";
     private static final String testResourceId2 = "TEST-RESOURCE-2";
+    private static final String testMasterRegion = "us-east-1";
+    private static final String testSecondaryRegion = "us-west-1";
+    private static final Map<String, String> endpointMap = ImmutableMap.of(testMasterRegion, "master-1.a.c", 
+            testSecondaryRegion, "secondary-1.a.c");
 
     private static final String testOwnerARN = "testOwnerARN";
     private static final String testResourceId1 = "TEST-RESOURCE-1";
@@ -83,23 +91,43 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     
     private static final Map<String, Set<String>> recordedResourcesMap = new HashMap<String, Set<String>>();
     private static final MitigationStateSetting setting = new MitigationStateSetting();  
-    private static final Map<String, MitigationStateSetting> locationMitigationState = new HashMap<String, MitigationStateSetting> ();
+    private static final Map<String, MitigationStateSetting> locationMitigationState = 
+            new HashMap<String, MitigationStateSetting> ();
+    private static DogFishMetadataProvider dogfishProvider;
+    private static DogFishValidationHelper dogfishValidator;
     
     private static MitigationState mitigationState1;
     private static MitigationState mitigationState2;
     
     @Before
-    public void cleanTables() {
+    public void beforeTests() {
         mitigationStateDynamoDBHelper.deleteTable();
         mitigationStateDynamoDBHelper.createTableIfNotExist(5L, 5L);
         resourceAllocationStateDDBHelper.deleteTable();
         resourceAllocationStateDDBHelper.createTableIfNotExist(5L, 5L);
+        
+        //reset the Dogfish mock
+        DogfishIPPrefix prefix = new DogfishIPPrefix();
+        prefix.setRegion(testMasterRegion);
+
+        Mockito.doReturn(prefix).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
+        dogfishValidator = new DogFishValidationHelper(testMasterRegion, testMasterRegion, dogfishProvider, endpointMap);
+        blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
+                resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
+                resourceTypeValidatorMap, 4);
     }
     
     @BeforeClass
     public static void setUpOnce() {
         TestUtils.configureLogging();
         
+        // mock TSDMetric
+        Mockito.doReturn(metrics).when(metricsFactory).newMetrics();
+        Mockito.doReturn(metrics).when(metrics).newMetrics();
+        tsdMetrics = new TSDMetrics(metricsFactory);
+        dogfishProvider = Mockito.mock(DogFishMetadataProvider.class);
+        dogfishValidator = new DogFishValidationHelper(testMasterRegion, testMasterRegion, dogfishProvider, endpointMap);
+
         resourceTypeValidatorMap.put(BlackWatchMitigationResourceType.IPAddress, 
                 new IPAddressResourceTypeValidator());
         resourceTypeValidatorMap.put(BlackWatchMitigationResourceType.IPAddressList, 
@@ -113,12 +141,9 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         resourceAllocationHelper = new ResourceAllocationHelper(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, metricsFactory);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
-                resourceAllocationStateDDBHelper, resourceAllocationHelper, resourceTypeValidatorMap, 4);
+                resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, resourceTypeValidatorMap, 4);
 
-        // mock TSDMetric
-        Mockito.doReturn(metrics).when(metricsFactory).newMetrics();
-        Mockito.doReturn(metrics).when(metrics).newMetrics();
-        tsdMetrics = new TSDMetrics(metricsFactory);
+
         
         recordedResourcesMap.put("ELB", ImmutableSet.of("ELB-18181"));
         recordedResourcesMap.put("EC2", ImmutableSet.of("EC2-55858"));
@@ -701,8 +726,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expectMessage("duplicate IPs");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
-                String.format(ipListTemplate, "\"2001:0db8:85a3:0000:0000:8a2e:0370:7334\","
-                        + "\"2001:0db8:85a3::8a2e:0370:7334\""), "ARN-1222", tsdMetrics);
+                String.format(ipListTemplate, "\"2001:0db8:85a3:0000:0000:8a2e:0370:7334\"," +
+                     "\"2001:0db8:85a3::8a2e:0370:7334\""), "ARN-1222", tsdMetrics);
     }
     
     @Test
@@ -722,5 +747,77 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         assertNotNull(response);
         assertFalse(response.isNewMitigationCreated());
     }
+    
+    @Test
+    public void testApplyBlackWatchMitigationValidIPAddressListDogFishFailed() {
+        //Not found IPList
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("not found in DogFish");
+        Mockito.doReturn(null).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
+                String.format(ipListTemplate, "\"1.2.3.4\""), "ARN-1222", tsdMetrics);
+    }
+    
+    @Test
+    public void testApplyBlackWatchMitigationValidIPAddressDogFishFailed() {
+        //Not found IP Address
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("not found in DogFish");
+        Mockito.doReturn(null).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                "ARN-1222", tsdMetrics);
+    }
+    
+    @Test
+    public void testApplyBlackWatchMitigationValidIPAddressDogFishFailedOtherActive() {
+        //DogFish returned active Mit SVC region.
+        DogfishIPPrefix prefix = new DogfishIPPrefix();
+        prefix.setRegion(testSecondaryRegion);
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("with an active mitigation service");
+        Mockito.doReturn(prefix).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                "ARN-1222", tsdMetrics);
+    }
+    
+    @Test
+    public void testApplyBlackWatchMitigationValidIPAddressDogFishFailedNotPrimaryUnknown() {
+        //DogFish returned Non Mit SVC region - but we aren't primary.
+        dogfishValidator = new DogFishValidationHelper(testSecondaryRegion, testMasterRegion, 
+                dogfishProvider, endpointMap);
+        blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
+                resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
+                resourceTypeValidatorMap, 4);
+        DogfishIPPrefix prefix = new DogfishIPPrefix();
+        prefix.setRegion("NotActive");
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("without an active mitigation service");
+        Mockito.doReturn(prefix).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                "ARN-1222", tsdMetrics);
+    }
+    
+    @Test
+    public void testApplyBlackWatchMitigationValidIPAddressDogFishFailedNotPrimary() {
+        //DogFish returned Non Mit SVC region - but we aren't primary.
+        dogfishValidator = new DogFishValidationHelper(testSecondaryRegion, testMasterRegion, 
+                dogfishProvider, endpointMap);
+        blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
+                resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
+                resourceTypeValidatorMap, 4);
+        DogfishIPPrefix prefix = new DogfishIPPrefix();
+        prefix.setRegion(testMasterRegion);
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("with an active mitigation service");
+        Mockito.doReturn(prefix).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                "ARN-1222", tsdMetrics);
+    }
+    
 }
 

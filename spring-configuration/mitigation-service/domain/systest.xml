@@ -33,6 +33,14 @@
         <constructor-arg value="Test:Prod"/>
     </bean>
     
+    <util:map id="systest.regionEndpointsMap">
+        <entry key="IAD" value="lookout-mitigation-service-systest.amazon.com"/>
+    </util:map>
+    
+    <bean id="systest.masterRegion" class="java.lang.String">
+        <constructor-arg value="IAD"/>
+    </bean>
+    
     <util:set id="systest.defaultPOPsForEdgeLocationsHelper">
         <value>G-SFO5</value>
     </util:set>

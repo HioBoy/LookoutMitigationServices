@@ -21,6 +21,15 @@
         <value>G-IAD5</value>
     </util:set>
     
+    <util:map id="gamma.regionEndpointsMap">
+        <entry key="IAD" value="lookout-mitigation-service-us-east-1-gamma.iad.amazon.com"/>
+        <entry key="PDX" value="lookout-mitigation-service-gamma-us-west-2.pdx.amazon.com"/>
+    </util:map>
+    
+    <bean id="gamma.masterRegion" class="java.lang.String">
+        <constructor-arg value="IAD"/>
+    </bean>
+    
     <bean id="gamma.mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
         <constructor-arg value="com.amazon.lookout.mws.mitigationservice.gamma"/>
     </bean>
