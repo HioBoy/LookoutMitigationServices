@@ -54,6 +54,12 @@
         <value>BR-SYD1-2</value>
         <value>BR-SYD4-1</value> 
         <value>BR-SYD4-2</value>
+        <!-- SIN -->
+        <value>BR-SIN2-1</value>
+        <value>BR-SIN2-2</value>
+        <value>BR-SIN5-1</value>
+        <value>BR-SIN5-2</value>
+        <!-- SIN -->
         <!-- CMH -->
         <value>BR-ORD50-1</value>
         <value>BR-ORD50-2</value>
