@@ -289,9 +289,18 @@
     <bean id="IPAddressTypeValidator" class="com.amazon.lookout.mitigation.blackwatch.model.IPAddressResourceTypeValidator" />
     <bean id="IPAddressListTypeValidator" class="com.amazon.lookout.mitigation.blackwatch.model.IPAddressListResourceTypeValidator" />
     
+    <!-- Convert public region name to the short name via RIPHelper.getRegion("${realm}"); -->
+    <bean id="ripRegion" class="com.aws.rip.RIPHelper" factory-method="getRegion">
+        <constructor-arg value="${realm}" />
+    </bean>
+    
+    <bean id="regionAirportCode" class="java.lang.String">
+        <constructor-arg value="#{ripRegion.getAirportCode()}" />
+    </bean>
+    
     
     <bean id="dogfishHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper">
-        <constructor-arg name="region" value="${realm}"/>
+        <constructor-arg name="region" ref="regionAirportCode"/>
         <constructor-arg name="masterRegion" ref="${domain}.masterRegion"/>
         <constructor-arg name="dogfishMetadata" ref="dogFishMetadataProvider"/>
         <constructor-arg name="regionEndpoints" ref="${domain}.regionEndpointsMap"/>

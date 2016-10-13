@@ -67,6 +67,7 @@ package.LookoutMitigationService = {
 
             LookoutMitigationServiceJlbRelayConfig = 1.0;
             CoralSslProxySupport = 1.0;
+            RIPJavaHelper = 1.2;
         };
     };
     
