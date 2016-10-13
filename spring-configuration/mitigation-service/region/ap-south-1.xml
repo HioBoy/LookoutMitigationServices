@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+    
+    <bean id="ap-south-1.dynamoDBCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.dynamodb.mitigationservice.ap-south-1.${domain}"/>
+    </bean>
+    
+    <bean id="ap-south-1.swfCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.swf.mitigationservice.ap-south-1.${domain}"/>
+    </bean>
+    
+    <bean id="authAccount.ap-south-1.prod" class="java.lang.String">
+        <constructor-arg value="562483159559"/> <!-- lookout-dev+lktmitsvc+bom@amazon.com -->
+    </bean>
+</beans>

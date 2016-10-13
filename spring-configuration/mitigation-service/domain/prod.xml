@@ -20,7 +20,20 @@
     </util:set>
     
     <util:map id="prod.regionEndpointsMap">
-        <entry key="IAD" value="lookout-mitigation-service-prod.us-east-1.amazonaws.com"/>
+        <entry key="BOM" value="lookout-mitigation-service.ap-south-1.amazonaws.com"/>
+        <entry key="CMH" value="lookout-mitigation-service.us-east-2.amazonaws.com"/>
+        <entry key="DUB" value="lookout-mitigation-service.eu-west-1.amazonaws.com"/>
+        <entry key="FRA" value="lookout-mitigation-service.eu-central-1.amazonaws.com"/>
+        <entry key="GRU" value="lookout-mitigation-service.sa-east-1.amazonaws.com"/>
+        <entry key="IAD" value="lookout-mitigation-service.us-east-1.amazonaws.com"/>
+        <entry key="ICN" value="lookout-mitigation-service.ap-northeast-2.amazonaws.com"/>
+        <entry key="LHR" value="lookout-mitigation-service.eu-west-2.amazonaws.com"/>
+        <entry key="NRT" value="lookout-mitigation-service.ap-northeast-1.amazonaws.com"/>
+        <entry key="PDX" value="lookout-mitigation-service.us-west-2.amazonaws.com"/>
+        <entry key="SFO" value="lookout-mitigation-service.us-west-1.amazonaws.com"/>
+        <entry key="SIN" value="lookout-mitigation-service.ap-southeast-1.amazonaws.com"/>
+        <entry key="SYD" value="lookout-mitigation-service.ap-southeast-2.amazonaws.com"/>
+        <entry key="YUL" value="lookout-mitigation-service.ca-central-1.amazonaws.com"/>
     </util:map>
     
     <bean id="prod.masterRegion" class="java.lang.String">
@@ -54,10 +67,12 @@
     </bean>
  
     <util:set id="prod.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
+        <!-- SFO -->
         <value>BR-SFO4-1</value> 
         <value>BR-SFO4-2</value> 
         <value>BR-SFO5-1</value> 
         <value>BR-SFO5-2</value>
+        <!-- SYD -->
         <value>BR-SYD1-1</value> 
         <value>BR-SYD1-2</value>
         <value>BR-SYD4-1</value> 
@@ -67,19 +82,44 @@
         <value>BR-SIN2-2</value>
         <value>BR-SIN5-1</value>
         <value>BR-SIN5-2</value>
-        <!-- SIN -->
         <!-- CMH -->
         <value>BR-ORD50-1</value>
         <value>BR-ORD50-2</value>
         <value>BR-ORD51-1</value>
         <value>BR-ORD51-2</value>
-        <!-- CMH -->
         <!-- PDX -->
         <value>BR-SEA19-1</value>
         <value>BR-SEA19-2</value>
         <value>BR-SEA4-1</value>
         <value>BR-SEA4-2</value>
-        <!-- PDX -->
+        <!-- BOM -->
+        <!-- DUB -->
+        <value>BR-DUB2-1</value>
+        <value>BR-DUB2-2</value>
+        <value>BR-DUB3-1</value>
+        <value>BR-DUB3-2</value>
+        <!-- FRA -->
+        <value>BR-FRA50-1</value>
+        <value>BR-FRA50-2</value>
+        <value>BR-FRA52-1</value>
+        <value>BR-FRA52-2</value>
+        <!-- GRU -->
+        <value>BR-GRU1-1</value>
+        <value>BR-GRU1-2</value>
+        <value>BR-GRU3-1</value>
+        <value>BR-GRU3-2</value>
+        <!-- ICN -->
+        <!-- LHR -->
+        <!-- NRT -->
+        <value>BR-NRT4-1</value>
+        <value>BR-NRT4-2</value>
+        <value>BR-NRT51-1</value>
+        <value>BR-NRT51-2</value>
+        <!-- YUL -->
+        <value>BR-YUL60-1</value>
+        <value>BR-YUL60-2</value>
+        <value>BR-YUL62-1</value>
+        <value>BR-YUL62-2</value>
     </util:set>
     
     <bean id="prod.allowedLocationPrefix" class="java.lang.String">
