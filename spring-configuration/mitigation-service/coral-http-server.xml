@@ -19,7 +19,7 @@
               <property name="orchestrator" ref="orchestrator"/>
               <property name="numThreads" value="10"/>
               <!-- TLS proxy (JLBRelay) decrypts traffic and forwards clear-text http to httpRegularPort. Only accept connections from localhost -->
-              <property name="uri" value="http://127.0.0.1:${apollo.OCF.HttpServer.httpRegularPort}, https://0.0.0.0:${apollo.OCF.HttpServer.httpSecurePort}"/>
+              <property name="uri" value="http://127.0.0.1:${apollo.OCF.HttpServer.httpRegularPort}"/>
           </bean>
       </constructor-arg>
   </bean>  
