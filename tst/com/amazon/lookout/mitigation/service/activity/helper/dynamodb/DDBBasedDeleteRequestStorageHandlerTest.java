@@ -74,7 +74,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     
     @BeforeClass
     public static void setUpOnce() {
-        TestUtils.configureLogging(Level.WARN);
+        TestUtils.configureLogging(Level.ERROR);
         localDynamoDBClient = DynamoDBTestUtil.get().getClient();
     }
     

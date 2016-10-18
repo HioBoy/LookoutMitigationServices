@@ -3,6 +3,7 @@ package com.amazon.lookout.mitigation.service.activity;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
@@ -55,7 +56,7 @@ public class ActivityTestHelper {
     
     @BeforeClass
     public static void setupOnce() {
-        TestUtils.configureLogging();
+        TestUtils.configureLogging(Level.ERROR);
     }
 
     @Before

@@ -72,7 +72,10 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final Map<String, String> endpointMap = ImmutableMap.of(testMasterRegion, "master-1.a.c", 
             testSecondaryRegion, "secondary-1.a.c");
 
-    private static final String testOwnerARN = "testOwnerARN";
+    private static final String testOwnerARN1 = "testOwnerARN1";
+    private static final String testOwnerARN2 = "testOwnerARN2";
+    private static final long testChangeTime = 151515L;
+    private static final int testMinsToLive = 100;
     private static final String testResourceId1 = "TEST-RESOURCE-1";
     private static final String testIPAddressResourceId = "1.2.3.4";
     private static final String testIPAddressResourceType = BlackWatchMitigationResourceType.IPAddress.name();
@@ -83,6 +86,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     //Generated with: echo -n $ESCAPED_STRING | sha256sum
     private static final String validJSONChecksum = "df02fe14833a568f9c4f87a40ed316398617b768b4901d8e03499f52f2e20bc4";
     private static final String ipListTemplate = "{\"destinations\":[%s]}";
+    
     
     private static BlackWatchMitigationActionMetadata testBWMetadata;
     private static MitigationActionMetadata testMetadata;
@@ -170,8 +174,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 .mitigationId(testMitigation1)
                 .resourceId(testResourceId1)
                 .resourceType(testResourceType)
-                .changeTime(23232L)
-                .ownerARN(testOwnerARN)
+                .changeTime(testChangeTime)
+                .ownerARN(testOwnerARN1)
                 .recordedResources(recordedResourcesMap)
                 .locationMitigationState(locationMitigationState)
                 .state(MitigationState.State.Active.name())
@@ -179,7 +183,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 .bpsRate(2323L)
                 .mitigationSettingsJSON("{ \"IncludeEC2NetworkACLs\":\"True\", \"ip_validation\": \"DROP\"}")
                 .mitigationSettingsJSONChecksum("ABABABABA")
-                .minutesToLive(100)
+                .minutesToLive(testMinsToLive)
                 .latestMitigationActionMetadata(testBWMetadata)
                 .build();
         
@@ -188,7 +192,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 .resourceId(testResourceId2)
                 .resourceType(testResourceType)
                 .changeTime(23232L)
-                .ownerARN(testOwnerARN)
+                .ownerARN(testOwnerARN2)
                 .recordedResources(recordedResourcesMap)
                 .locationMitigationState(locationMitigationState)
                 .state(MitigationState.State.Active.name())
@@ -299,9 +303,9 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
             .withDescription("Test Descr_update")
             .withRelatedTickets(Arrays.asList("4321"))
             .build();
-        String newOwnerARN  = "new" + testOwnerARN;
+        String newOwnerARN  = "new" + testOwnerARN1;
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
-        blackWatchMitigationInfoHandler.changeOwnerARN(mitigationState1.getMitigationId(), newOwnerARN, testOwnerARN, requestMetadata);
+        blackWatchMitigationInfoHandler.changeOwnerARN(mitigationState1.getMitigationId(), newOwnerARN, testOwnerARN1, requestMetadata);
         MitigationState newMitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationState1.getMitigationId());
         assertEquals(newOwnerARN, newMitigationState.getOwnerARN());
         assertEquals(requestMetadata.getUser(), newMitigationState.getLatestMitigationActionMetadata().getUser());
@@ -318,7 +322,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
             .withDescription("Test Descr_update")
             .withRelatedTickets(Arrays.asList("4321"))
             .build();
-        String newOwnerARN  = "new" + testOwnerARN;
+        String newOwnerARN  = "new" + testOwnerARN1;
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         Throwable caughtException = null;
         try {
@@ -337,7 +341,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
             .withDescription("Test Descr_update")
             .withRelatedTickets(Arrays.asList("4321"))
             .build();
-        String newOwnerARN  = "new" + testOwnerARN;
+        String newOwnerARN  = "new" + testOwnerARN1;
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         Throwable caughtException = null;
         try {
@@ -388,10 +392,34 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
     
     @Test
+    public void testGetBlackWatchMitigationsFiterOwnerARN() {
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
+        //filter by resource type, both mitigations match the resource type, return both
+        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation 
+        = blackWatchMitigationInfoHandler.getBlackWatchMitigations(null, null, null, testOwnerARN1, 5, tsdMetrics);
+        assertEquals(listOfBlackwatchMitigation.size(), 1);
+        validateMitigation(listOfBlackwatchMitigation.get(0), mitigationState1);
+    }
+    
+    @Test
+    public void testGetBlackWatchMitigationsExpiryTime() {
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
+        //filter by resource type, both mitigations match the resource type, return both
+        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = 
+                blackWatchMitigationInfoHandler.getBlackWatchMitigations(null, null, null, testOwnerARN1, 5, tsdMetrics);
+        assertEquals(listOfBlackwatchMitigation.size(), 1);
+        BlackWatchMitigationDefinition retState = listOfBlackwatchMitigation.get(0);
+        validateMitigation(retState, mitigationState1);
+        assertEquals(retState.getExpiryTime(), testChangeTime + (testMinsToLive * 60 * 1000));
+    }
+    
+    @Test
     public void testGetBlackWatchMitigationsFilterByAllOptions() {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         //filter by mitigation id, resource id, resource type, only one match
-        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler.getBlackWatchMitigations(testMitigation1, testResourceId1, testResourceType, null, 5, tsdMetrics);
+        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = 
+                blackWatchMitigationInfoHandler.getBlackWatchMitigations(testMitigation1, testResourceId1, 
+                        testResourceType, testOwnerARN1, 5, tsdMetrics);
         assertEquals(listOfBlackwatchMitigation.size(), 1);
         validateMitigation(listOfBlackwatchMitigation.get(0), mitigationState1);
     }

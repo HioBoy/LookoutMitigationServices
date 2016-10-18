@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -105,6 +106,13 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                                 .withAttributeValueList(new AttributeValue().withS(resourceType)));
                 }
                 
+                if (ownerARN != null && !ownerARN.isEmpty()) {
+                    scanExpression.addFilterCondition(MitigationState.OWNER_ARN_KEY, 
+                            new Condition()
+                                .withComparisonOperator(ComparisonOperator.EQ)
+                                .withAttributeValueList(new AttributeValue().withS(ownerARN)));
+                }
+                
                 List<MitigationState> mitigationStates = mitigationStateDynamoDBHelper
                         .getMitigationState(scanExpression, parallelScanSegments);
                 
@@ -132,7 +140,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                             .withMitigationSettingsJSON(ms.getMitigationSettingsJSON())
                             .withMitigationSettingsJSONChecksum(ms.getMitigationSettingsJSONChecksum())
                             .withMinutesToLiveAtChangeTime(ms.getMinutesToLive().intValue())
-                            .withExpiryTime(ms.getChangeTime() + ms.getMinutesToLive())
+                            .withExpiryTime(ms.getChangeTime() + TimeUnit.MINUTES.toMillis(ms.getMinutesToLive()))
                             .withLatestMitigationActionMetadata(mitigationActionMetadata)
                             .withLocationMitigationState(locationMitigationState)
                             .withRecordedResources(ms.getRecordedResources())
