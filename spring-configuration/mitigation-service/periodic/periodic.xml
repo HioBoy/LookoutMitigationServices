@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <import resource="file:${spring.config.root}/periodic/periodic_border.xml"/>
+
+    <!-- bean metronome in periodic_border.xml will be overwritten by this metronome bean -->
+    <bean id="metronome" class="com.amazon.aws158.commons.periodic.Metronome">
+        <property name="threadPoolSize" value="2"/>
+        <property name="work">
+            <set>
+                <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
+                    <property name="runnable" ref="${domain}.edgeLocationsHelper"/>
+                    <property name="period" value="30"/>
+                    <property name="timeUnit" ref="minutes"/>
+                </bean>
+                <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
+                    <property name="runnable" ref="requestsReaper"/>
+                    <property name="period" value="30"/>
+                    <property name="timeUnit" ref="seconds"/>
+                </bean>
+                <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
+                    <property name="runnable" ref="dogFishMetadataProvider"/>
+                    <property name="period" value="180"/>
+                    <property name="timeUnit" ref="seconds"/>
+                </bean>
+            </set>
+        </property>
+    </bean>
+</beans>

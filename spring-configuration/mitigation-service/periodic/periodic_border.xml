@@ -4,6 +4,7 @@
     xsi:schemaLocation="http://www.springframework.org/schema/beans
     http://www.springframework.org/schema/beans/spring-beans.xsd">
 
+    <!-- This file contains only the periodic worker that executes in border location -->
     <bean id="hours" class="java.util.concurrent.TimeUnit" factory-method="valueOf">
         <constructor-arg value="HOURS"/>
     </bean>
@@ -24,11 +25,6 @@
         <property name="threadPoolSize" value="2"/>
         <property name="work">
             <set>
-                <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
-                    <property name="runnable" ref="${domain}.edgeLocationsHelper"/>
-                    <property name="period" value="30"/>
-                    <property name="timeUnit" ref="minutes"/>
-                </bean>
                 <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
                     <property name="runnable" ref="requestsReaper"/>
                     <property name="period" value="30"/>

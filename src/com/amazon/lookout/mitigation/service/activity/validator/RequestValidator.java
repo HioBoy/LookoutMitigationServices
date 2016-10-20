@@ -147,7 +147,7 @@ public class RequestValidator {
             deviceScopes.add(deviceScope.name());
         }
     }
-    
+
     /**
      * Validates if the request object passed to the CreateMitigationAPI is valid.
      * @param request MitigationModificationRequest representing the input to the CreateMitigationAPI.
