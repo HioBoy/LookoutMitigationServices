@@ -136,6 +136,11 @@ package.LookoutMitigationService = {
             JavaMail = 1.4.6;
             Joda-time = 2.x;
             JakartaCommons-lang = 2.6;
+
+            Jackson-databind = 2.8.x;
+            Jackson-annotations = 2.8.x;
+            Jackson-dataformat-cbor = 2.8.x;
+            Jackson-core = 2.8.x;
         };
     };
     
