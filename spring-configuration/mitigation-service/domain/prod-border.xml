@@ -25,10 +25,21 @@
     <alias name="prod.popsWithCiscoRouter" alias="prod-border.popsWithCiscoRouter"/>
 
     <util:set id="prod-border.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
+        <!-- TODO: https://sim.amazon.com/issues/BLACKWATCH-1336 -->
+        <value>BR-ATL50-1</value>
+        <value>BR-ATL50-2</value>
+        <value>BR-DFW3-1</value>
+        <value>BR-DFW3-2</value>
         <value>BR-IAD2-1</value>
         <value>BR-IAD2-2</value>
         <value>BR-IAD4-1</value>
         <value>BR-IAD4-2</value>
+        <value>BR-JFK1-1</value>
+        <value>BR-JFK1-2</value>
+        <value>BR-JFK6-1</value>
+        <value>BR-JFK6-2</value>
+        <value>BR-MIA3-1</value>
+        <value>BR-MIA3-2</value>
     </util:set>
 
     <alias name="prod.regionEndpointsMap" alias="prod-border.regionEndpointsMap"/>

@@ -67,6 +67,8 @@
     </bean>
  
     <util:set id="prod.preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
+        <!-- TODO: https://sim.amazon.com/issues/BLACKWATCH-1336 -->
+
         <!-- SFO -->
         <value>BR-SFO4-1</value> 
         <value>BR-SFO4-2</value> 
