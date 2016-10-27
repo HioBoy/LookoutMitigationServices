@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.amazon.blackwatch.helper.BlackWatchHelper;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -53,7 +54,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     
     private static final String domain = "unit-test-domain";
     private static final String realm = "unit-test-realm";
-    
+
     private static AmazonDynamoDBClient dynamoDBClient;
     private static DDBBasedBlackWatchMitigationInfoHandler blackWatchMitigationInfoHandler;
     private static ResourceAllocationStateDynamoDBHelper resourceAllocationStateDDBHelper;
@@ -443,9 +444,9 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     
     @Test
     public void testChecksumString() {
-        assertEquals("674c1f08fac053e604366eb24f2123568e367479301d4dd14e6109ca85abda1b", 
-                blackWatchMitigationInfoHandler.getHexStringChecksum("Bryan"));
-        assertNull(blackWatchMitigationInfoHandler.getHexStringChecksum(null));
+        assertEquals("674c1f08fac053e604366eb24f2123568e367479301d4dd14e6109ca85abda1b",
+                BlackWatchHelper.getHexStringChecksum("Bryan"));
+        assertNull(BlackWatchHelper.getHexStringChecksum(null));
     }
     
     @Test

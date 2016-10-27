@@ -1,8 +1,5 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
-import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,6 +9,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.amazon.blackwatch.helper.BlackWatchHelper;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.commons.lang3.Validate;
@@ -50,7 +48,7 @@ import com.amazonaws.services.dynamodbv2.model.Condition;
 public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitigationInfoHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedBlackWatchMitigationInfoHandler.class);
     private static final int DEFAULT_MINUTES_TO_LIVE = 180;
-    
+
     private final MitigationStateDynamoDBHelper mitigationStateDynamoDBHelper;
     private final ResourceAllocationStateDynamoDBHelper resourceAllocationStateDynamoDBHelper;
     private final ResourceAllocationHelper resourceAllocationHelper;
@@ -60,9 +58,6 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     
     private static final String QUERY_BLACKWATCH_MITIGATION_FAILURE = "QUERY_BLACKWATCH_MITIGATION_FAILED";
 
-    private static final int CHECKSUM_HEX_DIGITS = 64;
-    private static final String CHECKSUM_ALGORITHM = "SHA-256";
-    private static final String JSON_ENCODING_CHARSET = "UTF-8";
     private static final int MAX_BW_IPADDRESSES = 256;
     
     private LocationMitigationStateSettings convertMitSSToLocMSS(MitigationStateSetting mitigationSettings) {
@@ -120,7 +115,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     //Opted for a different POJO between the service layer and the DB layer.  Unfortunately it creates 
                     //this dirt.
                     MitigationActionMetadata mitigationActionMetadata = 
-                            bwMetadataToCoralMetadata(ms.getLatestMitigationActionMetadata());
+                            BlackWatchHelper.bwMetadataToCoralMetadata(ms.getLatestMitigationActionMetadata());
                     
                     Map<String, MitigationStateSetting> locState = ObjectUtils.defaultIfNull(
                             ms.getLocationMitigationState(), new HashMap<String, MitigationStateSetting>());
@@ -162,28 +157,6 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         }
     }
     
-
-    /**
-     * Method to return the checksum of the input represented as a zero padded Hex string.
-     * @param inputString - String to run the checksum on
-     * @return null is inputString is null, otherwise returns the strings checksum in hex.
-     */
-    String getHexStringChecksum(String inputString) {
-        try {
-            if (inputString == null) {
-                return null;
-            }
-            MessageDigest md = MessageDigest.getInstance(CHECKSUM_ALGORITHM);
-            md.update(inputString.getBytes(JSON_ENCODING_CHARSET));
-            byte[] digest = md.digest();
-            return String.format("%0"+ CHECKSUM_HEX_DIGITS + "x", new java.math.BigInteger(1, digest));
-        }  catch (NoSuchAlgorithmException | UnsupportedEncodingException e) {
-            LOG.error("Unexpected error occurred while generating checksum " + ReflectionToStringBuilder.toString(e));
-            throw new RuntimeException("Unexpected exception occurred while generating checksum.");
-        }
-    }
-    
-    
     @Override
     public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId, Long globalPPS,
             Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata, String mitigationSettingsJSON,
@@ -224,9 +197,10 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             mitigationState.setBpsRate(globalBPS);
             mitigationState.setOwnerARN(userARN);
             mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
-            mitigationState.setMitigationSettingsJSONChecksum(getHexStringChecksum(mitigationSettingsJSON));
+            mitigationState.setMitigationSettingsJSONChecksum(
+                    BlackWatchHelper.getHexStringChecksum(mitigationSettingsJSON));
             mitigationState.setMinutesToLive(minsToLive);
-            BlackWatchMitigationActionMetadata bwMetadata = coralMetadataToBWMetadata(metadata);
+            BlackWatchMitigationActionMetadata bwMetadata = BlackWatchHelper.coralMetadataToBWMetadata(metadata);
             mitigationState.setLatestMitigationActionMetadata(bwMetadata);
             saveMitigationState(mitigationState, false, subMetrics);
             
@@ -314,9 +288,10 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             mitigationState.setPpsRate(globalPPS);
             mitigationState.setBpsRate(globalBPS);
             mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
-            mitigationState.setMitigationSettingsJSONChecksum(getHexStringChecksum(mitigationSettingsJSON));
+            mitigationState.setMitigationSettingsJSONChecksum(
+                    BlackWatchHelper.getHexStringChecksum(mitigationSettingsJSON));
             mitigationState.setMinutesToLive(minsToLive);
-            BlackWatchMitigationActionMetadata bwMetadata = coralMetadataToBWMetadata(metadata);
+            BlackWatchMitigationActionMetadata bwMetadata = BlackWatchHelper.coralMetadataToBWMetadata(metadata);
             mitigationState.setLatestMitigationActionMetadata(bwMetadata);
             saveMitigationState(mitigationState, newMitigationCreated, subMetrics);
             
@@ -378,24 +353,6 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         }
     }
 
-    private BlackWatchMitigationActionMetadata coralMetadataToBWMetadata(MitigationActionMetadata metadata) {
-        return BlackWatchMitigationActionMetadata.builder()
-                .user(metadata.getUser())
-                .toolName(metadata.getToolName())
-                .description(metadata.getDescription())
-                .relatedTickets(metadata.getRelatedTickets())
-                .build();
-    }
-    
-    private MitigationActionMetadata bwMetadataToCoralMetadata(BlackWatchMitigationActionMetadata metadata) {
-        return MitigationActionMetadata.builder()
-                .withUser(metadata.getUser())
-                .withToolName(metadata.getToolName())
-                .withDescription(metadata.getDescription())
-                .withRelatedTickets(metadata.getRelatedTickets())
-                .build();
-    }
-
     public void deactivateMitigation(String mitigationId, MitigationActionMetadata actionMetadata) {
             // Get current state
             String To_Delete_State = MitigationState.State.To_Delete.name();
@@ -404,7 +361,8 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
             }
             state.setState(To_Delete_State);
-            BlackWatchMitigationActionMetadata actionMetadataBlackWatch = coralMetadataToBWMetadata(actionMetadata);
+            BlackWatchMitigationActionMetadata actionMetadataBlackWatch =
+                    BlackWatchHelper.coralMetadataToBWMetadata(actionMetadata);
             state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
             DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
             ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
@@ -424,7 +382,8 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
             }
             state.setOwnerARN(newOwnerARN);
-            BlackWatchMitigationActionMetadata actionMetadataBlackWatch = coralMetadataToBWMetadata(actionMetadata);
+            BlackWatchMitigationActionMetadata actionMetadataBlackWatch =
+                    BlackWatchHelper.coralMetadataToBWMetadata(actionMetadata);
             state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
              DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
              ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
