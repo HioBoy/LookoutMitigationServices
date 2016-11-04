@@ -1,39 +1,8 @@
 
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
-import static org.junit.Assert.*;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import com.amazon.blackwatch.helper.BlackWatchHelper;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.mockito.Mockito;
-
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.test.common.util.TestUtils;
-import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
-import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator;
-import com.amazon.lookout.mitigation.blackwatch.model.IPAddressListResourceTypeValidator;
-import com.amazon.lookout.mitigation.blackwatch.model.IPAddressResourceTypeValidator;
-import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
-import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
-import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
-import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
-import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
-import com.amazon.lookout.mitigation.service.workflow.helper.DogFishMetadataProvider;
-import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
-import com.amazon.lookout.models.prefixes.DogfishIPPrefix;
-import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
+import com.amazon.blackwatch.helper.BlackWatchHelper;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
@@ -43,8 +12,30 @@ import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationHelper;
 import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDynamoDBHelper;
 import com.amazon.coral.metrics.Metrics;
 import com.amazon.coral.metrics.MetricsFactory;
+import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
+import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator;
+import com.amazon.lookout.mitigation.blackwatch.model.IPAddressListResourceTypeValidator;
+import com.amazon.lookout.mitigation.blackwatch.model.IPAddressResourceTypeValidator;
+import com.amazon.lookout.mitigation.service.*;
+import com.amazon.lookout.mitigation.service.workflow.helper.DogFishMetadataProvider;
+import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
+import com.amazon.lookout.models.prefixes.DogfishIPPrefix;
+import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
+import com.amazon.lookout.test.common.util.TestUtils;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.mockito.Mockito;
+
+import java.util.*;
+
+import static org.junit.Assert.*;
 
 public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     
@@ -83,9 +74,9 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final String testIPAddressListResourceType = BlackWatchMitigationResourceType.IPAddressList.name();
     private static final String testLocation = "BR-SFO5-1";
     private static final String testResourceType = "testResourceType";
-    private static final String testValidJSON = "{\"destinations\":[]}";
+    private static final String testValidJSON = "{ }";
     //Generated with: echo -n $ESCAPED_STRING | sha256sum
-    private static final String validJSONChecksum = "df02fe14833a568f9c4f87a40ed316398617b768b4901d8e03499f52f2e20bc4";
+    private static final String validJSONChecksum = "257c1be96ae69f4b01c2c69bdb6d78605f59175819fb007d0bf245bf48444c4a";
     private static final String ipListTemplate = "{\"destinations\":[%s]}";
     
     
@@ -693,7 +684,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testApplyBlackWatchMitigationInvalidIPAddressListMissing() {
         //Non existent json
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("IP List with one or more entries");
+        thrown.expectMessage("Could not map");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, "{\"BBTest\":\"[]\"}", 
                 "ARN-1222", tsdMetrics);
@@ -710,9 +701,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
     
     @Test
-    public void testApplyBlackWatchMitigationInvalidIPAddressListWithCIDR() {
-        thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Invalid values found in IP List");
+    public void testApplyBlackWatchMitigationValidIPAddressListWithCIDR() {
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
                 String.format(ipListTemplate,"\"1.2.3.4/32\""), "ARN-1222", tsdMetrics);
@@ -739,20 +728,17 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
     
     @Test
-    public void testApplyBlackWatchMitigationInvalidIPAddressListNoDuplicates() {
+    public void testApplyBlackWatchMitigationIPAddressListDuplicates() {
         //Duplicate addresses specified.
-        thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("duplicate IPs");
+        //They are silently ignored though
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
                 String.format(ipListTemplate, "\"1.2.3.4\",\"5.5.4.4\",\"1.2.3.4\""), "ARN-1222", tsdMetrics);
     }
     
     @Test
-    public void testApplyBlackWatchMitigationInvalidIPAddressListV6Equivalent() {
+    public void testApplyBlackWatchMitigationValidIPAddressListV6Equivalent() {
         //IPV6 addresses that are different strings, but are equivalent.
-        thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("duplicate IPs");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
                 String.format(ipListTemplate, "\"2001:0db8:85a3:0000:0000:8a2e:0370:7334\"," +

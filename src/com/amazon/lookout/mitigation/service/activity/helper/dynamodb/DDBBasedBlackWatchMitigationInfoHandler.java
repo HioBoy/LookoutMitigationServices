@@ -1,34 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import com.amazon.blackwatch.helper.BlackWatchHelper;
-import lombok.RequiredArgsConstructor;
-
-import org.apache.commons.lang3.Validate;
-import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import com.google.common.collect.ImmutableMap;
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
-import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator;
-import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
-import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
-import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
-import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
-import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
-import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
-import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
+import com.amazon.blackwatch.helper.BlackWatchHelper;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
@@ -36,13 +9,25 @@ import com.amazon.blackwatch.mitigation.state.model.ResourceAllocationState;
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
 import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationHelper;
 import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDynamoDBHelper;
+import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
+import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator;
+import com.amazon.lookout.mitigation.service.*;
+import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
+import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBSaveExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
-import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
-import com.amazonaws.services.dynamodbv2.model.Condition;
+import com.amazonaws.services.dynamodbv2.model.*;
+import com.google.common.collect.ImmutableMap;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitigationInfoHandler {
@@ -247,6 +232,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             }
 
             String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
+            mitigationSettingsJSON = BlackWatchResourceTypeValidator.normalizeJSONSettingsString(mitigationSettingsJSON);
             Map<BlackWatchMitigationResourceType, Set<String>> resourceMap = 
                     typeValidator.getCanonicalMapOfResources(resourceId, mitigationSettingsJSON);
             LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
