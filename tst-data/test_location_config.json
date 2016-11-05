@@ -1,0 +1,46 @@
+{
+     "locations": {
+         "LOCATION-1": {
+             "infra_region": "IAD",
+             "mitigation_region": "IAD",
+             "subnets": {
+                 "private_ipv4": "127.0.0.32/27",
+                 "public_ipv4": "127.0.1.32/27",
+                 "console_ipv4": "127.0.0.96/27"
+             },
+             "bgp_neighbor": {
+                 "ip": "127.0.0.2",
+                 "speaker_as": "65001",
+                 "neighbor_as": "65002",
+                 "odin_md5_key": "com.amazon.blackwatch.bgp.random.desktop-1.md5"
+             }
+         },
+         "LOCATION-2": {
+             "infra_region": "IAD",
+             "mitigation_region": "IAD",
+             "subnets": {
+                 "private_ipv4": "127.0.0.64/27",
+                 "public_ipv4": "127.0.1.64/27",
+                 "console_ipv4": "127.0.0.92/27"
+             },
+             "bgp_neighbor": {
+                 "ip": "127.0.0.3",
+                 "speaker_as": "65001",
+                 "neighbor_as": "65003",
+                 "odin_md5_key": "com.amazon.blackwatch.bgp.random.desktop-2.md5"
+             }
+         },
+         "BR-LOC99-1": {
+             "infra_region": "IAD",
+             "mitigation_region": "IAD",
+             "subnets": {
+                 "private_ipv4": "10.251.228.128/27",
+                 "public_ipv4": "52.94.253.64/27",
+                 "console_ipv4": "10.251.242.64/27"
+             },
+             "bgp_neighbor": {
+                 "ip": "52.94.252.132"
+             }
+         },
+     }
+ }

@@ -1,126 +1,84 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
-import static org.junit.Assert.*;
-
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import junitparams.JUnitParamsRunner;
-import static junitparams.JUnitParamsRunner.$;
 import junitparams.Parameters;
-
+import org.json.JSONException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import com.google.common.collect.ImmutableSet;
-
 @RunWith(JUnitParamsRunner.class)
 public class BlackWatchBorderLocationValidatorTest {
-    private static final Set<String> preDefinedLocations = ImmutableSet.<String>of("LA", "LB");
-    private static final String AllowedLocationPrefix = "fakerouter";
+    private static final String borderLocationConfigFilePath = System.getProperty("user.dir") + "/tst-data/test_location_config.json";
+    private static final String region = "test-region";
 
-    /**
-     * Test invalid location
-     * @param domainAndLocation
-     */
-    @Test(expected = IllegalArgumentException.class)
-    @Parameters({
-        "LC",
-        "fake",
-        "invalidlocation",
-        ""
-        })
-    public void testInvalidLocation(String location) {
-        BlackWatchBorderLocationValidator validator = new BlackWatchBorderLocationValidator(
-                preDefinedLocations, AllowedLocationPrefix);
-        validator.validateLocation(location);
-        fail("Failed valid location test with parameter : " + location);
-    }
-
-    /**
-     * test invalid location without allowed prefix
-     */
-    @Test(expected = IllegalArgumentException.class)
-    public void testInvalidLocationWithoutAllowedPrefix() {
-        BlackWatchBorderLocationValidator validator = new BlackWatchBorderLocationValidator(
-                preDefinedLocations, "");
-        validator.validateLocation("fake");
-    }
- 
     /**
      * Test valid location
-     * @param domainAndLocation
+     * @param location
+     * @throws JSONException 
+     * @throws IOException 
+     * @throws FileNotFoundException 
      */
     @Test
     @Parameters({
-        "Lb",
-        "la",
-        "LA",
-        "lB",
-        "FakerouteR124we3",
-        "fakerouter123"
+        "BR-LOC99-1",
+        "LOCATION-1"
     })
-    public void testValidLocation(String location) {
-        try {
-            BlackWatchBorderLocationValidator validator = new BlackWatchBorderLocationValidator(
-                    preDefinedLocations, AllowedLocationPrefix);
-            validator.validateLocation(location);
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Failed invalid location test with parameter : " + location, ex);
-        }
+    public void testValidLocation(String location) throws FileNotFoundException, IOException, JSONException {
+        BlackWatchBorderLocationValidator validator = null;
+        validator = new BlackWatchBorderLocationValidator("us-east-1", borderLocationConfigFilePath);
+        assertTrue(validator.isValidLocation(location));
     }
-
+    
     /**
-     * Test invalid multiple locations, 
+     * Test invalid location
+     * @param location
+     * @throws JSONException 
+     * @throws IOException 
+     * @throws FileNotFoundException 
      */
     @Test
-    public void testInvalidLocations() {
-        List<String> invalidLocations = Arrays.asList("LA", "invalidLocation", "fakerouter12", "fakerouter12");
-        try {
-            BlackWatchBorderLocationValidator validator = new BlackWatchBorderLocationValidator(
-                    preDefinedLocations, AllowedLocationPrefix);
-            validator.validateLocations(invalidLocations);
-            fail();
-        } catch (IllegalArgumentException ex) {
-            assertEquals("locations [invalidLocation] are not valid", ex.getMessage());
-        }
-    }
-    
-    /**
-     * Test valid multiple locations, 
-     */
-    @Test
-    public void testValidLocations() {
-        List<String> invalidLocations = Arrays.asList("LA", "Lb", "fakerouter12", "FAKErouter12");
-        try {
-            BlackWatchBorderLocationValidator validator = new BlackWatchBorderLocationValidator(
-                    preDefinedLocations, AllowedLocationPrefix);
-            validator.validateLocations(invalidLocations);
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Failed invalid locations test with parameter : " + invalidLocations, ex);
-        }
+    @Parameters({
+        "BR-LOC990-1",
+        "LOCATION-11"
+    })
+    public void testInvalidLocation(String location) throws FileNotFoundException, IOException, JSONException {
+        BlackWatchBorderLocationValidator validator = null;
+        validator = new BlackWatchBorderLocationValidator(region, borderLocationConfigFilePath);
+        assertFalse(validator.isValidLocation(location));
     }
 
-    
     /**
-     * Test invalid input
+     * Test empty location
+     * @param location
+     * @throws JSONException 
+     * @throws IOException 
+     * @throws FileNotFoundException 
      */
-    @Test(expected = IllegalArgumentException.class)
-    @Parameters(method = "invalidParams")
-    public void testInvalidInput(Set<String> preDefinedLocations, String allowedLocationPrefix) {
-        new BlackWatchBorderLocationValidator(
-                    preDefinedLocations, allowedLocationPrefix);
-    }
-    
-    public Object[] invalidParams() {
-        return $(
-            $(null, null),
-            $(null, AllowedLocationPrefix),
-            $(preDefinedLocations, null),
-            $(new HashSet<String>(), "")
-            );
+    @Test(expected=IllegalArgumentException.class)
+    @Parameters({
+        ""
+    })
+    public void testEmptyLocation(String location) throws FileNotFoundException, IOException, JSONException {
+        BlackWatchBorderLocationValidator validator = null;
+        validator = new BlackWatchBorderLocationValidator(region, borderLocationConfigFilePath);
+        assertFalse(validator.isValidLocation(location));
     }
 
+    /**
+     * Test Invalid file path
+     * @throws JSONException 
+     * @throws IOException 
+     * @throws FileNotFoundException 
+     */
+    @Test(expected=FileNotFoundException.class)
+    @Parameters({
+        "LOCATION-1"
+    })
+    public void testInvalidConfigFilePath(String location) throws FileNotFoundException, IOException, JSONException {
+        new BlackWatchBorderLocationValidator(region, "/random/path/file.json");
+    }
 }
