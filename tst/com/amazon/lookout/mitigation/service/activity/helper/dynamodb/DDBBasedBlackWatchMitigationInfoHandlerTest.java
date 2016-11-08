@@ -70,6 +70,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final int testMinsToLive = 100;
     private static final String testResourceId1 = "TEST-RESOURCE-1";
     private static final String testIPAddressResourceId = "1.2.3.4";
+    private static final String testIPv6AddressResourceId = "0000::1";
+    private static final String testIPv6AddressResourceIdCanonical = "::1";
     private static final String testIPAddressResourceType = BlackWatchMitigationResourceType.IPAddress.name();
     private static final String testIPAddressListResourceType = BlackWatchMitigationResourceType.IPAddressList.name();
     private static final String testLocation = "BR-SFO5-1";
@@ -94,7 +96,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     
     private static MitigationState mitigationState1;
     private static MitigationState mitigationState2;
-    
+
     @Before
     public void beforeTests() {
         mitigationStateDynamoDBHelper.deleteTable();
@@ -345,6 +347,35 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
 
     @Test
+    public void testGetBlackWatchMitigationsIPNormalize() {
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+            testIPv6AddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, testValidJSON, "ARN-1222", tsdMetrics);
+        assertNotNull(applyResponse);
+        assertNotEquals(testIPv6AddressResourceId, testIPv6AddressResourceIdCanonical);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler
+            .getBlackWatchMitigations(null, null, null, null, 5, tsdMetrics);
+        assertEquals(1, listOfBlackwatchMitigation.size());
+        assertEquals(testIPv6AddressResourceIdCanonical, listOfBlackwatchMitigation.get(0).getResourceId());
+
+        //Try and find using non-canonical form (DB has canonical as verified above)
+
+        //List using non-canonical Id, with resourceType
+        listOfBlackwatchMitigation = blackWatchMitigationInfoHandler
+            .getBlackWatchMitigations(null, testIPv6AddressResourceId, testIPAddressResourceType, null, 5, tsdMetrics);
+        assertEquals(1, listOfBlackwatchMitigation.size());
+        assertEquals(testIPv6AddressResourceIdCanonical, listOfBlackwatchMitigation.get(0).getResourceId());
+
+        //List using non-canonical Id, without resourceType
+        listOfBlackwatchMitigation = blackWatchMitigationInfoHandler
+            .getBlackWatchMitigations(null, testIPv6AddressResourceId, null, null, 5, tsdMetrics);
+        assertEquals(1, listOfBlackwatchMitigation.size());
+        assertEquals(testIPv6AddressResourceIdCanonical, listOfBlackwatchMitigation.get(0).getResourceId());
+    }
+
+    @Test
     public void testGetBlackWatchMitigationsNoFilter() {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2));
         //no filter, should return all mitigations
@@ -439,7 +470,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 BlackWatchHelper.getHexStringChecksum("Bryan"));
         assertNull(BlackWatchHelper.getHexStringChecksum(null));
     }
-    
+
     @Test
     public void testUpdateBlackWatchMitigationSuccess() {
         ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(

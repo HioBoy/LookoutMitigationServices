@@ -11,21 +11,35 @@ import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationHelper;
 import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDynamoDBHelper;
 import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
 import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator;
-import com.amazon.lookout.mitigation.service.*;
+import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
+import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
+import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
+import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBSaveExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
-import com.amazonaws.services.dynamodbv2.model.*;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
+import com.amazonaws.services.dynamodbv2.model.Condition;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
+import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 import com.google.common.collect.ImmutableMap;
 import lombok.RequiredArgsConstructor;
+import one.util.streamex.EntryStream;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -60,13 +74,23 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     @Override
     public List<BlackWatchMitigationDefinition> getBlackWatchMitigations(String mitigationId, String resourceId,
             String resourceType, String ownerARN, long maxNumberOfEntriesToReturn, TSDMetrics tsdMetrics) {
-        
+
+        BlackWatchResourceTypeValidator typeValidator = null;
         Validate.notNull(tsdMetrics);
         try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler"
                 + ".getBlackWatchMitigations")) {
             List<BlackWatchMitigationDefinition> listOfBlackWatchMitigations = new ArrayList<>();
             try {
                 DynamoDBScanExpression scanExpression = new DynamoDBScanExpression();
+                if (resourceType != null && !resourceType.isEmpty()) {
+                    BlackWatchMitigationResourceType blackWatchMitigationResourceType = BlackWatchMitigationResourceType.valueOf(resourceType);
+                    typeValidator = resourceTypeValidatorMap.get(blackWatchMitigationResourceType);
+                    scanExpression.addFilterCondition(MitigationState.RESOURCE_TYPE_KEY,
+                        new Condition()
+                            .withComparisonOperator(ComparisonOperator.EQ)
+                            .withAttributeValueList(new AttributeValue().withS(resourceType)));
+                }
+
                 if (mitigationId != null && !mitigationId.isEmpty()) {
                     scanExpression.addFilterCondition(MitigationState.MITIGATION_ID_KEY, 
                             new Condition()
@@ -74,18 +98,28 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                                 .withAttributeValueList(new AttributeValue().withS(mitigationId)));
                 }
                 if (resourceId != null && !resourceId.isEmpty()) {
-                    scanExpression.addFilterCondition(MitigationState.RESOURCE_ID_KEY, 
+                    if (typeValidator != null) {
+                        resourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
+                        scanExpression.addFilterCondition(MitigationState.RESOURCE_ID_KEY,
                             new Condition()
                                 .withComparisonOperator(ComparisonOperator.EQ)
                                 .withAttributeValueList(new AttributeValue().withS(resourceId)));
-                }
-                if (resourceType != null && !resourceType.isEmpty()) {
-                    scanExpression.addFilterCondition(MitigationState.RESOURCE_TYPE_KEY, 
+                    } else {
+                        final String finalResourceId = resourceId;
+                        List<AttributeValue> resourceIdAttributeValueList = EntryStream.of(resourceTypeValidatorMap)
+                            .map((keyValue) -> {
+                                try {
+                                    return new AttributeValue().withS(keyValue.getValue().getCanonicalStringRepresentation(finalResourceId));
+                                } catch (IllegalArgumentException e) {
+                                    return null;
+                                }
+                            } ).nonNull().toList();
+                        scanExpression.addFilterCondition(MitigationState.RESOURCE_ID_KEY,
                             new Condition()
-                                .withComparisonOperator(ComparisonOperator.EQ)
-                                .withAttributeValueList(new AttributeValue().withS(resourceType)));
+                                .withComparisonOperator(ComparisonOperator.IN)
+                                .withAttributeValueList(resourceIdAttributeValueList));
+                    }
                 }
-                
                 if (ownerARN != null && !ownerARN.isEmpty()) {
                     scanExpression.addFilterCondition(MitigationState.OWNER_ARN_KEY, 
                             new Condition()
