@@ -161,7 +161,7 @@
     <bean id="blackWatchBorderLocationValidator" 
             class="com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator">
         <constructor-arg name="region" value="${realm}"/>
-        <constructor-arg name="borderLocationConfigFilePath" ref="${root}/etc/blackwatch_border_locations.json"/>
+        <constructor-arg name="borderLocationConfigFilePath" value="${root}/etc/blackwatch_border_locations.json"/>
     </bean>
 
     <bean id="blackWatchEdgeLocationValidator"
