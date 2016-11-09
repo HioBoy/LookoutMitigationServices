@@ -58,7 +58,6 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
     private static final String testMitigation1 = "testMitigation-20160818";
     private static final String testMitigation2 = "testMitigation-20160819";
-    private static final String testResourceId2 = "TEST-RESOURCE-2";
     private static final String testMasterRegion = "us-east-1";
     private static final String testSecondaryRegion = "us-west-1";
     private static final Map<String, String> endpointMap = ImmutableMap.of(testMasterRegion, "master-1.a.c", 
@@ -68,14 +67,13 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final String testOwnerARN2 = "testOwnerARN2";
     private static final long testChangeTime = 151515L;
     private static final int testMinsToLive = 100;
-    private static final String testResourceId1 = "TEST-RESOURCE-1";
     private static final String testIPAddressResourceId = "1.2.3.4";
+    private static final String testIPAddressResourceId2 = "4.3.2.1";
     private static final String testIPv6AddressResourceId = "0000::1";
     private static final String testIPv6AddressResourceIdCanonical = "::1";
     private static final String testIPAddressResourceType = BlackWatchMitigationResourceType.IPAddress.name();
     private static final String testIPAddressListResourceType = BlackWatchMitigationResourceType.IPAddressList.name();
     private static final String testLocation = "BR-SFO5-1";
-    private static final String testResourceType = "testResourceType";
     private static final String testValidJSON = "{ }";
     //Generated with: echo -n $ESCAPED_STRING | sha256sum
     private static final String validJSONChecksum = "257c1be96ae69f4b01c2c69bdb6d78605f59175819fb007d0bf245bf48444c4a";
@@ -166,8 +164,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         locationMitigationState.put(testLocation, setting);
         mitigationState1 = MitigationState.builder()
                 .mitigationId(testMitigation1)
-                .resourceId(testResourceId1)
-                .resourceType(testResourceType)
+                .resourceId(testIPAddressResourceId)
+                .resourceType(testIPAddressResourceType)
                 .changeTime(testChangeTime)
                 .ownerARN(testOwnerARN1)
                 .recordedResources(recordedResourcesMap)
@@ -183,8 +181,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         
         mitigationState2 = MitigationState.builder()
                 .mitigationId(testMitigation2)
-                .resourceId(testResourceId2)
-                .resourceType(testResourceType)
+                .resourceId(testIPAddressResourceId2)
+                .resourceType(testIPAddressResourceType)
                 .changeTime(23232L)
                 .ownerARN(testOwnerARN2)
                 .recordedResources(recordedResourcesMap)
@@ -399,7 +397,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testGetBlackWatchMitigationsFiterByResourceId() {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         //filter by resource id
-        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler.getBlackWatchMitigations(null, testResourceId2, null, null, 5, tsdMetrics);
+        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler
+            .getBlackWatchMitigations(null, testIPAddressResourceId2, null, null, 5, tsdMetrics);
         assertEquals(listOfBlackwatchMitigation.size(), 1);
         validateMitigation(listOfBlackwatchMitigation.get(0), mitigationState2);
     }
@@ -408,7 +407,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testGetBlackWatchMitigationsFiterByResourceType() {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         //filter by resource type, both mitigations match the resource type, return both
-        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler.getBlackWatchMitigations(null, null, testResourceType, null, 5, tsdMetrics);
+        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler
+            .getBlackWatchMitigations(null, null, testIPAddressResourceType, null, 5, tsdMetrics);
         assertEquals(listOfBlackwatchMitigation.size(), 2);
         validateMitigation(listOfBlackwatchMitigation.get(0), mitigationState1);
         validateMitigation(listOfBlackwatchMitigation.get(1), mitigationState2);
@@ -441,8 +441,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         //filter by mitigation id, resource id, resource type, only one match
         List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = 
-                blackWatchMitigationInfoHandler.getBlackWatchMitigations(testMitigation1, testResourceId1, 
-                        testResourceType, testOwnerARN1, 5, tsdMetrics);
+                blackWatchMitigationInfoHandler.getBlackWatchMitigations(testMitigation1, testIPAddressResourceId,
+                        testIPAddressResourceType, testOwnerARN1, 5, tsdMetrics);
         assertEquals(listOfBlackwatchMitigation.size(), 1);
         validateMitigation(listOfBlackwatchMitigation.get(0), mitigationState1);
     }
@@ -451,7 +451,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testGetBlackWatchMitigationsFilterByAllOptionsNoMatch() {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2));  
         //filter by mitigation id, resource id, resource type, no match
-        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler.getBlackWatchMitigations(testMitigation1, testResourceId2, testResourceType, null, 5, tsdMetrics);
+        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler
+            .getBlackWatchMitigations(testMitigation1, testIPAddressResourceId2, testIPAddressResourceType, null, 5, tsdMetrics);
         assertEquals(listOfBlackwatchMitigation.size(), 0);
     }
     
