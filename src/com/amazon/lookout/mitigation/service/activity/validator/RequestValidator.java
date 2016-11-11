@@ -215,6 +215,7 @@ public class RequestValidator {
     public void validateChangeBlackWatchMitigationOwnerARNRequest(@NonNull ChangeBlackWatchMitigationOwnerARNRequest request) {
         validateUserName(request.getMitigationActionMetadata().getUser());
         validateToolName(request.getMitigationActionMetadata().getToolName());
+        validateMitigationDescription(request.getMitigationActionMetadata().getDescription());
         validateMitigationId(request.getMitigationId());
         validateUserARN(request.getNewOwnerARN());
         validateUserARN(request.getExpectedOwnerARN());
