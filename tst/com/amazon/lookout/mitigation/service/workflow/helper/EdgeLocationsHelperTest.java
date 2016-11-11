@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.amazon.edge.service.GetPOPsRequest;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.BeforeClass;
@@ -94,7 +95,9 @@ public class EdgeLocationsHelperTest {
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
         List<String> edgeServicesPOPs = Lists.newArrayList("POP1", "POP2", "POP5");
         edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
-        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult);
+        GetPOPsRequest getPOPsRequest = new GetPOPsRequest();
+        getPOPsRequest.setType("pop");
+        when(edgeServicesGetPOPsCall.call(getPOPsRequest)).thenReturn(edgeServicesGetPOPsResult);
         when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
         
         DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
@@ -142,7 +145,9 @@ public class EdgeLocationsHelperTest {
     public void testCloudFrontCustomerAPIFailureCase() throws Exception {
         EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
         GetPOPsCall edgeServicesGetPOPsCall = mock(GetPOPsCall.class);
-        when(edgeServicesGetPOPsCall.call()).thenThrow(new RuntimeException());
+        GetPOPsRequest getPOPsRequest = new GetPOPsRequest();
+        getPOPsRequest.setType("pop");
+        when(edgeServicesGetPOPsCall.call(getPOPsRequest)).thenThrow(new RuntimeException());
         when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
         
         DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
@@ -180,7 +185,9 @@ public class EdgeLocationsHelperTest {
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
         List<String> edgeServicesPOPs = Lists.newArrayList("POP1", "POP2", "POP5");
         edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
-        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult);
+        GetPOPsRequest getPOPsRequest = new GetPOPsRequest();
+        getPOPsRequest.setType("pop");
+        when(edgeServicesGetPOPsCall.call(getPOPsRequest)).thenReturn(edgeServicesGetPOPsResult);
         when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
         
         DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
@@ -219,7 +226,9 @@ public class EdgeLocationsHelperTest {
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
         List<String> edgeServicesPOPs = Lists.newArrayList("POP1", "POP2", "POP5");
         edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
-        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult);
+        GetPOPsRequest getPOPsRequest = new GetPOPsRequest();
+        getPOPsRequest.setType("pop");
+        when(edgeServicesGetPOPsCall.call(getPOPsRequest)).thenReturn(edgeServicesGetPOPsResult);
         when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
         
         DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
@@ -259,7 +268,9 @@ public class EdgeLocationsHelperTest {
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
         List<String> edgeServicesPOPs = Lists.newArrayList("POP1", "POP2", "POP5");
         edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
-        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult).thenThrow(new RuntimeException()).thenThrow(new RuntimeException()).thenThrow(new RuntimeException());
+        GetPOPsRequest getPOPsRequest = new GetPOPsRequest();
+        getPOPsRequest.setType("pop");
+        when(edgeServicesGetPOPsCall.call(getPOPsRequest)).thenReturn(edgeServicesGetPOPsResult).thenThrow(new RuntimeException()).thenThrow(new RuntimeException()).thenThrow(new RuntimeException());
         when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
         
         DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
@@ -317,7 +328,9 @@ public class EdgeLocationsHelperTest {
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
         List<String> edgeServicesPOPs = Lists.newArrayList("POP1", "POP2", "POP5");
         edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
-        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult);
+        GetPOPsRequest getPOPsRequest = new GetPOPsRequest();
+        getPOPsRequest.setType("pop");
+        when(edgeServicesGetPOPsCall.call(getPOPsRequest)).thenReturn(edgeServicesGetPOPsResult);
         when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
         
         DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
@@ -392,35 +405,6 @@ public class EdgeLocationsHelperTest {
     }
     
     @Test
-    public void testFilteringOutMetroCFPOPs() throws Exception {
-        LdapProvider ldapProvider = mock(LdapProvider.class);
-        BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(ldapProvider, false, getMonitoringQueryClientProviderForBWPOP(), "Prod", "Total_Mitigated_Packets_RX", 5);
-        
-        EdgeOperatorServiceClient edgeServicesClient = mock(EdgeOperatorServiceClient.class);
-        GetPOPsCall edgeServicesGetPOPsCall = mock(GetPOPsCall.class);
-        GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
-        List<String> edgeServicesPOPs = Lists.newArrayList("POP1", "POP2", "POP5", "SFO5", "SFO5-M1", "SFO50-M3", "SFO20-M2", "LHR51-M2");
-        edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
-        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult);
-        when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
-        
-        DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
-        ListDNSServersCall dnsServersCall = mock(ListDNSServersCall.class);
-        ListDNSServersResponse dnsServersResponse = new ListDNSServersResponse();
-        List<String> daasPOPs = Lists.newArrayList("POP1");
-        DNSServer serverPOP1 = new DNSServer();
-        serverPOP1.setPOP(daasPOPs.get(0));
-        dnsServersResponse.setResults(Lists.newArrayList(serverPOP1));
-        when(dnsServersCall.call(any(ListDNSServersRequest.class))).thenReturn(dnsServersResponse);
-        when(daasClient.newListDNSServersCall()).thenReturn(dnsServersCall);
-        
-        EdgeLocationsHelper locationsHelper = new EdgeLocationsHelper(edgeServicesClient, daasClient, bwLocationsHelper, 1, "dir", new NullMetricsFactory(), new ArrayList<String>());
-        Set<String> cfClassicPOPs = locationsHelper.getCloudFrontClassicPOPs();
-        assertNotNull(cfClassicPOPs);
-        assertEquals(Sets.newHashSet("POP1", "POP2", "POP5", "SFO5"), cfClassicPOPs);
-    }
-    
-    @Test
     public void testLoadPOPsFromDiskOnStartupWithUnsuccessfulCFPopsRefresh() throws Exception {
         LdapProvider ldapProvider = mock(LdapProvider.class);
         BlackwatchLocationsHelper bwLocationsHelper = new BlackwatchLocationsHelper(ldapProvider, false, getMonitoringQueryClientProviderForBWPOP(), "Prod", "Total_Mitigated_Packets_RX", 5);
@@ -457,7 +441,9 @@ public class EdgeLocationsHelperTest {
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
         List<String> edgeServicesPOPs = Lists.newArrayList("POP1", "ARN1");
         edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
-        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult);
+        GetPOPsRequest getPOPsRequest = new GetPOPsRequest();
+        getPOPsRequest.setType("pop");
+        when(edgeServicesGetPOPsCall.call(getPOPsRequest)).thenReturn(edgeServicesGetPOPsResult);
         when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
         
         DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
@@ -502,7 +488,9 @@ public class EdgeLocationsHelperTest {
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
         List<String> edgeServicesPOPs = Lists.newArrayList("POP1", "ARN1", "BOM2", "SFO5", "GIG50", "MAA3");
         edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
-        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult);
+        GetPOPsRequest getPOPsRequest = new GetPOPsRequest();
+        getPOPsRequest.setType("pop");
+        when(edgeServicesGetPOPsCall.call(getPOPsRequest)).thenReturn(edgeServicesGetPOPsResult);
         when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
         
         DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
@@ -536,7 +524,9 @@ public class EdgeLocationsHelperTest {
         GetPOPsResult edgeServicesGetPOPsResult = new GetPOPsResult();
         List<String> edgeServicesPOPs = Lists.newArrayList("POP1");
         edgeServicesGetPOPsResult.setPOPList(edgeServicesPOPs);
-        when(edgeServicesGetPOPsCall.call()).thenReturn(edgeServicesGetPOPsResult);
+        GetPOPsRequest getPOPsRequest = new GetPOPsRequest();
+        getPOPsRequest.setType("pop");
+        when(edgeServicesGetPOPsCall.call(getPOPsRequest)).thenReturn(edgeServicesGetPOPsResult);
         when(edgeServicesClient.newGetPOPsCall()).thenReturn(edgeServicesGetPOPsCall);
         
         DaasControlAPIServiceV20100701Client daasClient = mock(DaasControlAPIServiceV20100701Client.class);
