@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 import javax.annotation.PreDestroy;
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.amazon.edge.service.GetPOPsRequest;
 import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
@@ -62,10 +63,6 @@ public class EdgeLocationsHelper implements Runnable {
     private static final String CLOUDFRONT_POP_NAMES_REFRESH_FAILED_METRIC = "EdgeServicesRefreshFailed";
     private static final String BLACKWATCH_POP_CHECK_METRIC = "BlackwatchCheck";
     private static final String BLACKWATCH_POP_CHECK_FAILED_METRIC = "BlackwatchCheckFailed";
-    
-    // If any CF POP has a -M<some number> in its name, then it is a metro POP. Examples of class POP: SFO5, DFW3. Examples of metro POPs: SFO5-M1, SFO20-M2.
-    // Pattern is thread-safe and hence using a static final instance.
-    private static final Pattern CF_METRO_POP_PATTERN = Pattern.compile("^[A-Z0-9]+-M[1-9]+$");
     
     public static final String POPS_LIST_FILE_NAME = "popsList";
     private static final String FILE_NEW_SUFFIX = ".new";
@@ -259,21 +256,14 @@ public class EdgeLocationsHelper implements Runnable {
         GetPOPsCall getPOPsCall = cloudfrontClient.newGetPOPsCall();
         
         int numAttempts = 0;
-        while (numAttempts++ < MAX_POP_NAMES_REFRESH_ATTEMPTS) {
+        while (cloudfrontPOPs.isEmpty() && numAttempts++ < MAX_POP_NAMES_REFRESH_ATTEMPTS) {
             try {
-                GetPOPsResult cfGetPOPsResult = getPOPsCall.call();
+                GetPOPsRequest getPOPsRequest = new GetPOPsRequest();
+                getPOPsRequest.setType("pop");
+                GetPOPsResult cfGetPOPsResult = getPOPsCall.call(getPOPsRequest);
                 LOG.info("List of CloudFront POPs received: " + cfGetPOPsResult.getPOPList() + " after refreshing with EdgeOperatorService.");
-                
-                for (String popName : cfGetPOPsResult.getPOPList()) {
-                    String popNameUpperCase = popName.toUpperCase().trim();
-                    Matcher matcher = CF_METRO_POP_PATTERN.matcher(popNameUpperCase);
-                    if (matcher.matches()) {
-                        LOG.info("Skipping the pop: " + popName + " whose name represents a metro-POP satisfying the pattern: " + CF_METRO_POP_PATTERN.pattern());
-                        continue;
-                    }
-                    cloudfrontPOPs.add(popNameUpperCase);
-                }
-                break;
+
+                cloudfrontPOPs.addAll(cfGetPOPsResult.getPOPList());
             } catch (Exception ex) {
                 LOG.warn("Caught exception when refreshing POP names from EdgeOperatorService. NumAttempts: " + numAttempts, ex);
                 
