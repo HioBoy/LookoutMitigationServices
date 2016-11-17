@@ -15,7 +15,10 @@
     </bean>
     
     <bean id="authAccount.us-west-1.prod" class="java.lang.String">
-        <constructor-arg value="693842253790"/> <!-- lookout-dev+lktmitsvc@amazon.com -->
+        <constructor-arg value="693842253790"/> <!-- lookout-dev+lktmitsvc+sfo@amazon.com -->
     </bean>
-    
+
+    <bean id="authAccount.us-west-1.gamma" class="java.lang.String">
+        <constructor-arg value="118405365741"/> <!-- lookout-dev+lktmitsvc+sfo+gamma@amazon.com -->
+    </bean>
 </beans>
