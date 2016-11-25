@@ -1003,6 +1003,10 @@ public class RequestValidatorTest {
         assertTrue(caughtExcepion instanceof IllegalArgumentException);
         assertTrue(caughtExcepion.getMessage().startsWith("Could not parse"));
         caughtExcepion = null;
+
+        //Allow null for the JSON.
+        request.setMitigationSettingsJSON(null);
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
         
         JSON="{\"test\":\"jsonValue\", \"test_array\":[\"A\", \"B\", \"C\"]}";
         request.setMitigationSettingsJSON(JSON);

@@ -1106,7 +1106,10 @@ public class RequestValidator {
         }
     }
 
-    private void validateMitigationSettingsJSON(@NonNull String mitigationSettingsJSON) {
+    private void validateMitigationSettingsJSON(String mitigationSettingsJSON) {
+        if (mitigationSettingsJSON == null) {
+            return;
+        }
         //For now, just validate it is properly formatted JSON.
         try {
             jsonReader.readTree(mitigationSettingsJSON);
