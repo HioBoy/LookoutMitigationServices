@@ -36,7 +36,7 @@ public class ApplyBlackWatchMitigationActivityTest extends ActivityTestHelper {
                 .withUser("Khaleesi")
                 .withToolName("JUnit")
                 .withDescription("Test Descr")
-                .withRelatedTickets(Arrays.asList("1234,5655"))
+                .withRelatedTickets(Arrays.asList("1234", "5655"))
                 .build());
     }
 
@@ -51,7 +51,7 @@ public class ApplyBlackWatchMitigationActivityTest extends ActivityTestHelper {
         Mockito.doReturn(retResponse).when(blackwatchMitigationInfoHandler).applyBlackWatchMitigation(anyString(), 
                 anyString(), anyLong(), anyLong(), anyInt(), 
                 isA(MitigationActionMetadata.class), anyString(), anyString(), isA(TSDMetrics.class));
-        
+
         ApplyBlackWatchMitigationResponse response = applyBlackWatchMitigationActivity.enact(request);
         assertEquals(requestId, response.getRequestId());
     }

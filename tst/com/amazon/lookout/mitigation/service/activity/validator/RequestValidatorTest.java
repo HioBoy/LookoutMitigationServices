@@ -819,7 +819,7 @@ public class RequestValidatorTest {
         request.setMitigationActionMetadata(MitigationActionMetadata.builder()
                 .withUser("Khaleesi").withToolName("JUnit")
                 .withDescription("Test Descr")
-                .withRelatedTickets(Arrays.asList("1234,5655")).build());
+                .withRelatedTickets(Arrays.asList("1234", "5655")).build());
         
         //valid request with only the MitigationActionMetadata, all other fields are null.
         validator.validateListBlackWatchMitigationsRequest(request);
@@ -909,7 +909,7 @@ public class RequestValidatorTest {
         request.setMitigationActionMetadata(MitigationActionMetadata.builder()
                 .withUser("Khaleesi").withToolName("JUnit")
                 .withDescription("Test Descr")
-                .withRelatedTickets(Arrays.asList("1234,5655")).build());
+                .withRelatedTickets(Arrays.asList("1234", "5655")).build());
 
         Throwable caughtException = null;
         
@@ -948,7 +948,7 @@ public class RequestValidatorTest {
                 .withUser("Khaleesi")
                 .withToolName("Dragons")
                 .withDescription("MOD butt kicking.")
-                .withRelatedTickets(Arrays.asList("1234,5655"))
+                .withRelatedTickets(Arrays.asList("1234", "5655"))
                 .build());
         char invalidChar = 0x00;
         
@@ -1037,6 +1037,41 @@ public class RequestValidatorTest {
         assertTrue(caughtExcepion instanceof IllegalArgumentException);
         assertTrue(caughtExcepion.getMessage().startsWith("Invalid user ARN"));
         caughtExcepion = null;
+
+        request.getMitigationActionMetadata().setUser("");
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("Invalid user"));
+        caughtExcepion = null;
+        request.getMitigationActionMetadata().setUser("Valid");
+
+        request.getMitigationActionMetadata().setToolName("");
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("Invalid tool"));
+        caughtExcepion = null;
+        request.getMitigationActionMetadata().setToolName("Towel");
+
+        request.getMitigationActionMetadata().setRelatedTickets(Arrays.asList("1234", "1234"));
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("Duplicate related tickets"));
+        caughtExcepion = null;
     }
 
     @Test
@@ -1046,7 +1081,7 @@ public class RequestValidatorTest {
                 .withUser("Khaleesi")
                 .withToolName("JUnit")
                 .withDescription("Test Descr")
-                .withRelatedTickets(Arrays.asList("1234,5655"))
+                .withRelatedTickets(Arrays.asList("1234", "5655"))
                 .build());
 
         Throwable caughtException = null;

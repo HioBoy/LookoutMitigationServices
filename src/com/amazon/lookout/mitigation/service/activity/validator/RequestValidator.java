@@ -1051,9 +1051,12 @@ public class RequestValidator {
     }
 
     public void validateUpdateBlackWatchMitigationRequest(@NonNull UpdateBlackWatchMitigationRequest request, 
-            @NonNull String userARN) {       
+            @NonNull String userARN) {
         validateUserName(request.getMitigationActionMetadata().getUser());
         validateToolName(request.getMitigationActionMetadata().getToolName());
+        if (request.getMitigationActionMetadata().getRelatedTickets() != null) {
+            validateRelatedTickets(request.getMitigationActionMetadata().getRelatedTickets());
+        }
         validateMitigationId(request.getMitigationId());
         validateMinutesToLive(request.getMinutesToLive());
         validatePacketsPerSecond(request.getGlobalPPS());
@@ -1066,6 +1069,9 @@ public class RequestValidator {
             String userARN) {
         validateUserName(request.getMitigationActionMetadata().getUser());
         validateToolName(request.getMitigationActionMetadata().getToolName());
+        if (request.getMitigationActionMetadata().getRelatedTickets() != null) {
+            validateRelatedTickets(request.getMitigationActionMetadata().getRelatedTickets());
+        }
         validateResourceId(request.getResourceId());
         validateResourceType(request.getResourceType());
         validateMinutesToLive(request.getMinutesToLive());

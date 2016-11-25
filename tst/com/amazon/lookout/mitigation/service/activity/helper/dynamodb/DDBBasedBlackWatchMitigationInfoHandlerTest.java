@@ -148,7 +148,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 .withUser("Khaleesi")
                 .withToolName("JUnit")
                 .withDescription("Test Descr")
-                .withRelatedTickets(Arrays.asList("1234,5655"))
+                .withRelatedTickets(Arrays.asList("1234", "5655"))
                 .build();
         
         testBWMetadata = BlackWatchMitigationActionMetadata.builder()
@@ -197,7 +197,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                         .user("Khaleesi")
                         .toolName("JUnit")
                         .description("Test Descr")
-                        .relatedTickets(Arrays.asList("1234,5655"))
+                        .relatedTickets(Arrays.asList("1234", "5655"))
                         .build())
                 .build();
     }

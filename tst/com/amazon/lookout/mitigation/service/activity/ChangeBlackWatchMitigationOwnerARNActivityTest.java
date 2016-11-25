@@ -30,7 +30,7 @@ public class ChangeBlackWatchMitigationOwnerARNActivityTest extends ActivityTest
                 .withUser("Khaleesi")
                 .withToolName("JUnit")
                 .withDescription("Test Descr")
-                .withRelatedTickets(Arrays.asList("1234,5655"))
+                .withRelatedTickets(Arrays.asList("1234", "5655"))
                 .build());
     }
 
