@@ -85,7 +85,6 @@ public class BlackWatchBorderLocationValidator implements LocationValidator {
     public boolean isValidLocation(String location) {
         Validate.notEmpty(location, "missing location");
         Validate.notNull(locationsSupported, "LocationSupported Set is NULL");
-        location = location.toUpperCase();
 
         return locationsSupported.contains(location);
     }

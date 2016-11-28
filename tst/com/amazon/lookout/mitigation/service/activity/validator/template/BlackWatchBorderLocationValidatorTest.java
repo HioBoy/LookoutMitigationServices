@@ -50,6 +50,24 @@ public class BlackWatchBorderLocationValidatorTest {
         validator = new BlackWatchBorderLocationValidator(region, borderLocationConfigFilePath);
         assertFalse(validator.isValidLocation(location));
     }
+    
+    /**
+     * Test lowercase valid location, should fail the validation since we only allow uppercase
+     * @param location
+     * @throws JSONException 
+     * @throws IOException 
+     * @throws FileNotFoundException 
+     */
+    @Test
+    @Parameters({
+        "BR-loc99-1",
+        "location-1"
+    })
+    public void testLowercaseLocation(String location) throws FileNotFoundException, IOException, JSONException {
+        BlackWatchBorderLocationValidator validator = null;
+        validator = new BlackWatchBorderLocationValidator(region, borderLocationConfigFilePath);
+        assertFalse(validator.isValidLocation(location));
+    }
 
     /**
      * Test empty location
