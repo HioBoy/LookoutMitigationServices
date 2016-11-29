@@ -261,7 +261,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         Throwable caughtException = null;
         try {
             blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId(), requestMetadata);
-        } catch (ConditionalCheckFailedException ex) {
+        } catch (IllegalArgumentException ex) {
             caughtException = ex;
         }
         assertNotNull(caughtException);
@@ -269,7 +269,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
 
     @Test
-    public void testDeactivateBlackWatchMitigationNonExistant() {
+    public void testDeactivateBlackWatchMitigationNonExistent() {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         Throwable caughtException = null;
         MitigationActionMetadata requestMetadata = MitigationActionMetadata.builder()
