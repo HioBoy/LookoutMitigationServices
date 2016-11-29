@@ -27,10 +27,10 @@ public interface BlackWatchMitigationInfoHandler {
     static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(MIT_ID_DATE_FORMAT_STRING, Locale.US)
             .withZone(ZoneId.of("Z"));
     final Random randomGenerator = new Random();
-    
-    public default String generateMitigationId() {
+
+    public default String generateMitigationId(String realm) {
         int random = randomGenerator.nextInt(MAX_RAND_BOUND);
-        return String.format(Locale.US, "%s_%04d", formatter.format(Instant.now()), random);
+        return String.format(Locale.US, "%s_%s_%04d", realm.toLowerCase(), formatter.format(Instant.now()), random);
     }
 
     public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceType,

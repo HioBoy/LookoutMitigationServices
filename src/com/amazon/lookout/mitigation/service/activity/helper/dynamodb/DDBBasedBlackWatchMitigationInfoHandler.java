@@ -54,6 +54,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     private final DogFishValidationHelper dogfishHelper;
     private final Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeValidator> resourceTypeValidatorMap;
     private final int parallelScanSegments;
+    private final String realm;
     
     private static final String QUERY_BLACKWATCH_MITIGATION_FAILURE = "QUERY_BLACKWATCH_MITIGATION_FAILED";
 
@@ -295,7 +296,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 }
             } else {
                 newMitigationCreated = true;
-                mitigationId = generateMitigationId();
+                mitigationId = generateMitigationId(realm);
                 mitigationState = MitigationState.builder()
                         .mitigationId(mitigationId)
                         .resourceId(canonicalResourceId)

@@ -283,6 +283,7 @@
         <constructor-arg name="dogfishHelper" ref="dogfishHelper"/>
         <constructor-arg name="resourceTypeValidatorMap" ref="resourceTypeValidatorMap"/>
         <constructor-arg name="parallelScanSegments" ref="mitigationStateParallelScanSegments"/>
+        <constructor-arg name="realm" value="${realm}" />
     </bean>
     
     <bean id="swfWorkflowStarter" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl">

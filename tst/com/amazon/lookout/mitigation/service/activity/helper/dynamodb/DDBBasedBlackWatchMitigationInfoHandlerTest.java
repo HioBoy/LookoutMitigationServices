@@ -110,7 +110,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         dogfishValidator = new DogFishValidationHelper(testMasterRegion, testMasterRegion, dogfishProvider, endpointMap);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, 4);
+                resourceTypeValidatorMap, 4, "us-east-1");
     }
     
     @BeforeClass
@@ -137,7 +137,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         resourceAllocationHelper = new ResourceAllocationHelper(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, metricsFactory);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
-                resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, resourceTypeValidatorMap, 4);
+                resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, resourceTypeValidatorMap, 4, "us-east-1");
 
 
         
@@ -837,7 +837,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 dogfishProvider, endpointMap);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, 4);
+                resourceTypeValidatorMap, 4, "us-east-1");
         DogfishIPPrefix prefix = new DogfishIPPrefix();
         prefix.setRegion("NotActive");
         thrown.expect(IllegalArgumentException.class);
@@ -855,7 +855,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 dogfishProvider, endpointMap);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, 4);
+                resourceTypeValidatorMap, 4, "us-east-1");
         DogfishIPPrefix prefix = new DogfishIPPrefix();
         prefix.setRegion(testMasterRegion);
         thrown.expect(IllegalArgumentException.class);
