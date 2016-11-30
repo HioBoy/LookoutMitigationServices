@@ -52,7 +52,9 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
                     blackWatchLocations.setChangeUser(ls.getChangeUser());
                     blackWatchLocations.setChangeTime(ls.getChangeTime());
                     blackWatchLocations.setChangeReason(ls.getChangeReason());
-
+                    blackWatchLocations.setActiveBGPSpeakerHosts(ls.getActiveBGPSpeakerHosts());
+                    blackWatchLocations.setActiveBlackWatchHosts(ls.getActiveBlackWatchHosts());
+                    blackWatchLocations.setLocationType(ls.getLocationType());
                     listOfBlackWatchLocation.add(blackWatchLocations);
                 }
             } catch (Exception ex) {

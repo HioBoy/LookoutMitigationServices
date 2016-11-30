@@ -58,6 +58,10 @@ public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
                     HostStatusInLocation hostStatusinLocation = new HostStatusInLocation();
                     hostStatusinLocation.setHostName(item.getString(HostStatus.HOST_NAME_KEY));
                     hostStatusinLocation.setIsActive(item.getBOOL(HostStatus.IS_ACTIVE_KEY));
+                    hostStatusinLocation.setLatestHeartbeatTimestamp(item.getLong(HostStatus.LATEST_HEART_BEAT_TIMESTAMP_KEY));
+                    hostStatusinLocation.setHostType(item.getString(HostStatus.HOST_TYPE_KEY));
+                    hostStatusinLocation.setDeviceName(item.getString(HostStatus.DEVICE_NAME_KEY));
+                    hostStatusinLocation.setHardwareType(item.getString(HostStatus.HARDWARE_TYPE_KEY));
                     listOfHostStatusInLocations.add(hostStatusinLocation);
                 }
             } catch (Exception ex) {
