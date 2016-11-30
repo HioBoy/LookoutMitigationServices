@@ -204,13 +204,15 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                         resourceTypeString);
                 throw new IllegalArgumentException(msg);
             }
+            mitigationSettingsJSON = BlackWatchResourceTypeValidator.normalizeJSONSettingsString(mitigationSettingsJSON);
+
             String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
-            Map<BlackWatchMitigationResourceType, Set<String>> resourceMap = 
+            Map<BlackWatchMitigationResourceType, Set<String>> resourceMap =
                     typeValidator.getCanonicalMapOfResources(resourceId, mitigationSettingsJSON);
             LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
                     canonicalResourceId, ReflectionToStringBuilder.toString(resourceMap)));
             validateResources(resourceMap);
-            
+
             String previousOwnerARN = mitigationState.getOwnerARN();
             mitigationState.setChangeTime(System.currentTimeMillis());
             mitigationState.setPpsRate(globalPPS);
@@ -318,10 +320,10 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             
             if (newMitigationCreated) {
                 boolean allocationProposalSuccess = resourceAllocationHelper.proposeNewMitigationResourceAllocation(
-                        mitigationId, resourceId, resourceTypeString);
+                        mitigationId, canonicalResourceId, resourceTypeString);
                 if (!allocationProposalSuccess) {
                     String msg = String.format("Could not complete resource allocation for mitigationId:%s "
-                            + "resourceId:%s resourceType:%s", mitigationId, resourceId, resourceType);
+                            + "resourceId:%s resourceType:%s", mitigationId, canonicalResourceId, resourceType);
                     mitigationStateDynamoDBHelper.deleteMitigationState(mitigationState);
                     throw new IllegalArgumentException(msg);
                 }
