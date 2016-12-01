@@ -23,8 +23,8 @@ import com.amazonaws.services.simpleworkflow.model.WorkflowType;
 
 /**
  * Helper for starting new workflows.
- * It uses the SWFWorkflowClientProvider to get an appropriate workflow client corresponding to the template being used for the client request
- * and then uses the client to start the workflow steps.
+ * It uses the SWFWorkflowClientProvider to get an appropriate workflow client corresponding to the template being used
+ * for the client request and then uses the client to start the workflow steps.
  */
 public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
     private static final Log LOG = LogFactory.getLog(SWFWorkflowStarterImpl.class);
@@ -34,21 +34,28 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
     private static final String WORKFLOW_TYPE_NAME_METRIC_PROPERTY_KEY = "WorkflowTypeName";
     private static final String WORKFLOW_TYPE_VERSION_METRIC_PROPERTY_KEY = "WorkflowTypeVersion";
     
-    // Default number of seconds we expect the workflow to complete in. Currently set to 10 minutes to allow enough time for workflow steps to complete.
-    // This value is deliberately set to higher than what our usual goal for finishing a workflow - to allow workflows to complete even if they're taking a bit longer.
+    // Default number of seconds we expect the workflow to complete in. Currently set to 10 minutes to allow enough
+    // time for workflow steps to complete.
+    // This value is deliberately set to higher than what our usual goal for finishing a workflow - to allow workflows
+    // to complete even if they're taking a bit longer.
     public static final long DEFAULT_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 10 * 60;
 
     // IPTABLES create/edit activities take long time to finish because of rsync'ing mitigation definitions to a large
     // number of hosts. Setting workflow timeout to 20 minutes to allow at least 2 activity timeouts.
     public static final long IPTABLES_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 20 * 60;
 
-    // BlackWatch need post deployment check on alarms, which can take at most 50 minutes, so override the workflow timeout to be 1 hours
+    // BlackWatch need post deployment check on alarms, which can take at most 50 minutes, so override the workflow
+    // timeout to be 1 hours
     public static final long BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 60 * 60;
     
     // BlackWatch Border workflows each take only 30-40 seconds, but a large number of them can queue up. Set timeout to 8 hours so queues have time to drain.
     public static final long BLACKWATCH_BORDER_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 8 * 60 * 60;
 
-    // Default timeout for deciders to finish a single decision task. Deciders are meant to be quick and anything taking above 60s would indicate a problem with our logic.
+    // BlackWatch border updates can stack up so override the workflow timeout to be 8 hours
+    public static final long BLACKWATCH_BORDER_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 60 * 60 * 8;
+
+    // Default timeout for deciders to finish a single decision task. Deciders are meant to be quick and anything
+    // taking above 60s would indicate a problem with our logic.
     private static final long DEFAULT_WORKFLOW_DECISION_TASK_TIMEOUT_SECONDS = 60;
 
     private final SWFWorkflowClientProvider workflowClientProvider;
@@ -63,34 +70,33 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * @param workflowId WorkflowId to use for the new workflow to be run.
      * @param request MitigationModificationRequest request passed by the client.
      * @param deviceName device on which the workflow steps are to be run.
-     * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to check for workflowId's uniqueness.
+     * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to
+     *                check for workflowId's uniqueness.
      * @return WorkflowClientExternal Representing the client that should be used to start running this workflow.
      */
     @Override
-    public WorkflowClientExternal createMitigationModificationWorkflowClient(long workflowId, @NonNull MitigationModificationRequest request, @NonNull String deviceName, @NonNull TSDMetrics metrics) {
+    public WorkflowClientExternal createMitigationModificationWorkflowClient(
+            long workflowId, @NonNull MitigationModificationRequest request, @NonNull String deviceName,
+            @NonNull TSDMetrics metrics) {
         Validate.isTrue(workflowId > 0);
         Validate.notEmpty(deviceName);
-        
-        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.createMitigationModificationWorkflowClient");
-        try {
-            String mitigationTemplate = request.getMitigationTemplate();
+
+        try (TSDMetrics subMetrics = metrics.newSubMetrics(
+                "SWFWorkflowStarterImpl.createMitigationModificationWorkflowClient")) {
+             String mitigationTemplate = request.getMitigationTemplate();
             
             // Get workflow client for this template + device.
-            return workflowClientProvider.getMitigationModificationWorkflowClient(mitigationTemplate, deviceName, workflowId);
-        } finally {
-            subMetrics.end();
+            return workflowClientProvider.getMitigationModificationWorkflowClient(mitigationTemplate,
+                    deviceName, workflowId);
         }
     }
     
     @Override
     public WorkflowClientExternal createReaperWorkflowClient(String swfWorkflowId, @NonNull TSDMetrics metrics) {
         Validate.notEmpty(swfWorkflowId);
-        
-        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.createReaperWorkflowClient");
-        try {
+
+        try (TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.createReaperWorkflowClient")) {
             return workflowClientProvider.getReaperWorkflowClient(swfWorkflowId);
-        } finally {
-            subMetrics.end();
         }
     }
 
@@ -102,22 +108,27 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * @param requestType Type of the request for which we need to start the workflow.
      * @param mitigationVersion Version to use for this mitigation.
      * @param deviceName device on which the workflow steps are to be run.
-     * @param deviceScope String representing the deviceScope for the device on which this mitigation needs to be applied.
+     * @param deviceScope String representing the deviceScope for the device on which this mitigation needs to be
+     *                    applied.
      * @param workflowExternalClient Pass the WorkflowClient to start the workflow.
-     * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to check for workflowId's uniqueness.
+     * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to
+     *                check for workflowId's uniqueness.
      */
     @Override
-    public void startMitigationModificationWorkflow(long workflowId, @NonNull MitigationModificationRequest request, @NonNull Set<String> locationsToDeploy,
-                                                    @NonNull RequestType requestType, int mitigationVersion, @NonNull String deviceName, @NonNull String deviceScope,
-                                                    @NonNull WorkflowClientExternal workflowExternalClient, @NonNull TSDMetrics metrics) {
+    public void startMitigationModificationWorkflow(
+            long workflowId, @NonNull MitigationModificationRequest request, @NonNull Set<String> locationsToDeploy,
+            @NonNull RequestType requestType, int mitigationVersion, @NonNull String deviceName,
+            @NonNull String deviceScope, @NonNull WorkflowClientExternal workflowExternalClient,
+            @NonNull TSDMetrics metrics) {
         Validate.isTrue(workflowId > 0);
         Validate.notEmpty(locationsToDeploy);
         Validate.isTrue(mitigationVersion > 0);
         Validate.notEmpty(deviceName);
         Validate.notEmpty(deviceScope);
         
-        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.startMitigationModificationWorkflow");
-        try {
+
+        try (TSDMetrics subMetrics =
+                     metrics.newSubMetrics("SWFWorkflowStarterImpl.startMitigationModificationWorkflow")) {
             // Add workflow properties to request metrics.
             WorkflowType workflowType = workflowExternalClient.getWorkflowType();
             String workflowTypeName = workflowType.getName();
@@ -130,11 +141,14 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             
             if (workflowExternalClient instanceof LookoutMitigationWorkflowClientExternal) {
                 // Start running the workflow.
-                ((LookoutMitigationWorkflowClientExternal) workflowExternalClient).startMitigationWorkflow(workflowId, locationsToDeploy, request, requestType, 
-                                                                                                           mitigationVersion, deviceName, deviceScope, workflowOptions);
+                ((LookoutMitigationWorkflowClientExternal) workflowExternalClient).startMitigationWorkflow(
+                        workflowId, locationsToDeploy, request, requestType, mitigationVersion, deviceName,
+                        deviceScope, workflowOptions);
             } else {
-                String msg = "WorkflowExternalClient is of type: " + workflowExternalClient.getClass().getName() + ". Currently there exists no setup to run workflow of this type. For workflowId: " + 
-                             workflowId + " on device: " + deviceName + " with mitigationVersion: " + mitigationVersion + " for request: " + ReflectionToStringBuilder.toString(request);
+                String msg = "WorkflowExternalClient is of type: " + workflowExternalClient.getClass().getName() +
+                        ". Currently there exists no setup to run workflow of this type. For workflowId: " +
+                        workflowId + " on device: " + deviceName + " with mitigationVersion: " +
+                        mitigationVersion + " for request: " + ReflectionToStringBuilder.toString(request);
                 LOG.error(msg);
                 throw new IllegalStateException(msg);
             }
@@ -146,11 +160,11 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             subMetrics.addProperty(WORKFLOW_ID_METRIC_PROPERTY_KEY, swfWorkflowId);
             subMetrics.addProperty(WORKFLOW_SWF_RUN_ID_METRIC_PROPERTY_KEY, swfRunId);
             
-            LOG.debug("Started workflow for workflowId: " + workflowId + " in SWF, with SWFWorkflowId: " + swfWorkflowId + " SWFRunId: " + swfRunId + 
-                      " WorkflowType: " + workflowTypeName + " WorkflowTypeVersion: " + workflowTypeVersion + " for request: " + ReflectionToStringBuilder.toString(request) + 
-                      " with mitigationVersion: " + mitigationVersion + " in locations: " + locationsToDeploy);
-        } finally {
-            subMetrics.end();
+            LOG.debug("Started workflow for workflowId: " + workflowId + " in SWF, with SWFWorkflowId: " +
+                    swfWorkflowId + " SWFRunId: " + swfRunId +  " WorkflowType: " + workflowTypeName +
+                    " WorkflowTypeVersion: " + workflowTypeVersion + " for request: " +
+                    ReflectionToStringBuilder.toString(request) + " with mitigationVersion: " + mitigationVersion +
+                    " in locations: " + locationsToDeploy);
         }
     }
     
@@ -159,14 +173,16 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
      * @param workflowId WorkflowId to use for the new workflow to be run.
      * @param requestToReap Request that needs to be reaped by this new reaper workflow.
      * @param workflowExternalClient Pass the WorkflowClient to start the workflow.
-     * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to check for workflowId's uniqueness.
+     * @param metrics TSDMetrics instance to log the time required to start the workflow, including SWF's check to
+     *                check for workflowId's uniqueness.
      */
     @Override
-    public void startReaperWorkflow(@NonNull String workflowId, @NonNull RequestToReap requestToReap, @NonNull WorkflowClientExternal workflowExternalClient, @NonNull TSDMetrics metrics) {
+    public void startReaperWorkflow(@NonNull String workflowId, @NonNull RequestToReap requestToReap,
+                                    @NonNull WorkflowClientExternal workflowExternalClient,
+                                    @NonNull TSDMetrics metrics) {
         Validate.notEmpty(workflowId);
 
-        TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.startReaperWorkflow");
-        try {
+        try (TSDMetrics subMetrics = metrics.newSubMetrics("SWFWorkflowStarterImpl.startReaperWorkflow")) {
             // Add workflow properties to request metrics.
             WorkflowType workflowType = workflowExternalClient.getWorkflowType();
             String workflowTypeName = workflowType.getName();
@@ -179,10 +195,12 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             
             if (workflowExternalClient instanceof LookoutReaperWorkflowClientExternal) {
                 // Start running the workflow.
-                ((LookoutReaperWorkflowClientExternal) workflowExternalClient).startReaperWorkflow(requestToReap, workflowOptions);
+                ((LookoutReaperWorkflowClientExternal) workflowExternalClient).startReaperWorkflow(requestToReap,
+                        workflowOptions);
             } else {
-                String msg = "WorkflowExternalClient is of type: " + workflowExternalClient.getClass().getName() + ". Currently there exists no setup to run workflow of " +
-                             "this reaper workflow type for reaping the request: " + requestToReap;
+                String msg = "WorkflowExternalClient is of type: " + workflowExternalClient.getClass().getName() +
+                        ". Currently there exists no setup to run workflow of this reaper workflow type for reaping" +
+                        " the request: " + requestToReap;
                 LOG.error(msg);
                 throw new IllegalStateException(msg);
             }
@@ -194,16 +212,16 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
             subMetrics.addProperty(WORKFLOW_ID_METRIC_PROPERTY_KEY, swfWorkflowId);
             subMetrics.addProperty(WORKFLOW_SWF_RUN_ID_METRIC_PROPERTY_KEY, swfRunId);
             
-            LOG.debug("Started reaper workflow for workflowId: " + workflowId + " in SWF, with SWFWorkflowId: " + swfWorkflowId + " SWFRunId: " + swfRunId + 
-                      " WorkflowType: " + workflowTypeName + " WorkflowTypeVersion: " + workflowTypeVersion + " for requestToReap: " + requestToReap);
-        } finally {
-            subMetrics.end();
+            LOG.debug("Started reaper workflow for workflowId: " + workflowId + " in SWF, with SWFWorkflowId: " +
+                    swfWorkflowId + " SWFRunId: " + swfRunId + " WorkflowType: " + workflowTypeName +
+                    " WorkflowTypeVersion: " + workflowTypeVersion + " for requestToReap: " + requestToReap);
         }
     }
     
     /**
      * Helper to get default configurations to use for this workflow.
-     * @return StartWorkflowOptions which represents basic timeout configurations that we want to set for the new workflow.
+     * @return StartWorkflowOptions which represents basic timeout configurations that we want to set for the
+     * new workflow.
      */
     private StartWorkflowOptions getReaperStartWorkflowOptions() {
         StartWorkflowOptions startWorkflowOptions = new StartWorkflowOptions();
@@ -214,7 +232,8 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
 
     /**
      * Helper to get configurations to use for this workflow.
-     * @return StartWorkflowOptions which represents basic timeout configurations that we want to set for the new workflow.
+     * @return StartWorkflowOptions which represents basic timeout configurations that we want to set for the
+     * new workflow.
      * @param deviceName logical device for applying mitigation.
      */
     private StartWorkflowOptions getStartWorkflowOptions(String deviceName) {

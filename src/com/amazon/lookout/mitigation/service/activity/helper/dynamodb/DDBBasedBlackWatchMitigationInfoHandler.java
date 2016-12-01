@@ -377,56 +377,56 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     }
 
     public void deactivateMitigation(String mitigationId, MitigationActionMetadata actionMetadata) {
-            // Get current state
-            String To_Delete_State = MitigationState.State.To_Delete.name();
-            MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
-            if (state == null) {
+        // Get current state
+        String To_Delete_State = MitigationState.State.To_Delete.name();
+        MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+        if (state == null) {
+            throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
+        }
+        state.setState(To_Delete_State);
+        BlackWatchMitigationActionMetadata actionMetadataBlackWatch =
+                BlackWatchHelper.coralMetadataToBWMetadata(actionMetadata);
+        state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
+        DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
+        ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
+                new AttributeValue(To_Delete_State));
+        expectedValue.setComparisonOperator(ComparisonOperator.NE);
+        Map<String, ExpectedAttributeValue> expectedAttributes =
+                ImmutableMap.of(MitigationState.STATE_KEY, expectedValue);
+        condition.setExpected(expectedAttributes);
+        try {
+            mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
+        } catch (ConditionalCheckFailedException conEx) {
+            MitigationState mitigation = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+            if (mitigation == null) {
                 throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
             }
-            state.setState(To_Delete_State);
-            BlackWatchMitigationActionMetadata actionMetadataBlackWatch =
-                    BlackWatchHelper.coralMetadataToBWMetadata(actionMetadata);
-            state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
-            DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
-            ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
-                    new AttributeValue(To_Delete_State));
-            expectedValue.setComparisonOperator(ComparisonOperator.NE);
-            Map<String, ExpectedAttributeValue> expectedAttributes =
-                    ImmutableMap.of(MitigationState.STATE_KEY, expectedValue);
-            condition.setExpected(expectedAttributes);
-            try {
-                mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
-            } catch (ConditionalCheckFailedException conEx) {
-                MitigationState mitigation = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
-                if (mitigation == null) {
-                    throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
-                }
-                if (To_Delete_State.equals(mitigation.getState())) {
-                    throw new IllegalArgumentException("Mitigation " + mitigationId + " is already in deactivated state.");
-                }
-                //Unknown reason, throw the exception.
-                throw conEx;
+            if (To_Delete_State.equals(mitigation.getState())) {
+                throw new IllegalArgumentException("Mitigation " + mitigationId + " is already in deactivated state.");
             }
+            //Unknown reason, throw the exception.
+            throw conEx;
+        }
     }
 
-     public void changeOwnerARN(String mitigationId, String newOwnerARN, String expectedOwnerARN, 
-             MitigationActionMetadata actionMetadata) {
-             // Get current state
-             MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
-            if (state == null) {
-                throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
-            }
-            state.setOwnerARN(newOwnerARN);
-            BlackWatchMitigationActionMetadata actionMetadataBlackWatch =
-                    BlackWatchHelper.coralMetadataToBWMetadata(actionMetadata);
-            state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
-             DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
-             ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
-                     new AttributeValue(expectedOwnerARN));
-             expectedValue.setComparisonOperator(ComparisonOperator.EQ);
-             Map<String, ExpectedAttributeValue> expectedAttributes =
-                     ImmutableMap.of(MitigationState.OWNER_ARN_KEY, expectedValue);
-             condition.setExpected(expectedAttributes);
-             mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
-     }
+    public void changeOwnerARN(String mitigationId, String newOwnerARN, String expectedOwnerARN,
+                            MitigationActionMetadata actionMetadata) {
+        // Get current state
+        MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+        if (state == null) {
+            throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
+        }
+
+        state.setOwnerARN(newOwnerARN);
+        BlackWatchMitigationActionMetadata actionMetadataBlackWatch =
+                BlackWatchHelper.coralMetadataToBWMetadata(actionMetadata);
+        state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
+        DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
+        ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(new AttributeValue(expectedOwnerARN));
+        expectedValue.setComparisonOperator(ComparisonOperator.EQ);
+        Map<String, ExpectedAttributeValue> expectedAttributes =
+                ImmutableMap.of(MitigationState.OWNER_ARN_KEY, expectedValue);
+        condition.setExpected(expectedAttributes);
+        mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
+    }
 }
