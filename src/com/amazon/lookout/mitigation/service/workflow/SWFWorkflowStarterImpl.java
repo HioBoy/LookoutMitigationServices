@@ -44,6 +44,9 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
 
     // BlackWatch need post deployment check on alarms, which can take at most 50 minutes, so override the workflow timeout to be 1 hours
     public static final long BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 60 * 60;
+    
+    // BlackWatch Border workflows each take only 30-40 seconds, but a large number of them can queue up. Set timeout to 8 hours so queues have time to drain.
+    public static final long BLACKWATCH_BORDER_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 8 * 60 * 60;
 
     // Default timeout for deciders to finish a single decision task. Deciders are meant to be quick and anything taking above 60s would indicate a problem with our logic.
     private static final long DEFAULT_WORKFLOW_DECISION_TASK_TIMEOUT_SECONDS = 60;
@@ -228,6 +231,9 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
         }
         if (DeviceName.BLACKWATCH_POP.name().equals(deviceName)) {
             return BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
+        }
+        if (DeviceName.BLACKWATCH_BORDER.name().equals(deviceName)) {
+            return BLACKWATCH_BORDER_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
         }
         return DEFAULT_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
     }
