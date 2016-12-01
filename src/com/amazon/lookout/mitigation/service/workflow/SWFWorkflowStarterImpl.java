@@ -48,11 +48,9 @@ public class SWFWorkflowStarterImpl implements SWFWorkflowStarter {
     // timeout to be 1 hours
     public static final long BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 60 * 60;
     
-    // BlackWatch Border workflows each take only 30-40 seconds, but a large number of them can queue up. Set timeout to 8 hours so queues have time to drain.
+    // BlackWatch Border workflows each take only 30-40 seconds, but a large number of them can queue up.
+    // Set timeout to 8 hours so queues have time to drain.
     public static final long BLACKWATCH_BORDER_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 8 * 60 * 60;
-
-    // BlackWatch border updates can stack up so override the workflow timeout to be 8 hours
-    public static final long BLACKWATCH_BORDER_WORKFLOW_COMPLETION_TIMEOUT_SECONDS = 60 * 60 * 8;
 
     // Default timeout for deciders to finish a single decision task. Deciders are meant to be quick and anything
     // taking above 60s would indicate a problem with our logic.
