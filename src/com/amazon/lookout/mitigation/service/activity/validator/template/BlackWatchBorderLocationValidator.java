@@ -31,15 +31,17 @@ public class BlackWatchBorderLocationValidator implements LocationValidator {
     private static final Log LOG = LogFactory.getLog(BlackWatchBorderLocationValidator.class);
     private static final String LOCATION_KEY = "locations";
     private static final String MITIGATION_REGION_KEY = "mitigation_region";
+    private final String whitelistedLocationPrefix;
     private Set<String> locationsSupported;
 
-    @ConstructorProperties({ "region", "borderLocationConfigFilePath" })
-    public BlackWatchBorderLocationValidator(String region, String borderLocationConfigFilePath) throws FileNotFoundException, IOException, JSONException {
+    @ConstructorProperties({ "region", "borderLocationConfigFilePath", "allowedLocationPrefix" })
+    public BlackWatchBorderLocationValidator(String region, String borderLocationConfigFilePath, String allowedLocationPrefix) throws FileNotFoundException, IOException, JSONException {
         Validate.notEmpty(region);
         Validate.notNull(borderLocationConfigFilePath, "borderLocationConfigFilePath can not be null");
 
         JSONObject borderLocationJSON = readBorderLocationsJSONFile(borderLocationConfigFilePath);
         locationsSupported = getLocationsSupported(region, borderLocationJSON);
+        whitelistedLocationPrefix = allowedLocationPrefix;
     }
 
     /**
@@ -85,8 +87,11 @@ public class BlackWatchBorderLocationValidator implements LocationValidator {
     public boolean isValidLocation(String location) {
         Validate.notEmpty(location, "missing location");
         Validate.notNull(locationsSupported, "LocationSupported Set is NULL");
-
-        return locationsSupported.contains(location);
+        if (!whitelistedLocationPrefix.isEmpty() && location.startsWith(whitelistedLocationPrefix)) {
+        	return true;
+        } else {
+        	return locationsSupported.contains(location);
+        }
     }
     
     /**

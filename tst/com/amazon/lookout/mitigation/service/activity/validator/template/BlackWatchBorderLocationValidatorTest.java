@@ -14,6 +14,7 @@ import org.junit.runner.RunWith;
 public class BlackWatchBorderLocationValidatorTest {
     private static final String borderLocationConfigFilePath = System.getProperty("user.dir") + "/tst-data/test_location_config.json";
     private static final String region = "test-region";
+    private static final String whitelistedLocationPrefix = "testPrefix";
 
     /**
      * Test valid location
@@ -29,8 +30,42 @@ public class BlackWatchBorderLocationValidatorTest {
     })
     public void testValidLocation(String location) throws FileNotFoundException, IOException, JSONException {
         BlackWatchBorderLocationValidator validator = null;
-        validator = new BlackWatchBorderLocationValidator("us-east-1", borderLocationConfigFilePath);
+        validator = new BlackWatchBorderLocationValidator("us-east-1", borderLocationConfigFilePath, whitelistedLocationPrefix);
         assertTrue(validator.isValidLocation(location));
+    }
+    
+    /**
+     * Test whitelisted location
+     * @param location
+     * @throws JSONException 
+     * @throws IOException 
+     * @throws FileNotFoundException 
+     */
+    @Test
+    @Parameters({
+        "testPrefixxxxx"
+    })
+    public void testWhitelistedLocation(String location) throws FileNotFoundException, IOException, JSONException {
+        BlackWatchBorderLocationValidator validator = null;
+        validator = new BlackWatchBorderLocationValidator("us-east-1", borderLocationConfigFilePath, whitelistedLocationPrefix);
+        assertTrue(validator.isValidLocation(location));
+    }
+    
+    /**
+     * Test empty whitelisted location
+     * @param location
+     * @throws JSONException 
+     * @throws IOException 
+     * @throws FileNotFoundException 
+     */
+    @Test
+    @Parameters({
+        "testPrefixxxxx"
+    })
+    public void testEmptyWhitelistedLocationPrefix(String location) throws FileNotFoundException, IOException, JSONException {
+        BlackWatchBorderLocationValidator validator = null;
+        validator = new BlackWatchBorderLocationValidator("us-east-1", borderLocationConfigFilePath, "");
+        assertFalse(validator.isValidLocation(location));
     }
     
     /**
@@ -47,7 +82,7 @@ public class BlackWatchBorderLocationValidatorTest {
     })
     public void testInvalidLocation(String location) throws FileNotFoundException, IOException, JSONException {
         BlackWatchBorderLocationValidator validator = null;
-        validator = new BlackWatchBorderLocationValidator(region, borderLocationConfigFilePath);
+        validator = new BlackWatchBorderLocationValidator(region, borderLocationConfigFilePath, whitelistedLocationPrefix);
         assertFalse(validator.isValidLocation(location));
     }
     
@@ -65,7 +100,7 @@ public class BlackWatchBorderLocationValidatorTest {
     })
     public void testLowercaseLocation(String location) throws FileNotFoundException, IOException, JSONException {
         BlackWatchBorderLocationValidator validator = null;
-        validator = new BlackWatchBorderLocationValidator(region, borderLocationConfigFilePath);
+        validator = new BlackWatchBorderLocationValidator(region, borderLocationConfigFilePath, whitelistedLocationPrefix);
         assertFalse(validator.isValidLocation(location));
     }
 
@@ -82,7 +117,7 @@ public class BlackWatchBorderLocationValidatorTest {
     })
     public void testEmptyLocation(String location) throws FileNotFoundException, IOException, JSONException {
         BlackWatchBorderLocationValidator validator = null;
-        validator = new BlackWatchBorderLocationValidator(region, borderLocationConfigFilePath);
+        validator = new BlackWatchBorderLocationValidator(region, borderLocationConfigFilePath, whitelistedLocationPrefix);
         assertFalse(validator.isValidLocation(location));
     }
 
@@ -97,6 +132,6 @@ public class BlackWatchBorderLocationValidatorTest {
         "LOCATION-1"
     })
     public void testInvalidConfigFilePath(String location) throws FileNotFoundException, IOException, JSONException {
-        new BlackWatchBorderLocationValidator(region, "/random/path/file.json");
+        new BlackWatchBorderLocationValidator(region, "/random/path/file.json", whitelistedLocationPrefix);
     }
 }

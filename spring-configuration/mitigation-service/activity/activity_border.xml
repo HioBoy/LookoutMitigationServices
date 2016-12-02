@@ -162,6 +162,7 @@
             class="com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator">
         <constructor-arg name="region" value="${realm}"/>
         <constructor-arg name="borderLocationConfigFilePath" value="${root}/etc/blackwatch_border_locations.json"/>
+        <constructor-arg name="allowedLocationPrefix" ref="${domain}.allowedLocationPrefix"/>
     </bean>
 
     <bean id="blackWatchEdgeLocationValidator"
