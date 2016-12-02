@@ -68,7 +68,7 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
         validator = new EdgeBlackWatchMitigationTemplateValidator(s3Client, edgeLocationsHelper,
-                new BlackWatchEdgeLocationValidator(edgeLocationsHelper, "^[GE]-([A-Z0-9]+)$", new HashSet<String>(Arrays.asList("LOADTEST-118", "LOADTEST-119"))));
+                new BlackWatchEdgeLocationValidator(edgeLocationsHelper, "^[GE]-([A-Z0-9]+)$", new HashSet<String>(Arrays.asList("LOADTEST-118", "LOADTEST-119")), "testWhitelistedPrefix"));
         
         doReturn(new HashSet<String>(Arrays.asList("AMS1", "AMS50", "NRT54", "G-IAD55"))).when(edgeLocationsHelper).getAllClassicPOPs();
     }
@@ -288,6 +288,54 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         request.setServiceName(ServiceName.Edge);
         request.setLocations(Arrays.asList("AMZ1"));
+        S3Object config = new S3Object();
+        config.setBucket("s3bucket");
+        config.setKey("s3key");
+        config.setMd5("md5");
+        BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
+        constraint.setConfig(config);
+        MitigationDefinition mitigationDefinition = new MitigationDefinition();
+        mitigationDefinition.setConstraint(constraint);
+        request.setMitigationDefinition(mitigationDefinition);
+        validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetrics);
+    }
+    
+    /**
+     * Create mitigation with whitelisted location
+     */
+    @Test
+    public void testCreateMitigationWhitelistedLocationPrefix() {
+        String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
+        CreateMitigationRequest request = new CreateMitigationRequest();
+        request.setMitigationName("BLACKWATCH_POP_GLOBAL_testWhitelistedPrefixxxx");
+        request.setMitigationTemplate(mitigationTemplate);
+        request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
+        request.setServiceName(ServiceName.Edge);
+        request.setLocations(Arrays.asList("testWhitelistedPrefixxxx"));
+        S3Object config = new S3Object();
+        config.setBucket("s3bucket");
+        config.setKey("s3key");
+        config.setMd5("md5");
+        BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
+        constraint.setConfig(config);
+        MitigationDefinition mitigationDefinition = new MitigationDefinition();
+        mitigationDefinition.setConstraint(constraint);
+        request.setMitigationDefinition(mitigationDefinition);
+        validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetrics);
+    }
+    
+    /**
+     * Create mitigation with location not whitelisted
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void testCreateMitigationNotWhitelistedLocationPrefix() {
+        String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
+        CreateMitigationRequest request = new CreateMitigationRequest();
+        request.setMitigationName("BLACKWATCH_POP_GLOBAL_G-XXXX");
+        request.setMitigationTemplate(mitigationTemplate);
+        request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
+        request.setServiceName(ServiceName.Edge);
+        request.setLocations(Arrays.asList("G-XXXX"));
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");

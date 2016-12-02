@@ -20,12 +20,14 @@ public class BlackWatchEdgeLocationValidator implements LocationValidator {
     private static final Pattern PROD_LOCATION_PATTERN = Pattern.compile("E-([A-Z0-9]+)");
     private final Pattern edgeLocationPattern;
     private final Set<String> preDefinedLocations;
+    private final String whitelistedLocationPrefix;
     
-    @ConstructorProperties({"edgeLocationsHelper", "edgeLocationPattern", "preDefinedLocations"}) 
-    public BlackWatchEdgeLocationValidator(EdgeLocationsHelper edgeLocationsHelper, String edgeLocationPattern, Set<String> preDefinedLocations) {
+    @ConstructorProperties({"edgeLocationsHelper", "edgeLocationPattern", "preDefinedLocations", "allowedLocationPrefix"}) 
+    public BlackWatchEdgeLocationValidator(EdgeLocationsHelper edgeLocationsHelper, String edgeLocationPattern, Set<String> preDefinedLocations, String allowedLocationPrefix) {
         this.edgeLocationsHelper = edgeLocationsHelper;
         this.edgeLocationPattern = Pattern.compile(edgeLocationPattern);
         this.preDefinedLocations = preDefinedLocations.stream().map(String::toUpperCase).collect(Collectors.toSet());
+        whitelistedLocationPrefix = allowedLocationPrefix;
     }
     
     @Override
@@ -35,6 +37,11 @@ public class BlackWatchEdgeLocationValidator implements LocationValidator {
         if (preDefinedLocations.contains(location)) {
         	return true;
         }
+        //whitelisted location prefix
+        if (!whitelistedLocationPrefix.isEmpty() && location.startsWith(whitelistedLocationPrefix)) {
+        	return true;
+        }
+        
         Validate.isTrue(edgeLocationPattern.matcher(location).find(), "invalid location " + location
                 + ". edge location must exactly match pattern " + edgeLocationPattern.pattern());
  

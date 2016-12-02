@@ -170,6 +170,7 @@
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
         <constructor-arg name="edgeLocationPattern" ref="${domain}.edgeLocationPattern"/>
         <constructor-arg name="preDefinedLocations" ref="preDefinedLocations"/>
+        <constructor-arg name="allowedLocationPrefix" ref="${domain}.allowedLocationPrefix"/>
     </bean>
     
     <bean id="templateBasedRequestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator">
