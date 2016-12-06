@@ -139,10 +139,9 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     
                     Map<String, MitigationStateSetting> locState = ObjectUtils.defaultIfNull(
                             ms.getLocationMitigationState(), new HashMap<String, MitigationStateSetting>());
-                    Map<String, LocationMitigationStateSettings> locationMitigationState = 
-                            locState.entrySet().stream().collect(Collectors
-                                    .toMap(p -> p.getKey(), p -> convertMitSSToLocMSS(p.getValue())));
-                    
+                    Map<String, LocationMitigationStateSettings> locationMitigationState = EntryStream.of(locState)
+                        .mapValues(v -> v != null ? convertMitSSToLocMSS(v) : null).toMap();
+
                     BlackWatchMitigationDefinition mitigationDefinition = BlackWatchMitigationDefinition.builder()
                             .withMitigationId(ms.getMitigationId())
                             .withResourceId(ms.getResourceId())
