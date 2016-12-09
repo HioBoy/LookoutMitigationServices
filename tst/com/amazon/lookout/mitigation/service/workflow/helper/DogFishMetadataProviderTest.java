@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
+import com.amazon.coral.metrics.Metrics;
 import com.amazon.coral.metrics.MetricsFactory;
 
 import java.util.ArrayList;
@@ -33,7 +34,7 @@ public class DogFishMetadataProviderTest {
     private AllIpVersionsCidrsTrie<DogfishIPPrefix> prefixTrie = new AllIpVersionsCidrsTrie<>();
     private final List<DogfishIPPrefix> ipPrefixes = new ArrayList<>();
     private MetricsFactory metricsFactory;
-    private TSDMetrics tsdMetrics;
+    private static Metrics metrics = Mockito.mock(Metrics.class);
 
     String[] ipv4Prefixes = { "103.246.150.0/24", "10.12.13.161/32", "54.231.226.0/32", "103.246.150.122/32" };
     String[] ipv4 = { "103.246.150.1", "10.12.13.161", "54.231.226.0", "103.246.150.122" };
@@ -87,9 +88,12 @@ public class DogFishMetadataProviderTest {
         }
 
         metricsFactory = mock(MetricsFactory.class);
-        tsdMetrics = mock(TSDMetrics.class);
+        // mock TSDMetric
+        Mockito.doReturn(metrics).when(metricsFactory).newMetrics();
+        Mockito.doReturn(metrics).when(metrics).newMetrics();
+
+
         awsDogfishFetcher = mock(AwsDogfishPrefixesMetadataFetcher.class);
-        awsDogFishMetadataProvider = spy(new DogFishMetadataProvider(awsDogfishFetcher, metricsFactory));
         awsDogfishJSON = mock(DogfishJSON.class);
         DateTime currentTime = new DateTime();
 
@@ -99,8 +103,8 @@ public class DogFishMetadataProviderTest {
         when(awsDogfishFetcher.getLastUpdateTimestamp()).thenReturn(Optional.of(currentTime.minusHours(5)),
                 Optional.of(currentTime.minusHours(3)), Optional.of(currentTime.minusHours(3)));
         when(awsDogfishJSON.getPrefixes()).thenReturn(ipPrefixes);
-        Mockito.doReturn(tsdMetrics).when(awsDogFishMetadataProvider).createTSDMetrics(anyString());
-        when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
+
+        awsDogFishMetadataProvider = spy(new DogFishMetadataProvider(awsDogfishFetcher, metricsFactory));
 
         TestUtils.configureLogging();
     }
@@ -109,7 +113,7 @@ public class DogFishMetadataProviderTest {
     public void updateCache() {
         String testIP = "32.31.45.11/24";
 
-        awsDogFishMetadataProvider.fetchFile(tsdMetrics);
+        awsDogFishMetadataProvider.fetchFile();
         DogfishIPPrefix fetchedPrefix = awsDogFishMetadataProvider.getCIDRMetaData(testIP);
         Assert.assertEquals(fetchedPrefix, null);
 
@@ -125,7 +129,7 @@ public class DogFishMetadataProviderTest {
         prefix.setIpVersion(DogfishIPPrefix.IP_VERSION_IPV4);
         ipPrefixes.add(prefix);
 
-        awsDogFishMetadataProvider.fetchFile(tsdMetrics);
+        awsDogFishMetadataProvider.fetchFile();
         fetchedPrefix = awsDogFishMetadataProvider.getCIDRMetaData(testIP);
         Assert.assertEquals(fetchedPrefix.getIpPrefix(), testIP);
     }

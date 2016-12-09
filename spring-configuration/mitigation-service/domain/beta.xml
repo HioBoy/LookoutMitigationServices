@@ -22,6 +22,10 @@
     <util:map id="beta.regionEndpointsMap">
         <entry key="IAD" value="lookout-mitigation-service-beta.amazon.com"/>
     </util:map>
+
+    <bean id="beta.dogfishBucketSuffix" class="java.lang.String">
+        <constructor-arg value="beta" />
+    </bean>
     
     <bean id="beta.masterRegion" class="java.lang.String">
         <constructor-arg value="IAD"/>

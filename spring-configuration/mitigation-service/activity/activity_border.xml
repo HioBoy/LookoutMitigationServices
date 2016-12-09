@@ -355,7 +355,7 @@
         <constructor-arg name="fileName" value="dogfish.json"/>
         <constructor-arg name="syncAlarmThresholdMinutes" value="90"/> <!-- 1.5 hours -->
         <constructor-arg name="acceptableAgeOfCachedContentMinutes" value="180"/> <!-- 3 hours -->
-        <constructor-arg value="${domain}"/>
+        <constructor-arg name="domain" ref="${domain}.dogfishBucketSuffix"/>
         <constructor-arg name="materialSet" ref="consolidatedMetadataMaterialSet"/>
         <constructor-arg name="reportees">
             <list>

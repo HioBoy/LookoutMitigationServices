@@ -35,6 +35,10 @@
         <entry key="SYD" value="lookout-mitigation-service.ap-southeast-2.amazonaws.com"/>
         <entry key="YUL" value="lookout-mitigation-service.ca-central-1.amazonaws.com"/>
     </util:map>
+
+    <bean id="prod.dogfishBucketSuffix" class="java.lang.String">
+        <constructor-arg value="prod" />
+    </bean>
     
     <bean id="prod.masterRegion" class="java.lang.String">
         <constructor-arg value="IAD"/>

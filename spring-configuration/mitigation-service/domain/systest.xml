@@ -36,7 +36,11 @@
     <util:map id="systest.regionEndpointsMap">
         <entry key="IAD" value="lookout-mitigation-service-systest.amazon.com"/>
     </util:map>
-    
+
+    <bean id="systest.dogfishBucketSuffix" class="java.lang.String">
+        <constructor-arg value="beta" />
+    </bean>
+
     <bean id="systest.masterRegion" class="java.lang.String">
         <constructor-arg value="IAD"/>
     </bean>

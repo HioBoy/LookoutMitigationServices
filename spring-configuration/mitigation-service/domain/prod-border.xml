@@ -30,6 +30,10 @@
         <constructor-arg value="IAD"/>
     </bean>
 
+    <bean id="prod-border.dogfishBucketSuffix" class="java.lang.String">
+        <constructor-arg value="prod" />
+    </bean>
+
     <alias name="prod.allowedLocationPrefix" alias="prod-border.allowedLocationPrefix"/>
 
     <alias name="prod.LocationState.readCapacityUnits" alias="prod-border.LocationState.readCapacityUnits"/>

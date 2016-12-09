@@ -27,7 +27,11 @@
         <entry key="SFO" value="lookout-mitigation-service-gamma-us-west-1.pdx.amazon.com"/>
         <entry key="NRT" value="lookout-mitigation-service-gamma-ap-northeast-1.nrt.amazon.com"/>
     </util:map>
-    
+
+    <bean id="gamma.dogfishBucketSuffix" class="java.lang.String">
+        <constructor-arg value="gamma" />
+    </bean>
+
     <bean id="gamma.masterRegion" class="java.lang.String">
         <constructor-arg value="IAD"/>
     </bean>

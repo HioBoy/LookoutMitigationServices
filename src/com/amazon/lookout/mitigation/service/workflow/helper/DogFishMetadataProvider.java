@@ -44,32 +44,30 @@ public class DogFishMetadataProvider implements Runnable {
         this.metricsFactory = metricsFactory;
     }
 
-    protected TSDMetrics createTSDMetrics(String metricName) {
-        return new TSDMetrics(metricsFactory, metricName);
-    }
-
     @Override
     public void run() {
-        try (TSDMetrics metrics = createTSDMetrics("RunDogFishMetadataProvider")) {
-            fetchFile(metrics);
-        } 
+        try {
+            fetchFile();
+        }
         catch (Exception ex) {
-            LOG.error("Problem occured when running the dog fish file fetcher periodic worker thread Failed renaming pops list file " + ex);
-        } 
+            LOG.error("A problem occurred when running the dog fish file fetcher.", ex);
+        }
     }
     
-    public synchronized void fetchFile(@NonNull TSDMetrics tsdMetrics) {
+    public synchronized void fetchFile() {
         LOG.info("Running Periodic Worker to check if dog fish file download is required");
-        final DogfishJSON awsDogfishJSON = dogfishFetcher.getCurrentObject();
-        final Optional<DateTime> latestAwsDogfishUpdateTimeStamp = dogfishFetcher.getLastUpdateTimestamp();
+        try (TSDMetrics metrics = new TSDMetrics(metricsFactory, "RunDogFishMetadataProvider")) {
+            final DogfishJSON awsDogfishJSON = dogfishFetcher.getCurrentObject();
+            final Optional<DateTime> latestAwsDogfishUpdateTimeStamp = dogfishFetcher.getLastUpdateTimestamp();
 
-        if (isNewerThanCache(awsDogfishJSON, lastAwsDogfishUpdateTimestamp, latestAwsDogfishUpdateTimeStamp)) {
-            LOG.info("Updating the dogfish datastructure as the file in S3 is newer than the local copy");
-            lastAwsDogfishUpdateTimestamp = latestAwsDogfishUpdateTimeStamp;
-            buildPrefixTrie(awsDogfishJSON);
-        }
-        else {
-            LOG.info("The local copy and remote S3 copy of the dog fish file is same. No need to download new dog fish data");
+            if (cidrToPrefixMetadataTrie == null ||
+                    isNewerThanCache(awsDogfishJSON, lastAwsDogfishUpdateTimestamp, latestAwsDogfishUpdateTimeStamp)) {
+                LOG.info("Updating the dogfish prefix trie");
+                lastAwsDogfishUpdateTimestamp = latestAwsDogfishUpdateTimeStamp;
+                buildPrefixTrie(awsDogfishJSON);
+            } else {
+                LOG.info("The local copy and remote S3 copy of the dog fish file is same. No need to download new dog fish data");
+            }
         }
     }
 
@@ -98,15 +96,15 @@ public class DogFishMetadataProvider implements Runnable {
     }
 
     private DogfishIPPrefix getMetadata(final String ipOrCidr) {
+        if (cidrToPrefixMetadataTrie == null) {
+            String msg = "Problem with downloaded dogfish file";
+            LOG.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+
         IpCidr cidr;
         try {
-            if (cidrToPrefixMetadataTrie == null) {
-                String msg = "Problem Downloading dogfish file";
-                LOG.error(msg);
-                throw new IllegalArgumentException(msg);
-            }
             cidr = IPUtils.parseCidr(IPUtils.convertToCidr(ipOrCidr));
-
         } 
         catch (Exception e) {
             String msg = "Failed to retrieve metadata as input is not valid CIDR or IP: " + ipOrCidr;
