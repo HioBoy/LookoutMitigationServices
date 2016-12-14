@@ -75,6 +75,7 @@ package.LookoutMitigationService = {
     
     runtime-dependencies = {
         1.0 = {
+            LookoutMitigationServiceLocationConfiguration = 1.0;
             JDK8 = 1.0;
             # Runtime dependencies for coral
             JakartaCommons-logging-adapters = 1.1;
