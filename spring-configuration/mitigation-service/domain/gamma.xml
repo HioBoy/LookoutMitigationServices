@@ -69,6 +69,7 @@
         <value>DEV-DSK-YROBOT</value>
         <value>DEV-DSK-HUZI</value>
         <value>DEV-DSK-LAVIGNEN</value>
+        <value>DEV-DSK-KHANESSA</value>
         <!-- for load testing we create one location for each new G-IAD55 host with LOADTEST prefix-->
         <value>LOADTEST-113</value>
         <value>LOADTEST-114</value>
