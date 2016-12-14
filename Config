@@ -96,6 +96,7 @@ package.LookoutMitigationService = {
             
             MonitoringCore = 1.0;
             ServiceMonitoring = 2.0;
+            AwsDynamoDBMetricsHelpersLib = 1.11.x;
             
             WebsiteLogPusher = 3.2;        
             
@@ -123,6 +124,7 @@ package.LookoutMitigationService = {
             JakartaCommons-logging = 1.2;
             CoralSpring = 4.2;
             CoralSpringLauncher = 4.2;
+            GoogleGuava = r18;
             JakartaCommons-codec = 1;
             log4j = 1.2;
             Log4j-api = 2.x;

@@ -6,7 +6,7 @@ import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.dynamo.DynamoDBHelper;
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
 
@@ -47,11 +47,11 @@ public abstract class DDBBasedMitigationStorageHandler {
     // Keys for TSDMetrics
     private static final String NUM_DDB_QUERY_ATTEMPTS_KEY = "NumDDBQueryAttempts";
     
-    private final AmazonDynamoDBClient dynamoDBClient;
+    private final AmazonDynamoDB dynamoDBClient;
     protected final String mitigationInstancesTableName;
     protected final String activeMitigationsTableName;
     
-    public DDBBasedMitigationStorageHandler(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull String domain) {
+    public DDBBasedMitigationStorageHandler(@NonNull AmazonDynamoDB dynamoDBClient, @NonNull String domain) {
         this.dynamoDBClient = dynamoDBClient;
         this.mitigationInstancesTableName = MITIGATION_INSTANCES_TABLE_NAME_PREFIX + domain.toUpperCase();
         this.activeMitigationsTableName = ACTIVE_MITIGATIONS_TABLE_NAME_PREFIX + domain.toUpperCase();

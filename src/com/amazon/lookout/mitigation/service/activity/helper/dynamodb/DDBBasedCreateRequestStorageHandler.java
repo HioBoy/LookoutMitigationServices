@@ -21,7 +21,7 @@ import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageRespo
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToFixedActionMapper;
 import com.amazon.lookout.model.RequestType;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 
 /**
  * DDBBasedCreateRequestStorageHandler is responsible for persisting create requests into DDB.
@@ -36,7 +36,7 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedCreateAndEditRe
     private static final String CREATE_REQUEST_STORAGE_FAILED_LOG_PREFIX = "[CREATE_REQUEST_STORAGE_FAILED]";
 
 
-    public DDBBasedCreateRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain, @NonNull TemplateBasedRequestValidator templateBasedRequestValidator) {
+    public DDBBasedCreateRequestStorageHandler(AmazonDynamoDB dynamoDBClient, String domain, @NonNull TemplateBasedRequestValidator templateBasedRequestValidator) {
         super(dynamoDBClient, domain, templateBasedRequestValidator);
     }
 

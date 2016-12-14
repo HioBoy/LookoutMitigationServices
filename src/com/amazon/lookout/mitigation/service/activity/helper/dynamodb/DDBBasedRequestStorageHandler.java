@@ -26,7 +26,7 @@ import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.AbortedException;
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.AttributeAction;
@@ -93,12 +93,12 @@ public class DDBBasedRequestStorageHandler {
     
     private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
     
-    private final AmazonDynamoDBClient dynamoDBClient;
+    private final AmazonDynamoDB dynamoDBClient;
     private final DynamoDB dynamoDB;
     private final String mitigationRequestsTableName;
     private final Table mitigationRequestsTable;
     
-    public DDBBasedRequestStorageHandler(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull String domain) {
+    public DDBBasedRequestStorageHandler(@NonNull AmazonDynamoDB dynamoDBClient, @NonNull String domain) {
         this.dynamoDBClient = dynamoDBClient;
         this.dynamoDB = new DynamoDB(dynamoDBClient);
         

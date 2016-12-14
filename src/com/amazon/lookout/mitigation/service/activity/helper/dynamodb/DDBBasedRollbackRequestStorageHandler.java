@@ -15,14 +15,14 @@ import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageRespo
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.request.RollbackMitigationRequestInternal;
 import com.amazon.lookout.model.RequestType;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 
 public class DDBBasedRollbackRequestStorageHandler extends DDBBasedCreateAndEditRequestStorageHandler implements RequestStorageHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedRollbackRequestStorageHandler.class);
     private static final String FAILED_TO_STORE_ROLLBACK_REQUEST_KEY = "FailedToStoreRollbackRequest";
     
     public DDBBasedRollbackRequestStorageHandler(
-            AmazonDynamoDBClient dynamoDBClient, String domain, 
+            AmazonDynamoDB dynamoDBClient, String domain, 
             TemplateBasedRequestValidator templateValidator) 
     {
         super(dynamoDBClient, domain, templateValidator);

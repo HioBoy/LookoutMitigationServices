@@ -32,7 +32,7 @@ import com.amazon.lookout.model.RequestType;
 import com.amazonaws.AbortedException;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Index;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.QueryFilter;
@@ -68,7 +68,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     private final ActiveMitigationsStatusHelper activeMitigationStatusHelper;
     private final String activeMitigationsTableName;
 
-    public DDBBasedListMitigationsHandler(AmazonDynamoDBClient dynamoDBClient, String domain, @NonNull ActiveMitigationsStatusHelper activeMitigationStatusHelper) {
+    public DDBBasedListMitigationsHandler(AmazonDynamoDB dynamoDBClient, String domain, @NonNull ActiveMitigationsStatusHelper activeMitigationStatusHelper) {
         super(dynamoDBClient, domain);
         this.activeMitigationStatusHelper = activeMitigationStatusHelper;
         

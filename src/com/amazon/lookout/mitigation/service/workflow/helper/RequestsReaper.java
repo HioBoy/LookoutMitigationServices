@@ -38,7 +38,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.workflow.model.RequestToReap;
 import com.amazon.lookout.workflow.reaper.RequestReaperConstants;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
@@ -94,7 +94,7 @@ public class RequestsReaper implements Runnable {
     
     private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
     
-    private final AmazonDynamoDBClient dynamoDBClient;
+    private final AmazonDynamoDB dynamoDBClient;
     private final AmazonSimpleWorkflowClient swfClient;
     private final MetricsFactory metricsFactory;
     private final String mitigationRequestsTableName;
@@ -105,7 +105,7 @@ public class RequestsReaper implements Runnable {
     
     @ConstructorProperties({"dynamoDBClient", "swfClient", "appDomain", "swfDomainName",
             "swfSocketTimeoutMillis", "swfConnTimeoutMillis", "workflowStarter", "metricsFactory"})
-    public RequestsReaper(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull AmazonSimpleWorkflowClient swfClient,
+    public RequestsReaper(@NonNull AmazonDynamoDB dynamoDBClient, @NonNull AmazonSimpleWorkflowClient swfClient,
             @NonNull String appDomain, @NonNull String swfDomain, int swfSocketTimeoutMillis, int swfConnTimeoutMillis,
             @NonNull SWFWorkflowStarter workflowStarter, @NonNull MetricsFactory metricsFactory) {
         this.dynamoDBClient = dynamoDBClient;

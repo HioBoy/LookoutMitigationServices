@@ -35,7 +35,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.router.helper.RouterFilterInfoDeserializer;
 import com.amazon.lookout.mitigation.utilities.POPLocationToRouterNameHelper;
 import com.amazon.lookout.model.RequestType;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ScanRequest;
 import com.amazonaws.services.dynamodbv2.model.ScanResult;
@@ -63,12 +63,12 @@ public class DDBBasedRouterMetadataHelper implements Callable<List<MitigationReq
     private final ObjectMapper jsonObjectMapper = new ObjectMapper();
     
     private final String routerMetadataTableName;
-    private final AmazonDynamoDBClient dynamoDBClient;
+    private final AmazonDynamoDB dynamoDBClient;
     private final ServiceSubnetsMatcher serviceSubnetsMatcher;
     private final POPLocationToRouterNameHelper locationToRouterNameHelper;
     
     @ConstructorProperties({"dynamoDBClient", "domain", "serviceSubnetsMatcher", "locationRouterMapper"})
-    public DDBBasedRouterMetadataHelper(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull String domain, 
+    public DDBBasedRouterMetadataHelper(@NonNull AmazonDynamoDB dynamoDBClient, @NonNull String domain, 
                                         @NonNull ServiceSubnetsMatcher serviceSubnetsMatcher, @NonNull POPLocationToRouterNameHelper locationToRouterNameHelper) {
         this.dynamoDBClient = dynamoDBClient;
         this.serviceSubnetsMatcher = serviceSubnetsMatcher;

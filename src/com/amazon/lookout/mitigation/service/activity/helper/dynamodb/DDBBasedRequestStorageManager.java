@@ -22,7 +22,7 @@ import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManag
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.model.RequestType;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 
 /**
  * This RequestStorageManager is responsible for storing requests in DynamoDB.
@@ -42,7 +42,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
     private final DDBBasedRequestStorageHandler baseRequestStorageHandler;
     
     @ConstructorProperties({"dynamoDBClient", "domain","templateBasedValidator"})
-    public DDBBasedRequestStorageManager(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull String domain,
+    public DDBBasedRequestStorageManager(@NonNull AmazonDynamoDB dynamoDBClient, @NonNull String domain,
                                          @NonNull TemplateBasedRequestValidator templateBasedValidator) {
 
         Validate.notEmpty(domain);
@@ -58,7 +58,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @param templateBasedValidator TemplateBasedValidator which might be required by some RequestStorageHandlers to perform checks before storage.
      * @return EnumMap with RequestType as the key and the corresponding RequestStorageHandler responsible for storing this request.
      */
-    private static ImmutableMap<RequestType, RequestStorageHandler> getRequestTypeToStorageHandlerMap(AmazonDynamoDBClient dynamoDBClient, String domain,
+    private static ImmutableMap<RequestType, RequestStorageHandler> getRequestTypeToStorageHandlerMap(AmazonDynamoDB dynamoDBClient, String domain,
                                                                                           TemplateBasedRequestValidator templateBasedValidator) {
         EnumMap<RequestType, RequestStorageHandler> requestStorageHandlerMap = new EnumMap<RequestType, RequestStorageHandler>(RequestType.class);
 
@@ -108,7 +108,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @param templateBasedValidator
      * @return New instance of DDBBasedCreateRequestStorageHandler
      */
-    private static DDBBasedCreateRequestStorageHandler getCreateRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain,
+    private static DDBBasedCreateRequestStorageHandler getCreateRequestStorageHandler(AmazonDynamoDB dynamoDBClient, String domain,
                                                                                TemplateBasedRequestValidator templateBasedValidator) {
         return new DDBBasedCreateRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
     }
@@ -120,7 +120,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @param templateBasedValidator
      * @return
      */
-    private static DDBBasedEditRequestStorageHandler getEditRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain,
+    private static DDBBasedEditRequestStorageHandler getEditRequestStorageHandler(AmazonDynamoDB dynamoDBClient, String domain,
             TemplateBasedRequestValidator templateBasedValidator) {
         return new DDBBasedEditRequestStorageHandler(dynamoDBClient, domain, templateBasedValidator);
     }
@@ -131,7 +131,7 @@ public class DDBBasedRequestStorageManager implements RequestStorageManager {
      * @param domain: Domain where this service runs, we have separate DDB tables for beta/gamma/prod, domain helps us identify the correct tableName.
      * @return an instance of DDBBasedRequestStorageHandler
      */
-    private DDBBasedRequestStorageHandler createBaseRequestStorageHandler(AmazonDynamoDBClient dynamoDBClient, String domain) {
+    private DDBBasedRequestStorageHandler createBaseRequestStorageHandler(AmazonDynamoDB dynamoDBClient, String domain) {
         return new DDBBasedRequestStorageHandler(dynamoDBClient, domain);
     }
     

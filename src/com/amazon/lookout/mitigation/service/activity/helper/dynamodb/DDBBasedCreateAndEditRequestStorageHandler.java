@@ -29,7 +29,7 @@ import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDevic
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
@@ -53,7 +53,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
     private final TemplateBasedRequestValidator templateValidator;
 
     public DDBBasedCreateAndEditRequestStorageHandler(
-            AmazonDynamoDBClient dynamoDBClient, String domain, TemplateBasedRequestValidator templateValidator) 
+            AmazonDynamoDB dynamoDBClient, String domain, TemplateBasedRequestValidator templateValidator) 
     {
         super(dynamoDBClient, domain);
         this.templateValidator = templateValidator;

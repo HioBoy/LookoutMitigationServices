@@ -13,7 +13,7 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.blackwatch.host.status.model.HostStatus;
 import com.amazon.lookout.mitigation.service.HostStatusInLocation;
 import com.amazon.lookout.mitigation.service.activity.helper.HostStatusInfoHandler;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.ItemCollection;
 import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
@@ -25,13 +25,13 @@ public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedHostStatusInfoHandler.class);
     public static final String DDB_QUERY_FAILURE_COUNT = "DynamoDBQueryFailureCount";
 
-    private final AmazonDynamoDBClient dynamoDBClient;
+    private final AmazonDynamoDB dynamoDBClient;
     private final DynamoDB dynamoDB;
 
     private final String hostStatusTableName;
     private final Table table;
 
-    public DDBBasedHostStatusInfoHandler(@NonNull AmazonDynamoDBClient dynamoDBClient, @NonNull String domain, @NonNull String realm) {
+    public DDBBasedHostStatusInfoHandler(@NonNull AmazonDynamoDB dynamoDBClient, @NonNull String domain, @NonNull String realm) {
         this.dynamoDBClient = dynamoDBClient;
         this.dynamoDB = new DynamoDB(dynamoDBClient);
         this.hostStatusTableName = String.format(HostStatus.TABLE_NAME_FORMAT, realm.toUpperCase(), domain.toUpperCase());

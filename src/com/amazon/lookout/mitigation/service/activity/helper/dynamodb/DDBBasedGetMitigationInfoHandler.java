@@ -18,7 +18,7 @@ import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.mitigation.service.LocationDeploymentInfo;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.QueryFilter;
@@ -40,7 +40,7 @@ public class DDBBasedGetMitigationInfoHandler extends DDBBasedMitigationStorageH
     private static final String NUM_ATTEMPTS_TO_GET_MITIGATION_INSTANCE_STATUSES = "NumGetMitigationInstanceStatusesAttempts";
     private final DynamoDB dynamoDB;
     
-    public DDBBasedGetMitigationInfoHandler(AmazonDynamoDBClient dynamoDBClient, String domain) {
+    public DDBBasedGetMitigationInfoHandler(AmazonDynamoDB dynamoDBClient, String domain) {
         super(dynamoDBClient, domain);
         this.dynamoDB = new DynamoDB(dynamoDBClient);
     }
