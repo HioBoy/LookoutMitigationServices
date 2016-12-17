@@ -91,6 +91,8 @@ public class RequestsReaper implements Runnable {
     private static final String FAILED_TO_START_WORKFLOW_METRIC_KEY = "FailedToStartWorkflow";
     private static final String NUM_REAPER_WORKFLOWS_STARTED_METRIC_KEY = "NumReaperWorkflows";
     private static final String PRE_EXISTING_REAPER_WORKFLOW_METRIC_KEY = "NumPreExistingReaperWorkflows";
+    private static final String NUM_OPEN_WORKFLOW_EXECUTIONS_FOUND = "NumOpenWorkflowExecutionsFound";
+    private static final String NUM_CLOSED_WORKFLOW_EXECUTIONS_FOUND = "NumClosedWorkflowExecutionsFound";
     
     private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
     
@@ -149,10 +151,12 @@ public class RequestsReaper implements Runnable {
     protected void reapRequests(@NonNull TSDMetrics tsdMetrics) {
         TSDMetrics metrics = tsdMetrics.newSubMetrics("reapRequests");
         try {
-            metrics.addCount(NUM_REQUESTS_TO_REAP_METRIC_KEY, 0);
-            metrics.addCount(FAILED_TO_START_WORKFLOW_METRIC_KEY, 0);
-            metrics.addCount(NUM_REAPER_WORKFLOWS_STARTED_METRIC_KEY, 0);
-            metrics.addCount(PRE_EXISTING_REAPER_WORKFLOW_METRIC_KEY, 0);
+            metrics.addZero(NUM_REQUESTS_TO_REAP_METRIC_KEY);
+            metrics.addZero(FAILED_TO_START_WORKFLOW_METRIC_KEY);
+            metrics.addZero(NUM_REAPER_WORKFLOWS_STARTED_METRIC_KEY);
+            metrics.addZero(PRE_EXISTING_REAPER_WORKFLOW_METRIC_KEY);
+            metrics.addZero(NUM_OPEN_WORKFLOW_EXECUTIONS_FOUND);
+            metrics.addZero(NUM_CLOSED_WORKFLOW_EXECUTIONS_FOUND);
             
             List<RequestToReap> activeDDBWorkflows = getRequestsToReap(metrics);
             if ((activeDDBWorkflows == null) || activeDDBWorkflows.isEmpty()) {
@@ -203,9 +207,11 @@ public class RequestsReaper implements Runnable {
      */
     protected List<RequestToReap> getRequestsToReap(@NonNull TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("getWorkflowsToReap");
+        int numRequestsFound = 0;
+        int numRequestsScanned = 0;
+        int numRequestsFoundRunning = 0;
+        int numDevicesFailingReaperCheck = 0;
         try {
-            subMetrics.addCount("NumDevicesFailingReaperCheck", 0);
-            
             List<RequestToReap> requestsToBeReaped = new ArrayList<>();
             
             // Query DDB for active workflows. We have a LSI on DeviceName + UpdateWorkflowId, hence query for each device.
@@ -220,6 +226,8 @@ public class RequestsReaper implements Runnable {
                         }
                         
                         lastEvaluatedKey = queryResult.getLastEvaluatedKey();
+                        numRequestsFound += queryResult.getCount();
+                        numRequestsScanned += queryResult.getScannedCount();
                         
                         for (Map<String, AttributeValue> item : queryResult.getItems()) {
                             String workflowIdStr = item.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN();
@@ -242,6 +250,8 @@ public class RequestsReaper implements Runnable {
                             
                             // If the workflow status is Running, check if it has been running for at least N seconds, if not, then skip this entry.
                             if (workflowStatus.equals(WorkflowStatus.RUNNING)) {
+                                ++numRequestsFoundRunning;
+                                
                                 DateTime now = new DateTime(DateTimeZone.UTC);
                                 if (now.minusSeconds(getMaxSecondsToStartWorkflow()).isBefore(requestDateInMillis)) {
                                     LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
@@ -286,13 +296,17 @@ public class RequestsReaper implements Runnable {
                         // Handle any exceptions by logging a warning and moving on to the next device.
                         String msg = "Caught exception when querying active workflows for device: " + deviceName.name();
                         LOG.warn(msg, ex);
-                        subMetrics.addOne("NumDevicesFailingReaperCheck");
+                        ++numDevicesFailingReaperCheck;
                         break; // break out of the do-while loop.
                     }
                 } while (lastEvaluatedKey != null);
             }
             return requestsToBeReaped;
         } finally {
+            subMetrics.addCount("NumRequestsFound", numRequestsFound);
+            subMetrics.addCount("NumRequestsScanned", numRequestsScanned);
+            subMetrics.addCount("NumRequestsFoundRunning", numRequestsFoundRunning);
+            subMetrics.addCount("NumDevicesFailingReaperCheck", numDevicesFailingReaperCheck);
             subMetrics.end();
         }
     }
@@ -479,23 +493,41 @@ public class RequestsReaper implements Runnable {
                 return openExecutions.isEmpty();
             }
             
-            if (closedExecutions.size() > 1) {
-                String msg = "Got more than 1 WorkflowExecution when querying status in SWF for workflow: " + workflowIdStr + ", deviceName: " + deviceName + 
-                             " WorkflowExecutionInfos found: " + closedExecutions;
-                throw new RuntimeException(msg);
+            if (closedExecutions.size() + openExecutions.size() > 1) {
+                LOG.warn( String.format("Found multiple executions of workflow: %s, deviceName: %s, closed executions: %s, open executions: %s",
+                        workflowIdStr, deviceName, closedExecutions, openExecutions) );
             }
             
-            WorkflowExecutionInfo closedExecution = closedExecutions.get(0);
-            LOG.debug("Got WorkflowExecutionInfo: " + closedExecution + " when querying status in SWF for workflow: " + workflowIdStr + ", deviceName: " + deviceName +
-                    " WorkflowExecutionInfos found: " + closedExecutions);
+            // find the execution that started most recently (either open or closed)
+            WorkflowExecutionInfo latestExecution = null;
+            boolean latestExecutionIsOpen = false;
+            for (WorkflowExecutionInfo execution : openExecutions) {
+                if (latestExecution == null || execution.getStartTimestamp().after(latestExecution.getStartTimestamp())) {
+                    latestExecution = execution;
+                    latestExecutionIsOpen = true;
+                }
+            }
+            for (WorkflowExecutionInfo execution : closedExecutions) {
+                if (latestExecution == null || execution.getStartTimestamp().after(latestExecution.getStartTimestamp())) {
+                    latestExecution = execution;
+                    latestExecutionIsOpen = false;
+                }
+            }
+            LOG.debug( String.format("Found latest execution %s (which is %s) for workflow: %s, deviceName: %s",
+                    latestExecution, latestExecutionIsOpen ? "open" : "closed", workflowIdStr, deviceName) );
+                        
+            subMetrics.addCount(NUM_OPEN_WORKFLOW_EXECUTIONS_FOUND, latestExecutionIsOpen ? 1 : 0);
+            subMetrics.addCount(NUM_CLOSED_WORKFLOW_EXECUTIONS_FOUND, latestExecutionIsOpen ? 0 : 1);
             
-            String executionStatus = closedExecution.getExecutionStatus();
-            if (executionStatus.equals(ExecutionStatus.CLOSED.name())) {
-                // If SWF has marked this workflow as being finished, check how long ago did this happen, giving the
-                // deciders some time to perform the appropriate DDB updates.
-                DateTime closeTimestamp = new DateTime(closedExecution.getCloseTimestamp());
-                if (now.minusSeconds(SECONDS_TO_ALLOW_WORKFLOW_DDB_UPDATES).isAfter(closeTimestamp)) {
-                    return true;
+            if (!latestExecutionIsOpen) {
+                String executionStatus = latestExecution.getExecutionStatus();
+                if (executionStatus.equals(ExecutionStatus.CLOSED.name())) {
+                    // If SWF has marked this workflow as being finished, check how long ago did this happen, giving the
+                    // deciders some time to perform the appropriate DDB updates.
+                    DateTime closeTimestamp = new DateTime(latestExecution.getCloseTimestamp());
+                    if (now.minusSeconds(SECONDS_TO_ALLOW_WORKFLOW_DDB_UPDATES).isAfter(closeTimestamp)) {
+                        return true;
+                    }
                 }
             }
             return false;

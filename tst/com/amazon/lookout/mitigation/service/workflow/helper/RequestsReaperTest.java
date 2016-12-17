@@ -242,7 +242,7 @@ public class RequestsReaperTest {
     }
 
     @Test
-    public void testIsWorkflowClosedForMultipleExecutionInfosReturned() throws Exception {
+    public void testIsWorkflowClosedForMultipleExecutionsBothClosed() throws Exception {
         RequestsReaper reaper = mock(RequestsReaper.class);
         when(reaper.isWorkflowClosedInSWF(anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class)))
                 .thenCallRealMethod();
@@ -252,19 +252,80 @@ public class RequestsReaperTest {
         when(reaper.getSWFClient()).thenReturn(swfClient);
 
         WorkflowExecutionInfos workflowInfos = new WorkflowExecutionInfos();
-        WorkflowExecutionInfo info = new WorkflowExecutionInfo();
-        info.setExecutionStatus(ExecutionStatus.CLOSED.name());
-        info.setCloseTimestamp((new DateTime(DateTimeZone.UTC).minusMinutes(2)).toDate());
-        workflowInfos.setExecutionInfos(Lists.newArrayList(info, info));
+        WorkflowExecutionInfo info1 = new WorkflowExecutionInfo();
+        info1.setExecutionStatus(ExecutionStatus.CLOSED.name());
+        info1.setStartTimestamp((new DateTime(DateTimeZone.UTC).minusHours(1).minusMinutes(5)).toDate());
+        info1.setCloseTimestamp((new DateTime(DateTimeZone.UTC).minusHours(1).minusMinutes(2)).toDate());
+        WorkflowExecutionInfo info2 = new WorkflowExecutionInfo();
+        info2.setExecutionStatus(ExecutionStatus.CLOSED.name());
+        info2.setStartTimestamp((new DateTime(DateTimeZone.UTC).minusMinutes(5)).toDate());
+        info2.setCloseTimestamp((new DateTime(DateTimeZone.UTC).minusMinutes(2)).toDate());
+        workflowInfos.setExecutionInfos(Lists.newArrayList(info1, info2));
+        
         when(swfClient.listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class)))
                 .thenReturn(workflowInfos);
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
 
-        RuntimeException actualException = assertThrows(RuntimeException.class, () ->
-                reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics()));
-        assertThat(actualException.getMessage(),
-                containsString("Got more than 1 WorkflowExecution when querying status in SWF"));
+        assertTrue(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics()));
+    }
+
+    @Test
+    public void testIsWorkflowClosedForMultipleExecutionsLatestClosed() throws Exception {
+        RequestsReaper reaper = mock(RequestsReaper.class);
+        when(reaper.isWorkflowClosedInSWF(anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class)))
+                .thenCallRealMethod();
+        when(reaper.getSWFDomain()).thenReturn("TestDomain");
+
+        AmazonSimpleWorkflowClient swfClient = mock(AmazonSimpleWorkflowClient.class);
+        when(reaper.getSWFClient()).thenReturn(swfClient);
+
+        WorkflowExecutionInfos workflowInfos = new WorkflowExecutionInfos();
+        WorkflowExecutionInfo info1 = new WorkflowExecutionInfo();
+        info1.setExecutionStatus(ExecutionStatus.OPEN.name());
+        info1.setStartTimestamp((new DateTime(DateTimeZone.UTC).minusHours(1).minusMinutes(5)).toDate());
+        info1.setCloseTimestamp((new DateTime(DateTimeZone.UTC).minusHours(1).minusMinutes(2)).toDate());
+        WorkflowExecutionInfo info2 = new WorkflowExecutionInfo();
+        info2.setExecutionStatus(ExecutionStatus.CLOSED.name());
+        info2.setStartTimestamp((new DateTime(DateTimeZone.UTC).minusMinutes(5)).toDate());
+        info2.setCloseTimestamp((new DateTime(DateTimeZone.UTC).minusMinutes(2)).toDate());
+        workflowInfos.setExecutionInfos(Lists.newArrayList(info1, info2));
+        
+        when(swfClient.listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class))).thenReturn(
+                new WorkflowExecutionInfos().withExecutionInfos(Lists.newArrayList(info2)));
+        when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
+                new WorkflowExecutionInfos().withExecutionInfos(Lists.newArrayList(info1)));
+
+        assertTrue(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics()));
+    }
+
+    @Test
+    public void testIsWorkflowClosedForMultipleExecutionsLatestOpen() throws Exception {
+        RequestsReaper reaper = mock(RequestsReaper.class);
+        when(reaper.isWorkflowClosedInSWF(anyString(), anyString(), anyString(), anyLong(), any(TSDMetrics.class)))
+                .thenCallRealMethod();
+        when(reaper.getSWFDomain()).thenReturn("TestDomain");
+
+        AmazonSimpleWorkflowClient swfClient = mock(AmazonSimpleWorkflowClient.class);
+        when(reaper.getSWFClient()).thenReturn(swfClient);
+
+        WorkflowExecutionInfos workflowInfos = new WorkflowExecutionInfos();
+        WorkflowExecutionInfo info1 = new WorkflowExecutionInfo();
+        info1.setExecutionStatus(ExecutionStatus.CLOSED.name());
+        info1.setStartTimestamp((new DateTime(DateTimeZone.UTC).minusHours(1).minusMinutes(5)).toDate());
+        info1.setCloseTimestamp((new DateTime(DateTimeZone.UTC).minusHours(1).minusMinutes(2)).toDate());
+        WorkflowExecutionInfo info2 = new WorkflowExecutionInfo();
+        info2.setExecutionStatus(ExecutionStatus.OPEN.name());
+        info2.setStartTimestamp((new DateTime(DateTimeZone.UTC).minusMinutes(5)).toDate());
+        info2.setCloseTimestamp((new DateTime(DateTimeZone.UTC).minusMinutes(2)).toDate());
+        workflowInfos.setExecutionInfos(Lists.newArrayList(info1, info2));
+        
+        when(swfClient.listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class))).thenReturn(
+                new WorkflowExecutionInfos().withExecutionInfos(Lists.newArrayList(info1)));
+        when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
+                new WorkflowExecutionInfos().withExecutionInfos(Lists.newArrayList(info2)));
+
+        assertFalse(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics()));
     }
 
     @Test
@@ -512,6 +573,7 @@ public class RequestsReaperTest {
         
         result1.setItems(items);
         result1.setCount(items.size());
+        result1.setScannedCount(items.size());
         result1.setLastEvaluatedKey(new HashMap<String, AttributeValue>());
         
         QueryResult result2 = new QueryResult();
@@ -542,6 +604,7 @@ public class RequestsReaperTest {
         
         result2.setItems(items);
         result2.setCount(items.size());
+        result2.setScannedCount(items.size());
         
         when(reaper.getUnsuccessfulUnreapedRequests(anyString(), anyMap())).thenReturn(result1).thenReturn(result2).thenReturn(null);
         
@@ -605,16 +668,20 @@ public class RequestsReaperTest {
         QueryResult result1 = new QueryResult();
         result1.setItems(new ArrayList<>());
         result1.setLastEvaluatedKey(new HashMap<>());
+        result1.setCount(0);
+        result1.setScannedCount(0);
         
         QueryResult result2 = new QueryResult();
         result2.setItems(new ArrayList<>());
+        result2.setCount(0);
+        result2.setScannedCount(0);
        
         when(reaper.getUnsuccessfulUnreapedRequests(anyString(), anyMap())).thenReturn(result1).thenReturn(result2);
         
         List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
         assertEquals(0, requestsToReap.size());
         
-        // Verify that we have 1 call per device + an additional call for getting the result1 defined above which has a non-null lastEvaluatedKey.
+        // Verify that we have 1 call per device + an additional call for getting the result defined above which has a non-null lastEvaluatedKey.
         verify(reaper, times(DeviceName.values().length + 1)).getUnsuccessfulUnreapedRequests(anyString(), anyMap());
     }
     
