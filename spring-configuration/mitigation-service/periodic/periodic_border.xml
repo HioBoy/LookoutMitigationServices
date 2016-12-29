@@ -27,7 +27,7 @@
             <set>
                 <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
                     <property name="runnable" ref="requestsReaper"/>
-                    <property name="period" value="30"/>
+                    <property name="period" value="1"/>
                     <property name="timeUnit" ref="seconds"/>
                 </bean>
                 <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
@@ -48,6 +48,22 @@
         <constructor-arg name="swfConnTimeoutMillis" ref="swfClientConnectionTimeoutMillis"/>
         <constructor-arg name="workflowStarter" ref="swfWorkflowStarter"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+        
+        <!-- RequestsReaper only performs one DynamoDB query over MITIGATION_REQUESTS each time it
+             runs and passes queryLimit as the Limit parameter. This limits the amount of DDB
+             capacity consumed each time RequestsReaper runs to approximately queryLimit*0.3. The
+             number 0.3 comes from dividing DDB read capacity used by scanned item count in a
+             collection of production requests and computing the average. The DDB capacity consumed
+             by a query operation is calculated from the total size of all items scanned, and thus
+             depends not only on scanned count but also item size, which is variable across items.
+             The number 0.3 estimates that MITIGATION_REQUESTS items have an average size of 1229
+             bytes. Assuming the reaper runs every 1 second concurrently on 6 hosts setting
+             queryLimit to 300 limits DDB capacity consumed by reapers to
+             300*0.3*6=540 units/second across the fleet. Note that increasing queryLimit beyond
+             approximately 850 will not increase repaer throughput because each DDB query operation
+             is limited to scanning at most 1MB of total item size with a capacity usage of ~256.
+          -->
+        <constructor-arg name="queryLimit" value="300"/>
     </bean>
 
     <bean id="dogFishMetadataProvider" class="com.amazon.lookout.mitigation.service.workflow.helper.DogFishMetadataProvider">

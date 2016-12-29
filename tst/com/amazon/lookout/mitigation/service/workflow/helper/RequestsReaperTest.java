@@ -1,19 +1,19 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import static com.amazon.aws158.commons.tst.TestUtils.newNopTsdMetrics;
-import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyList;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyMap;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isNull;
+import static org.mockito.Matchers.same;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -477,7 +477,7 @@ public class RequestsReaperTest {
     }
     
     @Test
-    public void testGetRequestsToReap() {
+    public void testGetRequestsToReapFirstResult() {
         RequestsReaper reaper = mock(RequestsReaper.class);
         when(reaper.getRequestsToReap(any(TSDMetrics.class))).thenCallRealMethod();
         when(reaper.getMaxSecondsToStartWorkflow()).thenReturn(60);
@@ -576,40 +576,10 @@ public class RequestsReaperTest {
         result1.setScannedCount(items.size());
         result1.setLastEvaluatedKey(new HashMap<String, AttributeValue>());
         
-        QueryResult result2 = new QueryResult();
-        items = new ArrayList<>();
-        // Item5, status is Indeterminate.
-        Map<String, AttributeValue> item5 = new HashMap<>();
-        item5.put(MitigationRequestsModel.WORKFLOW_ID_KEY, new AttributeValue().withN("5"));
-        item5.put(MitigationRequestsModel.LOCATIONS_KEY, new AttributeValue().withSS(Lists.newArrayList("TST1", "TST2")));
-        item5.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, new AttributeValue(WorkflowStatus.INDETERMINATE));
-        item5.put(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, new AttributeValue().withN(String.valueOf(new DateTime(DateTimeZone.UTC).minusSeconds(120).getMillis())));
-        item5.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue("TstMit1"));
-        item5.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN("2"));
-        item5.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit1Template"));
-        item5.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
-        item5.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.CreateRequest.name()));
-        item5.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Route53));
-        item5.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
-        items.add(item5);
-        instancesDetails = new HashMap<>();
-        info = new HashMap<>();
-        info.put(MitigationInstancesModel.LOCATION_KEY, new AttributeValue("TST1"));
-        instancesDetails.put("TST1", info);
-        info = new HashMap<>();
-        info.put(MitigationInstancesModel.LOCATION_KEY, new AttributeValue("TST2"));
-        instancesDetails.put("TST2", info);
-        when(reaper.queryInstancesForWorkflow(DeviceName.POP_ROUTER.name(), "5")).thenReturn(instancesDetails);
-        when(reaper.filterInstancesToBeReaped(Lists.newArrayList("TST1", "TST2"), instancesDetails)).thenReturn(instancesDetails);
-        
-        result2.setItems(items);
-        result2.setCount(items.size());
-        result2.setScannedCount(items.size());
-        
-        when(reaper.getUnsuccessfulUnreapedRequests(anyString(), anyMap())).thenReturn(result1).thenReturn(result2).thenReturn(null);
+        when(reaper.getUnsuccessfulUnreapedRequests(eq(DeviceName.POP_ROUTER.name()), anyMap())).thenReturn(result1);
         
         List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
-        assertEquals(3, requestsToReap.size());
+        assertEquals(2, requestsToReap.size());
         
         RequestToReap request3 = requestsToReap.get(0);
         assertEquals(request3.getWorkflowIdStr(), item3.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN());
@@ -640,8 +610,53 @@ public class RequestsReaperTest {
         assertEquals(request4.getRequestType(), RequestType.DeleteRequest.name());
         assertEquals(request4.getServiceName(), ServiceName.Route53);
         assertEquals(request4.getWorkflowIdStr(), "4");
+    }
+
+    @Test
+    public void testGetRequestsToReapSecondResult() {
+        RequestsReaper reaper = mock(RequestsReaper.class);
+        when(reaper.getRequestsToReap(any(TSDMetrics.class))).thenCallRealMethod();
+        when(reaper.getMaxSecondsToStartWorkflow()).thenReturn(60);
         
-        RequestToReap request5 = requestsToReap.get(2);
+        TSDMetrics metrics = mock(TSDMetrics.class);
+        when(metrics.newSubMetrics(anyString())).thenReturn(metrics);
+
+        QueryResult result2 = new QueryResult();
+        List<Map<String, AttributeValue>> items = new ArrayList<>();
+        // Item5, status is Indeterminate.
+        Map<String, AttributeValue> item5 = new HashMap<>();
+        item5.put(MitigationRequestsModel.WORKFLOW_ID_KEY, new AttributeValue().withN("5"));
+        item5.put(MitigationRequestsModel.LOCATIONS_KEY, new AttributeValue().withSS(Lists.newArrayList("TST1", "TST2")));
+        item5.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, new AttributeValue(WorkflowStatus.INDETERMINATE));
+        item5.put(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, new AttributeValue().withN(String.valueOf(new DateTime(DateTimeZone.UTC).minusSeconds(120).getMillis())));
+        item5.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue("TstMit1"));
+        item5.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN("2"));
+        item5.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit1Template"));
+        item5.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
+        item5.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.CreateRequest.name()));
+        item5.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Route53));
+        item5.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
+        items.add(item5);
+        Map<String, Map<String, AttributeValue>> instancesDetails = new HashMap<>();
+        Map<String, AttributeValue> info = new HashMap<>();
+        info.put(MitigationInstancesModel.LOCATION_KEY, new AttributeValue("TST1"));
+        instancesDetails.put("TST1", info);
+        info = new HashMap<>();
+        info.put(MitigationInstancesModel.LOCATION_KEY, new AttributeValue("TST2"));
+        instancesDetails.put("TST2", info);
+        when(reaper.queryInstancesForWorkflow(DeviceName.POP_ROUTER.name(), "5")).thenReturn(instancesDetails);
+        when(reaper.filterInstancesToBeReaped(Lists.newArrayList("TST1", "TST2"), instancesDetails)).thenReturn(instancesDetails);
+        
+        result2.setItems(items);
+        result2.setCount(items.size());
+        result2.setScannedCount(items.size());
+        
+        when(reaper.getUnsuccessfulUnreapedRequests(eq(DeviceName.POP_ROUTER.name()), anyMap())).thenReturn(result2);
+        
+        List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
+        assertEquals(1, requestsToReap.size());
+        
+        RequestToReap request5 = requestsToReap.get(0);
         assertEquals(request5.getWorkflowIdStr(), item5.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN());
         assertEquals(request5.getDeviceName(), DeviceName.POP_ROUTER.name());
         assertEquals(request5.getDeviceScope(), DeviceScope.GLOBAL.name());
@@ -657,7 +672,7 @@ public class RequestsReaperTest {
     }
     
     @Test
-    public void testGetRequestsWithNoCountButLastEval() {
+    public void testGetRequestsToReapWithLastEvaluatedKeyReturned() {
         RequestsReaper reaper = mock(RequestsReaper.class);
         when(reaper.getRequestsToReap(any(TSDMetrics.class))).thenCallRealMethod();
         when(reaper.getMaxSecondsToStartWorkflow()).thenReturn(60);
@@ -665,24 +680,50 @@ public class RequestsReaperTest {
         TSDMetrics metrics = mock(TSDMetrics.class);
         when(metrics.newSubMetrics(anyString())).thenReturn(metrics);
         
-        QueryResult result1 = new QueryResult();
-        result1.setItems(new ArrayList<>());
-        result1.setLastEvaluatedKey(new HashMap<>());
-        result1.setCount(0);
-        result1.setScannedCount(0);
+        Map<String, AttributeValue> lastEvaluatedKey = new HashMap<>();
         
-        QueryResult result2 = new QueryResult();
-        result2.setItems(new ArrayList<>());
-        result2.setCount(0);
-        result2.setScannedCount(0);
+        QueryResult result = new QueryResult();
+        result.setItems(new ArrayList<>());
+        result.setLastEvaluatedKey(lastEvaluatedKey);
+        result.setCount(0);
+        result.setScannedCount(0);
        
-        when(reaper.getUnsuccessfulUnreapedRequests(anyString(), anyMap())).thenReturn(result1).thenReturn(result2);
+        when(reaper.getLastEvaluatedKey(any())).thenReturn(null);
+        when(reaper.getUnsuccessfulUnreapedRequests(anyString(), anyMap())).thenReturn(result);
         
         List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
         assertEquals(0, requestsToReap.size());
         
-        // Verify that we have 1 call per device + an additional call for getting the result defined above which has a non-null lastEvaluatedKey.
-        verify(reaper, times(DeviceName.values().length + 1)).getUnsuccessfulUnreapedRequests(anyString(), anyMap());
+        // verify one call per device
+        verify(reaper, times(DeviceName.values().length)).getUnsuccessfulUnreapedRequests(anyString(), isNull(Map.class));
+        verify(reaper, times(DeviceName.values().length)).setLastEvaluatedKey(any(), same(lastEvaluatedKey));
+    }
+
+    @Test
+    public void testGetRequestsToReapWithPreviousLastEvaluatedKey() {
+        RequestsReaper reaper = mock(RequestsReaper.class);
+        when(reaper.getRequestsToReap(any(TSDMetrics.class))).thenCallRealMethod();
+        when(reaper.getMaxSecondsToStartWorkflow()).thenReturn(60);
+        
+        TSDMetrics metrics = mock(TSDMetrics.class);
+        when(metrics.newSubMetrics(anyString())).thenReturn(metrics);
+        
+        Map<String, AttributeValue> lastEvaluatedKey = new HashMap<>();
+        
+        QueryResult result = new QueryResult();
+        result.setItems(new ArrayList<>());
+        result.setCount(0);
+        result.setScannedCount(0);
+
+        when(reaper.getLastEvaluatedKey(any())).thenReturn(lastEvaluatedKey);
+        when(reaper.getUnsuccessfulUnreapedRequests(anyString(), anyMap())).thenReturn(result);
+        
+        List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
+        assertEquals(0, requestsToReap.size());
+        
+        // verify one call per device
+        verify(reaper, times(DeviceName.values().length)).getUnsuccessfulUnreapedRequests(anyString(), same(lastEvaluatedKey));
+        verify(reaper, times(DeviceName.values().length)).setLastEvaluatedKey(any(), isNull(Map.class));
     }
     
     @Test

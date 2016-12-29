@@ -2,6 +2,7 @@ package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -93,6 +94,7 @@ public class RequestsReaper implements Runnable {
     private static final String PRE_EXISTING_REAPER_WORKFLOW_METRIC_KEY = "NumPreExistingReaperWorkflows";
     private static final String NUM_OPEN_WORKFLOW_EXECUTIONS_FOUND = "NumOpenWorkflowExecutionsFound";
     private static final String NUM_CLOSED_WORKFLOW_EXECUTIONS_FOUND = "NumClosedWorkflowExecutionsFound";
+    private static final String REAPER_FINISHED_PASS_FORMAT = "ReaperFinishedPass.%s";
     
     private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
     
@@ -104,12 +106,17 @@ public class RequestsReaper implements Runnable {
     private final String swfDomain;
     private final int maxSecondsToStartWorkflow;
     private final SWFWorkflowStarter workflowStarter;
+    private final int queryLimit;
+    
+    private final Map<DeviceName, Map<String, AttributeValue>> lastEvaluatedKeys =
+            new EnumMap<DeviceName, Map<String,AttributeValue>>(DeviceName.class);
     
     @ConstructorProperties({"dynamoDBClient", "swfClient", "appDomain", "swfDomainName",
-            "swfSocketTimeoutMillis", "swfConnTimeoutMillis", "workflowStarter", "metricsFactory"})
+            "swfSocketTimeoutMillis", "swfConnTimeoutMillis", "workflowStarter", "metricsFactory",
+            "queryLimit"})
     public RequestsReaper(@NonNull AmazonDynamoDB dynamoDBClient, @NonNull AmazonSimpleWorkflowClient swfClient,
             @NonNull String appDomain, @NonNull String swfDomain, int swfSocketTimeoutMillis, int swfConnTimeoutMillis,
-            @NonNull SWFWorkflowStarter workflowStarter, @NonNull MetricsFactory metricsFactory) {
+            @NonNull SWFWorkflowStarter workflowStarter, @NonNull MetricsFactory metricsFactory, int queryLimit) {
         this.dynamoDBClient = dynamoDBClient;
         this.swfClient = swfClient;
         
@@ -126,6 +133,9 @@ public class RequestsReaper implements Runnable {
         
         this.workflowStarter = workflowStarter;
         this.metricsFactory = metricsFactory;
+        
+        Validate.isTrue(queryLimit >= 10, "queryLimit must be >= 10");
+        this.queryLimit = queryLimit;
     }
 
     @Override
@@ -139,6 +149,16 @@ public class RequestsReaper implements Runnable {
         } finally {
             metrics.end();
         }
+    }
+    
+    // protected to be visible for mocking
+    protected Map<String, AttributeValue> getLastEvaluatedKey(DeviceName deviceName) {
+        return lastEvaluatedKeys.get(deviceName);
+    }
+    
+    // protected to be visible for mocking
+    protected void setLastEvaluatedKey(DeviceName deviceName, Map<String, AttributeValue> lastEvaluatedKey) {
+        lastEvaluatedKeys.put(deviceName, lastEvaluatedKey);
     }
     
     /**
@@ -216,90 +236,90 @@ public class RequestsReaper implements Runnable {
             
             // Query DDB for active workflows. We have a LSI on DeviceName + UpdateWorkflowId, hence query for each device.
             for (DeviceName deviceName : DeviceName.values()) {
-                Map<String, AttributeValue> lastEvaluatedKey = null;
-                do {
-                    try {
-                        // Get a list of active requests which weren't successful and haven't been reaped as yet.
-                        QueryResult queryResult = getUnsuccessfulUnreapedRequests(deviceName.name(), lastEvaluatedKey);
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug("Found: " + queryResult.getItems().size() + " unsuccessful+unreaped requests: " + ReflectionToStringBuilder.toString(queryResult));
+                try {
+                    // Get a list of active requests which weren't successful and haven't been reaped as yet.
+                    QueryResult queryResult = getUnsuccessfulUnreapedRequests(deviceName.name(), getLastEvaluatedKey(deviceName));
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Found: " + queryResult.getItems().size() + " unsuccessful+unreaped requests: " + ReflectionToStringBuilder.toString(queryResult));
+                    }
+                    
+                    Map<String, AttributeValue> lastEvaluatedKey = queryResult.getLastEvaluatedKey();
+                    setLastEvaluatedKey(deviceName, lastEvaluatedKey);
+                    subMetrics.addCount(String.format(REAPER_FINISHED_PASS_FORMAT, deviceName), lastEvaluatedKey == null ? 1 : 0);
+                    
+                    numRequestsFound += queryResult.getCount();
+                    numRequestsScanned += queryResult.getScannedCount();
+                    
+                    for (Map<String, AttributeValue> item : queryResult.getItems()) {
+                        String workflowIdStr = item.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN();
+                        List<String> locations = item.get(MitigationRequestsModel.LOCATIONS_KEY).getSS();
+                        String workflowStatus = item.get(MitigationRequestsModel.WORKFLOW_STATUS_KEY).getS();
+                        long requestDateInMillis = Long.parseLong(item.get(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY).getN());
+                        DateTime requestDateTime = new DateTime(requestDateInMillis);
+                        String mitigationName = item.get(MitigationRequestsModel.MITIGATION_NAME_KEY).getS();
+                        int mitigationVersion = Integer.parseInt(item.get(MitigationRequestsModel.MITIGATION_VERSION_KEY).getN());
+                        String mitigationTemplate = item.get(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY).getS();
+                        String deviceScope = item.get(MitigationRequestsModel.DEVICE_SCOPE_KEY).getS();
+                        String requestType = item.get(MitigationRequestsModel.REQUEST_TYPE_KEY).getS();
+                        String serviceName = item.get(MitigationRequestsModel.SERVICE_NAME_KEY).getS();
+                        
+                        // SWF RunId could be null - for cases where a new request was persisted into DDB, but the SWF RunId was not yet updated.
+                        String swfRunId = null;
+                        if (item.containsKey(MitigationRequestsModel.SWF_RUN_ID_KEY)) {
+                            swfRunId = item.get(MitigationRequestsModel.SWF_RUN_ID_KEY).getS();
                         }
                         
-                        lastEvaluatedKey = queryResult.getLastEvaluatedKey();
-                        numRequestsFound += queryResult.getCount();
-                        numRequestsScanned += queryResult.getScannedCount();
-                        
-                        for (Map<String, AttributeValue> item : queryResult.getItems()) {
-                            String workflowIdStr = item.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN();
-                            List<String> locations = item.get(MitigationRequestsModel.LOCATIONS_KEY).getSS();
-                            String workflowStatus = item.get(MitigationRequestsModel.WORKFLOW_STATUS_KEY).getS();
-                            long requestDateInMillis = Long.parseLong(item.get(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY).getN());
-                            DateTime requestDateTime = new DateTime(requestDateInMillis);
-                            String mitigationName = item.get(MitigationRequestsModel.MITIGATION_NAME_KEY).getS();
-                            int mitigationVersion = Integer.parseInt(item.get(MitigationRequestsModel.MITIGATION_VERSION_KEY).getN());
-                            String mitigationTemplate = item.get(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY).getS();
-                            String deviceScope = item.get(MitigationRequestsModel.DEVICE_SCOPE_KEY).getS();
-                            String requestType = item.get(MitigationRequestsModel.REQUEST_TYPE_KEY).getS();
-                            String serviceName = item.get(MitigationRequestsModel.SERVICE_NAME_KEY).getS();
+                        // If the workflow status is Running, check if it has been running for at least N seconds, if not, then skip this entry.
+                        if (workflowStatus.equals(WorkflowStatus.RUNNING)) {
+                            ++numRequestsFoundRunning;
                             
-                            // SWF RunId could be null - for cases where a new request was persisted into DDB, but the SWF RunId was not yet updated.
-                            String swfRunId = null;
-                            if (item.containsKey(MitigationRequestsModel.SWF_RUN_ID_KEY)) {
-                                swfRunId = item.get(MitigationRequestsModel.SWF_RUN_ID_KEY).getS();
-                            }
-                            
-                            // If the workflow status is Running, check if it has been running for at least N seconds, if not, then skip this entry.
-                            if (workflowStatus.equals(WorkflowStatus.RUNNING)) {
-                                ++numRequestsFoundRunning;
-                                
-                                DateTime now = new DateTime(DateTimeZone.UTC);
-                                if (now.minusSeconds(getMaxSecondsToStartWorkflow()).isBefore(requestDateInMillis)) {
-                                    LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
-                                              " at locations: " + locations + " has recently started within the last: " + getMaxSecondsToStartWorkflow() + 
-                                              " number of seconds, hence not reaping. Workflow RequestDate: " + requestDateTime);
-                                    continue;
-                                }
-                                
-                                // Query SWF to see if this workflow is still active or not. If it is still active, don't perform any further steps.
-                                if (!isWorkflowClosedInSWF(deviceName.name(), workflowIdStr, swfRunId, requestDateInMillis, subMetrics)) {
-                                    LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
-                                                " at locations: " + locations + " with RequestDate: " + requestDateTime + " doesn't show as CLOSED in SWF, hence skipping any reaping activity.");
-                                    continue;
-                                }
-                            }
-                            
-                            // If the request has a creation time before SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION, we stop attempting to reap it.
                             DateTime now = new DateTime(DateTimeZone.UTC);
-                            if (now.minusSeconds(SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION).isAfter(requestDateInMillis)) {
-                                LOG.error("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
-                                          " at locations: " + locations + " has not being successfully reaped  within the last: " + SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION + 
-                                          " number of seconds, stop attempting to reap. Workflow RequestDate: " + requestDateTime);
+                            if (now.minusSeconds(getMaxSecondsToStartWorkflow()).isBefore(requestDateInMillis)) {
+                                LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
+                                          " at locations: " + locations + " has recently started within the last: " + getMaxSecondsToStartWorkflow() + 
+                                          " number of seconds, hence not reaping. Workflow RequestDate: " + requestDateTime);
                                 continue;
                             }
                             
-                            // Get instances for the workflow corresponding to the request being evaluated.
-                            Map<String, Map<String, AttributeValue>> instancesDetails = queryInstancesForWorkflow(deviceName.name(), workflowIdStr);
-                            
-                            // Filter only the instances that need some state to be corrected.
-                            Map<String, Map<String, AttributeValue>> instancesToBeReaped = filterInstancesToBeReaped(locations, instancesDetails);
-                            LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
-                                        " at locations: " + locations + " has " +  instancesToBeReaped.size() + " instances to be reaped. Instances: " + 
-                                      ReflectionToStringBuilder.toString(instancesToBeReaped));
-                            
-                            // Wrap up this request and its instances in a RequestToReap object. 
-                            RequestToReap workflowInfo = new RequestToReap(workflowIdStr, swfRunId, deviceName.name(), deviceScope, serviceName, mitigationName, 
-                                                                           mitigationVersion, mitigationTemplate, requestType, requestDateInMillis, instancesToBeReaped);
-                            LOG.info("Request that needs to be reaped: " + workflowInfo);
-                            requestsToBeReaped.add(workflowInfo);
+                            // Query SWF to see if this workflow is still active or not. If it is still active, don't perform any further steps.
+                            if (!isWorkflowClosedInSWF(deviceName.name(), workflowIdStr, swfRunId, requestDateInMillis, subMetrics)) {
+                                LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
+                                            " at locations: " + locations + " with RequestDate: " + requestDateTime + " doesn't show as CLOSED in SWF, hence skipping any reaping activity.");
+                                continue;
+                            }
                         }
-                    } catch (Exception ex) {
-                        // Handle any exceptions by logging a warning and moving on to the next device.
-                        String msg = "Caught exception when querying active workflows for device: " + deviceName.name();
-                        LOG.warn(msg, ex);
-                        ++numDevicesFailingReaperCheck;
-                        break; // break out of the do-while loop.
+                        
+                        // If the request has a creation time before SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION, we stop attempting to reap it.
+                        DateTime now = new DateTime(DateTimeZone.UTC);
+                        if (now.minusSeconds(SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION).isAfter(requestDateInMillis)) {
+                            LOG.error("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
+                                      " at locations: " + locations + " has not being successfully reaped  within the last: " + SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION + 
+                                      " number of seconds, stop attempting to reap. Workflow RequestDate: " + requestDateTime);
+                            continue;
+                        }
+                        
+                        // Get instances for the workflow corresponding to the request being evaluated.
+                        Map<String, Map<String, AttributeValue>> instancesDetails = queryInstancesForWorkflow(deviceName.name(), workflowIdStr);
+                        
+                        // Filter only the instances that need some state to be corrected.
+                        Map<String, Map<String, AttributeValue>> instancesToBeReaped = filterInstancesToBeReaped(locations, instancesDetails);
+                        LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
+                                    " at locations: " + locations + " has " +  instancesToBeReaped.size() + " instances to be reaped. Instances: " + 
+                                  ReflectionToStringBuilder.toString(instancesToBeReaped));
+                        
+                        // Wrap up this request and its instances in a RequestToReap object. 
+                        RequestToReap workflowInfo = new RequestToReap(workflowIdStr, swfRunId, deviceName.name(), deviceScope, serviceName, mitigationName, 
+                                                                       mitigationVersion, mitigationTemplate, requestType, requestDateInMillis, instancesToBeReaped);
+                        LOG.info("Request that needs to be reaped: " + workflowInfo);
+                        requestsToBeReaped.add(workflowInfo);
                     }
-                } while (lastEvaluatedKey != null);
+                } catch (Exception ex) {
+                    // Handle any exceptions by logging a warning and moving on to the next device.
+                    String msg = "Caught exception when querying active workflows for device: " + deviceName.name();
+                    LOG.warn(msg, ex);
+                    ++numDevicesFailingReaperCheck;
+                    break; // break out of the do-while loop.
+                }
             }
             return requestsToBeReaped;
         } finally {
@@ -393,6 +413,7 @@ public class RequestsReaper implements Runnable {
         
         request.setIndexName(MitigationRequestsModel.UNEDITED_MITIGATIONS_LSI_NAME);
         request.setConsistentRead(true);
+        request.setLimit(queryLimit);
         request.setAttributesToGet(Lists.newArrayList(MitigationRequestsModel.WORKFLOW_ID_KEY, MitigationRequestsModel.SWF_RUN_ID_KEY, 
                                                       MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, MitigationRequestsModel.WORKFLOW_STATUS_KEY, 
                                                       MitigationRequestsModel.DEVICE_SCOPE_KEY, MitigationRequestsModel.LOCATIONS_KEY, 
