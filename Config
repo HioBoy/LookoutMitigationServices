@@ -37,6 +37,7 @@ package.LookoutMitigationService = {
             FindBugsAnnotations = 2.0.3;
             
             AWSJavaSDKExternalRelease = 1.11.x;
+            AmazonDynamoDBLockClient = 1.11.x;
             LookoutMitigationWorkFlowWorker = 1.0;
 
             CoralAwsAuthentication = 1.1; # To support authenticating/authorizing calls to LookoutMitigationService.
