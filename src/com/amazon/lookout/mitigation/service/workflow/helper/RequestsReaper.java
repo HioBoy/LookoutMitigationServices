@@ -1,6 +1,8 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import java.beans.ConstructorProperties;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -11,6 +13,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazonaws.AmazonWebServiceRequest;
@@ -39,12 +43,21 @@ import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.workflow.model.RequestToReap;
 import com.amazon.lookout.workflow.reaper.RequestReaperConstants;
+import com.amazonaws.services.dynamodbv2.AcquireLockOptions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBLockClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBLockClientOptions;
+import com.amazonaws.services.dynamodbv2.LockItem;
+import com.amazonaws.services.dynamodbv2.SendHeartbeatOptions;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
+import com.amazonaws.services.dynamodbv2.model.LockNotGrantedException;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.QueryRequest;
 import com.amazonaws.services.dynamodbv2.model.QueryResult;
+import com.amazonaws.services.dynamodbv2.util.TableUtils;
+import com.amazonaws.services.dynamodbv2.util.TableUtils.TableNeverTransitionedToStateException;
 import com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.ExecutionStatus;
@@ -111,12 +124,26 @@ public class RequestsReaper implements Runnable {
     private final Map<DeviceName, Map<String, AttributeValue>> lastEvaluatedKeys =
             new EnumMap<DeviceName, Map<String,AttributeValue>>(DeviceName.class);
     
+    // lock client and related parameters for leadership election
+    private static final String LEADER_ELECTION_LOCK_TABLE_NAME_FORMAT = "MITIGATION_SERVICE_LOCKS_%s";
+    private static final long LEADER_ELECTION_LOCK_TABLE_READ_UNITS = 10L;
+    private static final long LEADER_ELECTION_LOCK_TABLE_WRITE_UNITS = 10L;
+    private static final String LEADER_ELECTION_LOCK_OWNER_NAME_FORMAT = "MitigationService-%s";
+    private static final long LEADER_ELECTION_LOCK_HEARTBEAT_PERIOD_MILLIS = 1000L;
+    private static final long MIN_LEADER_ELECTION_LEASE_DURATION_MILLIS = LEADER_ELECTION_LOCK_HEARTBEAT_PERIOD_MILLIS*3;
+    private static final String LEADER_ELECTION_LOCK_KEY = "RequestsReaper";
+    
+    private final String leaderElectionLockTableName;
+    private final AmazonDynamoDBLockClient leaderElectionLockClient;
+    private LockItem leaderElectionLock;
+    
     @ConstructorProperties({"dynamoDBClient", "swfClient", "appDomain", "swfDomainName",
             "swfSocketTimeoutMillis", "swfConnTimeoutMillis", "workflowStarter", "metricsFactory",
-            "queryLimit"})
+            "queryLimit", "leaderElectionLeaseDurationMillis"})
     public RequestsReaper(@NonNull AmazonDynamoDB dynamoDBClient, @NonNull AmazonSimpleWorkflowClient swfClient,
             @NonNull String appDomain, @NonNull String swfDomain, int swfSocketTimeoutMillis, int swfConnTimeoutMillis,
-            @NonNull SWFWorkflowStarter workflowStarter, @NonNull MetricsFactory metricsFactory, int queryLimit) {
+            @NonNull SWFWorkflowStarter workflowStarter, @NonNull MetricsFactory metricsFactory, int queryLimit,
+            long leaderElectionLeaseDurationMillis) {
         this.dynamoDBClient = dynamoDBClient;
         this.swfClient = swfClient;
         
@@ -136,18 +163,103 @@ public class RequestsReaper implements Runnable {
         
         Validate.isTrue(queryLimit >= 10, "queryLimit must be >= 10");
         this.queryLimit = queryLimit;
+        
+        Validate.isTrue(leaderElectionLeaseDurationMillis >= MIN_LEADER_ELECTION_LEASE_DURATION_MILLIS,
+                "leaderElectionLeaseDurationMillis must be >= %d", MIN_LEADER_ELECTION_LEASE_DURATION_MILLIS);
+        
+        String hostName;
+        try {
+            hostName = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            hostName = String.format("randomhost-%06.0f", Math.random()*1e6);
+        }
+        
+        leaderElectionLockTableName = String.format(LEADER_ELECTION_LOCK_TABLE_NAME_FORMAT, appDomain.toUpperCase());
+        leaderElectionLockClient = new AmazonDynamoDBLockClient(new AmazonDynamoDBLockClientOptions()
+            .withDynamoDB(dynamoDBClient)
+            .withTableName(leaderElectionLockTableName)
+            .withOwnerName(String.format(LEADER_ELECTION_LOCK_OWNER_NAME_FORMAT, hostName))
+            .withLeaseDuration(leaderElectionLeaseDurationMillis)
+            .withHeartbeatPeriod(LEADER_ELECTION_LOCK_HEARTBEAT_PERIOD_MILLIS)
+            .withTimeUnit(TimeUnit.MILLISECONDS)
+            .withCreateHeartbeatBackgroundThread(false));
+        leaderElectionLock = null;
     }
 
+    @PostConstruct
+    public void prepareToRun() {
+        if (!leaderElectionLockClient.lockTableExists()) {
+            LOG.info(String.format("Leader election Lock table %s does not exist in DynamoDB. Creating it...",
+                    leaderElectionLockTableName));
+            AmazonDynamoDBLockClient.createLockTableInDynamoDB(dynamoDBClient,
+                    new ProvisionedThroughput()
+                        .withReadCapacityUnits(LEADER_ELECTION_LOCK_TABLE_READ_UNITS)
+                        .withWriteCapacityUnits(LEADER_ELECTION_LOCK_TABLE_WRITE_UNITS),
+                    leaderElectionLockTableName);
+            
+            try { 
+                TableUtils.waitUntilActive(dynamoDBClient, leaderElectionLockTableName);
+            } catch (TableNeverTransitionedToStateException ex) {
+                throw new RuntimeException(String.format("Failed creating table %s.", leaderElectionLockTableName), ex);
+            } catch (InterruptedException ex) {
+                throw new RuntimeException("Interrupted while waiting for table creation!", ex);
+            }
+            
+            LOG.info(String.format("Table %s is ready for use.", leaderElectionLockTableName));
+        }
+    }
+    
+    @PreDestroy
+    public void cleanup() {
+        try {
+            leaderElectionLockClient.close();
+        } catch (Exception ex) {
+            LOG.error("Failed to close leader election lock client!", ex);
+        }
+    }
+    
     @Override
     public void run() {
-        TSDMetrics metrics = new TSDMetrics(getMetricsFactory(), "RunRequestsReaper");
-        try {
-            reapRequests(metrics);
-        } catch (Exception ex) {
-            // Simply catch all exceptions and log them as errors, to prevent this thread from dying.
-            LOG.error(ex);
-        } finally {
-            metrics.end();
+        try (TSDMetrics metrics = new TSDMetrics(getMetricsFactory(), "RunRequestsReaper")) {
+            try {
+                // attempt to acquire and/or maintain the leader election lock
+                if (leaderElectionLock == null || leaderElectionLock.isExpired()) {
+                    // attempt to acquire leader election lock
+                    leaderElectionLock = leaderElectionLockClient.acquireLock(new AcquireLockOptions()
+                        .withKey(LEADER_ELECTION_LOCK_KEY)
+                        .withRefreshPeriod(LEADER_ELECTION_LOCK_HEARTBEAT_PERIOD_MILLIS)
+                        .withAdditionalTimeToWaitForLock(LEADER_ELECTION_LOCK_HEARTBEAT_PERIOD_MILLIS)
+                        .withTimeUnit(TimeUnit.MILLISECONDS)
+                        .withDeleteLockOnRelease(false));
+                    LOG.info(String.format("Successfully acquired %s lock in table %s.",
+                            LEADER_ELECTION_LOCK_KEY, leaderElectionLockTableName));
+                } else {
+                    // send heartbeat to ensure we own the lock
+                    leaderElectionLockClient.sendHeartbeat(new SendHeartbeatOptions()
+                        .withLockItem(leaderElectionLock));
+                    LOG.info(String.format("Successfully sent heartbeat for %s lock in table %s.",
+                            LEADER_ELECTION_LOCK_KEY, leaderElectionLockTableName));
+                }
+                
+                // we are the leader and should reap requests, because the preceding code throws
+                // LockNotGrantedException when we don't own the leader election lock.
+                reapRequests(metrics);
+                
+                // send another heartbeat to keep holding the lock
+                leaderElectionLockClient.sendHeartbeat(new SendHeartbeatOptions()
+                    .withLockItem(leaderElectionLock));
+                LOG.info(String.format("Successfully sent heartbeat for %s lock in table %s.",
+                        LEADER_ELECTION_LOCK_KEY, leaderElectionLockTableName));
+            } catch (LockNotGrantedException ex) {
+                LOG.info(String.format("Not running reaper because %s lock in table %s was not acquired: %s",
+                        LEADER_ELECTION_LOCK_KEY, leaderElectionLockTableName, ex.getMessage()));
+                leaderElectionLock = null;
+            } catch (Exception ex) {
+                // Simply catch all exceptions and log them as errors, to prevent this thread from dying.
+                LOG.error(ex);
+            } finally {
+                metrics.addCount("LeaderElectionLocksOwned", leaderElectionLock != null ? 1 : 0);
+            }
         }
     }
     

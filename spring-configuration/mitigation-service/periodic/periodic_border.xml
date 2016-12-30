@@ -25,7 +25,7 @@
         <property name="threadPoolSize" value="2"/>
         <property name="work">
             <set>
-                <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
+                <bean class="com.amazon.aws158.commons.periodic.PeriodicWorkWithFixedDelay">
                     <property name="runnable" ref="requestsReaper"/>
                     <property name="period" value="1"/>
                     <property name="timeUnit" ref="seconds"/>
@@ -64,6 +64,16 @@
              is limited to scanning at most 1MB of total item size with a capacity usage of ~256.
           -->
         <constructor-arg name="queryLimit" value="300"/>
+        
+        <!-- The following setting should be significantly longer than the requestsReaper period
+             defined above in Metronome configuration, because that setting effectively controls
+             how often the leader election lock heartbeat is updated and this sets how long to
+             wait without seeing any heartbeats before another host takes over after a leader
+             fails. This should also be set long enough to not change leaders when requests to
+             DynamoDB are failing/slow because problems with DynamoDB generally won't be fixed
+             by changing leadership and could be made worse.
+          -->
+        <constructor-arg name="leaderElectionLeaseDurationMillis" value="60000"/>
     </bean>
 
     <bean id="dogFishMetadataProvider" class="com.amazon.lookout.mitigation.service.workflow.helper.DogFishMetadataProvider">
