@@ -1,8 +1,10 @@
 package com.amazon.lookout.mitigation.service.workflow.helper;
 
 import java.beans.ConstructorProperties;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -20,8 +22,16 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.simpleworkflow.model.ListOpenWorkflowExecutionsRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfos;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Uninterruptibles;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
@@ -124,6 +134,23 @@ public class RequestsReaper implements Runnable {
     private final Map<DeviceName, Map<String, AttributeValue>> lastEvaluatedKeys =
             new EnumMap<DeviceName, Map<String,AttributeValue>>(DeviceName.class);
     
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class Checkpoint {
+        private Map<DeviceName, Map<String, AttributeValue>> lastEvaluatedKeys;
+        
+        private static ObjectMapper OM = new ObjectMapper().setSerializationInclusion(Include.NON_NULL);
+        
+        public static Checkpoint fromLockData(byte[] data) throws JsonParseException, JsonMappingException, IOException {
+            return OM.readValue(data, Checkpoint.class);
+        }
+        
+        public byte[] toLockData() throws JsonProcessingException {
+            return OM.writeValueAsBytes(this);
+        }
+    }
+    
     // lock client and related parameters for leadership election
     private static final String LEADER_ELECTION_LOCK_TABLE_NAME_FORMAT = "MITIGATION_SERVICE_LOCKS_%s";
     private static final long LEADER_ELECTION_LOCK_TABLE_READ_UNITS = 10L;
@@ -218,6 +245,15 @@ public class RequestsReaper implements Runnable {
         }
     }
     
+    private Checkpoint getCheckpoint() {
+        return new Checkpoint(lastEvaluatedKeys);
+    }
+    
+    private void applyCheckpoint(Checkpoint checkpoint) {
+        this.lastEvaluatedKeys.clear();
+        this.lastEvaluatedKeys.putAll(checkpoint.getLastEvaluatedKeys());
+    }
+    
     @Override
     public void run() {
         try (TSDMetrics metrics = new TSDMetrics(getMetricsFactory(), "RunRequestsReaper")) {
@@ -230,9 +266,25 @@ public class RequestsReaper implements Runnable {
                         .withRefreshPeriod(LEADER_ELECTION_LOCK_HEARTBEAT_PERIOD_MILLIS)
                         .withAdditionalTimeToWaitForLock(LEADER_ELECTION_LOCK_HEARTBEAT_PERIOD_MILLIS)
                         .withTimeUnit(TimeUnit.MILLISECONDS)
-                        .withDeleteLockOnRelease(false));
+                        .withDeleteLockOnRelease(false)
+                        .withReplaceData(false));
                     LOG.info(String.format("Successfully acquired %s lock in table %s.",
                             LEADER_ELECTION_LOCK_KEY, leaderElectionLockTableName));
+                    
+                    // de-serialize and apply checkpoint data from lock
+                    byte[] lockData = leaderElectionLock.getData();
+                    if (lockData != null) {
+                        try {
+                            applyCheckpoint(Checkpoint.fromLockData(lockData));
+                            LOG.info("Successfully applied checkpoint data from lock: "
+                                    + new String(lockData, StandardCharsets.UTF_8));
+                        } catch (Exception ex) {
+                            LOG.warn("Failed to apply checkpoint data from lock: "
+                                    + new String(lockData, StandardCharsets.UTF_8), ex);
+                        }
+                    } else {
+                        LOG.info("Did not find any checkpoint data attached to lock.");
+                    }
                 } else {
                     // send heartbeat to ensure we own the lock
                     leaderElectionLockClient.sendHeartbeat(new SendHeartbeatOptions()
@@ -247,7 +299,8 @@ public class RequestsReaper implements Runnable {
                 
                 // send another heartbeat to keep holding the lock
                 leaderElectionLockClient.sendHeartbeat(new SendHeartbeatOptions()
-                    .withLockItem(leaderElectionLock));
+                    .withLockItem(leaderElectionLock)
+                    .withData(getCheckpoint().toLockData()));
                 LOG.info(String.format("Successfully sent heartbeat for %s lock in table %s.",
                         LEADER_ELECTION_LOCK_KEY, leaderElectionLockTableName));
             } catch (LockNotGrantedException ex) {

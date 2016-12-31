@@ -20,9 +20,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +61,7 @@ import com.amazonaws.services.simpleworkflow.model.ListOpenWorkflowExecutionsReq
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfo;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfos;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.Lists;
 
 public class RequestsReaperTest {
@@ -827,5 +831,23 @@ public class RequestsReaperTest {
         // swf run id does not match result
         isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID2", 12345, newNopTsdMetrics());
         assertTrue(isWorkflowClosedInSWF);
+    }
+    
+    @Test
+    public void testCheckpointSerialization() throws IOException {
+        Map<DeviceName, Map<String, AttributeValue>> lastEvaluatedKeys =
+            new EnumMap<DeviceName, Map<String,AttributeValue>>(DeviceName.class);
+        // {UpdateWorkflowId={N: 0,}, WorkflowId={N: 9220,}, DeviceName={S: BLACKWATCH_BORDER,}}
+        Map<String, AttributeValue> key = new HashMap<String, AttributeValue>();
+        key.put("UpdateWorkflowId", new AttributeValue().withN("0"));
+        key.put("WorkflowId", new AttributeValue().withN("9220"));
+        key.put("DeviceName", new AttributeValue().withS("BLACKWATCH_BORDER"));
+        lastEvaluatedKeys.put(DeviceName.BLACKWATCH_BORDER, key);
+        lastEvaluatedKeys.put(DeviceName.BLACKWATCH_POP, null);
+        RequestsReaper.Checkpoint checkpoint = new RequestsReaper.Checkpoint(lastEvaluatedKeys);
+        byte[] checkpointData = checkpoint.toLockData();
+        System.out.println("Checkpoint data: " + new String(checkpointData, StandardCharsets.UTF_8));
+        RequestsReaper.Checkpoint deserializedCheckpoint = RequestsReaper.Checkpoint.fromLockData(checkpointData);
+        assertEquals(checkpoint, deserializedCheckpoint);
     }
 }
