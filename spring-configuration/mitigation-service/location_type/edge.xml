@@ -6,6 +6,9 @@
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
     <!-- EDGE location -->
+    <bean id="marketplaceName" class="java.lang.String">
+        <constructor-arg value="edge.${domain}.${realm}"/>
+    </bean>
     <import resource="file:${spring.config.root}/activity/activity.xml"/>
     <import resource="file:${spring.config.root}/periodic/periodic.xml"/>
 </beans>

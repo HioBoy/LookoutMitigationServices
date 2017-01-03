@@ -81,7 +81,7 @@
             </list>
         </property>
         <property name="program" value="LookoutMitigationService"/>
-        <property name="marketplace" value="${realm}"/>
+        <property name="marketplace" ref="marketplaceName"/>
     </bean>
 
     <!--  Initialize AppConfig -->
