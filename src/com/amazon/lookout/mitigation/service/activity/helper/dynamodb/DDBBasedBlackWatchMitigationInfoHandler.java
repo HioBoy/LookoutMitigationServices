@@ -359,7 +359,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         try {
             mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(mitigationState, saveExpression);
         } catch (ConditionalCheckFailedException conEx) {
-            String msg;;
+            String msg;
             if (newMitigationCreated) {
                 msg = "Could not save MitigationState due to conditional failure! "
                         + "Conflicting MitigationId on a new mitigation.";
@@ -367,7 +367,6 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 msg = String.format("Could not save MitigationState due to conditional failure! "
                         + "MitigationState must not be: %s", MitigationState.State.To_Delete.name());
             }
-            LOG.error(msg);
             throw new IllegalArgumentException(msg);
         } finally {
             subMetrics.addCount("NewMitgationCreated", newMitigationCreated ? 1 : 0);
