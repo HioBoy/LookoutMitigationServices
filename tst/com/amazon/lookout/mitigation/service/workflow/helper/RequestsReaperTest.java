@@ -73,10 +73,10 @@ public class RequestsReaperTest {
     @Test
     public void testCreateQueryRequest() {
         RequestsReaper reaper = mock(RequestsReaper.class);
-        when(reaper.createQueryForRequests(anyString(), anyMap())).thenCallRealMethod();
+        when(reaper.createQueryForRequests(anyString(), anyMap(), anyLong())).thenCallRealMethod();
         when(reaper.getRequestsTableName()).thenReturn("MitigationRequests_Test");
         
-        QueryRequest request = reaper.createQueryForRequests(DeviceName.POP_ROUTER.name(), null);
+        QueryRequest request = reaper.createQueryForRequests(DeviceName.POP_ROUTER.name(), null, 12345L);
         assertNotNull(request);
         
         Map<String, Condition> keyConditions = request.getKeyConditions();
@@ -88,11 +88,11 @@ public class RequestsReaperTest {
         assertEquals(keyConditions.get(MitigationRequestsModel.DEVICE_NAME_KEY).getAttributeValueList().get(0).getS(), DeviceName.POP_ROUTER.name());
         assertEquals(keyConditions.get(MitigationRequestsModel.DEVICE_NAME_KEY).getComparisonOperator(), ComparisonOperator.EQ.name());
         
-        assertTrue(keyConditions.containsKey(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY));
-        assertNotNull(keyConditions.get(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY));
-        assertEquals(keyConditions.get(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY).getAttributeValueList().size(), 1);
-        assertEquals(keyConditions.get(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY).getAttributeValueList().get(0).getN(), "0");
-        assertEquals(keyConditions.get(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY).getComparisonOperator(), ComparisonOperator.EQ.name());
+        assertTrue(keyConditions.containsKey(MitigationRequestsModel.WORKFLOW_ID_KEY));
+        assertNotNull(keyConditions.get(MitigationRequestsModel.WORKFLOW_ID_KEY));
+        assertEquals(keyConditions.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getAttributeValueList().size(), 1);
+        assertEquals(keyConditions.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getAttributeValueList().get(0).getN(), "12345");
+        assertEquals(keyConditions.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getComparisonOperator(), ComparisonOperator.GT.name());
         
         Map<String, AttributeValue> lastEvaluationKey = request.getExclusiveStartKey();
         assertNull(lastEvaluationKey);
@@ -101,26 +101,12 @@ public class RequestsReaperTest {
         assertNull(conditionalOperator);
         
         String indexName = request.getIndexName();
-        assertNotNull(indexName);
-        assertEquals(indexName, MitigationRequestsModel.UNEDITED_MITIGATIONS_LSI_NAME);
+        assertNull(indexName);
         
         boolean consistentRead = request.getConsistentRead();
         assertTrue(consistentRead);
         
-        Map<String, Condition> queryFilters = request.getQueryFilter();
-        assertNotNull(queryFilters);
-        assertEquals(queryFilters.size(), 2);
-        assertTrue(queryFilters.containsKey(MitigationRequestsModel.WORKFLOW_STATUS_KEY));
-        assertNotNull(queryFilters.get(MitigationRequestsModel.WORKFLOW_STATUS_KEY));
-        assertEquals(queryFilters.get(MitigationRequestsModel.WORKFLOW_STATUS_KEY).getAttributeValueList().size(), 1);
-        assertEquals(queryFilters.get(MitigationRequestsModel.WORKFLOW_STATUS_KEY).getAttributeValueList().get(0).getS(), WorkflowStatus.SUCCEEDED);
-        assertEquals(queryFilters.get(MitigationRequestsModel.WORKFLOW_STATUS_KEY).getComparisonOperator(), ComparisonOperator.NE.name());
-        
-        assertTrue(queryFilters.containsKey(MitigationRequestsModel.REAPED_FLAG_KEY));
-        assertNotNull(queryFilters.get(MitigationRequestsModel.REAPED_FLAG_KEY));
-        assertEquals(queryFilters.get(MitigationRequestsModel.REAPED_FLAG_KEY).getAttributeValueList().size(), 1);
-        assertEquals(queryFilters.get(MitigationRequestsModel.REAPED_FLAG_KEY).getAttributeValueList().get(0).getS(), "true");
-        assertEquals(queryFilters.get(MitigationRequestsModel.REAPED_FLAG_KEY).getComparisonOperator(), ComparisonOperator.NE.name());
+        assertNull(request.getQueryFilter());
         
         String tableName = request.getTableName();
         assertEquals(tableName, "MitigationRequests_Test");
@@ -580,7 +566,7 @@ public class RequestsReaperTest {
         result1.setScannedCount(items.size());
         result1.setLastEvaluatedKey(new HashMap<String, AttributeValue>());
         
-        when(reaper.getUnsuccessfulUnreapedRequests(eq(DeviceName.POP_ROUTER.name()), anyMap())).thenReturn(result1);
+        when(reaper.queryForRequests(eq(DeviceName.POP_ROUTER.name()), anyMap(), anyLong())).thenReturn(result1);
         
         List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
         assertEquals(2, requestsToReap.size());
@@ -655,7 +641,7 @@ public class RequestsReaperTest {
         result2.setCount(items.size());
         result2.setScannedCount(items.size());
         
-        when(reaper.getUnsuccessfulUnreapedRequests(eq(DeviceName.POP_ROUTER.name()), anyMap())).thenReturn(result2);
+        when(reaper.queryForRequests(eq(DeviceName.POP_ROUTER.name()), anyMap(), anyLong())).thenReturn(result2);
         
         List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
         assertEquals(1, requestsToReap.size());
@@ -693,13 +679,14 @@ public class RequestsReaperTest {
         result.setScannedCount(0);
        
         when(reaper.getLastEvaluatedKey(any())).thenReturn(null);
-        when(reaper.getUnsuccessfulUnreapedRequests(anyString(), anyMap())).thenReturn(result);
+        when(reaper.getWorkflowIdLowerBound(any())).thenReturn(0L);
+        when(reaper.queryForRequests(anyString(), anyMap(), anyLong())).thenReturn(result);
         
         List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
         assertEquals(0, requestsToReap.size());
         
         // verify one call per device
-        verify(reaper, times(DeviceName.values().length)).getUnsuccessfulUnreapedRequests(anyString(), isNull(Map.class));
+        verify(reaper, times(DeviceName.values().length)).queryForRequests(anyString(), isNull(Map.class), eq(0L));
         verify(reaper, times(DeviceName.values().length)).setLastEvaluatedKey(any(), same(lastEvaluatedKey));
     }
 
@@ -720,13 +707,14 @@ public class RequestsReaperTest {
         result.setScannedCount(0);
 
         when(reaper.getLastEvaluatedKey(any())).thenReturn(lastEvaluatedKey);
-        when(reaper.getUnsuccessfulUnreapedRequests(anyString(), anyMap())).thenReturn(result);
+        when(reaper.getWorkflowIdLowerBound(any())).thenReturn(0L);
+        when(reaper.queryForRequests(anyString(), anyMap(), anyLong())).thenReturn(result);
         
         List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
         assertEquals(0, requestsToReap.size());
         
         // verify one call per device
-        verify(reaper, times(DeviceName.values().length)).getUnsuccessfulUnreapedRequests(anyString(), same(lastEvaluatedKey));
+        verify(reaper, times(DeviceName.values().length)).queryForRequests(anyString(), same(lastEvaluatedKey), eq(0L));
         verify(reaper, times(DeviceName.values().length)).setLastEvaluatedKey(any(), isNull(Map.class));
     }
     
@@ -835,16 +823,22 @@ public class RequestsReaperTest {
     
     @Test
     public void testCheckpointSerialization() throws IOException {
-        Map<DeviceName, Map<String, AttributeValue>> lastEvaluatedKeys =
-            new EnumMap<DeviceName, Map<String,AttributeValue>>(DeviceName.class);
+        Map<DeviceName, Map<String, AttributeValue>> lastEvaluatedKeys = new EnumMap<>(DeviceName.class);
         // {UpdateWorkflowId={N: 0,}, WorkflowId={N: 9220,}, DeviceName={S: BLACKWATCH_BORDER,}}
-        Map<String, AttributeValue> key = new HashMap<String, AttributeValue>();
+        Map<String, AttributeValue> key = new HashMap<>();
         key.put("UpdateWorkflowId", new AttributeValue().withN("0"));
         key.put("WorkflowId", new AttributeValue().withN("9220"));
         key.put("DeviceName", new AttributeValue().withS("BLACKWATCH_BORDER"));
         lastEvaluatedKeys.put(DeviceName.BLACKWATCH_BORDER, key);
         lastEvaluatedKeys.put(DeviceName.BLACKWATCH_POP, null);
-        RequestsReaper.Checkpoint checkpoint = new RequestsReaper.Checkpoint(lastEvaluatedKeys);
+        Map<DeviceName, Long> workflowIdLowerBounds = new EnumMap<>(DeviceName.class);
+        workflowIdLowerBounds.put(DeviceName.BLACKWATCH_BORDER, 12345L);
+        workflowIdLowerBounds.put(DeviceName.BLACKWATCH_POP, 0L);
+        Map<DeviceName, Boolean> unsuccessfulUnreapedRequestWasFound = new EnumMap<>(DeviceName.class);
+        unsuccessfulUnreapedRequestWasFound.put(DeviceName.BLACKWATCH_BORDER, true);
+        unsuccessfulUnreapedRequestWasFound.put(DeviceName.BLACKWATCH_POP, false);
+        RequestsReaper.Checkpoint checkpoint = new RequestsReaper.Checkpoint(lastEvaluatedKeys,
+                workflowIdLowerBounds, unsuccessfulUnreapedRequestWasFound);
         byte[] checkpointData = checkpoint.toLockData();
         System.out.println("Checkpoint data: " + new String(checkpointData, StandardCharsets.UTF_8));
         RequestsReaper.Checkpoint deserializedCheckpoint = RequestsReaper.Checkpoint.fromLockData(checkpointData);

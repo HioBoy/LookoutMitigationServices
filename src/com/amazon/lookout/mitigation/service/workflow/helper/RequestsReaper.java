@@ -19,24 +19,14 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.concurrent.ThreadSafe;
 
-import com.amazonaws.AmazonWebServiceRequest;
-import com.amazonaws.services.simpleworkflow.model.ListOpenWorkflowExecutionsRequest;
-import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfos;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.Uninterruptibles;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
-import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang3.builder.RecursiveToStringStyle;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.joda.time.DateTime;
@@ -53,6 +43,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
 import com.amazon.lookout.workflow.model.RequestToReap;
 import com.amazon.lookout.workflow.reaper.RequestReaperConstants;
+import com.amazonaws.AmazonWebServiceRequest;
 import com.amazonaws.services.dynamodbv2.AcquireLockOptions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBLockClient;
@@ -73,10 +64,19 @@ import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.ExecutionStatus;
 import com.amazonaws.services.simpleworkflow.model.ExecutionTimeFilter;
 import com.amazonaws.services.simpleworkflow.model.ListClosedWorkflowExecutionsRequest;
+import com.amazonaws.services.simpleworkflow.model.ListOpenWorkflowExecutionsRequest;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionAlreadyStartedException;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionFilter;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfo;
+import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfos;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * This class is responsible for cleaning up any workflows whose state needs to be brought in sync with the reality on the mitigation devices.
@@ -131,14 +131,31 @@ public class RequestsReaper implements Runnable {
     private final SWFWorkflowStarter workflowStarter;
     private final int queryLimit;
     
-    private final Map<DeviceName, Map<String, AttributeValue>> lastEvaluatedKeys =
-            new EnumMap<DeviceName, Map<String,AttributeValue>>(DeviceName.class);
+    private final Map<DeviceName, Map<String, AttributeValue>> lastEvaluatedKeys = new EnumMap<>(DeviceName.class);
+    private static final ImmutableSet<String> REQUESTS_QUERY_KEY_ATTRIBUTES =
+            ImmutableSet.of(MitigationRequestsModel.DEVICE_NAME_KEY,  MitigationRequestsModel.WORKFLOW_ID_KEY);
+    
+    // Maximum WorkflowId for each DeviceName such that only requests satisfying the key condition
+    // WorkflowId > WorkflowIdLowerBound could need to be reaped in the future. In other words, all
+    // requests with WorkflowId <= WorkflowIdLowerBound have already SUCCEEDED or been reaped. This
+    // is used in the KeyCondition of the MITIGATION_REQUESTS query finding requests to reap and
+    // its purpose is to minimize the number of items that must be scanned by that query.
+    private final Map<DeviceName, Long> workflowIdLowerBounds = new EnumMap<>(DeviceName.class);
+    
+    // Flag reset to false when starting a new query to find requests that could be reaped for
+    // a DeviceName and then set to true when an unsuccessful (WorkflowStatus != SUCCEEDED),
+    // unreaped (Reaped != 'true') is found. As long as this flag remained false for a given
+    // DeviceName WorkflowIdLowerBound may continue to be increased as successful or reaped
+    // requests are found but it must stop increasing once this flag is set to true.
+    private final Map<DeviceName, Boolean> unsuccessfulUnreapedRequestWasFound = new EnumMap<>(DeviceName.class);
     
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
     public static class Checkpoint {
         private Map<DeviceName, Map<String, AttributeValue>> lastEvaluatedKeys;
+        private Map<DeviceName, Long> workflowIdLowerBounds;
+        private Map<DeviceName, Boolean> unsuccessfulUnreapedRequestWasFound;
         
         private static ObjectMapper OM = new ObjectMapper().setSerializationInclusion(Include.NON_NULL);
         
@@ -246,12 +263,28 @@ public class RequestsReaper implements Runnable {
     }
     
     private Checkpoint getCheckpoint() {
-        return new Checkpoint(lastEvaluatedKeys);
+        return new Checkpoint(lastEvaluatedKeys, workflowIdLowerBounds, unsuccessfulUnreapedRequestWasFound);
     }
     
     private void applyCheckpoint(Checkpoint checkpoint) {
         this.lastEvaluatedKeys.clear();
-        this.lastEvaluatedKeys.putAll(checkpoint.getLastEvaluatedKeys());
+        if (checkpoint.getLastEvaluatedKeys() != null) {
+            checkpoint.getLastEvaluatedKeys().forEach((deviceName, lastEvaluatedKey) -> {
+                if (lastEvaluatedKey != null && lastEvaluatedKey.keySet().equals(REQUESTS_QUERY_KEY_ATTRIBUTES)) {
+                    this.lastEvaluatedKeys.put(deviceName, lastEvaluatedKey);
+                } else {
+                    LOG.warn("Ignoring lastEvaluatedKey:" + lastEvaluatedKey
+                            + " with unexpected attributes for deviceName:" + deviceName);
+                }
+            });
+        }
+        if (checkpoint.getWorkflowIdLowerBounds() != null) {
+            this.workflowIdLowerBounds.putAll(checkpoint.getWorkflowIdLowerBounds());
+        }
+        this.unsuccessfulUnreapedRequestWasFound.clear();
+        if (checkpoint.getUnsuccessfulUnreapedRequestWasFound() != null) {
+            this.unsuccessfulUnreapedRequestWasFound.putAll(checkpoint.getUnsuccessfulUnreapedRequestWasFound());
+        }
     }
     
     @Override
@@ -307,6 +340,10 @@ public class RequestsReaper implements Runnable {
                 LOG.info(String.format("Not running reaper because %s lock in table %s was not acquired: %s",
                         LEADER_ELECTION_LOCK_KEY, leaderElectionLockTableName, ex.getMessage()));
                 leaderElectionLock = null;
+            } catch (InterruptedException ex) {
+                // Don't log InterruptedException as an ERROR, because it can be logged during shutdown.
+                LOG.info("Interrupted! Probably shutting down...");
+                Thread.currentThread().interrupt();
             } catch (Exception ex) {
                 // Simply catch all exceptions and log them as errors, to prevent this thread from dying.
                 LOG.error(ex);
@@ -324,6 +361,26 @@ public class RequestsReaper implements Runnable {
     // protected to be visible for mocking
     protected void setLastEvaluatedKey(DeviceName deviceName, Map<String, AttributeValue> lastEvaluatedKey) {
         lastEvaluatedKeys.put(deviceName, lastEvaluatedKey);
+    }
+    
+    // protected to be visible for mocking
+    protected long getWorkflowIdLowerBound(DeviceName deviceName) {
+        return workflowIdLowerBounds.getOrDefault(deviceName, 0L);
+    }
+    
+    // protected to be visible for mocking
+    protected void setWorkflowIdLowerBound(DeviceName deviceName, long workflowId) {
+        workflowIdLowerBounds.put(deviceName, workflowId);
+    }
+    
+    // protected to be visible for mocking
+    protected boolean wasUnsuccessfulUnreapedRequestFound(DeviceName deviceName) {
+        return unsuccessfulUnreapedRequestWasFound.getOrDefault(deviceName, Boolean.FALSE);
+    }
+    
+    // protected to be visible for mocking
+    protected void setUnsuccessfulUnreapedRequestWasFound(DeviceName deviceName, boolean wasFound) {
+        unsuccessfulUnreapedRequestWasFound.put(deviceName, wasFound);
     }
     
     /**
@@ -394,6 +451,7 @@ public class RequestsReaper implements Runnable {
         TSDMetrics subMetrics = metrics.newSubMetrics("getWorkflowsToReap");
         int numRequestsFound = 0;
         int numRequestsScanned = 0;
+        int numRequestsIgnored = 0;
         int numRequestsFoundRunning = 0;
         int numDevicesFailingReaperCheck = 0;
         try {
@@ -403,16 +461,23 @@ public class RequestsReaper implements Runnable {
             for (DeviceName deviceName : DeviceName.values()) {
                 try {
                     // Get a list of active requests which weren't successful and haven't been reaped as yet.
-                    QueryResult queryResult = getUnsuccessfulUnreapedRequests(deviceName.name(), getLastEvaluatedKey(deviceName));
+                    Map<String, AttributeValue> lastEvaluatedKey = getLastEvaluatedKey(deviceName);
+                    long workflowIdLowerBound = getWorkflowIdLowerBound(deviceName);
+                    boolean unsuccessfulUnreapedRequestFound;
+                    if (lastEvaluatedKey == null) {
+                        // starting new query pass; reset flag
+                        setUnsuccessfulUnreapedRequestWasFound(deviceName, false);
+                        unsuccessfulUnreapedRequestFound = false;
+                    } else {
+                        // continuing a query pass; use saved flag
+                        unsuccessfulUnreapedRequestFound = wasUnsuccessfulUnreapedRequestFound(deviceName);
+                    }
+                    
+                    QueryResult queryResult = queryForRequests(deviceName.name(), lastEvaluatedKey, workflowIdLowerBound);
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Found: " + queryResult.getItems().size() + " unsuccessful+unreaped requests: " + ReflectionToStringBuilder.toString(queryResult));
                     }
                     
-                    Map<String, AttributeValue> lastEvaluatedKey = queryResult.getLastEvaluatedKey();
-                    setLastEvaluatedKey(deviceName, lastEvaluatedKey);
-                    subMetrics.addCount(String.format(REAPER_FINISHED_PASS_FORMAT, deviceName), lastEvaluatedKey == null ? 1 : 0);
-                    
-                    numRequestsFound += queryResult.getCount();
                     numRequestsScanned += queryResult.getScannedCount();
                     
                     for (Map<String, AttributeValue> item : queryResult.getItems()) {
@@ -427,12 +492,32 @@ public class RequestsReaper implements Runnable {
                         String deviceScope = item.get(MitigationRequestsModel.DEVICE_SCOPE_KEY).getS();
                         String requestType = item.get(MitigationRequestsModel.REQUEST_TYPE_KEY).getS();
                         String serviceName = item.get(MitigationRequestsModel.SERVICE_NAME_KEY).getS();
+                        AttributeValue reapedFlagValue = item.get(MitigationRequestsModel.REAPED_FLAG_KEY);
+                        boolean reaped = reapedFlagValue != null && "true".equals(reapedFlagValue.getS());
                         
                         // SWF RunId could be null - for cases where a new request was persisted into DDB, but the SWF RunId was not yet updated.
-                        String swfRunId = null;
-                        if (item.containsKey(MitigationRequestsModel.SWF_RUN_ID_KEY)) {
-                            swfRunId = item.get(MitigationRequestsModel.SWF_RUN_ID_KEY).getS();
+                        AttributeValue swfRunIdValue = item.get(MitigationRequestsModel.SWF_RUN_ID_KEY);
+                        String swfRunId = swfRunIdValue != null ? swfRunIdValue.getS() : null;
+                        
+                        // skip requests with WorkflowStatus == SUCCEEDED or Reaped == 'true'
+                        if (workflowStatus.equals(WorkflowStatus.SUCCEEDED) || reaped) {
+                            ++numRequestsIgnored;
+                            if (!unsuccessfulUnreapedRequestFound) {
+                                // Attempt to increase WorkflowIdLowerBound, because we have not found
+                                // a previous unsuccessful unreaped request with a lower WorkflowId.
+                                try {
+                                    long workflowId = Long.parseLong(workflowIdStr);
+                                    workflowIdLowerBound = Math.max(workflowIdLowerBound, workflowId);
+                                } catch (IllegalArgumentException ex) {
+                                    LOG.warn("Failed to parse WorkflowId string:" + workflowIdStr, ex);
+                                }
+                            }
+                            continue;
                         }
+                        
+                        // we found an unsuccessful and unreaped request
+                        unsuccessfulUnreapedRequestFound = true;
+                        ++numRequestsFound;
                         
                         // If the workflow status is Running, check if it has been running for at least N seconds, if not, then skip this entry.
                         if (workflowStatus.equals(WorkflowStatus.RUNNING)) {
@@ -478,6 +563,14 @@ public class RequestsReaper implements Runnable {
                         LOG.info("Request that needs to be reaped: " + workflowInfo);
                         requestsToBeReaped.add(workflowInfo);
                     }
+                    
+                    setWorkflowIdLowerBound(deviceName, workflowIdLowerBound);
+                    setUnsuccessfulUnreapedRequestWasFound(deviceName, unsuccessfulUnreapedRequestFound);
+                    
+                    lastEvaluatedKey = queryResult.getLastEvaluatedKey();
+                    setLastEvaluatedKey(deviceName, lastEvaluatedKey);
+                    subMetrics.addCount(String.format(REAPER_FINISHED_PASS_FORMAT, deviceName), lastEvaluatedKey == null ? 1 : 0);
+
                 } catch (Exception ex) {
                     // Handle any exceptions by logging a warning and moving on to the next device.
                     String msg = "Caught exception when querying active workflows for device: " + deviceName.name();
@@ -490,6 +583,7 @@ public class RequestsReaper implements Runnable {
         } finally {
             subMetrics.addCount("NumRequestsFound", numRequestsFound);
             subMetrics.addCount("NumRequestsScanned", numRequestsScanned);
+            subMetrics.addCount("NumRequestsIgnored", numRequestsIgnored);
             subMetrics.addCount("NumRequestsFoundRunning", numRequestsFoundRunning);
             subMetrics.addCount("NumDevicesFailingReaperCheck", numDevicesFailingReaperCheck);
             subMetrics.end();
@@ -547,58 +641,66 @@ public class RequestsReaper implements Runnable {
     }
     
     /**
-     * Responsible for querying DDB to find requests which weren't completely successful and haven't yet been reaped.
-     * @param deviceName DeviceName whose workflow requests need to be queried.
-     * @param lastEvaluatedKey Represents the lastEvaluatedKey returned by DDB for the previous key, null if this is the first query.
-     * @return QueryResult containing the result of querying for workflows whose status reflect them as being active.
+     * Query the MITIGATION_REQUESTS table in DynamoDB to find requests that might need to be reaped.
+     * 
+     * @param deviceName DeviceName of requests to query for.
+     * @param lastEvaluatedKey last key evaluated by previous DynamoDB query for the same DeviceName.
+     * @param workflowIdLowerBound Lower bound for WorkflowId key condition.
+     * @return DynamoDB QueryResult containing requests that might need to be reaped.
      */
-    protected QueryResult getUnsuccessfulUnreapedRequests(@NonNull String deviceName, Map<String, AttributeValue> lastEvaluatedKey) {
-        QueryRequest request = createQueryForRequests(deviceName, lastEvaluatedKey);
+    protected QueryResult queryForRequests(@NonNull String deviceName,
+            Map<String, AttributeValue> lastEvaluatedKey, long workflowIdLowerBound) {
+        QueryRequest request = createQueryForRequests(deviceName, lastEvaluatedKey, workflowIdLowerBound);
         return queryDynamoDB(request);
     }
     
     /**
-     * Helper to create the QueryRequest to be issued to DDB for getting the list of requests which weren't completely successful and haven't yet been reaped.
-     * @param deviceName DeviceName whose workflow requests need to be queried.
-     * @param lastEvaluatedKey Represents the lastEvaluatedKey returned by DDB for the previous key, null if this is the first query.
-     * @return QueryRequest representing the query to be issued against DDB to get the appropriate list of requests that need to be reaped.
+     * Create DynamoDB QueryRequest to find requests that might need to be reaped.
+     * 
+     * @param deviceName DeviceName of requests to query for.
+     * @param lastEvaluatedKey last key evaluated by previous DynamoDB query for the same DeviceName.
+     * @param workflowIdLowerBound Lower bound for WorkflowId key condition.
+     * @return DynamoDB QueryRequest used to find request that might need to be reaped.
      */
-    protected QueryRequest createQueryForRequests(@NonNull String deviceName, Map<String, AttributeValue> lastEvaluatedKey) {
+    protected QueryRequest createQueryForRequests(@NonNull String deviceName,
+            Map<String, AttributeValue> lastEvaluatedKey, long workflowIdLowerBound) {
         QueryRequest request = new QueryRequest(getRequestsTableName());
         Map<String, Condition> queryConditions = new HashMap<>();
         
-        List<AttributeValue> conditionAttributes = new ArrayList<>();
-        conditionAttributes.add(new AttributeValue(deviceName));
-        queryConditions.put(MitigationRequestsModel.DEVICE_NAME_KEY, new Condition().withAttributeValueList(conditionAttributes).withComparisonOperator(ComparisonOperator.EQ));
+        queryConditions.put(MitigationRequestsModel.DEVICE_NAME_KEY,
+                new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(
+                        new AttributeValue().withS(deviceName)));
         
-        conditionAttributes = new ArrayList<>();
-        conditionAttributes.add(new AttributeValue().withN("0"));
-        queryConditions.put(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY, new Condition().withAttributeValueList(conditionAttributes).withComparisonOperator(ComparisonOperator.EQ));
-        request.setKeyConditions(queryConditions);
-        
-        request.setIndexName(MitigationRequestsModel.UNEDITED_MITIGATIONS_LSI_NAME);
-        request.setConsistentRead(true);
-        request.setLimit(queryLimit);
-        request.setAttributesToGet(Lists.newArrayList(MitigationRequestsModel.WORKFLOW_ID_KEY, MitigationRequestsModel.SWF_RUN_ID_KEY, 
-                                                      MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, MitigationRequestsModel.WORKFLOW_STATUS_KEY, 
-                                                      MitigationRequestsModel.DEVICE_SCOPE_KEY, MitigationRequestsModel.LOCATIONS_KEY, 
-                                                      MitigationRequestsModel.MITIGATION_NAME_KEY, MitigationRequestsModel.MITIGATION_VERSION_KEY, 
-                                                      MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, MitigationRequestsModel.REQUEST_TYPE_KEY,
-                                                      MitigationRequestsModel.SERVICE_NAME_KEY));
         if (lastEvaluatedKey != null) {
+            // if we have a lastEvaluatedKey then continue query from where we left off
             request.setExclusiveStartKey(lastEvaluatedKey);
+        } else {
+            // otherwise start a new query from workflowIdLowerBound
+            queryConditions.put(MitigationRequestsModel.WORKFLOW_ID_KEY,
+                    new Condition().withComparisonOperator(ComparisonOperator.GT).withAttributeValueList(
+                            new AttributeValue().withN(Long.toString(workflowIdLowerBound))));
         }
         
-        Map<String, Condition> queryFilters = new HashMap<>();
-        AttributeValue workflowStatusValue = new AttributeValue(WorkflowStatus.SUCCEEDED);
-        Condition workflowStatusCondition = new Condition().withAttributeValueList(workflowStatusValue).withComparisonOperator(ComparisonOperator.NE);
-        queryFilters.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, workflowStatusCondition);
+        request.setKeyConditions(queryConditions);
+        request.setConsistentRead(true);
+        request.setLimit(queryLimit);
+        request.setAttributesToGet(Lists.newArrayList(MitigationRequestsModel.WORKFLOW_ID_KEY,
+                                                      MitigationRequestsModel.SWF_RUN_ID_KEY, 
+                                                      MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY,
+                                                      MitigationRequestsModel.WORKFLOW_STATUS_KEY, 
+                                                      MitigationRequestsModel.DEVICE_SCOPE_KEY,
+                                                      MitigationRequestsModel.LOCATIONS_KEY, 
+                                                      MitigationRequestsModel.MITIGATION_NAME_KEY,
+                                                      MitigationRequestsModel.MITIGATION_VERSION_KEY, 
+                                                      MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY,
+                                                      MitigationRequestsModel.REQUEST_TYPE_KEY,
+                                                      MitigationRequestsModel.SERVICE_NAME_KEY,
+                                                      MitigationRequestsModel.REAPED_FLAG_KEY));
         
-        AttributeValue reapedValue = new AttributeValue("true");
-        Condition reapedCondition = new Condition().withAttributeValueList(reapedValue).withComparisonOperator(ComparisonOperator.NE);
-        queryFilters.put(MitigationRequestsModel.REAPED_FLAG_KEY, reapedCondition);
-        
-        request.setQueryFilter(queryFilters);
+        LOG.debug("From deviceName:" + deviceName + ", lastEvaluatedKey:" + lastEvaluatedKey
+                + ", workflowIdLowerBound:" + workflowIdLowerBound + " created query request:"
+                + request);
+
         return request;
     }
 
