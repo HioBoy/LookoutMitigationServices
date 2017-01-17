@@ -452,6 +452,7 @@ public class RequestsReaper implements Runnable {
         int numRequestsFound = 0;
         int numRequestsScanned = 0;
         int numRequestsIgnored = 0;
+        int numExpiredRequestsFound = 0;
         int numRequestsFoundRunning = 0;
         int numDevicesFailingReaperCheck = 0;
         try {
@@ -466,7 +467,6 @@ public class RequestsReaper implements Runnable {
                     boolean unsuccessfulUnreapedRequestFound;
                     if (lastEvaluatedKey == null) {
                         // starting new query pass; reset flag
-                        setUnsuccessfulUnreapedRequestWasFound(deviceName, false);
                         unsuccessfulUnreapedRequestFound = false;
                     } else {
                         // continuing a query pass; use saved flag
@@ -482,6 +482,14 @@ public class RequestsReaper implements Runnable {
                     
                     for (Map<String, AttributeValue> item : queryResult.getItems()) {
                         String workflowIdStr = item.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN();
+                        long workflowId;
+                        try {
+                            workflowId = Long.parseLong(workflowIdStr);
+                        } catch (IllegalArgumentException ex) {
+                            LOG.warn("Failed to parse WorkflowId string:" + workflowIdStr, ex);
+                            workflowId = -1; // guaranteed to be < workflowIdLowerBound
+                        }
+                        
                         List<String> locations = item.get(MitigationRequestsModel.LOCATIONS_KEY).getSS();
                         String workflowStatus = item.get(MitigationRequestsModel.WORKFLOW_STATUS_KEY).getS();
                         long requestDateInMillis = Long.parseLong(item.get(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY).getN());
@@ -505,12 +513,26 @@ public class RequestsReaper implements Runnable {
                             if (!unsuccessfulUnreapedRequestFound) {
                                 // Attempt to increase WorkflowIdLowerBound, because we have not found
                                 // a previous unsuccessful unreaped request with a lower WorkflowId.
-                                try {
-                                    long workflowId = Long.parseLong(workflowIdStr);
-                                    workflowIdLowerBound = Math.max(workflowIdLowerBound, workflowId);
-                                } catch (IllegalArgumentException ex) {
-                                    LOG.warn("Failed to parse WorkflowId string:" + workflowIdStr, ex);
-                                }
+                                workflowIdLowerBound = Math.max(workflowIdLowerBound, workflowId);
+                                LOG.debug("WorkflowIdLowerBound increased to " + workflowIdLowerBound);
+                            }
+                            continue;
+                        }
+                        
+                        // If the request has a creation time before SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION, we stop attempting to reap it.
+                        DateTime now = new DateTime(DateTimeZone.UTC);
+                        if (now.minusSeconds(SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION).isAfter(requestDateInMillis)) {
+                            LOG.error("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
+                                      " at locations: " + locations + " has not being successfully reaped  within the last: " + SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION + 
+                                      " number of seconds, stop attempting to reap. Workflow RequestDate: " + requestDateTime);
+                            ++numExpiredRequestsFound;
+                            if (!unsuccessfulUnreapedRequestFound) {
+                                // Attempt to increase WorkflowIdLowerBound, because we have given
+                                // up attempting to reap this request and have not found a previous
+                                // unsuccessful unreaped request with a lower WorkflowId that was
+                                // also not too old to be reaped.
+                                workflowIdLowerBound = Math.max(workflowIdLowerBound, workflowId);
+                                LOG.debug("WorkflowIdLowerBound increased to " + workflowIdLowerBound);
                             }
                             continue;
                         }
@@ -523,7 +545,6 @@ public class RequestsReaper implements Runnable {
                         if (workflowStatus.equals(WorkflowStatus.RUNNING)) {
                             ++numRequestsFoundRunning;
                             
-                            DateTime now = new DateTime(DateTimeZone.UTC);
                             if (now.minusSeconds(getMaxSecondsToStartWorkflow()).isBefore(requestDateInMillis)) {
                                 LOG.debug("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
                                           " at locations: " + locations + " has recently started within the last: " + getMaxSecondsToStartWorkflow() + 
@@ -537,15 +558,6 @@ public class RequestsReaper implements Runnable {
                                             " at locations: " + locations + " with RequestDate: " + requestDateTime + " doesn't show as CLOSED in SWF, hence skipping any reaping activity.");
                                 continue;
                             }
-                        }
-                        
-                        // If the request has a creation time before SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION, we stop attempting to reap it.
-                        DateTime now = new DateTime(DateTimeZone.UTC);
-                        if (now.minusSeconds(SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION).isAfter(requestDateInMillis)) {
-                            LOG.error("Workflow: " + workflowIdStr + " for mitigation: " + mitigationName + " using template: " + mitigationTemplate +
-                                      " at locations: " + locations + " has not being successfully reaped  within the last: " + SECONDS_TO_ATTEMPT_TO_REAP_REQUEST_AFTER_CREATION + 
-                                      " number of seconds, stop attempting to reap. Workflow RequestDate: " + requestDateTime);
-                            continue;
                         }
                         
                         // Get instances for the workflow corresponding to the request being evaluated.
@@ -584,6 +596,7 @@ public class RequestsReaper implements Runnable {
             subMetrics.addCount("NumRequestsFound", numRequestsFound);
             subMetrics.addCount("NumRequestsScanned", numRequestsScanned);
             subMetrics.addCount("NumRequestsIgnored", numRequestsIgnored);
+            subMetrics.addCount("NumExpiredRequestsFound", numExpiredRequestsFound);
             subMetrics.addCount("NumRequestsFoundRunning", numRequestsFoundRunning);
             subMetrics.addCount("NumDevicesFailingReaperCheck", numDevicesFailingReaperCheck);
             subMetrics.end();
