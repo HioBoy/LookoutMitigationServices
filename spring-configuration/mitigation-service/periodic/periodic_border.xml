@@ -37,6 +37,9 @@
                 </bean>
             </set>
         </property>
+        <!-- must be longer than leaderElectionLeaseDurationMillis for clean shutdown -->
+        <property name="shutdownTimeout" value="70"/>
+        <property name="shutdownTimeoutUnit" value="SECONDS"/>
     </bean>
     
     <bean id="requestsReaper" class="com.amazon.lookout.mitigation.service.workflow.helper.RequestsReaper">
