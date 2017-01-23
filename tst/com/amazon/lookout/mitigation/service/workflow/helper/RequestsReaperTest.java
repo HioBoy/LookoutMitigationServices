@@ -332,11 +332,11 @@ public class RequestsReaperTest {
         Map<String, Condition> keyConditions = request.getKeyConditions();
         assertNotNull(keyConditions);
         assertEquals(keyConditions.size(), 1);
-        assertTrue(keyConditions.containsKey(MitigationInstancesModel.DEVICE_WORKFLOW_KEY));
-        assertNotNull(keyConditions.get(MitigationInstancesModel.DEVICE_WORKFLOW_KEY));
-        assertEquals(keyConditions.get(MitigationInstancesModel.DEVICE_WORKFLOW_KEY).getAttributeValueList().size(), 1);
-        assertEquals(keyConditions.get(MitigationInstancesModel.DEVICE_WORKFLOW_KEY).getAttributeValueList().get(0).getS(), deviceWorkflowId);
-        assertEquals(keyConditions.get(MitigationInstancesModel.DEVICE_WORKFLOW_KEY).getComparisonOperator(), ComparisonOperator.EQ.name());
+        assertTrue(keyConditions.containsKey(MitigationInstancesModel.DEVICE_WORKFLOW_ID_KEY));
+        assertNotNull(keyConditions.get(MitigationInstancesModel.DEVICE_WORKFLOW_ID_KEY));
+        assertEquals(keyConditions.get(MitigationInstancesModel.DEVICE_WORKFLOW_ID_KEY).getAttributeValueList().size(), 1);
+        assertEquals(keyConditions.get(MitigationInstancesModel.DEVICE_WORKFLOW_ID_KEY).getAttributeValueList().get(0).getS(), deviceWorkflowId);
+        assertEquals(keyConditions.get(MitigationInstancesModel.DEVICE_WORKFLOW_ID_KEY).getComparisonOperator(), ComparisonOperator.EQ.name());
         
         Map<String, AttributeValue> lastEvaluationKey = request.getExclusiveStartKey();
         assertNull(lastEvaluationKey);

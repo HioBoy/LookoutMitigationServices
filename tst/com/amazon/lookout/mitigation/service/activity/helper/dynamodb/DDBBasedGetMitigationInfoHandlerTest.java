@@ -168,7 +168,7 @@ public class DDBBasedGetMitigationInfoHandlerTest {
             item.withString(DEVICE_WORKFLOW_ID_HASH_KEY, deviceWorkflowId);
             item.withString(LOCATION_RANGE_KEY, location);
             item.withString(MITIGATION_STATUS_KEY, mitigationStatus);
-            item.withString(BLOCKING_DEVICE_WORKFLOW_ID, blockingDeviceWorkflowId);
+            item.withString(BLOCKING_DEVICE_WORKFLOW_ID_KEY, blockingDeviceWorkflowId);
             item.withString(SCHEDULING_STATUS_KEY, schedulingStatus);
             item.withString(SERVICE_NAME_KEY, serviceName);
             item.withString(DEVICE_NAME_KEY, deviceName);
