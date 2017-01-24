@@ -731,7 +731,7 @@ public class RequestsReaper implements Runnable {
         Map<String, Condition> queryConditions = new HashMap<>();
         List<AttributeValue> conditionAttributes = new ArrayList<>();
         conditionAttributes.add(new AttributeValue(deviceWorkflowKey));
-        queryConditions.put(MitigationInstancesModel.DEVICE_WORKFLOW_KEY, new Condition().withAttributeValueList(conditionAttributes).withComparisonOperator(ComparisonOperator.EQ));
+        queryConditions.put(MitigationInstancesModel.DEVICE_WORKFLOW_ID_KEY, new Condition().withAttributeValueList(conditionAttributes).withComparisonOperator(ComparisonOperator.EQ));
         request.setKeyConditions(queryConditions);
         
         request.setConsistentRead(true);
