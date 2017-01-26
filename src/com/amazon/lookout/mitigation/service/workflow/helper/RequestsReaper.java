@@ -40,7 +40,7 @@ import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
-import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
+import com.amazon.lookout.workflow.helper.SWFWorkflowStarter;
 import com.amazon.lookout.workflow.model.RequestToReap;
 import com.amazon.lookout.workflow.reaper.RequestReaperConstants;
 import com.amazonaws.AmazonWebServiceRequest;

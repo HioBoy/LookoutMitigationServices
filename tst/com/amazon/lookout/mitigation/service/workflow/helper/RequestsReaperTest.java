@@ -44,7 +44,7 @@ import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
-import com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarter;
+import com.amazon.lookout.workflow.helper.SWFWorkflowStarter;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.workflow.model.RequestToReap;
@@ -61,7 +61,6 @@ import com.amazonaws.services.simpleworkflow.model.ListOpenWorkflowExecutionsReq
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfo;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecutionInfos;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.Lists;
 
 public class RequestsReaperTest {

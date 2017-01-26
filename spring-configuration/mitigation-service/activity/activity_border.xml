@@ -288,11 +288,11 @@
         <constructor-arg name="realm" value="${realm}" />
     </bean>
     
-    <bean id="swfWorkflowStarter" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl">
+    <bean id="swfWorkflowStarter" class="com.amazon.lookout.workflow.helper.SWFWorkflowStarterImpl">
         <constructor-arg name="swfWorkflowProvider" ref="swfWorkflowClientProvider"/>
     </bean>
     
-    <bean id="swfWorkflowClientProvider" class="com.amazon.lookout.mitigation.service.workflow.SWFWorkflowClientProviderImpl">
+    <bean id="swfWorkflowClientProvider" class="com.amazon.lookout.workflow.helper.SWFWorkflowClientProviderImpl">
         <constructor-arg name="swfClient" ref="swfClient"/>
         <constructor-arg name="swfDomain" value="LookoutMitigationService-${domain}"/>
     </bean>

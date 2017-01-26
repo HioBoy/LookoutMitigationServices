@@ -1,6 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
-import static com.amazon.lookout.mitigation.service.workflow.SWFWorkflowStarterImpl.BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
+import static com.amazon.lookout.workflow.helper.SWFWorkflowStarterImpl.BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
