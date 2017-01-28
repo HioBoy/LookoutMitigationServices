@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
 
+import com.amazon.blackwatch.location.state.model.LocationType;
 import com.amazon.lookout.ddb.model.TransitProvider;
 import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
@@ -69,13 +70,16 @@ import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.model.RequestType;
+
+import com.amazonaws.regions.Regions;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.amazon.blackwatch.location.state.model.LocationType;
 /**
  * RequestValidator is a basic validator for requests to ensure the requests are well-formed and contain all the required inputs.
  * This validator performs template-agnostic validation - it doesn't dive deep into specific requirements of each template, the TemplateBasedRequestValidator
@@ -397,20 +401,24 @@ public class RequestValidator {
     }
 
     /**
-     * Validates if the request object passed to the UpdateBlackWatchLocationState API is valid
-     * @param An instance of UpdateBlackWatchLocationStateRequest representing the input to the UpdateBlackWatchLocationState API
+     * Validates if the request object passed to the ListBlackWatchLocationState API is valid
+     * @param An instance of ListBlackWatchLocationStateRequest representing the input to the ListBlackWatchLocationState API
+     * @throws IllegalArgumentException
      * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
      */
     public void validateListBlackWatchLocationsRequest(ListBlackWatchLocationsRequest request) {
         String region = request.getRegion();
-        // if the string is not empty and does not match the regex, then its an invalid region
-        if (!region.trim().equals("") && !region.matches("[a-zA-Z]{2}-[a-zA-Z]+-[1-9]")) {
-            String msg = "Invalid region name found!";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
+        if (region != null) {
+            try {
+                Regions.fromName(region);
+            } catch (IllegalArgumentException ex) {
+                String msg = String.format("Invalid region name - %s", region);
+                LOG.info(msg, ex);
+                throw new IllegalArgumentException(msg);
+            }
         }
     }
-    
+
     /**
      * Validates if the request object passed to the UpdateBlackWatchLocationState API is valid
      * @param An instance of UpdateBlackWatchLocationStateRequest representing the input to the UpdateBlackWatchLocationState API
@@ -623,8 +631,8 @@ public class RequestValidator {
     }
 
     private void validateBlackWatchMitigationTemplate(String mitigationTemplate) {
-    	validateMitigationTemplate(mitigationTemplate);
-    	Set<String> blackwatchMitigationTemplates = Sets.newHashSet(MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer, MitigationTemplate.BlackWatchPOP_EdgeCustomer, MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer);
+        validateMitigationTemplate(mitigationTemplate);
+        Set<String> blackwatchMitigationTemplates = Sets.newHashSet(MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer, MitigationTemplate.BlackWatchPOP_EdgeCustomer, MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer);
         if (!blackwatchMitigationTemplates.contains(mitigationTemplate)) {
             String msg = "None BlackWatch mitigation template found: " + mitigationTemplate + ". only support blackwatch mitigation template: " + blackwatchMitigationTemplates;
             LOG.info(msg);

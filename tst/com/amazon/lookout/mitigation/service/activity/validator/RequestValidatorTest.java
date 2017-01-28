@@ -27,6 +27,7 @@ import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNR
 import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
+import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
@@ -1138,6 +1139,29 @@ public class RequestValidatorTest {
         try {
             validator.validateChangeBlackWatchMitigationOwnerARNRequest(request);
         } catch (Exception ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+    }
+
+    @Test
+    public void testValidateListBlackWatchLocationsRequest() {
+        ListBlackWatchLocationsRequest request = new ListBlackWatchLocationsRequest();
+
+        // valid region name
+        request.setRegion("us-east-1");
+        validator.validateListBlackWatchLocationsRequest(request);
+
+        // region name is optional, so valid input
+        request.setRegion(null);
+        validator.validateListBlackWatchLocationsRequest(request);
+
+        // invalid region name
+        request.setRegion("not-valid-region-name");
+        Throwable caughtException = null;
+        try {
+            validator.validateListBlackWatchLocationsRequest(request);
+        } catch (IllegalArgumentException ex) {
             caughtException = ex;
         }
         assertNotNull(caughtException);
