@@ -179,9 +179,11 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
                 }
             }
 
-            // Next, check if we have any duplicate mitigations already in place.
-            checkForDuplicateAndConflictingRequests(deviceName, deviceScope, definition, mitigationName, mitigationTemplate, 
-                                              isUpdate, prevMaxWorkflowId, metrics);
+            if (templateValidator.requiresCheckForDuplicateAndConflictingRequests(mitigationTemplate)) {
+                // Next, check if we have any duplicate mitigations already in place.
+                checkForDuplicateAndConflictingRequests(deviceName, deviceScope, definition, mitigationName, mitigationTemplate, 
+                                                  isUpdate, prevMaxWorkflowId, metrics);
+            }
             
             try {
                 storeRequestInDDB(request, definition,
@@ -220,14 +222,13 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
      * @return Max WorkflowId for existing mitigations. Null if no mitigations exist for this deviceName and deviceScope.
      * 
      * @throws AmazonClientException if the attempt to read from DynamoDB failed too many times
-     * @throws DuplicateMitigationNameException400 if isUpdate is false and the mitigation already exists
      * @throws DuplicateDefinitionException400 if a conflicting mitigation already exists. The definition of conflicting 
      *   depends on the template type
      */
     private void checkForDuplicateAndConflictingRequests(
             String deviceName, String deviceScope, MitigationDefinition mitigationDefinition, String mitigationName, 
             String mitigationTemplate, boolean isUpdate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics)
-        throws AmazonClientException, DuplicateMitigationNameException400, DuplicateDefinitionException400
+        throws AmazonClientException, DuplicateDefinitionException400
     {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateAndEditRequestStorageHandler.checkForDuplicateAndConflictingRequests");
         try {

@@ -111,7 +111,10 @@ public class DDBBasedEditRequestStorageHandlerTest {
         testTableHelper = new RequestTableTestHelper(new DynamoDB(localDynamoDBClient), domain);
         
         spyDynamoDBClient = spy(localDynamoDBClient);
+        
         templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         storageHandler = spy(new DDBBasedEditRequestStorageHandler(spyDynamoDBClient, domain, templateBasedValidator));
 
         // Create a new TemplateBasedRequestValidator for the create so calls to it won't match any verifications

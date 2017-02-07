@@ -225,5 +225,10 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
         // blackwatch allow multiple mitigations, so ignore this check.
         // it also allow same mitigation definition but different mitigation name.
         // so leave this empty.
-    } 
+    }
+    
+    @Override
+    public boolean requiresCheckForDuplicateAndConflictingRequests() {
+        return false;
+    }
 }

@@ -126,6 +126,23 @@ public class TemplateBasedRequestValidator {
     }
     
     /**
+     * Returns whether checkForDuplicateAndConflictingRequests needs to be called in
+     * DDBBasedCreateAndEditRequestStorageHandler to search for active requests with a mitigation
+     * definition that conflicts with this request's definition. This implementation delegates
+     * to {@link ServiceTemplateValidator#requiresCheckForDuplicateAndConflictingRequests()} in
+     * the validator specific to each request's template. In general this should return true unless
+     * the template-specific validator implements
+     * {@link ServiceTemplateValidator#validateCoexistenceForTemplateAndDevice(String, String, MitigationDefinition, String, String, MitigationDefinition, TSDMetrics)}
+     * as a noop, in which case this method can probably return false.
+     * 
+     * @param mitigationTemplate template for new create/edit request
+     * @return true if the check is required, false if not.
+     */
+    public boolean requiresCheckForDuplicateAndConflictingRequests(String mitigationTemplate) {
+        return getValidator(mitigationTemplate).requiresCheckForDuplicateAndConflictingRequests();
+    }
+    
+    /**
      * Return the ServiceTemplateValidator based on the mitigationTemplate passed as input. Protected for unit-testing.
      * @param mitigationTemplate MitigationTemplate used in the request.
      * @return ServiceTemplateValidator corresponding to the mitigation template passed as input. 

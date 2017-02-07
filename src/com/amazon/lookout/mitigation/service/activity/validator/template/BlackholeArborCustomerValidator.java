@@ -152,6 +152,11 @@ public class BlackholeArborCustomerValidator implements DeviceBasedServiceTempla
                 ip, newConstraint, newCommunityString, existingConstraint, existingCommunityString, 
                 mitigationNameForExistingDefinition, metrics);
     }
+    
+    @Override
+    public boolean requiresCheckForDuplicateAndConflictingRequests() {
+        return true;
+    }
 
     private void checkOverlappingDevices(String ip, ArborBlackholeConstraint newConstraint, String newCommunityString, ArborBlackholeConstraint existingConstraint, String existingCommunityString,
             String mitigationNameForExistingDefinition, TSDMetrics metrics) {

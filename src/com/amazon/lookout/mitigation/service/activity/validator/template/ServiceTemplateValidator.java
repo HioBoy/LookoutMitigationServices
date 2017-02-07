@@ -17,5 +17,7 @@ public interface ServiceTemplateValidator {
                                                         String mitigationNameForExistingDefinition, MitigationDefinition existingDefinition,
                                                         TSDMetrics metrics);
     
+    public boolean requiresCheckForDuplicateAndConflictingRequests();
+    
     public String getServiceNameToValidate();
 }

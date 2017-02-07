@@ -293,6 +293,11 @@ public class Route53SingleCustomerMitigationValidator implements DeviceBasedServ
             checkForDuplicateDefinition(templateForNewDefinition, nameForNewDefinition, newDefinition, templateForExistingDefinition, nameForExistingDefinition, existingDefinition);
         }
     }
+    
+    @Override
+    public boolean requiresCheckForDuplicateAndConflictingRequests() {
+        return true;
+    }
 
     /**
      * We currently check if 2 definitions are exactly identical. There could be cases where 2 definitions are equivalent, but not identical (eg:

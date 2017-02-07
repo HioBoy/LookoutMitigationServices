@@ -109,6 +109,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testCreateMitigation() {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
         
@@ -148,6 +150,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testDuplicateName() {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
         
@@ -172,7 +176,10 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testDuplicateNameButDifferentDevice() {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
         
@@ -190,7 +197,10 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testDuplicateNameButDifferentService() {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
         
@@ -213,6 +223,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testRecreateSucceed() {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
         
@@ -246,6 +258,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     })
     public void testRecreateFailed1(String deleteRequestWorkflowStatus) {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
         
@@ -281,6 +295,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     })
     public void testRecreateFailed2(String editRequestWorkflowStatus) {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
         
@@ -316,6 +332,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     })
     public void testRecreateFailed3(String createRequestWorkflowStatus) {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
         
@@ -350,6 +368,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     })
     public void testRecreateFailed4(String rollbackRequestWorkflowStatus) {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
         
@@ -463,7 +483,10 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testNonConflictingDefinitions() {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
         
@@ -490,6 +513,10 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testConflictingDefinitions() {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         DDBBasedCreateRequestStorageHandler storageHandler = new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator);
         
@@ -511,7 +538,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testConcurrentCreates() {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
         
         DDBBasedCreateRequestStorageHandler storageHandler = spy(new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator));
@@ -545,7 +574,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testConcurrentDuplicateCreates() {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
         
         DDBBasedCreateRequestStorageHandler storageHandler = spy(new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator));
@@ -572,7 +603,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testConcurrentConflictingCreates() {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
         
         DDBBasedCreateRequestStorageHandler storageHandler = spy(new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator));
@@ -603,7 +636,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testConcurrentMixedCreates() {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
         
         DDBBasedCreateRequestStorageHandler storageHandler = spy(new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator));
@@ -641,7 +676,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testTooManyConcurrentCreates() {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
         
         DDBBasedCreateRequestStorageHandler storageHandler = spy(new DDBBasedCreateRequestStorageHandler(
                 localDynamoDBClient, domain, templateBasedValidator));
@@ -681,6 +718,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testQueryFails() {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         AmazonDynamoDBClient spyClient = spy(localDynamoDBClient);
         
         DDBBasedCreateRequestStorageHandler storageHandler =
@@ -719,6 +758,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testPutFails() {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         AmazonDynamoDBClient spyClient = spy(localDynamoDBClient);
         
         DDBBasedCreateRequestStorageHandler storageHandler =
@@ -755,7 +796,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testLotsOfMitigations() {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
         
         AmazonDynamoDBClient spyClient = spy(localDynamoDBClient);
         
@@ -786,7 +829,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testHittingWorkflowIdLimit() {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
+        
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
         
         AmazonDynamoDBClient spyClient = spy(localDynamoDBClient);
         
@@ -821,6 +866,8 @@ public class DDBBasedCreateRequestStorageHandlerTest {
     @Test
     public void testUpdateRunIdForWorkflowRequest() {
         TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
+        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
+        
         AmazonDynamoDBClient spyClient = spy(localDynamoDBClient);
         
         DDBBasedCreateRequestStorageHandler storageHandler =

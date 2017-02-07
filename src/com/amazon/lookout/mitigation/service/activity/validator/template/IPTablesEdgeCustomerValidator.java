@@ -128,6 +128,11 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
             );
         }
     }
+    
+    @Override
+    public boolean requiresCheckForDuplicateAndConflictingRequests() {
+        return true;
+    }
 
     @Override
     public String getServiceNameToValidate() {
