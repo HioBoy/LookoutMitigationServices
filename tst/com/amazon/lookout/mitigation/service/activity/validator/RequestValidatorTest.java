@@ -1009,7 +1009,7 @@ public class RequestValidatorTest {
         request.setMitigationSettingsJSON(null);
         validator.validateApplyBlackWatchMitigationRequest(request, userARN);
         
-        JSON="{\"test\":\"jsonValue\", \"test_array\":[\"A\", \"B\", \"C\"]}";
+        JSON="{\"ipv6_per_dest_depth\":56, \"mitigation_config\":{}}";
         request.setMitigationSettingsJSON(JSON);
         validator.validateApplyBlackWatchMitigationRequest(request, userARN);
         

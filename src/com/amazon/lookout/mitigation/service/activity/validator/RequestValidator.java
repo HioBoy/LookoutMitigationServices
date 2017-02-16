@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
 
 import com.amazon.blackwatch.location.state.model.LocationType;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.lookout.ddb.model.TransitProvider;
 import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
@@ -1071,6 +1072,8 @@ public class RequestValidator {
         validateBitsPerSecond(request.getGlobalBPS());
         validateMitigationSettingsJSON(request.getMitigationSettingsJSON());
         validateUserARN(userARN);
+        validatePpsBpsJSON(request.getGlobalPPS(), request.getGlobalBPS(),
+                request.getMitigationSettingsJSON());
     }  
 
     public void validateApplyBlackWatchMitigationRequest(@NonNull ApplyBlackWatchMitigationRequest request,
@@ -1087,6 +1090,8 @@ public class RequestValidator {
         validateBitsPerSecond(request.getGlobalBPS());
         validateMitigationSettingsJSON(request.getMitigationSettingsJSON());
         validateUserARN(userARN);
+        validatePpsBpsJSON(request.getGlobalPPS(), request.getGlobalBPS(),
+                request.getMitigationSettingsJSON());
     }
     
     private void validateMinutesToLive(Integer minutesToLive) {
@@ -1118,7 +1123,8 @@ public class RequestValidator {
         if (mitigationSettingsJSON == null) {
             return;
         }
-        //For now, just validate it is properly formatted JSON.
+
+        // Validate that it is properly formatted JSON.
         try {
             jsonReader.readTree(mitigationSettingsJSON);
         } catch (JsonProcessingException e) {
@@ -1127,7 +1133,7 @@ public class RequestValidator {
                 message = "Can not parse empty mitigation settings JSON.  To clear the values, specify an empty JSON"
                         + " document IE: \"{}\"";
             } else {
-                message = String.format("Could not parse mitigation settings JSON: %s", 
+                message = String.format("Could not parse mitigation settings JSON: %s",
                         ReflectionToStringBuilder.toString(e));
             }
             throw new IllegalArgumentException(message);
@@ -1136,5 +1142,30 @@ public class RequestValidator {
                     ReflectionToStringBuilder.toString(e)));
             throw new RuntimeException("Caught unexpected Exception while parsing json.");
         }
+
+        BlackWatchTargetConfig targetConfig;
+        try {
+            targetConfig = BlackWatchTargetConfig.fromJSONString(mitigationSettingsJSON);
+        } catch (IOException e) {
+             String msg = String.format("Could not parse mitigation settings JSON: %s",
+                    ReflectionToStringBuilder.toString(e));
+             throw new IllegalArgumentException(msg);
+        }
+
+        // Don't allow specifying both ip_traffic_shaper and global_traffic_shaper
+        if (targetConfig.getMitigation_config() != null
+                && targetConfig.getMitigation_config().getIp_traffic_shaper() != null
+                && targetConfig.getMitigation_config().getGlobal_traffic_shaper() != null) {
+            throw new IllegalArgumentException("Can't configure both ip_traffic_shaper and global_traffic_shaper.");
+        }
+    }
+
+    private void validatePpsBpsJSON(Long pps, Long bps, String json) {
+        // Accept requests with either PPS/BPS or JSON override, but not both.
+        if ((pps != null || bps != null) && (json != null)) {
+            String message = "Can not specify both globalPPS/globalBPS and mitigationSettingsJSON";
+            throw new IllegalArgumentException(message);
+        }
     }
 }
+
