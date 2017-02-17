@@ -1166,4 +1166,175 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtException);
     }
+
+    @Test
+    public void testValidateMitigationSettingsJSON() {
+        Throwable caughtException = null;
+
+        // Empty object is fine.
+        String json = "{}";
+        validator.validateMitigationSettingsJSON(json);
+
+        // Invalid JSON should fail.
+        json = "not json";
+
+        caughtException = null;
+        try {
+            validator.validateMitigationSettingsJSON(json);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+
+        // Valid JSON not conforming to the model should fail.
+        json = "{ \"unknown_key\": true }";
+
+        caughtException = null;
+        try {
+            validator.validateMitigationSettingsJSON(json);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+
+        // Valid JSON matching the model should pass.
+        json = "{ \"mitigation_config\": { \"ip_validation\": { \"action\": \"DROP\" } } }";
+        validator.validateMitigationSettingsJSON(json);
+
+        // JSON specifying valid ip_traffic_shaper is fine
+        json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"ip_traffic_shaper\": {"
+            + "    \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"enable_per_host\": false,"
+            + "        \"default\": {"
+            + "        }"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        validator.validateMitigationSettingsJSON(json);
+
+        // JSON specifying valid global_traffic_shaper is fine
+        json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        validator.validateMitigationSettingsJSON(json);
+
+        // global_traffic_shaper without pps should be rejected
+        json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+
+        caughtException = null;
+        try {
+            validator.validateMitigationSettingsJSON(json);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+
+        // global_traffic_shaper with negative pps should be rejected
+        json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": -10,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+
+        caughtException = null;
+        try {
+            validator.validateMitigationSettingsJSON(json);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+
+        // global_traffic_shaper with duplicate shaper names should be rejected
+        json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 10,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"default\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+
+        caughtException = null;
+        try {
+            validator.validateMitigationSettingsJSON(json);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+
+        // Can't specify both ip_traffic_shaper and global_traffic_shaper
+        json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"ip_traffic_shaper\": {"
+            + "    \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"enable_per_host\": false,"
+            + "        \"default\": {"
+            + "        }"
+            + "      }"
+            + "    },"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"blobal_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+
+        caughtException = null;
+        try {
+            validator.validateMitigationSettingsJSON(json);
+        } catch (IllegalArgumentException ex) {
+            caughtException = ex;
+        }
+        assertNotNull(caughtException);
+    }
 }
+

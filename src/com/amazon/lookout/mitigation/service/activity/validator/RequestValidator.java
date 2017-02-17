@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -1119,7 +1120,7 @@ public class RequestValidator {
         }
     }
 
-    private void validateMitigationSettingsJSON(String mitigationSettingsJSON) {
+    void validateMitigationSettingsJSON(String mitigationSettingsJSON) {
         if (mitigationSettingsJSON == null) {
             return;
         }
@@ -1157,6 +1158,42 @@ public class RequestValidator {
                 && targetConfig.getMitigation_config().getIp_traffic_shaper() != null
                 && targetConfig.getMitigation_config().getGlobal_traffic_shaper() != null) {
             throw new IllegalArgumentException("Can't configure both ip_traffic_shaper and global_traffic_shaper.");
+        }
+
+        // Validate global_traffic_shaper
+        if (targetConfig.getMitigation_config() != null
+                && targetConfig.getMitigation_config().getGlobal_traffic_shaper() != null) {
+            // global_traffic_shaper key was specified
+            Map<String, BlackWatchTargetConfig.GlobalTrafficShaper> globalShapers =
+                targetConfig.getMitigation_config().getGlobal_traffic_shaper();
+
+            Set<String> shaperNames = new HashSet<>();
+
+            // For each global shaper, validate that the "global_pps" key was provided.
+            // Choose to do this here instead of in the model in order to eventually support
+            // BPS.  With BPS support, instead validate that PPS XOR BPS is specified.
+            for (Map.Entry<String, BlackWatchTargetConfig.GlobalTrafficShaper> entry : globalShapers.entrySet()) {
+                String shaperName = entry.getKey();
+
+                // Error on duplicate shaper names
+                if (shaperNames.contains(shaperName)) {
+                    String msg = "Duplicate shaper name in global_traffic_shaper: \"" + shaperName + "\"";
+                    throw new IllegalArgumentException(msg);
+                }
+                shaperNames.add(shaperName);
+
+                BlackWatchTargetConfig.GlobalTrafficShaper globalShaper = entry.getValue();
+
+                if (globalShaper.getGlobal_pps() == null) {
+                    String msg = "Configured global_traffic_shaper \"" + shaperName
+                        + "\" must specify \"global_pps\".";
+                    throw new IllegalArgumentException(msg);
+                } else if (globalShaper.getGlobal_pps().longValue() < 0L) {
+                    String msg = "Configured global_traffic_shaper \"" + shaperName
+                        + "\" must specify \"global_pps\" >= 0.";
+                    throw new IllegalArgumentException(msg);
+                }
+            }
         }
     }
 
