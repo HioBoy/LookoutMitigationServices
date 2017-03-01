@@ -41,18 +41,16 @@ public class OngoingRequestsFetcher implements Callable<List<MitigationRequestDe
             
             // Fetch the list of ongoing requests along with the locations involved in each of the request.
             List<MitigationRequestDescriptionWithLocations> requestDescriptionsWithLocations = 
-                    requestInfoHandler.getOngoingRequestsDescription(serviceName, deviceName, subMetrics);
+                    requestInfoHandler.getOngoingRequestsDescription(serviceName, deviceName, locationsConstraint, subMetrics);
             for (MitigationRequestDescriptionWithLocations descriptionWithLocation : requestDescriptionsWithLocations) {
-                List<String> locations = new ArrayList<>(descriptionWithLocation.getLocations());
+                List<String> locations = new ArrayList<>(descriptionWithLocation.getLocations());                
                 if (!CollectionUtils.isEmpty(locationsConstraint)) {
-                    // filter the locations with locationsConstraint, if it is not empty
-                    locations.retainAll(locationsConstraint);
-                    if (locations.isEmpty()) {
-                        // This ongoing request's locations does not include any locations in the filter, so skip this ongoing request
-                        continue;
-                    }
+	                locations.retainAll(locationsConstraint);
+	                if (locations.isEmpty()) {
+	                    // This ongoing request's locations does not include any locations in the filter, so skip this ongoing request
+	                    continue;
+	                }
                 }
-                 
                 // Fetch status for each instance being worked on as part of this ongoing request.
                 MitigationRequestDescription description = descriptionWithLocation.getMitigationRequestDescription();
                 List<MitigationInstanceStatus> instancesStatus = mitigationInstanceInfoHandler

@@ -84,7 +84,7 @@ public class OngoingRequestsFetcherTest {
         ongoingMitigationRequests.add(REQUEST_1);
         ongoingMitigationRequests.add(REQUEST_2);
         
-        when(requestInfoHandler.getOngoingRequestsDescription(SERVICE_NAME, DEVICE_NAME, tsdMetrics)).thenReturn(ongoingMitigationRequests);
+        when(requestInfoHandler.getOngoingRequestsDescription(SERVICE_NAME, DEVICE_NAME, null, tsdMetrics)).thenReturn(ongoingMitigationRequests);
         
         MitigationInstanceInfoHandler instanceInfoHandler = mock(MitigationInstanceInfoHandler.class);
         when(instanceInfoHandler.getMitigationInstanceStatus(DEVICE_NAME, JOB_ID_1, tsdMetrics)).thenReturn(REQUEST_1_INSTANCES);
@@ -116,14 +116,15 @@ public class OngoingRequestsFetcherTest {
         List<MitigationRequestDescriptionWithLocations> ongoingMitigationRequests = new ArrayList<>();
         ongoingMitigationRequests.add(REQUEST_1);
         ongoingMitigationRequests.add(REQUEST_2);
+        List<String> filterLocations = Arrays.asList("C", "A");
         
-        when(requestInfoHandler.getOngoingRequestsDescription(SERVICE_NAME, DEVICE_NAME, tsdMetrics)).thenReturn(ongoingMitigationRequests);
+        when(requestInfoHandler.getOngoingRequestsDescription(SERVICE_NAME, DEVICE_NAME, filterLocations, tsdMetrics)).thenReturn(ongoingMitigationRequests);
         
         MitigationInstanceInfoHandler instanceInfoHandler = mock(MitigationInstanceInfoHandler.class);
         when(instanceInfoHandler.getMitigationInstanceStatus(DEVICE_NAME, JOB_ID_1, tsdMetrics)).thenReturn(REQUEST_1_INSTANCES);
         when(instanceInfoHandler.getMitigationInstanceStatus(DEVICE_NAME, JOB_ID_2, tsdMetrics)).thenReturn(REQUEST_2_INSTANCES);
          
-        OngoingRequestsFetcher ongoingRequestsFetcher = new OngoingRequestsFetcher(requestInfoHandler, SERVICE_NAME, DEVICE_NAME, Arrays.asList("C", "A"), instanceInfoHandler, tsdMetrics);
+        OngoingRequestsFetcher ongoingRequestsFetcher = new OngoingRequestsFetcher(requestInfoHandler, SERVICE_NAME, DEVICE_NAME, filterLocations, instanceInfoHandler, tsdMetrics);
         
         List<MitigationRequestDescriptionWithStatuses> response = ongoingRequestsFetcher.call();
         // validate only specified locations status are returned
@@ -149,14 +150,14 @@ public class OngoingRequestsFetcherTest {
         List<MitigationRequestDescriptionWithLocations> ongoingMitigationRequests = new ArrayList<>();
         ongoingMitigationRequests.add(REQUEST_1);
         ongoingMitigationRequests.add(REQUEST_2);
-        
-        when(requestInfoHandler.getOngoingRequestsDescription(SERVICE_NAME, DEVICE_NAME, tsdMetrics)).thenReturn(ongoingMitigationRequests);
+        List<String> filterLocations = Arrays.asList("D");
+        when(requestInfoHandler.getOngoingRequestsDescription(SERVICE_NAME, DEVICE_NAME, filterLocations, tsdMetrics)).thenReturn(ongoingMitigationRequests);
         
         MitigationInstanceInfoHandler instanceInfoHandler = mock(MitigationInstanceInfoHandler.class);
         when(instanceInfoHandler.getMitigationInstanceStatus(DEVICE_NAME, JOB_ID_1, tsdMetrics)).thenReturn(REQUEST_1_INSTANCES);
         when(instanceInfoHandler.getMitigationInstanceStatus(DEVICE_NAME, JOB_ID_2, tsdMetrics)).thenReturn(REQUEST_2_INSTANCES);
          
-        OngoingRequestsFetcher ongoingRequestsFetcher = new OngoingRequestsFetcher(requestInfoHandler, SERVICE_NAME, DEVICE_NAME, Arrays.asList("D"), instanceInfoHandler, tsdMetrics);
+        OngoingRequestsFetcher ongoingRequestsFetcher = new OngoingRequestsFetcher(requestInfoHandler, SERVICE_NAME, DEVICE_NAME, filterLocations, instanceInfoHandler, tsdMetrics);
         
         List<MitigationRequestDescriptionWithStatuses> response = ongoingRequestsFetcher.call();
         // validate only specified location status is returned

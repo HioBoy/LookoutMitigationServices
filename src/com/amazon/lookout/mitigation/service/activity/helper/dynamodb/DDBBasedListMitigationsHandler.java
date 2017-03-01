@@ -1,11 +1,15 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
 
 import lombok.NonNull;
 
@@ -19,8 +23,10 @@ import org.springframework.util.CollectionUtils;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.activities.model.ActiveMitigationDetails;
 import com.amazon.lookout.activities.model.MitigationNameAndRequestStatus;
+import com.amazon.lookout.activities.model.SchedulingStatus;
 import com.amazon.lookout.ddb.model.ActiveMitigationsModel;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
+import com.amazon.lookout.mitigation.activities.model.MitigationInstanceSchedulingStatus;
 import com.amazon.lookout.mitigation.service.MissingMitigationVersionException404;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
@@ -65,6 +71,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
 
     private static final Integer MITIGATION_HISTORY_EVALUCATE_ITEMS_COUNT_PER_QUERY_BASE = 25;
     
+    private final DDBBasedMitigationInstanceHandler mitigationInstanceHandler;    
     private final ActiveMitigationsStatusHelper activeMitigationStatusHelper;
     private final String activeMitigationsTableName;
 
@@ -73,6 +80,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         this.activeMitigationStatusHelper = activeMitigationStatusHelper;
         
         this.activeMitigationsTableName = ACTIVE_MITIGATIONS_TABLE_NAME_PREFIX + domain.toUpperCase();
+        this.mitigationInstanceHandler = new DDBBasedMitigationInstanceHandler(dynamoDBClient, domain);
     }
 
     /**
@@ -220,38 +228,69 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
     }
 
     /**
-     * Fetches a list of MitigationRequestDescriptionWithLocations for each mitigation which is currently being worked on (whose WorkflowStatus is RUNNING).
+     * Searches backwards through mitigation requests to get all running request of each location (whose WorkflowStatus is RUNNING)
      * @param serviceName Service for which we need to fetch the mitigation request description for ongoing requests.
      * @param deviceName DeviceName for which we need to fetch the mitigation request description for ongoing requests.
+     * @param locations locations for which we need to fetch the mitigation request description for ongoing requests.(can be null)
      * @param tsdMetrics
      * @return a List of MitigationRequestDescription, where each MitigationRequestDescription instance describes a mitigation that is currently being worked on (whose WorkflowStatus is RUNNING).
      */
     @Override
-    public List<MitigationRequestDescriptionWithLocations> getOngoingRequestsDescription(@NonNull String serviceName, @NonNull String deviceName, @NonNull TSDMetrics tsdMetrics) {
+    public List<MitigationRequestDescriptionWithLocations> getOngoingRequestsDescription(@NonNull String serviceName, @NonNull String deviceName, List<String> locations, @NonNull TSDMetrics tsdMetrics) {
         Validate.notEmpty(serviceName);
         Validate.notEmpty(deviceName);
         
         final TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getInProgressRequestsDescription");
         try {
+
+            Map<String, MitigationRequestDescriptionWithLocations> remainingLocations = null;
             // Generate key condition to use when querying.
-            Map<String, Condition> keyConditions = DDBRequestSerializer.getQueryKeyForActiveMitigationsForDevice(deviceName);
+            Map<String, Condition> keyConditions = DDBRequestSerializer.getQueryKeyForDevice(deviceName);
             
             // Generate query filters to use when querying.
             Map<String, Condition> queryFilter = new HashMap<>();
-            Condition runningWorkflowCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ)
-                                                                .withAttributeValueList(new AttributeValue(WorkflowStatus.RUNNING));
-            queryFilter.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, runningWorkflowCondition);
- 
             Condition serviceNameCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ)
                                                             .withAttributeValueList(new AttributeValue(serviceName));
             queryFilter.put(MitigationRequestsModel.SERVICE_NAME_KEY, serviceNameCondition);
+            QueryRequest queryRequest = new QueryRequest().withTableName(getMitigationRequestsTableName())
+                    .withKeyConditions(keyConditions)
+                    .withQueryFilter(queryFilter)
+                    .withConsistentRead(true)
+                    .withScanIndexForward(false); 
             
-            Map<String, AttributeValue> lastEvaluatedKey = null;
-            QueryRequest queryRequest = generateQueryRequest(null, keyConditions, queryFilter, getMitigationRequestsTableName(),
-                    true, UNEDITED_MITIGATIONS_LSI_NAME, lastEvaluatedKey);
-            
+            if (!CollectionUtils.isEmpty(locations)) {
+                //with location filter
+                remainingLocations = new HashMap<>();
+                for (String location: locations) {
+                    remainingLocations.put(location, null);
+                }               
+            } else {
+                //without location filter, search only(and all) running requests with updateworkflowid=0;
+                DDBRequestSerializer.addActiveRequestCondition(keyConditions);
+                Condition runningWorkflowCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                                                    .withAttributeValueList(new AttributeValue(WorkflowStatus.RUNNING));
+                queryFilter.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, runningWorkflowCondition);
+                queryRequest.setKeyConditions(keyConditions);
+                queryRequest.setQueryFilter(queryFilter);
+                queryRequest.setIndexName(UNEDITED_MITIGATIONS_LSI_NAME);
+            }
+
+            Map<String, AttributeValue> lastEvaluatedKey = null;         
             List<MitigationRequestDescriptionWithLocations> descriptions = new ArrayList<>();
-            // Query DDB until there are no more items to fetch (i.e. when lastEvaluatedKey is null)
+            // query the MITIGATION_REQUESTS table backwards, starting with the most recent WorkflowId.
+            // three cases we need handle here:
+            // 1. find a running request
+            //      This is exactly the request we are looking for, simply save it. 
+            // 2. find a succeeded request:
+            //      This means all prior requests for locations in this request should have already completed;
+            //      so it is safe to stop searching running requests for those locations now
+            // 3. find a request in other status (FAILED or PARTIAL_SUCCESS or INDETERMINATE):
+            //      Because request can fail out of order due to SWF workflow timeouts or failures,
+            //      the only way to know there aren't any previous RUNNING requests is to inspect the MITIGATION_INSTANCE of each location for the failed request
+            //      to check if the instance is completed due to running and failing instead of being reaped. 
+            //      If the instance of a location has a non-blank BlockingWorkflowId attribute value, 
+            //          then the instance completed while still blocked, so there may still be previous RUNNING requests for that location and we need keep searching backwards.
+            //      otherwise, the instance completed and is not blocked, so there shouldn't be any running requests for that location and we can safely stop searching running request for this location. 
             do {
                 int numAttempts = 0;
                 Throwable lastCaughtException = null;
@@ -264,7 +303,42 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                         QueryResult result = queryDynamoDBWithRetries(queryRequest, subMetrics);
                         if (result.getCount() > 0) {
                             for (Map<String, AttributeValue> item : result.getItems()) {
-                                descriptions.add(DDBRequestSerializer.convertToRequestDescriptionWithLocations(item));
+                                MitigationRequestDescriptionWithLocations description = DDBRequestSerializer.convertToRequestDescriptionWithLocations(item);
+                                String workflowStatus = description.getMitigationRequestDescription().getRequestStatus();
+                                if (remainingLocations != null) {
+                                    List<String> locationsInRequest = new ArrayList<>(description.getLocations());
+                                    // filter requests by locations
+                                    locationsInRequest.retainAll(remainingLocations.keySet());
+                                    if (!locationsInRequest.isEmpty()) {
+                                        if (workflowStatus.equals(WorkflowStatus.RUNNING)) {
+                                            // 1. find a running request
+                                            //      This is exactly the request we are looking for, simply save it. 
+                                            descriptions.add(description);
+                                        } else if (workflowStatus.equals(WorkflowStatus.SUCCEEDED)) {
+                                            // 2. find a succeeded request:
+                                            //      This means all prior requests for locations in this request should have already completed;
+                                            //      so it is safe to stop searching running request for those locations now
+                                            remainingLocations.keySet().removeAll(locationsInRequest);
+                                            if (remainingLocations.isEmpty()) {
+                                                break;
+                                            }
+                                        } else {
+                                            // 3. find a request in other status (FAILED or PARTIAL_SUCCESS or INDETERMINATE):
+                                            //      Because request can fail out of order due to SWF workflow timeouts or failures,
+                                            //      the only way to know there aren't any previous RUNNING requests is to inspect the MITIGATION_INSTANCE of each location for the failed request
+                                            //      to check if the instance is completed due to running and failing instead of being reaped. 
+                                            for (String location : locationsInRequest) {
+                                                if (remainingLocations.containsKey(location)) {
+                                                    remainingLocations.put(location, description);
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    if (workflowStatus.equals(WorkflowStatus.RUNNING)) {
+                                        descriptions.add(description);
+                                    }
+                                }
                             }
                         }
                         lastEvaluatedKey = result.getLastEvaluatedKey();
@@ -281,10 +355,37 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                 
                 if (numAttempts >= DDB_ACTIVITY_MAX_ATTEMPTS) {
                     String msg = "Unable to query currently running mitigations associated with service: " + serviceName + " on device: " + deviceName +  
-                                 ReflectionToStringBuilder.toString(queryRequest) + " after " + numAttempts + " attempts";
+                                 ReflectionToStringBuilder.toString(queryRequest) + " after " + numAttempts + " attempts, Exception: " + lastCaughtException.toString();
                     LOG.warn(msg, lastCaughtException);
                     throw new RuntimeException(msg, lastCaughtException);
                 }
+                
+                if (lastEvaluatedKey != null && remainingLocations != null) {
+                    if (!remainingLocations.isEmpty()) {
+                        List<String> locationsToRemove = new ArrayList<>();
+                        //inspect the MITIGATION_INSTANCE of each location
+                        //If the instance of a location has a non-blank BlockingWorkflowId attribute value, 
+                        //then the instance completed while still blocked (request got reaped), so there may still be previous RUNNING requests for that location and we need keep searching backwards.
+                        //otherwise, the instance completed and was not blocked, so there shouldn't be any running requests for that location and we can safely stop searching for this location now. 
+                        remainingLocations.forEach((location, description) -> {
+                            MitigationInstanceSchedulingStatus mitigationInstanceSchedulingStatus = mitigationInstanceHandler.getMitigationInstanceSchedulingStatus(
+                                    description.getMitigationRequestDescription().getJobId(),
+                                    description.getMitigationRequestDescription().getDeviceName(), location);
+                            if (mitigationInstanceSchedulingStatus != null
+                                    && mitigationInstanceSchedulingStatus.isFound()
+                                    && !mitigationInstanceSchedulingStatus.isBlocked()
+                                    && mitigationInstanceSchedulingStatus.isCompleted()) {
+                                locationsToRemove.add(location);
+                            }
+                        });
+                        remainingLocations.keySet().removeAll(locationsToRemove);
+                    }                
+                
+                    if (remainingLocations.isEmpty()) {
+                        break;
+                    }
+                }
+
             } while (lastEvaluatedKey != null);
             
             return descriptions;
@@ -292,6 +393,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
             subMetrics.end();
         }
     }
+    
     
     /**
      * Generate a QueryRequest object.

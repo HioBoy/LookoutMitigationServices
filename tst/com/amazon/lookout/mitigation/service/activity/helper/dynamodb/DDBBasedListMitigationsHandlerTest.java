@@ -13,8 +13,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -25,12 +27,14 @@ import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.lookout.activities.model.ActiveMitigationDetails;
 import com.amazon.lookout.activities.model.MitigationNameAndRequestStatus;
+import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.MissingMitigationVersionException404;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
+import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.InstanceTableTestHelper.MitigationInstanceItemCreator;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.RequestTableTestHelper.MitigationRequestItemCreator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
@@ -66,6 +70,7 @@ public class DDBBasedListMitigationsHandlerTest {
     private static AmazonDynamoDBClient dynamoDBClient;
     private static DynamoDB dynamodb;
     private static RequestTableTestHelper requestTableTestHelper;
+    private static InstanceTableTestHelper instanceTableTestHelper;
     
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final ObjectWriter prettyWriter = mapper.writerWithDefaultPrettyPrinter();
@@ -81,6 +86,7 @@ public class DDBBasedListMitigationsHandlerTest {
         listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, 
                 domain, mock(ActiveMitigationsStatusHelper.class));
         requestTableTestHelper = new RequestTableTestHelper(dynamodb, domain);
+        instanceTableTestHelper = new InstanceTableTestHelper(dynamodb, domain);
     }
     
     @Before
@@ -89,6 +95,11 @@ public class DDBBasedListMitigationsHandlerTest {
         String tableName = MitigationRequestsModel.getInstance().getTableName(domain);
         CreateTableRequest request = MitigationRequestsModel.getInstance().getCreateTableRequest(tableName);
         TableUtils.deleteTableIfExists(dynamoDBClient, new DeleteTableRequest(tableName));
+        dynamoDBClient.createTable(request);
+        
+        String instanceTableName = MitigationInstancesModel.getInstance().getTableName(domain);
+        request = MitigationInstancesModel.getInstance().getCreateTableRequest(instanceTableName);
+        TableUtils.deleteTableIfExists(dynamoDBClient, new DeleteTableRequest(instanceTableName));
         dynamoDBClient.createTable(request);
     }
     
@@ -360,123 +371,289 @@ public class DDBBasedListMitigationsHandlerTest {
     }
     
     /**
-     * Test to ensure we pass the right set of keys/queryFilters when querying DDB for fetching mitigation description.
-     * Also checks if we correctly parse the QueryResult to wrap it into List of MitigationRequestDescription instances.
+     * Test fetch the running request succeed
      */
     @Test
     public void testGetInProgressRequestsDescription() {
-        AmazonDynamoDBClient dynamoDBClient = mock(AmazonDynamoDBClient.class);
-        DDBBasedListMitigationsHandler listHandler = new DDBBasedListMitigationsHandler(dynamoDBClient, domain, mock(ActiveMitigationsStatusHelper.class));
         
-        String deviceName = "testDevice";
-        long workflowId = 5;
-        String deviceScope = "testScope";
-        List<String> locations = Lists.newArrayList("TST1", "TST2", "TST3");
-        String mitigationName = "testMitigation";
-        String mitigationTemplate = "testTemplate";
-        int mitigationVersion = 3;
-        int numPreDeployChecks = 0;
-        int numPostDeployChecks = 0;
-        String reaped = "false";
-        List<String> relatedTickets = Lists.newArrayList("tt/1", "tt/2");
-        long requestDate = Long.parseLong("1410896163");
-        String requestType = RequestType.CreateRequest.name();
-        String swfRunId = "22Ans97eYkYe5pHRfsPirITXUHwowfqWWjfHQ2sKquXzI=";
-        String serviceName = ServiceName.Route53;
-        String toolName = "LookoutMitigationServiceUI";
-        long updateWorkflowId = 0;
-        String userDescription = "randomString";
-        String userName = "testUser";
-        String workflowStatus = "SUCCEEDED";
-        
-        // Setup the keys to check.
-        Map<String, Condition> keyConditions = new HashMap<>();
-        AttributeValue value = new AttributeValue(deviceName);
-        Condition deviceCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
-        keyConditions.put(MitigationRequestsModel.DEVICE_NAME_KEY, deviceCondition);
-        
-        value = new AttributeValue().withN("0");
-        Condition uneditedCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
-        keyConditions.put(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY, uneditedCondition);
-        
-        // Setup the queryFilters to check.
-        Map<String, Condition> queryFilter = new HashMap<>();
-        value = new AttributeValue(serviceName);
-        Condition serviceNameCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
-        queryFilter.put(MitigationRequestsModel.SERVICE_NAME_KEY, serviceNameCondition);
-        
-        value = new AttributeValue(WorkflowStatus.RUNNING);
-        Condition runningCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
-        queryFilter.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, runningCondition);
-        
-        MitigationDefinition mitigationDefinition = RequestTestHelper.createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.4"));
-        JsonDataConverter jsonDataConverter = new JsonDataConverter();
-        String mitigationDefinitionJsonString = jsonDataConverter.toData(mitigationDefinition);
-        
-        QueryRequest queryRequest = new QueryRequest().withTableName(MitigationRequestsModel.MITIGATION_REQUESTS_TABLE_NAME_PREFIX + domain.toUpperCase())
-                                                      .withConsistentRead(true)
-                                                      .withKeyConditions(keyConditions)
-                                                      .withQueryFilter(queryFilter)
-                                                      .withExclusiveStartKey(null)
-                                                      .withIndexName(DDBBasedRequestStorageHandler.UNEDITED_MITIGATIONS_LSI_NAME);
-        
-        QueryResult queryResult = new QueryResult();
-        
-        List<Map<String, AttributeValue>> listOfItems = new ArrayList<>();
-        Map<String, AttributeValue> item = new HashMap<>();
-        item.put(MitigationRequestsModel.DEVICE_NAME_KEY, new AttributeValue(deviceName));
-        item.put(MitigationRequestsModel.WORKFLOW_ID_KEY, new AttributeValue().withN(String.valueOf(workflowId)));
-        item.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(deviceScope));
-        item.put(MitigationRequestsModel.LOCATIONS_KEY, new AttributeValue().withSS(locations));
-        item.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue(mitigationName));
-        item.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue(mitigationTemplate));
-        item.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN(String.valueOf(mitigationVersion)));
-        item.put(MitigationRequestsModel.NUM_PRE_DEPLOY_CHECKS_KEY, new AttributeValue().withN(String.valueOf("0")));
-        item.put(MitigationRequestsModel.NUM_POST_DEPLOY_CHECKS_KEY, new AttributeValue().withN(String.valueOf("0")));
-        item.put(MitigationRequestsModel.REAPED_FLAG_KEY, new AttributeValue(reaped));
-        item.put(MitigationRequestsModel.RELATED_TICKETS_KEY, new AttributeValue().withSS(relatedTickets));
-        item.put(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, new AttributeValue().withN(String.valueOf(requestDate)));
-        item.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(requestType));
-        item.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue(swfRunId));
-        item.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(serviceName));
-        item.put(MitigationRequestsModel.TOOL_NAME_KEY, new AttributeValue(toolName));
-        item.put(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY, new AttributeValue().withN(String.valueOf(updateWorkflowId)));
-        item.put(MitigationRequestsModel.USER_DESCRIPTION_KEY, new AttributeValue(userDescription));
-        item.put(MitigationRequestsModel.USER_NAME_KEY, new AttributeValue(userName));
-        item.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, new AttributeValue(workflowStatus));
-        item.put(MitigationRequestsModel.MITIGATION_DEFINITION_KEY, new AttributeValue(mitigationDefinitionJsonString));
-        listOfItems.add(item);
-        queryResult.setCount(1);
-        queryResult.setItems(listOfItems);
-        
-        when(dynamoDBClient.query(queryRequest)).thenReturn(queryResult);
-        
-        List<MitigationRequestDescriptionWithLocations> descriptions = listHandler.getOngoingRequestsDescription(serviceName, deviceName, tsdMetrics);
-        
+        //create request in the  mitigation request table
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
+        List<String> queryLocations = Lists.newArrayList("TST1");
+        itemCreator.setLocations(locations);
+        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setMitigationVersion(1);
+        itemCreator.setWorkflowId(1);
+        itemCreator.addItem();
+       
+        List<MitigationRequestDescriptionWithLocations> descriptions = listHandler.getOngoingRequestsDescription(serviceName, deviceName, queryLocations, tsdMetrics);        
         assertEquals(descriptions.size(), 1);
         MitigationRequestDescriptionWithLocations descriptionWithLocations = descriptions.get(0);
         MitigationRequestDescription description = descriptionWithLocations.getMitigationRequestDescription();
         assertEquals(description.getDeviceName(), deviceName);
-        assertEquals(description.getJobId(), workflowId);
         assertEquals(description.getDeviceScope(), deviceScope);
         assertEquals(description.getMitigationName(), mitigationName);
         assertEquals(description.getMitigationTemplate(), mitigationTemplate);
-        assertEquals(description.getMitigationVersion(), mitigationVersion);
-        assertEquals(description.getNumPreDeployChecks(), numPreDeployChecks);
-        assertEquals(description.getNumPostDeployChecks(), numPostDeployChecks);
-        assertEquals(description.getMitigationActionMetadata().getRelatedTickets(), relatedTickets);
-        assertEquals(description.getMitigationActionMetadata().getDescription(), userDescription);
-        assertEquals(description.getMitigationActionMetadata().getUser(), userName);
-        assertEquals(description.getMitigationActionMetadata().getToolName(), toolName);
-        assertEquals(description.getRequestDate(), requestDate);
-        assertEquals(description.getRequestType(), requestType);
         assertEquals(description.getServiceName(), serviceName);
-        assertEquals(description.getUpdateJobId(), updateWorkflowId);
-        assertEquals(description.getRequestStatus(), workflowStatus);
-        assertEquals(description.getMitigationDefinition(), mitigationDefinition);
-        assertEquals(descriptionWithLocations.getLocations(), locations);
     }
+    
+    /**
+     * Test fetch the running request, no location filter. 
+     */
+    @Test
+    public void testGetInProgressRequestsDescription_NoLocationFilter() {
+        
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
+        List<String> queryLocations = null;
+        itemCreator.setLocations(locations);
+        itemCreator.setUpdateWorkflowId(0);
+        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setMitigationVersion(1);
+        itemCreator.setWorkflowId(1);
+        itemCreator.addItem();
+       
+        itemCreator.setWorkflowStatus(WorkflowStatus.FAILED);
+        itemCreator.setMitigationVersion(2);
+        itemCreator.setWorkflowId(2);
+        itemCreator.addItem();
+        
+        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setMitigationVersion(3);
+        itemCreator.setWorkflowId(3);
+        itemCreator.addItem();
+        List<MitigationRequestDescriptionWithLocations> descriptions = listHandler.getOngoingRequestsDescription(serviceName, deviceName, queryLocations, tsdMetrics);        
+        assertEquals(descriptions.size(), 2);
+        MitigationRequestDescription description = descriptions.get(0).getMitigationRequestDescription();
+        assertEquals(description.getJobId(), 3);
+        description = descriptions.get(1).getMitigationRequestDescription();
+        assertEquals(description.getJobId(), 1);
+    }
+    
 
+    /**
+     * Test fetch the running request, failed because there is no running request. 
+     */
+    @Test
+    public void testGetInProgressRequestsDescription_NoRunningRequest() {
+        
+        //create request in the  mitigation request table
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
+        List<String> queryLocations = Lists.newArrayList("TST1");
+        itemCreator.setLocations(locations);
+        itemCreator.setWorkflowStatus(WorkflowStatus.FAILED);
+        itemCreator.setMitigationVersion(1);
+        itemCreator.setWorkflowId(1);
+        itemCreator.addItem();
+       
+        List<MitigationRequestDescriptionWithLocations> descriptions = listHandler.getOngoingRequestsDescription(serviceName, deviceName, queryLocations, tsdMetrics);        
+        assertEquals(descriptions.size(), 0);
+    }
+    
+    /**
+     * Test fetch the running request, failed due to location in not in the request
+     */
+    @Test
+    public void testGetInProgressRequestsDescription_LocationNotInRequest() {
+        
+        //create request in the  mitigation request table
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
+        List<String> queryLocations = Lists.newArrayList("TSTxxx");
+        itemCreator.setLocations(locations);
+        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setMitigationVersion(1);
+        itemCreator.setWorkflowId(1);
+        itemCreator.addItem();
+       
+        List<MitigationRequestDescriptionWithLocations> descriptions = listHandler.getOngoingRequestsDescription(serviceName, deviceName, queryLocations, tsdMetrics);        
+        assertEquals(descriptions.size(), 0);
+    }
+    
+    /**
+     * Test fetch the running request, we should return all of them in reverse order (workflowId)
+     */
+    @Test
+    public void testGetInProgressRequestsDescription_WorkflowID_ReverseScan() {
+        
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
+        List<String> queryLocations = Lists.newArrayList("TST1");
+        itemCreator.setLocations(locations);
+        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setMitigationVersion(1);
+        itemCreator.setWorkflowId(1);
+        itemCreator.addItem();
+       
+        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setMitigationVersion(2);
+        itemCreator.setWorkflowId(2);
+        itemCreator.addItem();
+        
+        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setMitigationVersion(3);
+        itemCreator.setWorkflowId(3);
+        itemCreator.addItem();
+        List<MitigationRequestDescriptionWithLocations> descriptions = listHandler.getOngoingRequestsDescription(serviceName, deviceName, queryLocations, tsdMetrics);        
+        assertEquals(descriptions.size(), 3);
+        MitigationRequestDescription description = descriptions.get(0).getMitigationRequestDescription();
+        assertEquals(description.getJobId(), 3);
+        description = descriptions.get(1).getMitigationRequestDescription();
+        assertEquals(description.getJobId(), 2);
+        description = descriptions.get(2).getMitigationRequestDescription();
+        assertEquals(description.getJobId(), 1);
+    }
+    
+    
+    /**
+     * Test fetch the running request, three requests, one failed in the middle.
+     * we should only return the latest one
+     */
+    @Test
+    public void testGetInProgressRequestsDescription_FailRequestInMiddle() {
+        
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationInstanceItemCreator instanceCreator = instanceTableTestHelper.getItemCreator(deviceName, serviceName);
+        Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
+        List<String> queryLocations = Lists.newArrayList("TST1");
+        itemCreator.setLocations(locations);
+        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setMitigationVersion(1);
+        itemCreator.setWorkflowId(1);
+        itemCreator.addItem();
+       
+        itemCreator.setWorkflowStatus(WorkflowStatus.FAILED);
+        itemCreator.setMitigationVersion(2);
+        itemCreator.setWorkflowId(2);
+        itemCreator.addItem();
+        instanceCreator.setLocation("TST1");
+        instanceCreator.setBlockingDeviceWorkflowId("test#1");
+        instanceCreator.setWorkflowId("2");
+        instanceCreator.addItem();
+        
+        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setMitigationVersion(3);
+        itemCreator.setWorkflowId(3);
+        itemCreator.addItem();
+        List<MitigationRequestDescriptionWithLocations> descriptions = listHandler.getOngoingRequestsDescription(serviceName, deviceName, queryLocations, tsdMetrics);
+        assertEquals(descriptions.size(), 2);
+        MitigationRequestDescription description = descriptions.get(0).getMitigationRequestDescription();
+        assertEquals(description.getJobId(), 3);
+        description = descriptions.get(1).getMitigationRequestDescription();
+        assertEquals(description.getJobId(),1);
+    }
+    
+    @Test
+    public void testGetInProgressRequestsDescription_KeepSearchingAfterBlockedAndCompletedInstance() {
+        
+        DDBBasedListMitigationsHandler spylistHandler = spy(listHandler);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+
+        MitigationInstanceItemCreator instanceCreator = instanceTableTestHelper.getItemCreator(deviceName, serviceName);
+        Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
+        List<String> queryLocations = Lists.newArrayList("TST1");
+        
+        QueryResult queryResult = new QueryResult();
+        QueryResult queryResult2 = new QueryResult();
+        itemCreator.setLocations(locations);
+        Map<String, AttributeValue> lastEvaluatedKey = new HashMap<>() ;
+        lastEvaluatedKey.put("test", new AttributeValue("test"));
+
+        List<Map<String, AttributeValue>> items = new ArrayList<>();
+        items.add(itemCreator.generateQueryResultItem(deviceName, WorkflowStatus.RUNNING, "1", "0", "1"));
+        items.add(itemCreator.generateQueryResultItem(deviceName, WorkflowStatus.FAILED, "2", "0", "2"));
+        queryResult.setItems(items);
+        queryResult.setCount(2);
+        queryResult.setLastEvaluatedKey(lastEvaluatedKey);
+        
+        List<Map<String, AttributeValue>> items2 = new ArrayList<>();
+        items2.add(itemCreator.generateQueryResultItem(deviceName, WorkflowStatus.RUNNING, "3", "0", "3"));
+        queryResult2.setItems(items2);
+        queryResult2.setCount(1);
+        queryResult2.setLastEvaluatedKey(null);
+        doReturn(queryResult).doReturn(queryResult2).when(spylistHandler).queryDynamoDBWithRetries(any(QueryRequest.class), any(TSDMetrics.class));
+        
+        instanceCreator.setLocation("TST1");
+        instanceCreator.setBlockingDeviceWorkflowId("test#1");
+        instanceCreator.setWorkflowId("2");
+        instanceCreator.addItem();
+        List<MitigationRequestDescriptionWithLocations> descriptions = spylistHandler.getOngoingRequestsDescription(serviceName, deviceName, queryLocations, tsdMetrics);
+        assertEquals(descriptions.size(), 2);
+        MitigationRequestDescription description = descriptions.get(0).getMitigationRequestDescription();
+        assertEquals(description.getJobId(), 1);
+        description = descriptions.get(1).getMitigationRequestDescription();
+        assertEquals(description.getJobId(),3);
+    }
+    
+    @Test
+    public void testGetInProgressRequestsDescription_StopSearchingAfterCompletedInstance() {
+        
+        DDBBasedListMitigationsHandler spylistHandler = spy(listHandler);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+
+        MitigationInstanceItemCreator instanceCreator = instanceTableTestHelper.getItemCreator(deviceName, serviceName);
+        Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
+        List<String> queryLocations = Lists.newArrayList("TST1");
+        
+        QueryResult queryResult = new QueryResult();
+        QueryResult queryResult2 = new QueryResult();
+        itemCreator.setLocations(locations);
+        Map<String, AttributeValue> lastEvaluatedKey = new HashMap<>() ;
+        lastEvaluatedKey.put("test", new AttributeValue("test"));
+
+        List<Map<String, AttributeValue>> items = new ArrayList<>();
+        items.add(itemCreator.generateQueryResultItem(deviceName, WorkflowStatus.RUNNING, "1", "0", "1"));
+        items.add(itemCreator.generateQueryResultItem(deviceName, WorkflowStatus.FAILED, "2", "0", "2"));
+        queryResult.setItems(items);
+        queryResult.setCount(2);
+        queryResult.setLastEvaluatedKey(lastEvaluatedKey);
+        
+        List<Map<String, AttributeValue>> items2 = new ArrayList<>();
+        items2.add(itemCreator.generateQueryResultItem(deviceName, WorkflowStatus.RUNNING, "3", "0", "3"));
+        queryResult2.setItems(items2);
+        queryResult2.setCount(1);
+        queryResult2.setLastEvaluatedKey(null);
+        doReturn(queryResult).doReturn(queryResult2).when(spylistHandler).queryDynamoDBWithRetries(any(QueryRequest.class), any(TSDMetrics.class));
+        
+        instanceCreator.setLocation("TST1");
+        instanceCreator.setBlockingDeviceWorkflowId(null);
+        instanceCreator.setWorkflowId("2");
+        instanceCreator.addItem();
+        List<MitigationRequestDescriptionWithLocations> descriptions = spylistHandler.getOngoingRequestsDescription(serviceName, deviceName, queryLocations, tsdMetrics);
+        assertEquals(descriptions.size(), 1);
+        MitigationRequestDescription description = descriptions.get(0).getMitigationRequestDescription();
+        assertEquals(description.getJobId(), 1);
+    }
+    
+    /**
+     * Test fetch the running request
+     */
+    @Test
+    public void testGetInProgressRequestsDescription_Multiple_Locations() {
+        
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2"));
+        List<String> queryLocations = Lists.newArrayList("TST2", "TST1");
+        itemCreator.setLocations(locations);
+        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setMitigationVersion(1);
+        itemCreator.setWorkflowId(1);
+        itemCreator.addItem();
+       
+        locations = new HashSet<String>(Lists.newArrayList("TST3", "TST2"));
+        itemCreator.setWorkflowStatus(WorkflowStatus.RUNNING);
+        itemCreator.setMitigationVersion(2);
+        itemCreator.setWorkflowId(2);
+        itemCreator.addItem();
+        
+        List<MitigationRequestDescriptionWithLocations> descriptions = listHandler.getOngoingRequestsDescription(serviceName, deviceName, queryLocations, tsdMetrics);        
+        assertEquals(descriptions.size(), 2);
+        MitigationRequestDescription description = descriptions.get(0).getMitigationRequestDescription();
+        assertEquals(description.getJobId(), 2);
+        description = descriptions.get(1).getMitigationRequestDescription();
+        assertEquals(description.getJobId(), 1);
+    }
     /**
      * Test all history can be retrieved.
      */

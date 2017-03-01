@@ -15,6 +15,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
@@ -114,7 +115,7 @@ public class DDBBasedRequestStorageHandler {
     protected String getMitigationRequestsTableName() {
         return mitigationRequestsTableName;
     }
-
+    
     /**
      * Helper method to store a request into DDB.
      * @param request Request to be stored.

@@ -5,7 +5,9 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyMapOf;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import lombok.Data;
@@ -97,8 +99,31 @@ public class RequestTableTestHelper {
             }
             table.putItem(item);
         }
-    }
+        
+        Map<String, AttributeValue> generateQueryResultItem(String deviceName, String workflowStatus, String workflowId, String updateWorkflowId, String mitigationVersion) {
+            Map<String, AttributeValue> item = new HashMap<>();
+            item.put(MitigationRequestsModel.DEVICE_NAME_KEY, new AttributeValue(deviceName));
+            item.put(MitigationRequestsModel.WORKFLOW_ID_KEY, new AttributeValue().withN(String.valueOf(workflowId)));
+            item.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(deviceScope));
+            item.put(MitigationRequestsModel.LOCATIONS_KEY, new AttributeValue().withSS(locations));
+            item.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue(mitigationName));
+            item.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue(mitigationTemplate));
+            item.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN(String.valueOf(mitigationVersion)));
+            item.put(MitigationRequestsModel.NUM_PRE_DEPLOY_CHECKS_KEY, new AttributeValue().withN(String.valueOf("0")));
+            item.put(MitigationRequestsModel.NUM_POST_DEPLOY_CHECKS_KEY, new AttributeValue().withN(String.valueOf("0")));
+            item.put(MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY, new AttributeValue().withN(String.valueOf(requestDate)));
+            item.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(requestType));
+            item.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(serviceName));
+            item.put(MitigationRequestsModel.TOOL_NAME_KEY, new AttributeValue(toolName));
+            item.put(MitigationRequestsModel.UPDATE_WORKFLOW_ID_KEY, new AttributeValue().withN(String.valueOf(updateWorkflowId)));
+            item.put(MitigationRequestsModel.USER_NAME_KEY, new AttributeValue(userName));
+            item.put(MitigationRequestsModel.TOOL_NAME_KEY, new AttributeValue(toolName));
+            item.put(MitigationRequestsModel.USER_DESCRIPTION_KEY, new AttributeValue(userDesc));
 
+            item.put(MitigationRequestsModel.WORKFLOW_STATUS_KEY, new AttributeValue(workflowStatus));
+            return item;
+        }
+    }
     public MitigationRequestItemCreator getItemCreator(String deviceName, String serviceName, String mitigationName,
             String deviceScope) {
         MitigationRequestItemCreator itemCreator = new MitigationRequestItemCreator();
