@@ -44,7 +44,7 @@
         
           <!-- Debug port -->
           <jvmarg value="-Xdebug"/>
-          <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=11003"/>
+          <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=localhost:11003"/>
 
           <!-- OOM Conditions -->
           <jvmarg value="-XX:+HeapDumpOnOutOfMemoryError"/>
