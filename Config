@@ -20,6 +20,8 @@ package.LookoutMitigationService = {
             CoralSpringLauncher = 4.2;
             AWSSimpleWorkflowJavaFlowDeciderAPT = 3.3;
             CoralGenerator = 1.1;
+            DynamoDBLocal = 1.11.x;
+            DynamoDBLocalBuildLogic = 1.2;
         };
     };
     
@@ -118,6 +120,7 @@ package.LookoutMitigationService = {
             # For TOD-based approval step in the pipeline
             LookoutMitigationServiceMonitor = 1.0;
             LookoutTestCommons = 1.0;
+            DynamoDBLocal = 1.11.x;
         };
     };
 

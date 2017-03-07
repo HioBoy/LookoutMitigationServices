@@ -7,11 +7,12 @@
   <!-- Define HappierTrails property overrides here -->
   <property name="findbugs.failOnError" value="true"/>
   <property name="checkstyle.failOnError" value="false"/>
-  <property name="tests.additional.jvmargs" value="-enableassertions"/>
   <property name="sources.javac.extra.args" value="-Xlint:all"/>
 
   <ht:import file="coral-launcher.xml" optional="false"/>
   <ht:import file="coral-generator.xml" optional="false"/>
+  <ht:import file="dynamodb-local.xml" />
+	
 	
   <ht:import file="happier-trails.xml"/>
   
@@ -116,7 +117,13 @@
       <jvmarg line="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=6050"/>
     </coral:launch>
   </target>
-
+	
+  <target name="set-test-additional-jvmargs" depends="dynamodb-local">
+	<property name="tests.additional.jvmargs" value="-enableassertions ${dynamodb-local.system-properties}"/>
+  </target>
+	
+  <target name="coverage" depends="set-test-additional-jvmargs,standard-coverage"/>
+  <target name="test" depends="set-test-additional-jvmargs,unit-tests"/>
 
   <macrodef name="lkt-java">
     <attribute name="classname"/>
