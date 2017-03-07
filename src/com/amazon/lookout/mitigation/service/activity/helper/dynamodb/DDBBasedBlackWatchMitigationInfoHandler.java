@@ -3,6 +3,7 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.blackwatch.helper.BlackWatchHelper;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
 import com.amazon.blackwatch.mitigation.state.model.ResourceAllocationState;
@@ -26,8 +27,10 @@ import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
 import com.google.common.collect.ImmutableMap;
+
 import lombok.RequiredArgsConstructor;
 import one.util.streamex.EntryStream;
+
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
@@ -41,7 +44,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitigationInfoHandler {
@@ -178,7 +180,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     
     @Override
     public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId, Long globalPPS,
-            Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata, String mitigationSettingsJSON,
+            Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
             String userARN, TSDMetrics tsdMetrics) {
         Validate.notNull(mitigationId);
         Validate.notNull(userARN);
@@ -203,23 +205,38 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                         resourceTypeString);
                 throw new IllegalArgumentException(msg);
             }
-            mitigationSettingsJSON = BlackWatchResourceTypeValidator.normalizeJSONSettingsString(mitigationSettingsJSON);
-
-            String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
-            Map<BlackWatchMitigationResourceType, Set<String>> resourceMap =
-                    typeValidator.getCanonicalMapOfResources(resourceId, mitigationSettingsJSON);
-            LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
-                    canonicalResourceId, ReflectionToStringBuilder.toString(resourceMap)));
-            validateResources(resourceMap);
+            
+            String mitigationSettingsJSON;
+            if (targetConfig != null) {
+                // need to validate updated mitigation settings
+                mitigationSettingsJSON = targetConfig.getJsonString();
+    
+                String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
+                Map<BlackWatchMitigationResourceType, Set<String>> resourceMap =
+                        typeValidator.getCanonicalMapOfResources(resourceId, targetConfig);
+                LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
+                        canonicalResourceId, ReflectionToStringBuilder.toString(resourceMap)));
+                validateResources(resourceMap);
+            } else {
+                // mitigation settings are not being updated
+                mitigationSettingsJSON = null;
+            }
 
             String previousOwnerARN = mitigationState.getOwnerARN();
             mitigationState.setChangeTime(System.currentTimeMillis());
             mitigationState.setPpsRate(globalPPS);
             mitigationState.setBpsRate(globalBPS);
             mitigationState.setOwnerARN(userARN);
-            mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
-            mitigationState.setMitigationSettingsJSONChecksum(
-                    BlackWatchHelper.getHexStringChecksum(mitigationSettingsJSON));
+            if (mitigationSettingsJSON != null) {
+                // update mitigation settings JSON
+                mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
+                mitigationState.setMitigationSettingsJSONChecksum(
+                        BlackWatchHelper.getHexStringChecksum(mitigationSettingsJSON));
+            } else {
+                // do not update mitigation settings JSON
+                mitigationState.setMitigationSettingsJSON(null);
+                mitigationState.setMitigationSettingsJSONChecksum(null);
+            }
             mitigationState.setMinutesToLive(minsToLive);
             BlackWatchMitigationActionMetadata bwMetadata = BlackWatchHelper.coralMetadataToBWMetadata(metadata);
             mitigationState.setLatestMitigationActionMetadata(bwMetadata);
@@ -247,9 +264,10 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     @Override
     public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceTypeString,
             Long globalPPS, Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata,
-            String mitigationSettingsJSON, String userARN, TSDMetrics tsdMetrics) {
+            BlackWatchTargetConfig targetConfig, String userARN, TSDMetrics tsdMetrics) {
         Validate.notNull(resourceId);
         Validate.notNull(resourceTypeString);
+        Validate.notNull(targetConfig);
         Validate.notNull(userARN);
         Validate.notNull(tsdMetrics);
         try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler"
@@ -268,9 +286,9 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             }
 
             String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
-            mitigationSettingsJSON = BlackWatchResourceTypeValidator.normalizeJSONSettingsString(mitigationSettingsJSON);
+            String mitigationSettingsJSON = targetConfig.getJsonString();
             Map<BlackWatchMitigationResourceType, Set<String>> resourceMap = 
-                    typeValidator.getCanonicalMapOfResources(resourceId, mitigationSettingsJSON);
+                    typeValidator.getCanonicalMapOfResources(resourceId, targetConfig);
             LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
                     canonicalResourceId, ReflectionToStringBuilder.toString(resourceMap)));
             validateResources(resourceMap);

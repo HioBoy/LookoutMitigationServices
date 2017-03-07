@@ -72,13 +72,9 @@ import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.model.RequestType;
-
 import com.amazonaws.regions.Regions;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -122,8 +118,6 @@ public class RequestValidator {
     private static final int MAX_NUMBER_OF_TICKETS = 10;
     
     private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
-    
-    private static final ObjectReader jsonReader = new ObjectMapper().reader();
     
     private final Set<String> deviceNames;
     private final Set<String> deviceScopes;
@@ -1060,7 +1054,7 @@ public class RequestValidator {
         }
     }
 
-    public void validateUpdateBlackWatchMitigationRequest(@NonNull UpdateBlackWatchMitigationRequest request, 
+    public BlackWatchTargetConfig validateUpdateBlackWatchMitigationRequest(@NonNull UpdateBlackWatchMitigationRequest request, 
             @NonNull String userARN) {
         validateUserName(request.getMitigationActionMetadata().getUser());
         validateToolName(request.getMitigationActionMetadata().getToolName());
@@ -1071,13 +1065,21 @@ public class RequestValidator {
         validateMinutesToLive(request.getMinutesToLive());
         validatePacketsPerSecond(request.getGlobalPPS());
         validateBitsPerSecond(request.getGlobalBPS());
-        validateMitigationSettingsJSON(request.getMitigationSettingsJSON());
+        BlackWatchTargetConfig targetConfig;
+        if (request.getMitigationSettingsJSON() != null) {
+            // caller provided new target config; wants to replace existing
+            targetConfig = validateMitigationSettingsJSON(request.getMitigationSettingsJSON());
+        } else {
+            // caller did not provide target config; wants to keep existing
+            targetConfig = null;
+        }
         validateUserARN(userARN);
         validatePpsBpsJSON(request.getGlobalPPS(), request.getGlobalBPS(),
                 request.getMitigationSettingsJSON());
+        return targetConfig;
     }  
 
-    public void validateApplyBlackWatchMitigationRequest(@NonNull ApplyBlackWatchMitigationRequest request,
+    public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(@NonNull ApplyBlackWatchMitigationRequest request,
             String userARN) {
         validateUserName(request.getMitigationActionMetadata().getUser());
         validateToolName(request.getMitigationActionMetadata().getToolName());
@@ -1089,10 +1091,11 @@ public class RequestValidator {
         validateMinutesToLive(request.getMinutesToLive());
         validatePacketsPerSecond(request.getGlobalPPS());
         validateBitsPerSecond(request.getGlobalBPS());
-        validateMitigationSettingsJSON(request.getMitigationSettingsJSON());
+        BlackWatchTargetConfig targetConfig = validateMitigationSettingsJSON(request.getMitigationSettingsJSON());
         validateUserARN(userARN);
         validatePpsBpsJSON(request.getGlobalPPS(), request.getGlobalBPS(),
                 request.getMitigationSettingsJSON());
+        return targetConfig;
     }
     
     private void validateMinutesToLive(Integer minutesToLive) {
@@ -1120,37 +1123,27 @@ public class RequestValidator {
         }
     }
 
-    void validateMitigationSettingsJSON(String mitigationSettingsJSON) {
-        if (mitigationSettingsJSON == null) {
-            return;
-        }
-
-        // Validate that it is properly formatted JSON.
-        try {
-            jsonReader.readTree(mitigationSettingsJSON);
-        } catch (JsonProcessingException e) {
-            String message;
-            if (mitigationSettingsJSON.isEmpty()) {
-                message = "Can not parse empty mitigation settings JSON.  To clear the values, specify an empty JSON"
-                        + " document IE: \"{}\"";
-            } else {
-                message = String.format("Could not parse mitigation settings JSON: %s",
-                        ReflectionToStringBuilder.toString(e));
-            }
-            throw new IllegalArgumentException(message);
-        } catch (IOException e) {
-            LOG.warn(String.format("Caught unexpected IOException while parsing json. %s", 
-                    ReflectionToStringBuilder.toString(e)));
-            throw new RuntimeException("Caught unexpected Exception while parsing json.");
-        }
-
+    BlackWatchTargetConfig validateMitigationSettingsJSON(String mitigationSettingsJSON) {
         BlackWatchTargetConfig targetConfig;
         try {
             targetConfig = BlackWatchTargetConfig.fromJSONString(mitigationSettingsJSON);
+        } catch (JsonMappingException e) {
+            String msg = String.format("Could not map mitigation settings JSON to target config: %s",
+                    e.getMessage());
+            LOG.warn("Mitigation settings error path: " + e.getPathReference());
+            LOG.warn("Mitigation settings error location: " + e.getLocation());
+            LOG.warn("Mitigation settings error message: " + e.getOriginalMessage());
+            throw new IllegalArgumentException(msg, e);
+        } catch (JsonProcessingException e) {
+            String msg = String.format("Could not parse mitigation settings JSON: %s",
+                    e.getMessage());
+            LOG.warn("Mitigation settings error location: " + e.getLocation());
+            LOG.warn("Mitigation settings error message: " + e.getOriginalMessage());
+            throw new IllegalArgumentException(msg, e);
         } catch (IOException e) {
-             String msg = String.format("Could not parse mitigation settings JSON: %s",
-                    ReflectionToStringBuilder.toString(e));
-             throw new IllegalArgumentException(msg);
+             String msg = String.format("Could not read mitigation settings JSON: %s",
+                    e.getMessage());
+             throw new IllegalArgumentException(msg, e);
         }
 
         // Don't allow specifying both ip_traffic_shaper and global_traffic_shaper
@@ -1195,6 +1188,8 @@ public class RequestValidator {
                 }
             }
         }
+        
+        return targetConfig;
     }
 
     private void validatePpsBpsJSON(Long pps, Long bps, String json) {

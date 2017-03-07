@@ -4,6 +4,7 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.blackwatch.helper.BlackWatchHelper;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
 import com.amazon.blackwatch.mitigation.state.model.ResourceAllocationState;
@@ -26,6 +27,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -33,6 +35,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
+import java.io.IOException;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -204,6 +207,14 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                         .build())
                 .build();
     }
+    
+    private BlackWatchTargetConfig parseJSON(String json) {
+        try {
+            return BlackWatchTargetConfig.fromJSONString(json);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Failed to parse JSON: " + e.getMessage(), e);
+        }
+    }
 
     private void validateMitigation(BlackWatchMitigationDefinition bwMitigationDefinition, MitigationState ms) {
         assertEquals(bwMitigationDefinition.getMitigationId(), ms.getMitigationId());
@@ -350,7 +361,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     @Test
     public void testGetBlackWatchMitigationsIPNormalize() {
         ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-            testIPv6AddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, testValidJSON, "ARN-1222", tsdMetrics);
+            testIPv6AddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics);
         assertNotNull(applyResponse);
         assertNotEquals(testIPv6AddressResourceId, testIPv6AddressResourceIdCanonical);
         assertTrue(applyResponse.isNewMitigationCreated());
@@ -478,13 +489,13 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     @Test
     public void testUpdateBlackWatchMitigationSuccess() {
         ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, testValidJSON, "ARN-1222", tsdMetrics);
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics);
         assertNotNull(applyResponse);
         assertTrue(applyResponse.isNewMitigationCreated());
         assertTrue(applyResponse.getMitigationId().length() > 0);
         
         UpdateBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.updateBlackWatchMitigation(
-                applyResponse.getMitigationId(), 5L, 5L, 30, testMetadata, testValidJSON, "ARN-1122", tsdMetrics);
+                applyResponse.getMitigationId(), 5L, 5L, 30, testMetadata, parseJSON(testValidJSON), "ARN-1122", tsdMetrics);
         assertNotNull(response);
     }
     
@@ -492,13 +503,13 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testUpdateBlackWatchMitigationFailedNoMit() {
         thrown.expect(IllegalArgumentException.class);
         blackWatchMitigationInfoHandler.updateBlackWatchMitigation(
-                "NotThere", 5L, 5L, 30, testMetadata, testValidJSON, "ARN-1122", tsdMetrics);
+                "NotThere", 5L, 5L, 30, testMetadata, parseJSON(testValidJSON), "ARN-1122", tsdMetrics);
     }
     
     @Test
     public void testUpdateBlackWatchMitigationFailedBadState() {
         ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, testValidJSON, "ARN-1222", tsdMetrics);
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics);
         assertNotNull(applyResponse);
         assertTrue(applyResponse.isNewMitigationCreated());
         assertTrue(applyResponse.getMitigationId().length() > 0);
@@ -509,14 +520,14 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         
         thrown.expect(IllegalArgumentException.class);
         blackWatchMitigationInfoHandler.updateBlackWatchMitigation(
-                "NotThere", 5L, 5L, 30, testMetadata, testValidJSON, "ARN-1122", tsdMetrics);
+                "NotThere", 5L, 5L, 30, testMetadata, parseJSON(testValidJSON), "ARN-1122", tsdMetrics);
     }
     
     @Test
     public void testApplyBlackWatchMitigationNewIPAddressSuccess() {
         
         ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, testValidJSON, "ARN-1222", tsdMetrics);
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics);
         assertNotNull(response);
         assertTrue(response.isNewMitigationCreated());
         assertTrue(response.getMitigationId().length() > 0);
@@ -548,7 +559,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testApplyBlackWatchMitigationNotNewSuccess() {
         
         ApplyBlackWatchMitigationResponse response1 = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, testValidJSON, 
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
         assertNotNull(response1);
         assertTrue(response1.isNewMitigationCreated());
@@ -572,7 +583,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         assertEquals(rrs.get(testIPAddressResourceType), ImmutableSet.of(testIPAddressResourceIdCanonical));
         
         ApplyBlackWatchMitigationResponse response2 = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 10L, 10L, 30, testMetadata, testValidJSON, 
+                testIPAddressResourceId, testIPAddressResourceType, 10L, 10L, 30, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
         assertNotNull(response2);
         assertFalse(response2.isNewMitigationCreated());
@@ -596,7 +607,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testApplyBlackWatchMitigationDiffARN() {
         
         ApplyBlackWatchMitigationResponse response1 = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, testValidJSON, 
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 30, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
         assertNotNull(response1);
         assertTrue(response1.isNewMitigationCreated());
@@ -605,27 +616,27 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         
         thrown.expect(IllegalArgumentException.class);
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(testIPAddressResourceId, 
-                    testIPAddressResourceType, 5L, 5L, 30, testMetadata, testValidJSON, "ARN-1255", tsdMetrics);
+                    testIPAddressResourceType, 5L, 5L, 30, testMetadata, parseJSON(testValidJSON), "ARN-1255", tsdMetrics);
     }
     
     @Test
     public void testApplyBlackWatchMitigationBadType() {
         thrown.expect(IllegalArgumentException.class);
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, "BADType", 5L, 5L, 30, testMetadata, testValidJSON, 
+                testIPAddressResourceId, "BADType", 5L, 5L, 30, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
     }
     
     @Test
     public void testApplyBlackWatchMitigationOverrideMinstoLive() {
         ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, null, testMetadata, testValidJSON, 
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, null, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
         MitigationState ms = mitigationStateDynamoDBHelper.getMitigationState(response.getMitigationId());
         assertTrue(ms.getMinutesToLive() > 0);
         
         response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 0, testMetadata, testValidJSON, 
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 0, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
         assertTrue(ms.getMinutesToLive() > 0);
     }
@@ -633,7 +644,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     @Test
     public void testApplyBlackWatchMitigationMissingTableEntries() {
         ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
         MitigationState ms = mitigationStateDynamoDBHelper.getMitigationState(response.getMitigationId());
         assertNotNull(ms);
@@ -641,26 +652,26 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         
         thrown.expect(IllegalArgumentException.class);
         response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
     }
     
     @Test
     public void testApplyBlackWatchMitigationMismatchType() {
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
         
         thrown.expect(IllegalArgumentException.class);
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, "MismatchType", 5L, 5L, 10, testMetadata, testValidJSON, 
+                testIPAddressResourceId, "MismatchType", 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
     }
     
     @Test
     public void testApplyBlackWatchMitigationInactiveFailure() {
         ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
         
         MitigationState ms = mitigationStateDynamoDBHelper.getMitigationState(response.getMitigationId());
@@ -670,7 +681,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Could not save MitigationState due to conditional failure!");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                testIPAddressResourceId, testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
     }
     
@@ -679,7 +690,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("is not a valid IP address or CIDR!  Resource");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                "1.2.3", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                "1.2.3", testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
     }
 
@@ -688,14 +699,14 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("is not a valid IP address or CIDR!  Resource");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                "1.2.3.4/31", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON,
+                "1.2.3.4/31", testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON),
                 "ARN-1222", tsdMetrics);
     }
 
     @Test
     public void testApplyBlackWatchMitigationValidIPAddressCIDR() {
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-            "1.2.3.4/32", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON,
+            "1.2.3.4/32", testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON),
             "ARN-1222", tsdMetrics);
     }
 
@@ -704,20 +715,20 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("is not a valid IP address or CIDR!  Resource");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation("2001:0db8:85a3:BBZZ:0000:8a2e:0370:7334", 
-                testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
     }
     
     @Test
     public void testApplyBlackWatchMitigationValidAddresses() {
         ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
         assertNotNull(response);
         assertTrue(response.isNewMitigationCreated());
         
         response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation("2001:0db8:85a3:0000:0000:8a2e:0370:7334", 
-                testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, "ARN-1222", tsdMetrics);
+                testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics);
         assertNotNull(response);
         assertTrue(response.isNewMitigationCreated());
     }
@@ -726,9 +737,9 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testApplyBlackWatchMitigationInvalidIPAddressListMissing() {
         //Non existent json
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Could not map");
+        thrown.expectMessage("Failed to parse");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, "{\"BBTest\":\"[]\"}", 
+                "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, parseJSON("{\"BBTest\":\"[]\"}"), 
                 "ARN-1222", tsdMetrics);
     }
     
@@ -739,14 +750,14 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expectMessage("IP List with one or more entries");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
-                String.format(ipListTemplate, ""), "ARN-1222", tsdMetrics);
+                parseJSON(String.format(ipListTemplate, "")), "ARN-1222", tsdMetrics);
     }
     
     @Test
     public void testApplyBlackWatchMitigationValidIPAddressListWithCIDR() {
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
-                String.format(ipListTemplate,"\"1.2.3.4/32\""), "ARN-1222", tsdMetrics);
+                parseJSON(String.format(ipListTemplate,"\"1.2.3.4/32\"")), "ARN-1222", tsdMetrics);
     }
     
     @Test
@@ -756,7 +767,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expectMessage("1.2.3.Z");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
-                String.format(ipListTemplate,"\"1.2.3.Z\""), "ARN-1222", tsdMetrics);
+                parseJSON(String.format(ipListTemplate,"\"1.2.3.Z\"")), "ARN-1222", tsdMetrics);
     }
     
     @Test
@@ -766,7 +777,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expectMessage("1.2.5.X");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
-                String.format(ipListTemplate, "\"1.2.3.4\",\"1.2.5.X\""), "ARN-1222", tsdMetrics);
+                parseJSON(String.format(ipListTemplate, "\"1.2.3.4\",\"1.2.5.X\"")), "ARN-1222", tsdMetrics);
     }
     
     @Test
@@ -775,7 +786,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         //They are silently ignored though
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
-                String.format(ipListTemplate, "\"1.2.3.4\",\"5.5.4.4\",\"1.2.3.4\""), "ARN-1222", tsdMetrics);
+                parseJSON(String.format(ipListTemplate, "\"1.2.3.4\",\"5.5.4.4\",\"1.2.3.4\"")), "ARN-1222", tsdMetrics);
     }
     
     @Test
@@ -783,8 +794,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         //IPV6 addresses that are different strings, but are equivalent.
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
-                String.format(ipListTemplate, "\"2001:0db8:85a3:0000:0000:8a2e:0370:7334\"," +
-                     "\"2001:0db8:85a3::8a2e:0370:7334\""), "ARN-1222", tsdMetrics);
+                parseJSON(String.format(ipListTemplate, "\"2001:0db8:85a3:0000:0000:8a2e:0370:7334\"," +
+                     "\"2001:0db8:85a3::8a2e:0370:7334\"")), "ARN-1222", tsdMetrics);
     }
     
     @Test
@@ -792,14 +803,14 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         //Valid
         ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
-                String.format(ipListTemplate, "\"1.2.3.4\""), "ARN-1222", tsdMetrics);
+                parseJSON(String.format(ipListTemplate, "\"1.2.3.4\"")), "ARN-1222", tsdMetrics);
         assertNotNull(response);
         assertTrue(response.isNewMitigationCreated());
         
         //Valid V6 + V4.
         response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
-                String.format(ipListTemplate, "\"2001:0db8:85a3:0000:0000:8a2e:0370:7334\", \"1.2.3.4\""), 
+                parseJSON(String.format(ipListTemplate, "\"2001:0db8:85a3:0000:0000:8a2e:0370:7334\", \"1.2.3.4\"")), 
                 "ARN-1222", tsdMetrics);
         assertNotNull(response);
         assertFalse(response.isNewMitigationCreated());
@@ -813,7 +824,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         Mockito.doReturn(null).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "IPList-ABCD", testIPAddressListResourceType, 5L, 5L, 10, testMetadata, 
-                String.format(ipListTemplate, "\"1.2.3.4\""), "ARN-1222", tsdMetrics);
+                parseJSON(String.format(ipListTemplate, "\"1.2.3.4\"")), "ARN-1222", tsdMetrics);
     }
     
     @Test
@@ -823,7 +834,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expectMessage("not found in DogFish");
         Mockito.doReturn(null).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
     }
     
@@ -836,7 +847,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expectMessage("with an active mitigation service");
         Mockito.doReturn(prefix).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
     }
     
@@ -854,7 +865,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expectMessage("without an active mitigation service");
         Mockito.doReturn(prefix).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
     }
     
@@ -872,7 +883,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         thrown.expectMessage("with an active mitigation service");
         Mockito.doReturn(prefix).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
-                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, testValidJSON, 
+                "1.2.3.4", testIPAddressResourceType, 5L, 5L, 10, testMetadata, parseJSON(testValidJSON), 
                 "ARN-1222", tsdMetrics);
     }
     

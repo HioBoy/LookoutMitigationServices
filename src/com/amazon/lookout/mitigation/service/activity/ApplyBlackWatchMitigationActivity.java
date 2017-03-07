@@ -12,6 +12,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.http.annotation.ThreadSafe;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.coral.annotation.Documentation;
 import com.amazon.coral.annotation.Operation;
@@ -69,7 +70,7 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
                     + "and userARN:%s.", requestId, ReflectionToStringBuilder.toString(request), userARN));
             
             // Step 1. Validate your request.
-            requestValidator.validateApplyBlackWatchMitigationRequest(request, userARN);
+            BlackWatchTargetConfig targetConfig = requestValidator.validateApplyBlackWatchMitigationRequest(request, userARN);
             
             String resourceId = request.getResourceId();
             String resourceType = request.getResourceType();
@@ -77,11 +78,10 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
             Long globalBPS = request.getGlobalBPS();
             Integer minsToLive = request.getMinutesToLive();
             MitigationActionMetadata metadata = request.getMitigationActionMetadata();
-            String mitigationSettingsJSON = request.getMitigationSettingsJSON();
             
             ApplyBlackWatchMitigationResponse response = blackwatchMitigationInfoHandler
                     .applyBlackWatchMitigation(resourceId, resourceType, globalPPS, globalBPS, minsToLive, 
-                            metadata, mitigationSettingsJSON, userARN, tsdMetrics);
+                            metadata, targetConfig, userARN, tsdMetrics);
             response.setRequestId(requestId);
             return response;
 
@@ -91,7 +91,7 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
             LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX
                     + ApplyBlackWatchMitigationExceptions.BadRequest.name(), 1);
-            throw new BadRequest400(msg);
+            throw new BadRequest400(msg, ex);
         } catch (Exception internalError) {
             String msg = "Internal error in ApplyBlackWatchMitigationActivity for requestId: "
                     + requestId + ", reason: " + internalError.getMessage();
@@ -100,7 +100,7 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
             requestSuccessfullyProcessed = false;
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX 
                     + ApplyBlackWatchMitigationExceptions.InternalError.name(), 1);
-            throw new InternalServerError500(msg);
+            throw new InternalServerError500(msg, internalError);
         } finally {
             tsdMetrics.addCount(
                     LookoutMitigationServiceConstants.ENACT_SUCCESS, requestSuccessfullyProcessed ? 1 : 0);

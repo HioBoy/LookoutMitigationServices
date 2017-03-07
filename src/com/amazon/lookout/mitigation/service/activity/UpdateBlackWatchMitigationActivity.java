@@ -12,6 +12,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.http.annotation.ThreadSafe;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.coral.annotation.Documentation;
 import com.amazon.coral.annotation.Operation;
@@ -73,17 +74,16 @@ public class UpdateBlackWatchMitigationActivity extends Activity {
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
 
             // Step 1. Validate your request.
-            requestValidator.validateUpdateBlackWatchMitigationRequest(request, userARN);
+            BlackWatchTargetConfig targetConfig = requestValidator.validateUpdateBlackWatchMitigationRequest(request, userARN);
             
             String mitigationId = request.getMitigationId();
             Long globalBPS = request.getGlobalBPS();
             Long globalPPS = request.getGlobalPPS();
             Integer minsToLive = request.getMinutesToLive();
             MitigationActionMetadata metadata = request.getMitigationActionMetadata();
-            String mitigationSettingsJSON = request.getMitigationSettingsJSON();
             
             UpdateBlackWatchMitigationResponse response = blackwatchMitigationInfoHandler.updateBlackWatchMitigation(
-                    mitigationId, globalPPS, globalBPS, minsToLive, metadata, mitigationSettingsJSON, userARN, tsdMetrics);
+                    mitigationId, globalPPS, globalBPS, minsToLive, metadata, targetConfig, userARN, tsdMetrics);
             
             response.setRequestId(requestId);
             return response;

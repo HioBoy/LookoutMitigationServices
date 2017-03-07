@@ -2,6 +2,7 @@ package com.amazon.lookout.mitigation.service.activity.validator;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -11,19 +12,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
-import com.amazon.lookout.test.common.util.TestUtils;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig.MitigationAction;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
-import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;
+import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
@@ -33,7 +33,6 @@ import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
-import com.amazon.lookout.mitigation.service.activity.ApplyBlackWatchMitigationActivity;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
@@ -42,6 +41,7 @@ import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
+import com.amazon.lookout.test.common.util.TestUtils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -1168,41 +1168,61 @@ public class RequestValidatorTest {
     }
 
     @Test
-    public void testValidateMitigationSettingsJSON() {
-        Throwable caughtException = null;
-
+    public void testValidateMitigationSettingsEmptyJSON() {
         // Empty object is fine.
         String json = "{}";
-        validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        assertNotNull(targetConfig);
+        assertNull(targetConfig.getMitigation_config());
+    }
 
+    @Test
+    public void testValidateMitigationSettingsEmptyString() {
+        // Empty string is fine
+        String json = "";
+        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        assertNotNull(targetConfig);
+        assertNull(targetConfig.getMitigation_config());
+    }
+
+    @Test
+    public void testValidateMitigationSettingsNull() {
+        // Null value is fine
+        String json = null;
+        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        assertNotNull(targetConfig);
+        assertNull(targetConfig.getMitigation_config());
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsNotJSON() {
         // Invalid JSON should fail.
-        json = "not json";
-
-        caughtException = null;
-        try {
-            validator.validateMitigationSettingsJSON(json);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-
-        // Valid JSON not conforming to the model should fail.
-        json = "{ \"unknown_key\": true }";
-
-        caughtException = null;
-        try {
-            validator.validateMitigationSettingsJSON(json);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-
-        // Valid JSON matching the model should pass.
-        json = "{ \"mitigation_config\": { \"ip_validation\": { \"action\": \"DROP\" } } }";
+        String json = "not json";
         validator.validateMitigationSettingsJSON(json);
+    }
 
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsUnknownKey() {
+        // Valid JSON not conforming to the model should fail.
+        String json = "{ \"unknown_key\": true }";
+        validator.validateMitigationSettingsJSON(json);
+    }
+    
+    @Test
+    public void testValidateMitigationSettingsValidJSON() {
+        // Valid JSON matching the model should pass.
+        String json = "{ \"mitigation_config\": { \"ip_validation\": { \"action\": \"DROP\" } } }";
+        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        assertNotNull(targetConfig);
+        assertNotNull(targetConfig.getMitigation_config());
+        assertNotNull(targetConfig.getMitigation_config().getIp_validation());
+        assertSame(MitigationAction.DROP, targetConfig.getMitigation_config().getIp_validation().getAction());
+    }
+    
+    @Test
+    public void testValidateMitigationSettingsValidIpTrafficShaper() {
         // JSON specifying valid ip_traffic_shaper is fine
-        json = "{"
+        String json = "{"
             + "  \"mitigation_config\": {"
             + "    \"ip_traffic_shaper\": {"
             + "    \"action\": \"DROP\","
@@ -1214,10 +1234,18 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-        validator.validateMitigationSettingsJSON(json);
-
+        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        assertNotNull(targetConfig);
+        assertNotNull(targetConfig.getMitigation_config());
+        assertNotNull(targetConfig.getMitigation_config().getIp_traffic_shaper());
+        assertSame(MitigationAction.DROP, targetConfig.getMitigation_config().getIp_traffic_shaper().getAction());
+        assertNotNull(targetConfig.getMitigation_config().getIp_traffic_shaper().getConfig());
+    }
+    
+    @Test
+    public void testValidateMitigationSettingsGlobalTrafficShaper() {
         // JSON specifying valid global_traffic_shaper is fine
-        json = "{"
+        String json = "{"
             + "  \"mitigation_config\": {"
             + "    \"global_traffic_shaper\": {"
             + "      \"default\": {"
@@ -1231,10 +1259,16 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-        validator.validateMitigationSettingsJSON(json);
-
+        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        assertNotNull(targetConfig);
+        assertNotNull(targetConfig.getMitigation_config());
+        assertNotNull(targetConfig.getMitigation_config().getGlobal_traffic_shaper());
+    }
+    
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsGlobalTrafficShaperMissingPPS() {
         // global_traffic_shaper without pps should be rejected
-        json = "{"
+        String json = "{"
             + "  \"mitigation_config\": {"
             + "    \"global_traffic_shaper\": {"
             + "      \"default\": {"
@@ -1247,17 +1281,13 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-
-        caughtException = null;
-        try {
-            validator.validateMitigationSettingsJSON(json);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-
+        validator.validateMitigationSettingsJSON(json);
+    }
+    
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsGlobalTrafficShaperNegativePPS() {
         // global_traffic_shaper with negative pps should be rejected
-        json = "{"
+        String json = "{"
             + "  \"mitigation_config\": {"
             + "    \"global_traffic_shaper\": {"
             + "      \"default\": {"
@@ -1271,17 +1301,13 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-
-        caughtException = null;
-        try {
-            validator.validateMitigationSettingsJSON(json);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-
+        validator.validateMitigationSettingsJSON(json);
+    }
+    
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsGlobalTrafficShaperDuplicate() {
         // global_traffic_shaper with duplicate shaper names should be rejected
-        json = "{"
+        String json = "{"
             + "  \"mitigation_config\": {"
             + "    \"global_traffic_shaper\": {"
             + "      \"default\": {"
@@ -1295,17 +1321,13 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-
-        caughtException = null;
-        try {
-            validator.validateMitigationSettingsJSON(json);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-
+        validator.validateMitigationSettingsJSON(json);
+    }
+    
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsBothGlobalAndIpTrafficShaper() {
         // Can't specify both ip_traffic_shaper and global_traffic_shaper
-        json = "{"
+        String json = "{"
             + "  \"mitigation_config\": {"
             + "    \"ip_traffic_shaper\": {"
             + "    \"action\": \"DROP\","
@@ -1327,14 +1349,7 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-
-        caughtException = null;
-        try {
-            validator.validateMitigationSettingsJSON(json);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
+        validator.validateMitigationSettingsJSON(json);
     }
 }
 

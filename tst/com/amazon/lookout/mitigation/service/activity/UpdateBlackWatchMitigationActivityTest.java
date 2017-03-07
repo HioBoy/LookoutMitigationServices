@@ -8,10 +8,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.*;
 
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.coral.service.Identity;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
@@ -27,7 +29,7 @@ public class UpdateBlackWatchMitigationActivityTest extends ActivityTestHelper {
         TestUtils.configureLogging();
         updateBlackWatchMitigationActivity = 
                 spy(new UpdateBlackWatchMitigationActivity(requestValidator, blackwatchMitigationInfoHandler));
-        identity.setAttribute(Identity.AWS_USER_ARN, "arn:12324554");
+        identity.setAttribute(Identity.AWS_USER_ARN, userArn);
         request = new UpdateBlackWatchMitigationRequest();
         request.setMitigationId("");
         request.setMitigationActionMetadata(
@@ -37,6 +39,7 @@ public class UpdateBlackWatchMitigationActivityTest extends ActivityTestHelper {
                 .withDescription("Test Descr")
                 .withRelatedTickets(Arrays.asList("1234", "5655"))
                 .build());
+        when(requestValidator.validateUpdateBlackWatchMitigationRequest(request, userArn)).thenReturn(new BlackWatchTargetConfig());
     }
 
     @Test
@@ -49,7 +52,7 @@ public class UpdateBlackWatchMitigationActivityTest extends ActivityTestHelper {
         UpdateBlackWatchMitigationResponse retResponse = new UpdateBlackWatchMitigationResponse();
         Mockito.doReturn(retResponse).when(blackwatchMitigationInfoHandler).updateBlackWatchMitigation(anyString(), 
                 anyLong(), anyLong(), anyInt(), 
-                isA(MitigationActionMetadata.class), anyString(), anyString(), isA(TSDMetrics.class));
+                isA(MitigationActionMetadata.class), isA(BlackWatchTargetConfig.class), anyString(), isA(TSDMetrics.class));
         
         UpdateBlackWatchMitigationResponse response = updateBlackWatchMitigationActivity.enact(request);
         assertEquals(requestId, response.getRequestId());

@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Random;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
@@ -35,9 +36,9 @@ public interface BlackWatchMitigationInfoHandler {
 
     public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceType,
             Long globalPPS, Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata,
-            String mitigationSettingsJSON, String userARN, TSDMetrics tsdMetrics);
+            BlackWatchTargetConfig targetConfig, String userARN, TSDMetrics tsdMetrics);
     
     public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId, Long globalPPS,
-            Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata, String mitigationSettingsJSON,
+            Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
             String userARN, TSDMetrics tsdMetrics);
 }
