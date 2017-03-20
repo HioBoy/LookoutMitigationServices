@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -116,6 +117,8 @@ public class RequestValidator {
     
     private static final int MAX_NUMBER_OF_LOCATIONS = 200;
     private static final int MAX_NUMBER_OF_TICKETS = 10;
+
+    private static final String DEFAULT_SHAPER_NAME = "default";
     
     private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
     
@@ -1054,8 +1057,8 @@ public class RequestValidator {
         }
     }
 
-    public BlackWatchTargetConfig validateUpdateBlackWatchMitigationRequest(@NonNull UpdateBlackWatchMitigationRequest request, 
-            @NonNull String userARN) {
+    public BlackWatchTargetConfig validateUpdateBlackWatchMitigationRequest(
+            @NonNull UpdateBlackWatchMitigationRequest request, @NonNull String userARN) {
         validateUserName(request.getMitigationActionMetadata().getUser());
         validateToolName(request.getMitigationActionMetadata().getToolName());
         if (request.getMitigationActionMetadata().getRelatedTickets() != null) {
@@ -1063,24 +1066,23 @@ public class RequestValidator {
         }
         validateMitigationId(request.getMitigationId());
         validateMinutesToLive(request.getMinutesToLive());
-        validatePacketsPerSecond(request.getGlobalPPS());
-        validateBitsPerSecond(request.getGlobalBPS());
+
         BlackWatchTargetConfig targetConfig;
         if (request.getMitigationSettingsJSON() != null) {
             // caller provided new target config; wants to replace existing
-            targetConfig = validateMitigationSettingsJSON(request.getMitigationSettingsJSON());
+            targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
+            mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
+            validateTargetConfig(targetConfig);
         } else {
             // caller did not provide target config; wants to keep existing
             targetConfig = null;
         }
         validateUserARN(userARN);
-        validatePpsBpsJSON(request.getGlobalPPS(), request.getGlobalBPS(),
-                request.getMitigationSettingsJSON());
         return targetConfig;
     }  
 
-    public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(@NonNull ApplyBlackWatchMitigationRequest request,
-            String userARN) {
+    public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(
+            @NonNull ApplyBlackWatchMitigationRequest request, String userARN) {
         validateUserName(request.getMitigationActionMetadata().getUser());
         validateToolName(request.getMitigationActionMetadata().getToolName());
         if (request.getMitigationActionMetadata().getRelatedTickets() != null) {
@@ -1089,15 +1091,69 @@ public class RequestValidator {
         validateResourceId(request.getResourceId());
         validateResourceType(request.getResourceType());
         validateMinutesToLive(request.getMinutesToLive());
-        validatePacketsPerSecond(request.getGlobalPPS());
-        validateBitsPerSecond(request.getGlobalBPS());
-        BlackWatchTargetConfig targetConfig = validateMitigationSettingsJSON(request.getMitigationSettingsJSON());
+
+        // Parse the mitigation settings JSON
+        BlackWatchTargetConfig targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
+
+        // Merge global PPS/BPS into the target config
+        mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
+
+        // Validate the new target configuration
+        validateTargetConfig(targetConfig);
+
         validateUserARN(userARN);
-        validatePpsBpsJSON(request.getGlobalPPS(), request.getGlobalBPS(),
-                request.getMitigationSettingsJSON());
         return targetConfig;
     }
     
+    // Merge the GlobalPPS/GlobalBPS values provided via the API fields into the target config.
+    void mergeGlobalPpsBps(@NonNull BlackWatchTargetConfig targetConfig,
+            Long globalPps, Long globalBps) {
+        if (globalPps == null && globalBps == null) {
+            return;  // There is nothing to do here
+        }
+
+        // If the mitigation_config key doesn't exist, create it
+        if (targetConfig.getMitigation_config() == null) {
+            targetConfig.setMitigation_config(new BlackWatchTargetConfig.MitigationConfig());
+        }
+        BlackWatchTargetConfig.MitigationConfig mitigationConfig = targetConfig.getMitigation_config();
+        assert mitigationConfig != null;
+
+        // If global_traffic_shaper key doesn't exist, create it
+        if (mitigationConfig.getGlobal_traffic_shaper() == null) {
+            mitigationConfig.setGlobal_traffic_shaper(
+                    new LinkedHashMap<String, BlackWatchTargetConfig.GlobalTrafficShaper>());
+        }
+        Map<String, BlackWatchTargetConfig.GlobalTrafficShaper> globalShaper =
+            mitigationConfig.getGlobal_traffic_shaper();
+        assert globalShaper != null;
+
+        // If the global default shaper doesn't exist, create it
+        if (globalShaper.get(DEFAULT_SHAPER_NAME) == null) {
+            globalShaper.put(DEFAULT_SHAPER_NAME, new BlackWatchTargetConfig.GlobalTrafficShaper());
+        }
+        BlackWatchTargetConfig.GlobalTrafficShaper defaultShaper = globalShaper.get(DEFAULT_SHAPER_NAME);
+        assert defaultShaper != null;
+
+        if (globalPps != null) {
+            if (defaultShaper.getGlobal_pps() != null) {
+                String msg = "Cannot specify global PPS rate limit using both API field and JSON";
+                throw new IllegalArgumentException(msg);
+            }
+
+            defaultShaper.setGlobal_pps(globalPps);
+        }
+
+        if (globalBps != null) {
+            if (defaultShaper.getGlobal_bps() != null) {
+                String msg = "Cannot specify global BPS rate limit using both API field and JSON";
+                throw new IllegalArgumentException(msg);
+            }
+
+            defaultShaper.setGlobal_bps(globalBps);
+        }
+    }
+
     private void validateMinutesToLive(Integer minutesToLive) {
         //Allow null and zero to be overridden.
         if (minutesToLive != null && minutesToLive != 0) {
@@ -1107,14 +1163,14 @@ public class RequestValidator {
         }
     }
     
-    private void validatePacketsPerSecond(Long pps) {
+    private void validatePacketsPerSecond(Long pps, String shaperName) {
         if (pps != null) {
             Validate.inclusiveBetween(0, MAX_PPS, pps, 
-                    String.format("PPS (packets per second) must be between 0 and %d Invalid value:%d",
-                            MAX_PPS, pps));
+                    String.format("Traffic shaper \"" + shaperName + "\" must specify PPS"
+                        + " (packets per second) between 0 and %d Invalid value:%d", MAX_PPS, pps));
         }
     }
-    
+
     private void validateBitsPerSecond(Long bps) {
         if (bps != null) {
             Validate.inclusiveBetween(0, MAX_BPS, bps, 
@@ -1123,7 +1179,7 @@ public class RequestValidator {
         }
     }
 
-    BlackWatchTargetConfig validateMitigationSettingsJSON(String mitigationSettingsJSON) {
+    public static BlackWatchTargetConfig parseMitigationSettingsJSON(String mitigationSettingsJSON) {
         BlackWatchTargetConfig targetConfig;
         try {
             targetConfig = BlackWatchTargetConfig.fromJSONString(mitigationSettingsJSON);
@@ -1146,6 +1202,11 @@ public class RequestValidator {
              throw new IllegalArgumentException(msg, e);
         }
 
+        return targetConfig;
+    }
+
+
+    void validateTargetConfig(BlackWatchTargetConfig targetConfig) {
         // Don't allow specifying both ip_traffic_shaper and global_traffic_shaper
         if (targetConfig.getMitigation_config() != null
                 && targetConfig.getMitigation_config().getIp_traffic_shaper() != null
@@ -1181,22 +1242,10 @@ public class RequestValidator {
                     String msg = "Configured global_traffic_shaper \"" + shaperName
                         + "\" must specify \"global_pps\".";
                     throw new IllegalArgumentException(msg);
-                } else if (globalShaper.getGlobal_pps().longValue() < 0L) {
-                    String msg = "Configured global_traffic_shaper \"" + shaperName
-                        + "\" must specify \"global_pps\" >= 0.";
-                    throw new IllegalArgumentException(msg);
                 }
-            }
-        }
-        
-        return targetConfig;
-    }
 
-    private void validatePpsBpsJSON(Long pps, Long bps, String json) {
-        // Accept requests with either PPS/BPS or JSON override, but not both.
-        if ((pps != null || bps != null) && (json != null)) {
-            String message = "Can not specify both globalPPS/globalBPS and mitigationSettingsJSON";
-            throw new IllegalArgumentException(message);
+                validatePacketsPerSecond(globalShaper.getGlobal_pps(), shaperName);
+            }
         }
     }
 }

@@ -19,6 +19,7 @@ import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
+import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBSaveExpression;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
@@ -57,7 +58,9 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     private final Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeValidator> resourceTypeValidatorMap;
     private final int parallelScanSegments;
     private final String realm;
-    
+
+    private static final String DEFAULT_SHAPER_NAME = "default";
+
     private static final String QUERY_BLACKWATCH_MITIGATION_FAILURE = "QUERY_BLACKWATCH_MITIGATION_FAILED";
 
     private static final int MAX_BW_IPADDRESSES = 256;
@@ -144,6 +147,45 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     Map<String, LocationMitigationStateSettings> locationMitigationState = EntryStream.of(locState)
                         .mapValues(v -> v != null ? convertMitSSToLocMSS(v) : null).toMap();
 
+                    // PPS & BPS: return the values stored in JSON global_traffic_shaper,
+                    // if they exist.  If not, fall back to the fields in MitigationState.
+                    BlackWatchTargetConfig targetConfig = RequestValidator.parseMitigationSettingsJSON(
+                            ms.getMitigationSettingsJSON());
+
+                    Long ppsRate = null;
+
+                    try {
+                        ppsRate = targetConfig
+                            .getMitigation_config()
+                            .getGlobal_traffic_shaper()
+                            .get(DEFAULT_SHAPER_NAME)
+                            .getGlobal_pps();
+                    } catch (NullPointerException npe) {
+                        // Key doesn't exist, do nothing, ppsRate is still null
+                    }
+
+                    if (ppsRate == null) {
+                        // Fallback to the value stored in MitigationState
+                        ppsRate = ms.getPpsRate();
+                    }
+
+                    Long bpsRate = null;
+
+                    try {
+                        bpsRate = targetConfig
+                            .getMitigation_config()
+                            .getGlobal_traffic_shaper()
+                            .get(DEFAULT_SHAPER_NAME)
+                            .getGlobal_bps();
+                    } catch (NullPointerException npe) {
+                        // Key doesn't exist, do nothing, bpsRate is still null
+                    }
+
+                    if (bpsRate == null) {
+                        // Fallback to the value stored in MitigationState
+                        bpsRate = ms.getBpsRate();
+                    }
+
                     BlackWatchMitigationDefinition mitigationDefinition = BlackWatchMitigationDefinition.builder()
                             .withMitigationId(ms.getMitigationId())
                             .withResourceId(ms.getResourceId())
@@ -151,8 +193,8 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                             .withChangeTime(ms.getChangeTime())
                             .withOwnerARN(ms.getOwnerARN())
                             .withState(ms.getState())
-                            .withGlobalPPS(ms.getPpsRate())
-                            .withGlobalBPS(ms.getBpsRate())
+                            .withGlobalPPS(ppsRate)
+                            .withGlobalBPS(bpsRate)
                             .withMitigationSettingsJSON(ms.getMitigationSettingsJSON())
                             .withMitigationSettingsJSONChecksum(ms.getMitigationSettingsJSONChecksum())
                             .withMinutesToLiveAtChangeTime(ms.getMinutesToLive().intValue())
@@ -179,8 +221,8 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     }
     
     @Override
-    public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId, Long globalPPS,
-            Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
+    public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId,
+            Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
             String userARN, TSDMetrics tsdMetrics) {
         Validate.notNull(mitigationId);
         Validate.notNull(userARN);
@@ -224,8 +266,6 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
 
             String previousOwnerARN = mitigationState.getOwnerARN();
             mitigationState.setChangeTime(System.currentTimeMillis());
-            mitigationState.setPpsRate(globalPPS);
-            mitigationState.setBpsRate(globalBPS);
             mitigationState.setOwnerARN(userARN);
             if (mitigationSettingsJSON != null) {
                 // update mitigation settings JSON
@@ -263,8 +303,8 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
 
     @Override
     public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceTypeString,
-            Long globalPPS, Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata,
-            BlackWatchTargetConfig targetConfig, String userARN, TSDMetrics tsdMetrics) {
+            Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
+            String userARN, TSDMetrics tsdMetrics) {
         Validate.notNull(resourceId);
         Validate.notNull(resourceTypeString);
         Validate.notNull(targetConfig);
@@ -325,8 +365,6 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                         .build();
             }            
             mitigationState.setChangeTime(System.currentTimeMillis());
-            mitigationState.setPpsRate(globalPPS);
-            mitigationState.setBpsRate(globalBPS);
             mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
             mitigationState.setMitigationSettingsJSONChecksum(
                     BlackWatchHelper.getHexStringChecksum(mitigationSettingsJSON));

@@ -74,13 +74,11 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
             
             String resourceId = request.getResourceId();
             String resourceType = request.getResourceType();
-            Long globalPPS = request.getGlobalPPS();
-            Long globalBPS = request.getGlobalBPS();
             Integer minsToLive = request.getMinutesToLive();
             MitigationActionMetadata metadata = request.getMitigationActionMetadata();
             
             ApplyBlackWatchMitigationResponse response = blackwatchMitigationInfoHandler
-                    .applyBlackWatchMitigation(resourceId, resourceType, globalPPS, globalBPS, minsToLive, 
+                    .applyBlackWatchMitigation(resourceId, resourceType, minsToLive,
                             metadata, targetConfig, userARN, tsdMetrics);
             response.setRequestId(requestId);
             return response;
@@ -110,3 +108,4 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
         }
     }
 }
+

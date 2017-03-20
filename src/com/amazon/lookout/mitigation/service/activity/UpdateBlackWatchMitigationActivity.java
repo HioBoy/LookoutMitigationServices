@@ -77,13 +77,11 @@ public class UpdateBlackWatchMitigationActivity extends Activity {
             BlackWatchTargetConfig targetConfig = requestValidator.validateUpdateBlackWatchMitigationRequest(request, userARN);
             
             String mitigationId = request.getMitigationId();
-            Long globalBPS = request.getGlobalBPS();
-            Long globalPPS = request.getGlobalPPS();
             Integer minsToLive = request.getMinutesToLive();
             MitigationActionMetadata metadata = request.getMitigationActionMetadata();
             
             UpdateBlackWatchMitigationResponse response = blackwatchMitigationInfoHandler.updateBlackWatchMitigation(
-                    mitigationId, globalPPS, globalBPS, minsToLive, metadata, targetConfig, userARN, tsdMetrics);
+                    mitigationId, minsToLive, metadata, targetConfig, userARN, tsdMetrics);
             
             response.setRequestId(requestId);
             return response;
@@ -114,3 +112,4 @@ public class UpdateBlackWatchMitigationActivity extends Activity {
         }
     }
 }
+

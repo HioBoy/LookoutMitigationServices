@@ -1171,7 +1171,8 @@ public class RequestValidatorTest {
     public void testValidateMitigationSettingsEmptyJSON() {
         // Empty object is fine.
         String json = "{}";
-        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
         assertNotNull(targetConfig);
         assertNull(targetConfig.getMitigation_config());
     }
@@ -1180,7 +1181,8 @@ public class RequestValidatorTest {
     public void testValidateMitigationSettingsEmptyString() {
         // Empty string is fine
         String json = "";
-        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
         assertNotNull(targetConfig);
         assertNull(targetConfig.getMitigation_config());
     }
@@ -1189,7 +1191,8 @@ public class RequestValidatorTest {
     public void testValidateMitigationSettingsNull() {
         // Null value is fine
         String json = null;
-        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
         assertNotNull(targetConfig);
         assertNull(targetConfig.getMitigation_config());
     }
@@ -1198,21 +1201,24 @@ public class RequestValidatorTest {
     public void testValidateMitigationSettingsNotJSON() {
         // Invalid JSON should fail.
         String json = "not json";
-        validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
     }
 
     @Test(expected=IllegalArgumentException.class)
     public void testValidateMitigationSettingsUnknownKey() {
         // Valid JSON not conforming to the model should fail.
         String json = "{ \"unknown_key\": true }";
-        validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
     }
     
     @Test
     public void testValidateMitigationSettingsValidJSON() {
         // Valid JSON matching the model should pass.
         String json = "{ \"mitigation_config\": { \"ip_validation\": { \"action\": \"DROP\" } } }";
-        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
         assertNotNull(targetConfig);
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getIp_validation());
@@ -1234,7 +1240,8 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
         assertNotNull(targetConfig);
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getIp_traffic_shaper());
@@ -1259,7 +1266,8 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-        BlackWatchTargetConfig targetConfig = validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
         assertNotNull(targetConfig);
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getGlobal_traffic_shaper());
@@ -1281,7 +1289,8 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-        validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
     }
     
     @Test(expected=IllegalArgumentException.class)
@@ -1301,7 +1310,8 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-        validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
     }
     
     @Test(expected=IllegalArgumentException.class)
@@ -1321,7 +1331,8 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-        validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
     }
     
     @Test(expected=IllegalArgumentException.class)
@@ -1349,7 +1360,106 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
-        validator.validateMitigationSettingsJSON(json);
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test
+    public void testMergeNothing() {
+        // Test that the target config is not changed by merging null values
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+        assertNull(targetConfig.getMitigation_config());
+        validator.mergeGlobalPpsBps(targetConfig, null, null);
+        assertNull(targetConfig.getMitigation_config());
+    }
+
+    @Test
+    public void testMergePpsEmptyTargetConfig() {
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+        validator.mergeGlobalPpsBps(targetConfig, 5L, null);
+
+        // Wrong value or NullPointerException both mean that the value was not
+        // stored correctly
+        Long globalPps = targetConfig
+            .getMitigation_config()
+            .getGlobal_traffic_shaper()
+            .get("default")
+            .getGlobal_pps();
+        assertSame(5L, globalPps);
+    }
+
+    @Test
+    public void testMergeBpsEmptyTargetConfig() {
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+        validator.mergeGlobalPpsBps(targetConfig, null, 5L);
+
+        // Wrong value or NullPointerException both mean that the value was not
+        // stored correctly
+        Long globalBps = targetConfig
+            .getMitigation_config()
+            .getGlobal_traffic_shaper()
+            .get("default")
+            .getGlobal_bps();
+        assertSame(5L, globalBps);
+    }
+
+    @Test
+    public void testMergePpsBpsEmptyTargetConfig() {
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+        validator.mergeGlobalPpsBps(targetConfig, 10L, 5L);
+
+        // Wrong value or NullPointerException both mean that the value was not
+        // stored correctly
+        Long globalPps = targetConfig
+            .getMitigation_config()
+            .getGlobal_traffic_shaper()
+            .get("default")
+            .getGlobal_pps();
+        assertSame(10L, globalPps);
+
+        Long globalBps = targetConfig
+            .getMitigation_config()
+            .getGlobal_traffic_shaper()
+            .get("default")
+            .getGlobal_bps();
+        assertSame(5L, globalBps);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testMergeDuplicatePps() {
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+
+        // Add a pps value to the target config
+        validator.mergeGlobalPpsBps(targetConfig, 5L, null);
+
+        // Adding another value causes validation to fail
+        validator.mergeGlobalPpsBps(targetConfig, 6L, null);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testMergeDuplicateBps() {
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+
+        // Add a pps value to the target config
+        validator.mergeGlobalPpsBps(targetConfig, null, 5L);
+
+        // Adding another value causes validation to fail
+        validator.mergeGlobalPpsBps(targetConfig, null, 6L);
+    }
+
+    @Test
+    public void testMergeOneParameterOneJson() {
+        // Merge a PPS once then a BPS once.  This simulates what happens when
+        // a user specifies a PPS via the API parameter and BPS via JSON.  There
+        // is no real reason to ever do this, but it's not an error.
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+        validator.mergeGlobalPpsBps(targetConfig, null, 5L);
+        validator.mergeGlobalPpsBps(targetConfig, 6L, null);
+
+        // Other way around
+        targetConfig = new BlackWatchTargetConfig();
+        validator.mergeGlobalPpsBps(targetConfig, 5L, null);
+        validator.mergeGlobalPpsBps(targetConfig, null, 6L);
     }
 }
 

@@ -35,10 +35,10 @@ public interface BlackWatchMitigationInfoHandler {
     }
 
     public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceType,
-            Long globalPPS, Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata,
+            Integer minsToLive, MitigationActionMetadata metadata,
             BlackWatchTargetConfig targetConfig, String userARN, TSDMetrics tsdMetrics);
     
-    public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId, Long globalPPS,
-            Long globalBPS, Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
+    public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId,
+            Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
             String userARN, TSDMetrics tsdMetrics);
 }
