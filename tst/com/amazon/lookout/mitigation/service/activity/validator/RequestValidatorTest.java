@@ -1007,8 +1007,22 @@ public class RequestValidatorTest {
 
         //Allow null for the JSON.
         request.setMitigationSettingsJSON(null);
-        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
         
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("A default rate limit must"));
+        caughtExcepion = null;
+
+        // Specify a global rate limit.
+        request.setGlobalPPS(5L);
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+
         JSON="{\"ipv6_per_dest_depth\":56, \"mitigation_config\":{}}";
         request.setMitigationSettingsJSON(JSON);
         validator.validateApplyBlackWatchMitigationRequest(request, userARN);
@@ -1172,9 +1186,8 @@ public class RequestValidatorTest {
         // Empty object is fine.
         String json = "{}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.mergeGlobalPpsBps(targetConfig, 5L, null);  // A default rate limit is required
         validator.validateTargetConfig(targetConfig);
-        assertNotNull(targetConfig);
-        assertNull(targetConfig.getMitigation_config());
     }
 
     @Test
@@ -1182,9 +1195,8 @@ public class RequestValidatorTest {
         // Empty string is fine
         String json = "";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.mergeGlobalPpsBps(targetConfig, 5L, null);  // A default rate limit is required
         validator.validateTargetConfig(targetConfig);
-        assertNotNull(targetConfig);
-        assertNull(targetConfig.getMitigation_config());
     }
 
     @Test
@@ -1192,17 +1204,15 @@ public class RequestValidatorTest {
         // Null value is fine
         String json = null;
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.mergeGlobalPpsBps(targetConfig, 5L, null);  // A default rate limit is required
         validator.validateTargetConfig(targetConfig);
-        assertNotNull(targetConfig);
-        assertNull(targetConfig.getMitigation_config());
     }
 
     @Test(expected=IllegalArgumentException.class)
     public void testValidateMitigationSettingsNotJSON() {
-        // Invalid JSON should fail.
+        // Invalid JSON should fail to parse
         String json = "not json";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -1210,7 +1220,6 @@ public class RequestValidatorTest {
         // Valid JSON not conforming to the model should fail.
         String json = "{ \"unknown_key\": true }";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
     }
     
     @Test
@@ -1218,6 +1227,7 @@ public class RequestValidatorTest {
         // Valid JSON matching the model should pass.
         String json = "{ \"mitigation_config\": { \"ip_validation\": { \"action\": \"DROP\" } } }";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.mergeGlobalPpsBps(targetConfig, 5L, null);  // A default rate limit is required
         validator.validateTargetConfig(targetConfig);
         assertNotNull(targetConfig);
         assertNotNull(targetConfig.getMitigation_config());
@@ -1225,9 +1235,9 @@ public class RequestValidatorTest {
         assertSame(MitigationAction.DROP, targetConfig.getMitigation_config().getIp_validation().getAction());
     }
     
-    @Test
+    @Test(expected=IllegalArgumentException.class)
     public void testValidateMitigationSettingsValidIpTrafficShaper() {
-        // JSON specifying valid ip_traffic_shaper is fine
+        // JSON specifying valid ip_traffic_shaper is not allowed - must use global_traffic_shaper
         String json = "{"
             + "  \"mitigation_config\": {"
             + "    \"ip_traffic_shaper\": {"
@@ -1242,11 +1252,6 @@ public class RequestValidatorTest {
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
         validator.validateTargetConfig(targetConfig);
-        assertNotNull(targetConfig);
-        assertNotNull(targetConfig.getMitigation_config());
-        assertNotNull(targetConfig.getMitigation_config().getIp_traffic_shaper());
-        assertSame(MitigationAction.DROP, targetConfig.getMitigation_config().getIp_traffic_shaper().getAction());
-        assertNotNull(targetConfig.getMitigation_config().getIp_traffic_shaper().getConfig());
     }
     
     @Test
@@ -1460,6 +1465,182 @@ public class RequestValidatorTest {
         targetConfig = new BlackWatchTargetConfig();
         validator.mergeGlobalPpsBps(targetConfig, 5L, null);
         validator.mergeGlobalPpsBps(targetConfig, null, 6L);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testDefaultRateLimitNotSpecified() {
+        // A well-formed request, but it does not specify a default rate limit anywhere.
+        // Expect validation to fail.
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("IPAddressList");
+        request.setMitigationSettingsJSON("{}");
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
+    @Test
+    public void testDefaultRateLimitSpecifiedInAPIField() {
+        // The default rate limit is specified by the GlobalPPS API parameter
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("IPAddressList");
+        request.setGlobalPPS(1000L);
+        request.setMitigationSettingsJSON("{}");
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
+    @Test
+    public void testDefaultRateLimitSpecifiedInJSON() {
+        // The default rate limit is specified by the JSON global_traffic_shaper key
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("IPAddressList");
+        String json = "{\"mitigation_config\": {\"global_traffic_shaper\": {\"default\": {\"global_pps\": 1000}}}}";
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testDefaultRateLimitSpecifiedInAPIFieldAndJSON() {
+        // The default rate limit is specified by both the GlobalPPS API parameter
+        // and the JSON global_traffic_shaper field
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("IPAddressList");
+        request.setGlobalPPS(1000L);
+        String json = "{\"mitigation_config\": {\"global_traffic_shaper\": {\"default\": {\"global_pps\": 1000}}}}";
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testNamedRateLimitSpecifiedInJSON() {
+        // A named shaper rate limit is specified by the JSON global_traffic_shaper key,
+        // but the default rate isn't specified anywhere
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("IPAddressList");
+        String json = "{\"mitigation_config\": {\"global_traffic_shaper\": {\"name1\": {\"global_pps\": 1000}}}}";
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
+    @Test
+    public void testZeroRateLimitSpecifiedInJSON() {
+        // We tolerate a rate limit of zero when only the default shaper is present.
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("IPAddressList");
+
+        String json = ""
+            + "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 0"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testNamedZeroRateLimitSpecifiedInJSON() {
+        // A zero rate limit for any other shaper should be rejected
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("IPAddressList");
+
+        String json = ""
+            + "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"not_default\": {"
+            + "        \"global_pps\": 0"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testNamedDefaultZeroRateLimitSpecifiedInJSON() {
+        // A zero rate limit for the default shaper is rejected when more than one
+        // shaper exist.
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("IPAddressList");
+
+        String json = ""
+            + "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 0"
+            + "      },"
+            + "      \"not_default\": {"
+            + "        \"global_pps\": 1000"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
     }
 }
 

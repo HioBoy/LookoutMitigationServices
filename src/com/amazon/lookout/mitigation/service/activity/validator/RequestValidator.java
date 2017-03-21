@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.regex.Pattern;
 
@@ -104,7 +105,11 @@ public class RequestValidator {
     //Thirty days max
     private static final int MAX_MINUTES_TO_LIVE_DAYS = 30;
     private static final int MAX_MINUTES_TO_LIVE = MAX_MINUTES_TO_LIVE_DAYS*24*60;
-    
+
+    // Some nominal minimum PPS limit > 0.  It will be enforced on ALL shapers when
+    // more than just the default shaper is used.
+    private static final long MIN_PPS = 10L;
+
     //50 locations at 320Gbps per
     private static final long MAX_BPS = (long) (320L * 1e9 * 50);
     //84Bytes is the min frame size including preamble and interframe gap.
@@ -1205,7 +1210,6 @@ public class RequestValidator {
         return targetConfig;
     }
 
-
     void validateTargetConfig(BlackWatchTargetConfig targetConfig) {
         // Don't allow specifying both ip_traffic_shaper and global_traffic_shaper
         if (targetConfig.getMitigation_config() != null
@@ -1221,7 +1225,7 @@ public class RequestValidator {
             Map<String, BlackWatchTargetConfig.GlobalTrafficShaper> globalShapers =
                 targetConfig.getMitigation_config().getGlobal_traffic_shaper();
 
-            Set<String> shaperNames = new HashSet<>();
+            Map<String, Long> shaperRates = new HashMap<>();
 
             // For each global shaper, validate that the "global_pps" key was provided.
             // Choose to do this here instead of in the model in order to eventually support
@@ -1229,23 +1233,49 @@ public class RequestValidator {
             for (Map.Entry<String, BlackWatchTargetConfig.GlobalTrafficShaper> entry : globalShapers.entrySet()) {
                 String shaperName = entry.getKey();
 
-                // Error on duplicate shaper names
-                if (shaperNames.contains(shaperName)) {
-                    String msg = "Duplicate shaper name in global_traffic_shaper: \"" + shaperName + "\"";
-                    throw new IllegalArgumentException(msg);
-                }
-                shaperNames.add(shaperName);
-
                 BlackWatchTargetConfig.GlobalTrafficShaper globalShaper = entry.getValue();
+                Long ppsRate = globalShaper.getGlobal_pps();
 
-                if (globalShaper.getGlobal_pps() == null) {
+                if (ppsRate == null) {
                     String msg = "Configured global_traffic_shaper \"" + shaperName
                         + "\" must specify \"global_pps\".";
                     throw new IllegalArgumentException(msg);
                 }
 
-                validatePacketsPerSecond(globalShaper.getGlobal_pps(), shaperName);
+                validatePacketsPerSecond(ppsRate, shaperName);
+
+                // Error on duplicate shaper names
+                if (shaperRates.containsKey(shaperName)) {
+                    String msg = "Duplicate shaper name in global_traffic_shaper: \"" + shaperName + "\"";
+                    throw new IllegalArgumentException(msg);
+                }
+                shaperRates.put(shaperName, ppsRate);
             }
+
+            // Require a default rate to be defined somewhere
+            if (!shaperRates.containsKey(DEFAULT_SHAPER_NAME)) {
+                String msg = "A default rate limit must be specified";
+                throw new IllegalArgumentException(msg);
+            }
+
+            // If there is more than one shaper (i.e. the default plus others),
+            // don't accept a rate limit of zero for any.
+            // In this case the user has specified config via JSON, and should
+            // do it properly (with a DENY rule instead)
+            if (shaperRates.size() > 1) {
+                for (Map.Entry<String, Long> entry : shaperRates.entrySet()) {
+                    if (entry.getValue().longValue() < MIN_PPS) {
+                        String msg = "Rate limit for traffic shaper \"" + entry.getKey() + "\" "
+                            + "must be greater than the minimum: " + MIN_PPS + " pps";
+                        throw new IllegalArgumentException(msg);
+                    }
+                }
+            }
+        } else {
+            // A default rate limit is required to be specified somewhere.  Since
+            // we don't have any global_traffic_shaper after merging, it wasn't.
+            String msg = "A default rate limit must be specified";
+            throw new IllegalArgumentException(msg);
         }
     }
 }
