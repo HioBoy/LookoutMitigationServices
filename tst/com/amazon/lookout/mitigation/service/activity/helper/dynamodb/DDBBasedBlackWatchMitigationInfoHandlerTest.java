@@ -272,13 +272,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
             .build();
         mitigationState1.setState(MitigationState.State.To_Delete.name());
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
-        Throwable caughtException = null;
-        try {
-            blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId(), requestMetadata);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
+        blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId(), requestMetadata);
         mitigationState1.setState(MitigationState.State.Active.name());
     }
 

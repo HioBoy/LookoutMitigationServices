@@ -64,6 +64,9 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     private static final String QUERY_BLACKWATCH_MITIGATION_FAILURE = "QUERY_BLACKWATCH_MITIGATION_FAILED";
 
     private static final int MAX_BW_IPADDRESSES = 256;
+
+    private static final int MAX_UPDATE_RETRIES = 3;
+    private static final int UPDATE_RETRY_SLEEP_MILLIS = 100;
     
     private LocationMitigationStateSettings convertMitSSToLocMSS(MitigationStateSetting mitigationSettings) {
         return LocationMitigationStateSettings.builder()
@@ -430,37 +433,43 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         }
     }
 
-    public void deactivateMitigation(String mitigationId, MitigationActionMetadata actionMetadata) {
-        // Get current state
-        String To_Delete_State = MitigationState.State.To_Delete.name();
-        MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
-        if (state == null) {
-            throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
-        }
-        state.setState(To_Delete_State);
-        BlackWatchMitigationActionMetadata actionMetadataBlackWatch =
+    public void deactivateMitigation(final String mitigationId, final MitigationActionMetadata actionMetadata) {
+        final String To_Delete_State = MitigationState.State.To_Delete.name();
+
+        final BlackWatchMitigationActionMetadata actionMetadataBlackWatch =
                 BlackWatchHelper.coralMetadataToBWMetadata(actionMetadata);
-        state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
-        DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
-        ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(
-                new AttributeValue(To_Delete_State));
-        expectedValue.setComparisonOperator(ComparisonOperator.NE);
-        Map<String, ExpectedAttributeValue> expectedAttributes =
-                ImmutableMap.of(MitigationState.STATE_KEY, expectedValue);
-        condition.setExpected(expectedAttributes);
-        try {
-            mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
-        } catch (ConditionalCheckFailedException conEx) {
-            MitigationState mitigation = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
-            if (mitigation == null) {
+
+        // Allow a few retries to avoid clashing with the workers
+        for (int attempt = 0; attempt < MAX_UPDATE_RETRIES; attempt++) {
+            MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+
+            if (state == null) {
                 throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
+            } else if (state.getState().equals(To_Delete_State)) {
+                return;  // Already in the desired state
             }
-            if (To_Delete_State.equals(mitigation.getState())) {
-                throw new IllegalArgumentException("Mitigation " + mitigationId + " is already in deactivated state.");
+
+            state.setState(To_Delete_State);
+            state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
+
+            try {
+                mitigationStateDynamoDBHelper.updateMitigationState(state);
+                return;
+            } catch (ConditionalCheckFailedException e) {
+                try {
+                    Thread.sleep((long) ((attempt + 1)*UPDATE_RETRY_SLEEP_MILLIS*Math.random()));
+                } catch (InterruptedException intEx) {
+                    LOG.info("Interrupted while sleeping to retry");
+                    Thread.currentThread().interrupt();
+                }
             }
-            //Unknown reason, throw the exception.
-            throw conEx;
         }
+
+        // If we used all attempts and still failed to update the state, something
+        // is probably wrong.
+        final String msg = String.format("Failed to deactivate mitigationId=%s after %d retries.",
+                mitigationId, MAX_UPDATE_RETRIES);
+        throw new RuntimeException(msg);
     }
 
     public void changeOwnerARN(String mitigationId, String newOwnerARN, String expectedOwnerARN,
@@ -484,3 +493,4 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
     }
 }
+
