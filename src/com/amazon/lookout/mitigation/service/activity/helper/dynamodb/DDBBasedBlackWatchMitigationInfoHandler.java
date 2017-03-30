@@ -433,6 +433,12 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         }
     }
 
+    private void failDeactivateMitigation(final String mitigationId, final int attempts) {
+        final String msg = String.format("Failed to deactivate mitigationId=%s after %d retries.",
+                mitigationId, attempts);
+        throw new RuntimeException(msg);
+    }
+
     public void deactivateMitigation(final String mitigationId, final MitigationActionMetadata actionMetadata) {
         final String To_Delete_State = MitigationState.State.To_Delete.name();
 
@@ -459,17 +465,17 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 try {
                     Thread.sleep((long) ((attempt + 1)*UPDATE_RETRY_SLEEP_MILLIS*Math.random()));
                 } catch (InterruptedException intEx) {
+                    // If we were interrupted then stop trying and fail immediately.
                     LOG.info("Interrupted while sleeping to retry");
                     Thread.currentThread().interrupt();
+                    failDeactivateMitigation(mitigationId, attempt);
                 }
             }
         }
 
         // If we used all attempts and still failed to update the state, something
         // is probably wrong.
-        final String msg = String.format("Failed to deactivate mitigationId=%s after %d retries.",
-                mitigationId, MAX_UPDATE_RETRIES);
-        throw new RuntimeException(msg);
+        failDeactivateMitigation(mitigationId, MAX_UPDATE_RETRIES);
     }
 
     public void changeOwnerARN(String mitigationId, String newOwnerARN, String expectedOwnerARN,
