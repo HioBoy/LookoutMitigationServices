@@ -368,14 +368,16 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
                         //then the instance completed while still blocked (request got reaped), so there may still be previous RUNNING requests for that location and we need keep searching backwards.
                         //otherwise, the instance completed and was not blocked, so there shouldn't be any running requests for that location and we can safely stop searching for this location now. 
                         remainingLocations.forEach((location, description) -> {
-                            MitigationInstanceSchedulingStatus mitigationInstanceSchedulingStatus = mitigationInstanceHandler.getMitigationInstanceSchedulingStatus(
-                                    description.getMitigationRequestDescription().getJobId(),
-                                    description.getMitigationRequestDescription().getDeviceName(), location);
-                            if (mitigationInstanceSchedulingStatus != null
-                                    && mitigationInstanceSchedulingStatus.isFound()
-                                    && !mitigationInstanceSchedulingStatus.isBlocked()
-                                    && mitigationInstanceSchedulingStatus.isCompleted()) {
-                                locationsToRemove.add(location);
+                            if (description != null) {
+                                MitigationInstanceSchedulingStatus mitigationInstanceSchedulingStatus = mitigationInstanceHandler.getMitigationInstanceSchedulingStatus(
+                                        description.getMitigationRequestDescription().getJobId(),
+                                        description.getMitigationRequestDescription().getDeviceName(), location);
+                                if (mitigationInstanceSchedulingStatus != null
+                                        && mitigationInstanceSchedulingStatus.isFound()
+                                        && !mitigationInstanceSchedulingStatus.isBlocked()
+                                        && mitigationInstanceSchedulingStatus.isCompleted()) {
+                                    locationsToRemove.add(location);
+                                }
                             }
                         });
                         remainingLocations.keySet().removeAll(locationsToRemove);
