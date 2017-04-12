@@ -73,13 +73,28 @@ public class UpdateBlackWatchMitigationActivity extends Activity {
                             ReflectionToStringBuilder.toString(request)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
 
-            // Step 1. Validate your request.
-            BlackWatchTargetConfig targetConfig = requestValidator.validateUpdateBlackWatchMitigationRequest(request, userARN);
-            
             String mitigationId = request.getMitigationId();
             Integer minsToLive = request.getMinutesToLive();
             MitigationActionMetadata metadata = request.getMitigationActionMetadata();
             
+            // Get the current MitigationSettingsJSON from the mitigation state table.
+            // If the mitigation doesn't exist we will validate the request anyway and
+            // fail when we try to update.
+            String currentJson;
+            try {
+                currentJson = blackwatchMitigationInfoHandler
+                    .getMitigationState(mitigationId)
+                    .getMitigationSettingsJSON();
+            } catch (NullPointerException e) {
+                currentJson = null;
+            }
+            BlackWatchTargetConfig currentTargetConfig = RequestValidator.parseMitigationSettingsJSON(
+                    currentJson);
+
+            // Merge PPS & BPS, then validate
+            BlackWatchTargetConfig targetConfig = requestValidator.validateUpdateBlackWatchMitigationRequest(
+                    request, currentTargetConfig, userARN);
+
             UpdateBlackWatchMitigationResponse response = blackwatchMitigationInfoHandler.updateBlackWatchMitigation(
                     mitigationId, minsToLive, metadata, targetConfig, userARN, tsdMetrics);
             

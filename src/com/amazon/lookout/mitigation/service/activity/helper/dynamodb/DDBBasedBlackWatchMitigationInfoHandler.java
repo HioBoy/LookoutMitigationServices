@@ -222,7 +222,12 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             return listOfBlackWatchMitigations;
         }
     }
-    
+
+    @Override
+    public MitigationState getMitigationState(final String mitigationId) {
+        return mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+    }
+
     @Override
     public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId,
             Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,

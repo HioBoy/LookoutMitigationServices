@@ -1063,7 +1063,9 @@ public class RequestValidator {
     }
 
     public BlackWatchTargetConfig validateUpdateBlackWatchMitigationRequest(
-            @NonNull UpdateBlackWatchMitigationRequest request, @NonNull String userARN) {
+            @NonNull UpdateBlackWatchMitigationRequest request,
+            @NonNull BlackWatchTargetConfig existingTargetConfig,
+            @NonNull String userARN) {
         validateUserName(request.getMitigationActionMetadata().getUser());
         validateToolName(request.getMitigationActionMetadata().getToolName());
         if (request.getMitigationActionMetadata().getRelatedTickets() != null) {
@@ -1072,17 +1074,17 @@ public class RequestValidator {
         validateMitigationId(request.getMitigationId());
         validateMinutesToLive(request.getMinutesToLive());
 
-        BlackWatchTargetConfig targetConfig;
+        BlackWatchTargetConfig targetConfig = existingTargetConfig;
+
+        // If the request provided new JSON, use it instead of the existing target config
         if (request.getMitigationSettingsJSON() != null) {
-            // caller provided new target config; wants to replace existing
             targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
-            mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
-            validateTargetConfig(targetConfig);
-        } else {
-            // caller did not provide target config; wants to keep existing
-            targetConfig = null;
         }
+
+        mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
+        validateTargetConfig(targetConfig);
         validateUserARN(userARN);
+
         return targetConfig;
     }  
 

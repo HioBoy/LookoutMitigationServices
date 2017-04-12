@@ -22,6 +22,7 @@ import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig.MitigationAction;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
@@ -1091,6 +1092,69 @@ public class RequestValidatorTest {
         assertTrue(caughtExcepion instanceof IllegalArgumentException);
         assertTrue(caughtExcepion.getMessage().startsWith("Duplicate related tickets"));
         caughtExcepion = null;
+    }
+
+    private Long getDefaultRateLimit(final BlackWatchTargetConfig targetConfig) {
+        return targetConfig
+            .getMitigation_config()
+            .getGlobal_traffic_shaper()
+            .get("default")
+            .getGlobal_pps();
+    }
+
+    @Test
+    public void testValidateUpdateBlackWatchMitigationWithPPS() {
+        UpdateBlackWatchMitigationRequest request = new UpdateBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+
+        final String validMitigationId = "US-WEST-1_2016-02-05T00:43:04.6767Z_55";
+        request.setMitigationId(validMitigationId);
+
+        final String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+
+        final Long theRateLimit = 42L;
+        request.setGlobalPPS(theRateLimit);
+
+        final BlackWatchTargetConfig newTargetConfig = validator.validateUpdateBlackWatchMitigationRequest(
+                request, new BlackWatchTargetConfig(), userARN);
+        assertSame(theRateLimit, getDefaultRateLimit(newTargetConfig));
+    }
+
+    @Test
+    public void testValidateUpdateBlackWatchMitigationWithJson() {
+        UpdateBlackWatchMitigationRequest request = new UpdateBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+
+        final String validMitigationId = "US-WEST-1_2016-02-05T00:43:04.6767Z_55";
+        request.setMitigationId(validMitigationId);
+
+        final String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+
+        final Long theRateLimit = 43L;
+
+        String json = String.format(""
+            + "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": %d"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}", theRateLimit);
+        request.setMitigationSettingsJSON(json);
+
+        final BlackWatchTargetConfig newTargetConfig = validator.validateUpdateBlackWatchMitigationRequest(
+                request, new BlackWatchTargetConfig(), userARN);
+        assertSame(theRateLimit, getDefaultRateLimit(newTargetConfig));
     }
 
     @Test

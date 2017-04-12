@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Random;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
@@ -33,6 +34,8 @@ public interface BlackWatchMitigationInfoHandler {
         int random = randomGenerator.nextInt(MAX_RAND_BOUND);
         return String.format(Locale.US, "%s_%s_%04d", realm.toLowerCase(), formatter.format(Instant.now()), random);
     }
+
+    public MitigationState getMitigationState(final String mitigationId);
 
     public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceType,
             Integer minsToLive, MitigationActionMetadata metadata,

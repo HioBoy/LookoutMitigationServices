@@ -499,7 +499,64 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         blackWatchMitigationInfoHandler.updateBlackWatchMitigation(
                 "NotThere", 30, testMetadata, parseJSON(testValidJSON), "ARN-1122", tsdMetrics);
     }
-    
+
+    private Long getDefaultPps(MitigationState mitigation) {
+        BlackWatchTargetConfig targetConfig = parseJSON(mitigation.getMitigationSettingsJSON());
+
+        return targetConfig
+            .getMitigation_config()
+            .getGlobal_traffic_shaper()
+            .get("default")
+            .getGlobal_pps();
+    }
+
+    @Test
+    public void testUpdateRateLimit() {
+        final String configTemplate = ""
+                + "{"
+                + "  \"mitigation_config\": {"
+                + "    \"ip_validation\": {"
+                + "      \"action\": \"DROP\""
+                + "    },"
+                + "    \"global_traffic_shaper\": {"
+                + "      \"default\": {"
+                + "        \"global_pps\": %d"
+                + "      }"
+                + "    }"
+                + "  }"
+                + "}";
+
+        final Long oldRateLimit = 1112L;
+        final Long newRateLimit = 9992L;
+
+        final String oldConfig = String.format(configTemplate, oldRateLimit);
+        final String newConfig = String.format(configTemplate, newRateLimit);
+
+        final String testARN = "ARN-1222";
+
+        // Apply
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata,
+                parseJSON(oldConfig), testARN, tsdMetrics);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        // Test that the rate limit was set initially
+        final String mitId = applyResponse.getMitigationId();
+        final MitigationState beforeState = mitigationStateDynamoDBHelper.getMitigationState(mitId);
+        assertEquals(oldRateLimit, getDefaultPps(beforeState));
+
+        // Update
+        UpdateBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.updateBlackWatchMitigation(
+                mitId, 30, testMetadata, parseJSON(newConfig), testARN, tsdMetrics);
+        assertNotNull(response);
+
+        // Test that the rate limit was updated
+        final MitigationState afterState = mitigationStateDynamoDBHelper.getMitigationState(mitId);
+        assertEquals(newRateLimit, getDefaultPps(afterState));
+    }
+
     @Test
     public void testUpdateBlackWatchMitigationFailedBadState() {
         ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(

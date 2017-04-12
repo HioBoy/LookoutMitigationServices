@@ -18,6 +18,7 @@ import com.amazon.coral.service.Identity;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
+import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 
 public class UpdateBlackWatchMitigationActivityTest extends ActivityTestHelper {
     private UpdateBlackWatchMitigationRequest request;
@@ -39,7 +40,11 @@ public class UpdateBlackWatchMitigationActivityTest extends ActivityTestHelper {
                 .withDescription("Test Descr")
                 .withRelatedTickets(Arrays.asList("1234", "5655"))
                 .build());
-        when(requestValidator.validateUpdateBlackWatchMitigationRequest(request, userArn)).thenReturn(new BlackWatchTargetConfig());
+
+        when(requestValidator.validateUpdateBlackWatchMitigationRequest(
+                    isA(UpdateBlackWatchMitigationRequest.class),
+                    isA(BlackWatchTargetConfig.class),
+                    anyString())).thenReturn(new BlackWatchTargetConfig());
     }
 
     @Test
