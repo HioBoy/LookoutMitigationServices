@@ -73,6 +73,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 .withBPS(mitigationSettings.getBPS())
                 .withPPS(mitigationSettings.getPPS())
                 .withMitigationSettingsJSONChecksum(mitigationSettings.getMitigationSettingsJSONChecksum())
+                .withJobStatus(mitigationSettings.getConfigDeploymentJobStatus())
                 .build();
     }
     
