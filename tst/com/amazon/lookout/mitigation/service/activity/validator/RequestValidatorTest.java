@@ -1505,6 +1505,30 @@ public class RequestValidatorTest {
         validator.mergeGlobalPpsBps(targetConfig, 6L, null);
     }
 
+    // Test that the "merge ignoring duplicate rates" works and that the new
+    // rate overrides the old one
+    @Test
+    public void testMergeDuplicatePpsIgnoreDuplicate() {
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+
+        Long oldRate = 5L;
+        Long newRate = 6L;
+
+        // Add a pps value to the target config
+        validator.mergeGlobalPpsBps(targetConfig, oldRate, null, false);
+
+        // Adding another value does not raise an exception
+        validator.mergeGlobalPpsBps(targetConfig, newRate, null, false);
+
+        // Validate that the new value overrides the old one
+        Long globalPps = targetConfig
+            .getMitigation_config()
+            .getGlobal_traffic_shaper()
+            .get("default")
+            .getGlobal_pps();
+        assertSame(newRate, globalPps);
+    }
+
     @Test(expected=IllegalArgumentException.class)
     public void testMergeDuplicateBps() {
         BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
@@ -1514,6 +1538,30 @@ public class RequestValidatorTest {
 
         // Adding another value causes validation to fail
         validator.mergeGlobalPpsBps(targetConfig, null, 6L);
+    }
+
+    // Test that the "merge ignoring duplicate rates" works and that the new
+    // rate overrides the old one
+    @Test
+    public void testMergeDuplicateBpsIgnoreDuplicate() {
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+
+        Long oldRate = 5L;
+        Long newRate = 6L;
+
+        // Add a pps value to the target config
+        validator.mergeGlobalPpsBps(targetConfig, null, oldRate, false);
+
+        // Adding another value does not raise an exception
+        validator.mergeGlobalPpsBps(targetConfig, null, newRate, false);
+
+        // Validate that the new value overrides the old one
+        Long globalBps = targetConfig
+            .getMitigation_config()
+            .getGlobal_traffic_shaper()
+            .get("default")
+            .getGlobal_bps();
+        assertSame(newRate, globalBps);
     }
 
     @Test

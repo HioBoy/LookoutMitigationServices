@@ -1075,13 +1075,16 @@ public class RequestValidator {
         validateMinutesToLive(request.getMinutesToLive());
 
         BlackWatchTargetConfig targetConfig = existingTargetConfig;
+        boolean errorOnDuplicateRates = false;
 
         // If the request provided new JSON, use it instead of the existing target config
         if (request.getMitigationSettingsJSON() != null) {
             targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
+            errorOnDuplicateRates = true;
         }
 
-        mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
+        mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS(),
+                errorOnDuplicateRates);
         validateTargetConfig(targetConfig);
         validateUserARN(userARN);
 
@@ -1112,9 +1115,14 @@ public class RequestValidator {
         return targetConfig;
     }
     
-    // Merge the GlobalPPS/GlobalBPS values provided via the API fields into the target config.
     void mergeGlobalPpsBps(@NonNull BlackWatchTargetConfig targetConfig,
             Long globalPps, Long globalBps) {
+        mergeGlobalPpsBps(targetConfig, globalPps, globalBps, true);
+    }
+
+    // Merge the GlobalPPS/GlobalBPS values provided via the API fields into the target config.
+    void mergeGlobalPpsBps(@NonNull BlackWatchTargetConfig targetConfig,
+            Long globalPps, Long globalBps, boolean errorOnDuplicateRates) {
         if (globalPps == null && globalBps == null) {
             return;  // There is nothing to do here
         }
@@ -1143,7 +1151,7 @@ public class RequestValidator {
         assert defaultShaper != null;
 
         if (globalPps != null) {
-            if (defaultShaper.getGlobal_pps() != null) {
+            if (errorOnDuplicateRates && defaultShaper.getGlobal_pps() != null) {
                 String msg = "Cannot specify global PPS rate limit using both API field and JSON";
                 throw new IllegalArgumentException(msg);
             }
@@ -1152,7 +1160,7 @@ public class RequestValidator {
         }
 
         if (globalBps != null) {
-            if (defaultShaper.getGlobal_bps() != null) {
+            if (errorOnDuplicateRates && defaultShaper.getGlobal_bps() != null) {
                 String msg = "Cannot specify global BPS rate limit using both API field and JSON";
                 throw new IllegalArgumentException(msg);
             }
