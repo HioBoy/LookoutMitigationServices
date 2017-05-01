@@ -29,7 +29,7 @@ import org.springframework.util.CollectionUtils;
 import com.amazon.blackwatch.location.state.model.LocationType;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.lookout.ddb.model.TransitProvider;
-import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
+import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.BlackholeDeviceInfo;

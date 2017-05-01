@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xmlns:coral="http://schema.amazon.com/spring-extensions/coral/v1.0"
+    xsi:schemaLocation="
+    http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
+    http://schema.amazon.com/spring-extensions/coral/v1.0 http://schema.amazon.com/spring-extensions/coral/v1.0/coral.xsd">
+
+
+    <!-- ELB internal clients for all the regions -->
+{% for stack in locations.values() %}
+    {% for realm_domain, location in stack.items() %}
+    <coral:client id="elbInternalAPIClient.{{ realm_domain }}"
+      service-client-class="com.amazon.elb.internal.LBServiceInternalClient"
+      qualifier="{{ location['elb_internal_api_client_qualifier'] }}"/>
+    {% endfor %}
+{% endfor %}
+
+    <!-- ELB region ipv6 prefix -->
+{% for stack in locations.values() %}
+    {% for realm_domain, location in stack.items() %}
+    <bean id="elbIPv6Prefix.{{ realm_domain }}" class="java.lang.String">
+        <constructor-arg value="{{ location['elb_classic_ipv6_prefix'] }}"/>
+    </bean>
+    {% endfor %}
+{% endfor %}
+
+</beans>

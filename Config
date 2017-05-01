@@ -4,7 +4,7 @@ package.LookoutMitigationService = {
     interfaces = (1.0);
     scope = webservices;
     
-    build-system = happytrails;
+    build-system = templates-then-happytrails;
     build-environment = {
         chroot = basic;
         network-access = blocked;
@@ -22,6 +22,8 @@ package.LookoutMitigationService = {
             CoralGenerator = 1.1;
             DynamoDBLocal = 1.11.x;
             DynamoDBLocalBuildLogic = 1.2;
+            LookoutMitigationServiceLocationConfiguration = 1.0;
+            TemplateConfigGenerator = 1.0;
         };
     };
     
@@ -89,6 +91,7 @@ package.LookoutMitigationService = {
             CoralMetricsQuerylogReporter = 1.0;            
             # Coral protocol handlers
             CoralRpcSupport = 1.0;                          
+            CoralClientSpringSupport = 4.2;
             LookoutMitigationServiceExplorer = 1.0;
             
             # ProcessManager.

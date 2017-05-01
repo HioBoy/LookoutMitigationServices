@@ -251,8 +251,9 @@
         <constructor-arg value="4"/>
     </bean>
     
-    <bean id="IPAddressTypeValidator" class="com.amazon.lookout.mitigation.blackwatch.model.IPAddressResourceTypeValidator" />
-    <bean id="IPAddressListTypeValidator" class="com.amazon.lookout.mitigation.blackwatch.model.IPAddressListResourceTypeValidator" />
+    <bean id="IPAddressTypeValidator" class="com.amazon.blackwatch.mitigation.resource.validator.IPAddressResourceTypeValidator" />
+    <bean id="IPAddressListTypeValidator" class="com.amazon.blackwatch.mitigation.resource.validator.IPAddressListResourceTypeValidator" />
+    <bean id="ELBTypeValidator" class="com.amazon.blackwatch.mitigation.resource.validator.ELBResourceTypeValidator" />
     
     <!-- Convert public region name to the short name via RIPHelper.getRegion("${realm}"); -->
     <bean id="ripRegion" class="com.aws.rip.RIPHelper" factory-method="getRegion">
@@ -272,10 +273,35 @@
     </bean>
     
     <util:map id="resourceTypeValidatorMap" 
-        key-type="com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType" 
+        key-type="com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType" 
         value-type="com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator">
         <entry key="IPAddress" value-ref="IPAddressTypeValidator"/>
         <entry key="IPAddressList" value-ref="IPAddressListTypeValidator"/>
+        <entry key="ELB" value-ref="ELBTypeValidator"/>
+    </util:map>
+
+    <bean id="elbResourceHelper" class="com.amazon.blackwatch.mitigation.resource.helper.ELBResourceHelper">
+        <constructor-arg name="awsCredentialsProvider" ref="elbInternalServiceCredentialsProvider.${realm}.${domain}"/>
+        <constructor-arg name="elbInternalClient" ref="elbInternalAPIClient.${realm}.${domain}"/>
+        <constructor-arg name="regionIPv6Prefix" ref="elbIPv6Prefix.${realm}.${domain}"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
+    
+    
+    <bean id="elbResourceTypeHelper" class="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchELBResourceTypeHelper">
+        <constructor-arg name="elbResourceHelper" ref="elbResourceHelper" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
+    <bean id="ipaddressResourceTypeHelper" class="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchIPAddressResourceTypeHelper" />    
+    <bean id="ipaddressListResourceTypeHelper" class="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchIPAddressListResourceTypeHelper" />
+        
+        
+    <util:map id="resourceTypeHelpers" 
+        key-type="com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType" 
+        value-type="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceTypeHelper">
+        <entry key="IPAddress" value-ref="ipaddressResourceTypeHelper"/>
+        <entry key="IPAddressList" value-ref="ipaddressListResourceTypeHelper"/>
+        <entry key="ELB" value-ref="elbResourceTypeHelper"/>
     </util:map>
 
     <bean id="ddbBasedBlackWatchMitigationInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedBlackWatchMitigationInfoHandler">
@@ -284,6 +310,7 @@
         <constructor-arg name="resourceAllocationHelper" ref="resourceAllocationHelper"/>
         <constructor-arg name="dogfishHelper" ref="dogfishHelper"/>
         <constructor-arg name="resourceTypeValidatorMap" ref="resourceTypeValidatorMap"/>
+        <constructor-arg name="resourceTypeHelpers" ref="resourceTypeHelpers"/>
         <constructor-arg name="parallelScanSegments" ref="mitigationStateParallelScanSegments"/>
         <constructor-arg name="realm" value="${realm}" />
     </bean>

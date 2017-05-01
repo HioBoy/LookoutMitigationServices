@@ -12,6 +12,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.mockito.Mockito;
 
+import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchELBResourceTypeHelper;
+import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchIPAddressListResourceTypeHelper;
+import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchIPAddressResourceTypeHelper;
+import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceTypeHelper;
+import com.amazon.blackwatch.mitigation.resource.helper.ELBResourceHelper;
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
 import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationHelper;
 import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDynamoDBHelper;
@@ -20,10 +25,10 @@ import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.coral.service.Activity;
 import com.amazon.coral.service.Context;
 import com.amazon.coral.service.Identity;
-import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
-import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator;
-import com.amazon.lookout.mitigation.blackwatch.model.IPAddressListResourceTypeValidator;
-import com.amazon.lookout.mitigation.blackwatch.model.IPAddressResourceTypeValidator;
+import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType;
+import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchResourceTypeValidator;
+import com.amazon.blackwatch.mitigation.resource.validator.IPAddressListResourceTypeValidator;
+import com.amazon.blackwatch.mitigation.resource.validator.IPAddressResourceTypeValidator;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
@@ -42,6 +47,7 @@ import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.google.common.collect.ImmutableMap;
 
 public class DDBBasedActivityTestHelper {
     protected static final String serviceName = ServiceName.AWS;
@@ -92,7 +98,9 @@ public class DDBBasedActivityTestHelper {
     protected BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
     protected BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
     protected RequestValidator requestValidator;
-    
+    private static ELBResourceHelper elbResourceHelper;
+    private static Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeHelper> resourceTypeHelpers;
+
     protected DogFishValidationHelper dogfishHelper;
     protected BlackWatchMitigationInfoHandler blackwatchMitigationInfoHandler;
     
@@ -117,6 +125,16 @@ public class DDBBasedActivityTestHelper {
         resourceAllocationHelper = new ResourceAllocationHelper(
                 mitigationStateDDBHelper, resourceAllocationStateDDBHelper, metricsFactory);
         
+        elbResourceHelper = Mockito.mock(ELBResourceHelper.class);
+        
+        BlackWatchELBResourceTypeHelper elbResourceTypeHelper =  new BlackWatchELBResourceTypeHelper(elbResourceHelper, metricsFactory);
+        BlackWatchIPAddressResourceTypeHelper ipadressResourceTypeHelper =  new BlackWatchIPAddressResourceTypeHelper();
+        BlackWatchIPAddressListResourceTypeHelper ipaddressListResourceTypeHelper =  new BlackWatchIPAddressListResourceTypeHelper();
+        resourceTypeHelpers = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress, ipadressResourceTypeHelper,
+                BlackWatchMitigationResourceType.IPAddressList, ipaddressListResourceTypeHelper,
+                BlackWatchMitigationResourceType.ELB, elbResourceTypeHelper
+                );
         resourceTypeValidatorMap = new EnumMap<>(BlackWatchMitigationResourceType.class);
         resourceTypeValidatorMap.put(BlackWatchMitigationResourceType.IPAddress, new IPAddressResourceTypeValidator());
         resourceTypeValidatorMap.put(BlackWatchMitigationResourceType.IPAddressList, new IPAddressListResourceTypeValidator());
@@ -137,10 +155,11 @@ public class DDBBasedActivityTestHelper {
         requestValidator = new RequestValidator(serviceLocationsHelper, edgeLocationsHelper,
                 blackWatchBorderLocationValidator, blackWatchEdgeLocationValidator);
         
+
         dogfishHelper = mock(DogFishValidationHelper.class);
         blackwatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDDBHelper,
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishHelper, resourceTypeValidatorMap,
-                parallelScanSegments, realm);
+                resourceTypeHelpers, parallelScanSegments, realm);
     }
     
     protected <T extends Activity> T setupActivity(T activity) {

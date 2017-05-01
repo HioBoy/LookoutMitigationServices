@@ -2,6 +2,7 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.blackwatch.helper.BlackWatchHelper;
+import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceTypeHelper;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
@@ -10,8 +11,8 @@ import com.amazon.blackwatch.mitigation.state.model.ResourceAllocationState;
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
 import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationHelper;
 import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDynamoDBHelper;
-import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
-import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator;
+import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType;
+import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchResourceTypeValidator;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
@@ -56,6 +57,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     private final ResourceAllocationHelper resourceAllocationHelper;
     private final DogFishValidationHelper dogfishHelper;
     private final Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeValidator> resourceTypeValidatorMap;
+    private final Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeHelper> resourceTypeHelpers;
     private final int parallelScanSegments;
     private final String realm;
 
@@ -257,6 +259,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 throw new IllegalArgumentException(msg);
             }
             
+            
             String mitigationSettingsJSON;
             if (targetConfig != null) {
                 // need to validate updated mitigation settings
@@ -289,6 +292,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             mitigationState.setMinutesToLive(minsToLive);
             BlackWatchMitigationActionMetadata bwMetadata = BlackWatchHelper.coralMetadataToBWMetadata(metadata);
             mitigationState.setLatestMitigationActionMetadata(bwMetadata);
+
             saveMitigationState(mitigationState, false, subMetrics);
             
             UpdateBlackWatchMitigationResponse response = new UpdateBlackWatchMitigationResponse();
@@ -341,6 +345,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
                     canonicalResourceId, ReflectionToStringBuilder.toString(resourceMap)));
             validateResources(resourceMap);
+                        
             ResourceAllocationState resourceState = resourceAllocationStateDynamoDBHelper
                     .getResourceAllocationState(canonicalResourceId);
             
@@ -372,7 +377,8 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                         .state(MitigationState.State.Active.name())
                         .ownerARN(userARN)
                         .build();
-            }            
+            }
+            
             mitigationState.setChangeTime(System.currentTimeMillis());
             mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
             mitigationState.setMitigationSettingsJSONChecksum(
@@ -380,8 +386,16 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             mitigationState.setMinutesToLive(minsToLive);
             BlackWatchMitigationActionMetadata bwMetadata = BlackWatchHelper.coralMetadataToBWMetadata(metadata);
             mitigationState.setLatestMitigationActionMetadata(bwMetadata);
-            saveMitigationState(mitigationState, newMitigationCreated, subMetrics);
             
+            BlackWatchResourceTypeHelper resourceTypeHelper = resourceTypeHelpers.get(resourceType);
+            if (resourceTypeHelper == null) {
+                String message = String.format("Resource type specific helper could not be found! Type:%s",  resourceType);
+                LOG.error(message);
+                throw new IllegalArgumentException(message);                        
+            }
+            resourceTypeHelper.updateResourceBriefInformation(mitigationState);
+            LOG.debug("mitigation state after update: " + mitigationState.toString());
+            saveMitigationState(mitigationState, newMitigationCreated, subMetrics);
             if (newMitigationCreated) {
                 boolean allocationProposalSuccess = resourceAllocationHelper.proposeNewMitigationResourceAllocation(
                         mitigationId, canonicalResourceId, resourceTypeString);
@@ -391,6 +405,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     mitigationStateDynamoDBHelper.deleteMitigationState(mitigationState);
                     throw new IllegalArgumentException(msg);
                 }
+                
             }
     
             ApplyBlackWatchMitigationResponse response = new ApplyBlackWatchMitigationResponse();

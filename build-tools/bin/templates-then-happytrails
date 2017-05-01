@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+env
+PARAMS_FILE="build/mitsvc_location_params.json"
+save_lookout_mitsvc_config_to "$PARAMS_FILE"
+process-jinja-templates --output_dir=build --input_glob="spring-configuration/mitigation-service/*.template" --output_ext=".xml" --input_params="$PARAMS_FILE"
+exec happytrails "$@"

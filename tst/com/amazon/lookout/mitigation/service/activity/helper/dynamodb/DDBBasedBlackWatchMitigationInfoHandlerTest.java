@@ -3,8 +3,14 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.blackwatch.helper.BlackWatchHelper;
+import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchELBResourceTypeHelper;
+import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchIPAddressListResourceTypeHelper;
+import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchIPAddressResourceTypeHelper;
+import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceTypeHelper;
+import com.amazon.blackwatch.mitigation.resource.helper.ELBResourceHelper;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
+import com.amazon.blackwatch.mitigation.state.model.ELBBriefInformation;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
 import com.amazon.blackwatch.mitigation.state.model.ResourceAllocationState;
@@ -13,10 +19,12 @@ import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationHelper;
 import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDynamoDBHelper;
 import com.amazon.coral.metrics.Metrics;
 import com.amazon.coral.metrics.MetricsFactory;
-import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchMitigationResourceType;
-import com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator;
-import com.amazon.lookout.mitigation.blackwatch.model.IPAddressListResourceTypeValidator;
-import com.amazon.lookout.mitigation.blackwatch.model.IPAddressResourceTypeValidator;
+import com.amazon.elb.internal.AccessPointNotFoundException;
+import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType;
+import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchResourceTypeValidator;
+import com.amazon.blackwatch.mitigation.resource.validator.ELBResourceTypeValidator;
+import com.amazon.blackwatch.mitigation.resource.validator.IPAddressListResourceTypeValidator;
+import com.amazon.blackwatch.mitigation.resource.validator.IPAddressResourceTypeValidator;
 import com.amazon.lookout.mitigation.service.*;
 import com.amazon.lookout.mitigation.service.workflow.helper.DogFishMetadataProvider;
 import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
@@ -54,6 +62,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static ResourceAllocationStateDynamoDBHelper resourceAllocationStateDDBHelper;
     private static ResourceAllocationHelper resourceAllocationHelper;
     private static MitigationStateDynamoDBHelper mitigationStateDynamoDBHelper;
+    private static ELBResourceHelper elbResourceHelper;
 
     private static MetricsFactory metricsFactory = Mockito.mock(MetricsFactory.class);
     private static Metrics metrics = Mockito.mock(Metrics.class);
@@ -78,12 +87,13 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final String testIPv6AddressResourceIdCanonical = "::1/128";
     private static final String testIPAddressResourceType = BlackWatchMitigationResourceType.IPAddress.name();
     private static final String testIPAddressListResourceType = BlackWatchMitigationResourceType.IPAddressList.name();
+    private static final String testELBResourceType = BlackWatchMitigationResourceType.ELB.name();
     private static final String testLocation = "BR-SFO5-1";
     private static final String testValidJSON = "{ }";
     //Generated with: echo -n $ESCAPED_STRING | sha256sum
     private static final String validJSONChecksum = "257c1be96ae69f4b01c2c69bdb6d78605f59175819fb007d0bf245bf48444c4a";
     private static final String ipListTemplate = "{\"destinations\":[%s]}";
-    
+    private static Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeHelper> resourceTypeHelpers;
     
     private static BlackWatchMitigationActionMetadata testBWMetadata;
     private static MitigationActionMetadata testMetadata;
@@ -115,7 +125,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         dogfishValidator = new DogFishValidationHelper(testMasterRegion, testMasterRegion, dogfishProvider, endpointMap);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, 4, "us-east-1");
+                resourceTypeValidatorMap, resourceTypeHelpers,  4, "us-east-1");
     }
     
     @BeforeClass
@@ -126,6 +136,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         Mockito.doReturn(metrics).when(metricsFactory).newMetrics();
         Mockito.doReturn(metrics).when(metrics).newMetrics();
         tsdMetrics = new TSDMetrics(metricsFactory);
+        elbResourceHelper = Mockito.mock(ELBResourceHelper.class);
         dogfishProvider = Mockito.mock(DogFishMetadataProvider.class);
         dogfishValidator = new DogFishValidationHelper(testMasterRegion, testMasterRegion, dogfishProvider, endpointMap);
 
@@ -133,6 +144,18 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 new IPAddressResourceTypeValidator());
         resourceTypeValidatorMap.put(BlackWatchMitigationResourceType.IPAddressList, 
                 new IPAddressListResourceTypeValidator());
+        resourceTypeValidatorMap.put(BlackWatchMitigationResourceType.ELB, 
+                new ELBResourceTypeValidator());
+
+        
+        BlackWatchELBResourceTypeHelper elbResourceTypeHelper =  new BlackWatchELBResourceTypeHelper(elbResourceHelper, metricsFactory);
+        BlackWatchIPAddressResourceTypeHelper ipadressResourceTypeHelper =  new BlackWatchIPAddressResourceTypeHelper();
+        BlackWatchIPAddressListResourceTypeHelper ipaddressListResourceTypeHelper =  new BlackWatchIPAddressListResourceTypeHelper();
+        resourceTypeHelpers = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress, ipadressResourceTypeHelper,
+                BlackWatchMitigationResourceType.IPAddressList, ipaddressListResourceTypeHelper,
+                BlackWatchMitigationResourceType.ELB, elbResourceTypeHelper
+                );
         
         dynamoDBClient = DynamoDBTestUtil.get().getClient();
         mitigationStateDynamoDBHelper = new MitigationStateDynamoDBHelper(dynamoDBClient, realm, domain, 
@@ -142,7 +165,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         resourceAllocationHelper = new ResourceAllocationHelper(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, metricsFactory);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
-                resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, resourceTypeValidatorMap, 4, "us-east-1");
+                resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, resourceTypeValidatorMap, resourceTypeHelpers, 4, "us-east-1");
 
         BlackWatchMitigationResourceType testblackWatchIPAddressResourceType = BlackWatchMitigationResourceType.valueOf(testIPAddressResourceType);
 
@@ -901,7 +924,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 dogfishProvider, endpointMap);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, 4, "us-east-1");
+                resourceTypeValidatorMap, resourceTypeHelpers, 4, "us-east-1");
         DogfishIPPrefix prefix = new DogfishIPPrefix();
         prefix.setRegion("NotActive");
         thrown.expect(IllegalArgumentException.class);
@@ -919,7 +942,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 dogfishProvider, endpointMap);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, 4, "us-east-1");
+                resourceTypeValidatorMap, resourceTypeHelpers, 4, "us-east-1");
         DogfishIPPrefix prefix = new DogfishIPPrefix();
         prefix.setRegion(testMasterRegion);
         thrown.expect(IllegalArgumentException.class);
@@ -928,6 +951,60 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 "1.2.3.4", testIPAddressResourceType, 10, testMetadata, parseJSON(testValidJSON),
                 "ARN-1222", tsdMetrics);
+    }
+    
+    @Test
+    public void testApplyBlackWatchMitigationNewValidELBResource() {
+        ELBBriefInformation elbBriefInformation = ELBBriefInformation.builder()
+                .accessPointName("ELBAccessPointName")
+                .accessPointVersion(2)
+                .configVersion(1L)
+                .dnsName("elb.dns.name")
+                .state("Active")
+                .build();
+        Mockito.doReturn(elbBriefInformation).when(elbResourceHelper).getLoadBalancerBriefInformation(Mockito.anyLong());
+        //Valid
+        ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                "1234", testELBResourceType, 10, testMetadata,
+                parseJSON(testValidJSON), "ARN-1222", tsdMetrics);
+        MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(response.getMitigationId());
+        assertNotNull(response);
+        assertTrue(response.isNewMitigationCreated());
+        assertEquals(state.getElbResourceConfiguration().getBriefInformation(), elbBriefInformation );
+    }
+    
+    @Test
+    public void testApplyBlackWatchMitigationExistValidELBResource() {
+        String accessPointId = "1234";
+        ELBBriefInformation elbBriefInformation = ELBBriefInformation.builder()
+                .accessPointName("ELBAccessPointName")
+                .accessPointVersion(2)
+                .configVersion(1L)
+                .dnsName("elb.dns.name")
+                .state("Active")
+                .build();
+        Mockito.doReturn(elbBriefInformation).when(elbResourceHelper).getLoadBalancerBriefInformation(Mockito.anyLong());
+        ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                accessPointId, testELBResourceType, 10, testMetadata,
+                parseJSON(testValidJSON), "ARN-1222", tsdMetrics);
+        MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(response.getMitigationId());
+        assertNotNull(response);
+        assertTrue(response.isNewMitigationCreated());
+        assertEquals(state.getElbResourceConfiguration().getBriefInformation(), elbBriefInformation );
+        response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                accessPointId, testELBResourceType, 10, testMetadata,
+                parseJSON(testValidJSON), "ARN-1222", tsdMetrics);
+        assertNotNull(response);
+        assertFalse(response.isNewMitigationCreated());
+    }
+    
+    @Test(expected = IllegalArgumentException.class)
+    public void testApplyBlackWatchMitigationNonExistELBResource() {
+        Mockito.doThrow(AccessPointNotFoundException.class).when(elbResourceHelper).getLoadBalancerBriefInformation(Mockito.anyLong());
+        //ELB resource doesn't exist, should throw exception.
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                "1234", testELBResourceType, 10, testMetadata,
+                parseJSON(testValidJSON), "ARN-1222", tsdMetrics);
     }
     
 }
