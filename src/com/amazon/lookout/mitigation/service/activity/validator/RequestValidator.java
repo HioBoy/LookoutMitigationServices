@@ -1228,6 +1228,35 @@ public class RequestValidator {
             throw new IllegalArgumentException("Can't configure both ip_traffic_shaper and global_traffic_shaper.");
         }
 
+        // Validate network_acl
+        if (targetConfig.getMitigation_config() != null
+                && targetConfig.getMitigation_config().getNetwork_acl() != null
+                && targetConfig.getMitigation_config().getNetwork_acl().getConfig() != null) {
+
+            // non-fragment network ACL rules
+            if (targetConfig.getMitigation_config().getNetwork_acl().getConfig().getRules() == null) {
+                throw new IllegalArgumentException("rules key is missing in network_acl");
+            }
+            for (BlackWatchTargetConfig.NetworkAclMitigationConfig.ACLEntry rule :
+                        targetConfig.getMitigation_config().getNetwork_acl().getConfig().getRules()) {
+                if ((rule.getSrc() == null) == (rule.getSrc_country() == null)) {
+                    throw new IllegalArgumentException("ACL rule should have either source ip (src)" +
+                            " or source country (src_country) field, but not both");
+                }
+            }
+
+            // fragment network ACL rules
+            if (targetConfig.getMitigation_config().getNetwork_acl().getConfig().getFragments_rules() != null) {
+                for (BlackWatchTargetConfig.NetworkAclMitigationConfig.ACLEntryForFragmented rule :
+                            targetConfig.getMitigation_config().getNetwork_acl().getConfig().getFragments_rules()) {
+                    if ((rule.getSrc() == null) == (rule.getSrc_country() == null)) {
+                        throw new IllegalArgumentException("Fragment ACL rule should have either source ip (src)" +
+                                " or source country (src_country) field, but not both");
+                    }
+                }
+            }
+        }
+
         // Validate global_traffic_shaper
         if (targetConfig.getMitigation_config() != null
                 && targetConfig.getMitigation_config().getGlobal_traffic_shaper() != null) {

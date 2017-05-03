@@ -1754,5 +1754,330 @@ public class RequestValidatorTest {
         String userARN = "arn:aws:iam::005436146250:user/blackwatch";
         validator.validateApplyBlackWatchMitigationRequest(request, userARN);
     }
-}
 
+    @Test
+    public void testValidateMitigationSettingsNetworkACL() {
+        // test valid network ACL rule
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"fragments_rules\": [],"
+            + "        \"rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+        assertNotNull(targetConfig);
+        assertNotNull(targetConfig.getMitigation_config());
+        assertNotNull(targetConfig.getMitigation_config().getNetwork_acl());
+        assertNotNull(targetConfig.getMitigation_config().getNetwork_acl().getConfig());
+        assertNotNull(targetConfig.getMitigation_config().getNetwork_acl().getConfig().getRules());
+        assertNotNull(targetConfig.getMitigation_config().getNetwork_acl().getConfig().getFragments_rules());
+    }
+
+    @Test
+    public void testValidateMitigationSettingsFragmentNetworkACL() {
+        // test valid fragment network ACL rule
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [],"
+            + "        \"fragments_rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+        assertNotNull(targetConfig);
+        assertNotNull(targetConfig.getMitigation_config());
+        assertNotNull(targetConfig.getMitigation_config().getNetwork_acl());
+        assertNotNull(targetConfig.getMitigation_config().getNetwork_acl().getConfig());
+        assertNotNull(targetConfig.getMitigation_config().getNetwork_acl().getConfig().getRules());
+        assertNotNull(targetConfig.getMitigation_config().getNetwork_acl().getConfig().getFragments_rules());
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsInvalidNetworkACL_1() {
+        // both src and src_country field are specified in ACL rule
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsInvalidFragmentNetworkACL_1() {
+        // both src and src_country field are specified in fragment ACL rule
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [],"
+            + "        \"fragments_rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsInvalidNetworkACL_2() {
+        // src and src_country field is missing in ACL rule
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsInvalidFragmentNetworkACL_2() {
+        // src and src_country field is missing in fragments ACL rule
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [],"
+            + "        \"fragments_rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsInvalidNetworkACL_3() {
+        // rules field is missing in network_acl
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"fragments_rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test
+    public void testValidateMitigationSettingsValidNetworkACL() {
+        // fragments_rules field is missing in network_acl
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+        assertNotNull(targetConfig);
+        assertNotNull(targetConfig.getMitigation_config());
+        assertNotNull(targetConfig.getMitigation_config().getNetwork_acl());
+        assertNotNull(targetConfig.getMitigation_config().getNetwork_acl().getConfig());
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsInvalidNetworkACL_4() {
+        // both fragment_rules and rules fields are missing in network_acl
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\""
+            + "      \"config\": {"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
+}
