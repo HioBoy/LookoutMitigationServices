@@ -1220,6 +1220,23 @@ public class RequestValidator {
         return targetConfig;
     }
 
+    // Set of allowed per-shaper actions
+    private static Set<BlackWatchTargetConfig.MitigationAction> allowedShaperActions = ImmutableSet.of(
+            BlackWatchTargetConfig.MitigationAction.PASS,
+            BlackWatchTargetConfig.MitigationAction.COUNT,
+            BlackWatchTargetConfig.MitigationAction.DROP);
+
+    private void validateShaperAction(final String shaperName,
+            final BlackWatchTargetConfig.MitigationAction shaperAction) {
+        if (shaperAction != null) {
+            if (!allowedShaperActions.contains(shaperAction)) {
+                String msg = String.format("Shaper \"%s\" has invalid action \"%s\"",
+                        shaperName, shaperAction);
+                throw new IllegalArgumentException(msg);
+            }
+        }
+    }
+
     void validateTargetConfig(BlackWatchTargetConfig targetConfig) {
         // Don't allow specifying both ip_traffic_shaper and global_traffic_shaper
         if (targetConfig.getMitigation_config() != null
@@ -1271,8 +1288,12 @@ public class RequestValidator {
             // BPS.  With BPS support, instead validate that PPS XOR BPS is specified.
             for (Map.Entry<String, BlackWatchTargetConfig.GlobalTrafficShaper> entry : globalShapers.entrySet()) {
                 String shaperName = entry.getKey();
-
                 BlackWatchTargetConfig.GlobalTrafficShaper globalShaper = entry.getValue();
+
+                // Validate that the action is either null or one of the allowed actions
+                BlackWatchTargetConfig.MitigationAction shaperAction = globalShaper.getAction();
+                validateShaperAction(shaperName, shaperAction);
+
                 Long ppsRate = globalShaper.getGlobal_pps();
 
                 if (ppsRate == null) {

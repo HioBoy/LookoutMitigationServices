@@ -1434,6 +1434,73 @@ public class RequestValidatorTest {
     }
 
     @Test
+    public void testValidShaperActions() {
+        // global_traffic_shaper with allowed actions
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"action\": \"DROP\","
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"action\": \"COUNT\","
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      },"
+            + "      \"named_two\": {"
+            + "        \"action\": \"PASS\","
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+        assertNotNull(targetConfig);
+        assertNotNull(targetConfig.getMitigation_config());
+        assertNotNull(targetConfig.getMitigation_config().getGlobal_traffic_shaper());
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testInvalidShaperAction() {
+        // RESPOND action is not valid for shapers
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"action\": \"RESPOND\","
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testUnknownShaperAction() {
+        // Shaper with an unrecognized action
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"action\": \"NANANANANA-BATMAN\","
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test
     public void testMergeNothing() {
         // Test that the target config is not changed by merging null values
         BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
@@ -2081,3 +2148,4 @@ public class RequestValidatorTest {
         validator.validateTargetConfig(targetConfig);
     }
 }
+
