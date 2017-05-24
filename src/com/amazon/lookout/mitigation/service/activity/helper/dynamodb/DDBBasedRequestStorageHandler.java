@@ -141,7 +141,7 @@ public class DDBBasedRequestStorageHandler {
             
             int numAttempts = 0;
             // Try for a fixed number of times to store the item into DDB. If we succeed, we simply return, else we exit the loop and throw back an exception.
-            while(true) {
+            while (true) {
                 numAttempts++;
                 subMetrics.addOne(NUM_DDB_PUT_ITEM_ATTEMPTS_KEY);
                 try {
