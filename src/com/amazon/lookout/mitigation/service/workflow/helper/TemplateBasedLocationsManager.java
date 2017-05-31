@@ -35,8 +35,6 @@ public class TemplateBasedLocationsManager {
         mapBuilder.put(MitigationTemplate.Router_CountMode_Route53Customer, route53SingleCustomerHelper);
         mapBuilder.put(MitigationTemplate.IPTables_Mitigation_EdgeCustomer,
                 new IPTablesEdgeCustomerTemplateLocationsHelper());
-        mapBuilder.put(MitigationTemplate.Blackhole_Mitigation_ArborCustomer,
-                new ArborBlackholeLocationsHelper());
         mapBuilder.put(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, blackWatchTemplateLocationHelper);
         mapBuilder.put(MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer, blackWatchTemplateLocationHelper);
         

@@ -187,11 +187,6 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                 MitigationTemplate.Router_RateLimit_Route53Customer, "Name", ServiceName.Route53);
         long workflowId1 = storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request1, locations, workflowId1);
-        
-        CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest(
-                MitigationTemplate.Blackhole_Mitigation_ArborCustomer, "Mitigation2", ServiceName.Blackhole);
-        long workflowId2 = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics).getWorkflowId();
-        validateRequestInDDB(request2, locations, workflowId2);
     }
     
     @Test

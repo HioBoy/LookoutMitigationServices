@@ -28,26 +28,20 @@ import org.springframework.util.CollectionUtils;
 
 import com.amazon.blackwatch.location.state.model.LocationType;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
-import com.amazon.lookout.ddb.model.TransitProvider;
 import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
-import com.amazon.lookout.mitigation.service.BlackholeDeviceInfo;
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;
-import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
-import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
-import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetLocationHostStatusRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationDefinitionRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
-import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
@@ -56,10 +50,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
-import com.amazon.lookout.mitigation.service.TransitProviderInfo;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
-import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
-import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
 import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
@@ -118,7 +109,6 @@ public class RequestValidator {
     private static final long MAX_PPS = MAX_BPS/MIN_FRAME_BITS;
     
     private static final int DEFAULT_MAX_LENGTH_DESCRIPTION = 500;
-    private static final int MAX_LENGTH_BLACKHOLE_DEVICE = 50;
     
     private static final int MAX_NUMBER_OF_LOCATIONS = 200;
     private static final int MAX_NUMBER_OF_TICKETS = 10;
@@ -478,60 +468,6 @@ public class RequestValidator {
         validateListOfLocations(Lists.newArrayList(request.getLocation()), request.getServiceName());
     }
     
-    public void validateCreateBlackholeDeviceRequest(@NonNull CreateBlackholeDeviceRequest request) {
-        if (request.getBlackholeDeviceInfo() == null) {
-            String msg = "No blackhole device info found.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        validateBlackholeDeviceInfo(request.getBlackholeDeviceInfo());
-        if (request.getBlackholeDeviceInfo().getVersion() != null) {
-            String msg = "Version for a new device must be null";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-    }
-    
-    public void validateGetBlackholeDeviceRequest(@NonNull GetBlackholeDeviceRequest request) {
-        validateBlackholeDeviceName(request.getName());
-    }
-    
-    public void validateUpdateBlackholeDeviceRequest(@NonNull UpdateBlackholeDeviceRequest request) {
-        if (request.getBlackholeDeviceInfo() == null) {
-            String msg = "No blackhole device info found.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        validateBlackholeDeviceInfo(request.getBlackholeDeviceInfo());
-        if (request.getBlackholeDeviceInfo().getVersion() == null) {
-            String msg = "Version for update must be not be null";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-    }
-    
-    public void validateCreateTransitProviderRequest(@NonNull CreateTransitProviderRequest request) {
-        if (request.getTransitProviderInfo() == null) {
-            String msg = "No transit provider info found.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        validateTransitProviderInfo(request.getTransitProviderInfo());
-    }
-    
-    public void validateGetTransitProviderRequest(@NonNull GetTransitProviderRequest request) {
-        validateTransitProviderId(request.getId());
-    }
-    
-    public void validateUpdateTransitProviderRequest(@NonNull UpdateTransitProviderRequest request) {
-        if (request.getTransitProviderInfo() == null) {
-            String msg = "No transit provider info found.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        validateTransitProviderInfo(request.getTransitProviderInfo());
-    }
-    
     /**
      * Private helper method to validate the common parameters for some of the modification requests.
      * @param mitigationName Name of the mitigation passed in the request by the client.
@@ -813,87 +749,7 @@ public class RequestValidator {
             return false;
         }
     }
-    
-    private static final String BLACKHOLE_DEVICE_DESCRIPTION_ERROR_MSG = 
-            String.format(
-                    "Blackhole device description must be an non empty string of ascii-printable " + 
-                    "characters shorter than %d characters", DEFAULT_MAX_LENGTH_DESCRIPTION);
-    
-    private static void validateBlackholeDeviceInfo(BlackholeDeviceInfo blackholeDeviceInfo) {
-        validateBlackholeDeviceName(blackholeDeviceInfo.getDeviceName());
-        
-        String deviceDescription = blackholeDeviceInfo.getDeviceDescription();
-        if (isInvalidFreeFormText(deviceDescription, false, DEFAULT_MAX_LENGTH_DESCRIPTION)) {
-            LOG.info(BLACKHOLE_DEVICE_DESCRIPTION_ERROR_MSG);
-            throw new IllegalArgumentException(BLACKHOLE_DEVICE_DESCRIPTION_ERROR_MSG);
-        }
-        
-        if (blackholeDeviceInfo.getVersion() != null && blackholeDeviceInfo.getVersion() < 0) {
-            String msg = "The device version that was provided, " + blackholeDeviceInfo.getVersion() + ", is not valid.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-    }
-    
-    private static final String TRANSIT_PROVIDER_ID_ERROR_MSG = 
-            String.format("Transit provider id must be an url safe base64 encoded string.");
-    
-    public static void validateTransitProviderId(String transitProviderId) {
-        if (StringUtils.isEmpty(transitProviderId)) {
-            LOG.info(TRANSIT_PROVIDER_ID_ERROR_MSG);
-            throw new IllegalArgumentException(TRANSIT_PROVIDER_ID_ERROR_MSG);
-        }
-        
-        byte[] transitProviderBytes;
-        try {
-            transitProviderBytes = Base64.getUrlDecoder().decode(transitProviderId);
-        } catch (IllegalArgumentException e) {
-            LOG.info(TRANSIT_PROVIDER_ID_ERROR_MSG);
-            throw new IllegalArgumentException(TRANSIT_PROVIDER_ID_ERROR_MSG, e);
-        }
-        
-        if (transitProviderBytes.length != 16) {
-            LOG.info(TRANSIT_PROVIDER_ID_ERROR_MSG);
-            throw new IllegalArgumentException(TRANSIT_PROVIDER_ID_ERROR_MSG);
-        }
-    }
-    
-    private static void validateTransitProviderInfo(TransitProviderInfo transitProviderInfo) {
-        validateTransitProviderId(transitProviderInfo.getId());
-        
-        validateFreeFormText("The transit provider name", 
-                transitProviderInfo.getProviderName(), false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS);
-        
-        validateFreeFormText("The transit provider description", 
-                transitProviderInfo.getProviderDescription(), false, DEFAULT_MAX_LENGTH_DESCRIPTION);
-        
-        if (!TransitProvider.TRANSIT_PROVIDER_STATUSES.contains(transitProviderInfo.getBlackholeSupported())) {
-            String msg = "Unrecognized blackhole supported status. Allowed values for blackhole supported are "
-                    + TransitProvider.TRANSIT_PROVIDER_STATUSES;
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        validateCommunityString(transitProviderInfo.getCommunityString());
-        
-        if (transitProviderInfo.getBlackholeSupported().equals(TransitProvider.BLACKHOLE_SUPPORTED) &&
-            StringUtils.isEmpty(transitProviderInfo.getCommunityString())) 
-        {
-            String msg = "The community string may not be empty for an enabled transit provider";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        validateFreeFormText("The transit provider blackhole link", 
-                transitProviderInfo.getManualBlackholeLink(), true, DEFAULT_MAX_LENGTH_DESCRIPTION);
-        
-        if (transitProviderInfo.getVersion() != null && transitProviderInfo.getVersion() < 0) {
-            String msg = "The transit provider version that was provided, " + transitProviderInfo.getVersion() + ", is not valid.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-    }
-    
+   
     private static String COMMUNITY_STRING_ERROR_MSG = 
             "The community string must be a space seperated list of <asn>:<value> where asn and value are integers.";
     
@@ -942,29 +798,6 @@ public class RequestValidator {
                 LOG.info(COMMUNITY_STRING_ERROR_MSG);
                 throw new IllegalArgumentException(COMMUNITY_STRING_ERROR_MSG);
             }
-        }
-    }
-    
-    private static final Pattern BLACKHOLE_DEVICE_NAME_PATTERN = Pattern.compile("[A-Za-z0-9-.]*");
-            
-    private static final String BLACKHOLE_DEVICE_NAME_ERROR_MSG = 
-            String.format(
-                    "Blackhole device name must be an non empty string shorter than %d characters containing " +
-                    "only alpha numeric characters, '-' and '.'", MAX_LENGTH_BLACKHOLE_DEVICE);
-    
-    /**
-     * Check that stringToCheck is valid for a blackhole device name. If it isn't then an IllegalArgumentException
-     * will be thrown. 
-     * 
-     * @param deviceName the string to check
-     * @throws IllegalArgumentException if the stringToCheck is invalid
-     */
-    private static void validateBlackholeDeviceName(String deviceName) {
-        if (StringUtils.isBlank(deviceName) || deviceName.length() > MAX_LENGTH_BLACKHOLE_DEVICE ||
-            !BLACKHOLE_DEVICE_NAME_PATTERN.matcher(deviceName).matches())
-        {
-            LOG.info(BLACKHOLE_DEVICE_NAME_ERROR_MSG);
-            throw new IllegalArgumentException(BLACKHOLE_DEVICE_NAME_ERROR_MSG);
         }
     }
     
@@ -1023,9 +856,6 @@ public class RequestValidator {
         case POP_HOSTS_IP_TABLES:
             Validate.isTrue(ServiceName.Edge.equals(service), errorMessage);
             break;
-        case ARBOR:
-            Validate.isTrue(ServiceName.Blackhole.equals(service), errorMessage);
-            break;
         case BLACKWATCH_POP:
             Validate.isTrue(ServiceName.Edge.equals(service), errorMessage);
             break;
@@ -1047,9 +877,6 @@ public class RequestValidator {
             break;
         case POP_HOSTS_IP_TABLES:
             Validate.isTrue(ImmutableSet.of("EdgeWorldwide").containsAll(locations), errorMessage);
-            break;
-        case ARBOR:
-            Validate.isTrue(ImmutableSet.of("Arbor").containsAll(locations), errorMessage);
             break;
         case BLACKWATCH_POP:
             blackWatchEdgeLocationValidator.validateLocations(locations, errorMessage);

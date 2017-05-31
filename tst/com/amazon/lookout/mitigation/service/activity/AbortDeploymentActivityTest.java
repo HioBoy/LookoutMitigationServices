@@ -99,19 +99,6 @@ public class AbortDeploymentActivityTest extends ActivityTestHelper {
     }
     
     /**
-     * Test invalid request, non-bw mitigation template
-     */
-    @Test(expected = BadRequest400.class)
-    public void testNonBWMitigationTemplate() {
-        request = new AbortDeploymentRequest();
-        request.setServiceName(serviceName);
-        request.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
-        request.setDeviceName(deviceName);
-        request.setJobId(workflowId);    
-        abortDeploymentActivity.enact(request);
-    }
-    
-    /**
      * throw ConditionalCheckFailedException when update the abortflag in DDB
      */
     @Test(expected = InternalServerError500.class)

@@ -92,17 +92,6 @@ public class RequestValidatorTest {
     		abortRequest.setMitigationTemplate(template);
     		validator.validateAbortDeploymentRequest(abortRequest);
     	}
-    	
-    	//invalid non-bw template
-        Throwable caughtException = null;
-        abortRequest.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
-        try {
-            validator.validateAbortDeploymentRequest(abortRequest);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-            assertTrue(ex.getMessage().startsWith("None BlackWatch mitigation template found"));
-        }
-        assertNotNull(caughtException);
     }
     
     /**

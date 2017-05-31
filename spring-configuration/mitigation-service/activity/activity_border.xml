@@ -177,7 +177,6 @@
         <constructor-arg name="serviceSubnetsMatcher" ref="serviceSubnetsMatcher"/>
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
         <constructor-arg name="blackWatchS3Client" ref="blackWatchS3Client"/>
-        <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
         <constructor-arg name="blackWatchBorderLocationValidator" ref="blackWatchBorderLocationValidator"/>
         <constructor-arg name="blackWatchEdgeLocationValidator" ref="blackWatchEdgeLocationValidator"/>
     </bean>
@@ -411,12 +410,6 @@
                 <entry key="G-SFO5" value="sfo5-gm-tra-r1"/>
             </map>
         </constructor-arg>
-    </bean>
-    
-    <bean id="blackholeMitigationHelper" class="com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper">
-        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
-        <constructor-arg name="domain" value="${domain}"/>
-        <constructor-arg name="realm" value="${realm}"/>
     </bean>
     
     <bean id="mitigationRequestTable" class="com.amazon.lookout.ddb.model.MitigationRequestsModel" factory-method="getInstance"/>

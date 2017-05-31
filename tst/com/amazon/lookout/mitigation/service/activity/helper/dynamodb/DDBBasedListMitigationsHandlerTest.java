@@ -837,11 +837,6 @@ public class DDBBasedListMitigationsHandlerTest {
             itemCreator.addItem();
         }
 
-        itemCreator.setServiceName(ServiceName.Blackhole);
-        itemCreator.setMitigationVersion(11);
-        itemCreator.setWorkflowId(10011);
-        itemCreator.addItem();
-
         // validate all history can be retrieved, when startVersion is null
         List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
                 deviceScope, mitigationName, null, 1, tsdMetrics);

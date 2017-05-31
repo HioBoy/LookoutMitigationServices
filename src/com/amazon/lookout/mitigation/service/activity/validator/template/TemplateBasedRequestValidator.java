@@ -21,7 +21,6 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
-import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
 import com.amazonaws.services.s3.AmazonS3;
 
 /**
@@ -37,7 +36,6 @@ public class TemplateBasedRequestValidator {
     
     private final EdgeLocationsHelper edgeLocationsHelper;
     private final AmazonS3 blackWatchS3Client;
-    private final BlackholeMitigationHelper blackholeMitigationHelper;
     private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
     private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
     
@@ -49,17 +47,15 @@ public class TemplateBasedRequestValidator {
      *                              this matcher, in case they have to perform any subnet specific checks.
      */
     @ConstructorProperties({"serviceSubnetsMatcher", "edgeLocationsHelper", "blackWatchS3Client",
-        "blackholeMitigationHelper", "blackWatchBorderLocationValidator", "blackWatchEdgeLocationValidator"})
+        "blackWatchBorderLocationValidator", "blackWatchEdgeLocationValidator"})
     public TemplateBasedRequestValidator(@NonNull ServiceSubnetsMatcher serviceSubnetsMatcher,
             @NonNull EdgeLocationsHelper edgeLocationsHelper, @NonNull AmazonS3 blackWatchS3Client,
-            @NonNull BlackholeMitigationHelper blackholeMitigationHelper,
             @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator,
             @NonNull BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator) 
     {
         
         this.blackWatchS3Client = blackWatchS3Client;
         this.edgeLocationsHelper = edgeLocationsHelper;
-        this.blackholeMitigationHelper = blackholeMitigationHelper;
         this.blackWatchBorderLocationValidator = blackWatchBorderLocationValidator;
         this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
         
@@ -180,10 +176,6 @@ public class TemplateBasedRequestValidator {
     	return new EdgeBlackWatchMitigationTemplateValidator(blackWatchS3Client, edgeLocationsHelper, blackWatchEdgeLocationValidator);
     }
     
-    private ServiceTemplateValidator getBlackholeArborCustomerValidator() {
-        return new BlackholeArborCustomerValidator(blackholeMitigationHelper);
-    }
-
     private ServiceTemplateValidator getBlackWatchBorderValidator() {
         return new BlackWatchPerTargetBorderLocationTemplateValidator(blackWatchS3Client, blackWatchBorderLocationValidator);
     }
@@ -212,9 +204,6 @@ public class TemplateBasedRequestValidator {
                 break;
             case MitigationTemplate.BlackWatchPOP_EdgeCustomer:
                 serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchEdgeCustomerValidator());
-                break;
-            case MitigationTemplate.Blackhole_Mitigation_ArborCustomer:
-                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackholeArborCustomerValidator());
                 break;
             case MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer:
                 serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchBorderValidator());

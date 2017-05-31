@@ -3,7 +3,6 @@ package com.amazon.lookout.mitigation.service.activity;
 import java.util.Collections;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.mitigation.service.ArborBlackholeConstraint;
 import com.amazon.lookout.mitigation.service.DropAction;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
@@ -56,36 +55,6 @@ public class EditMitigationActivityTest {
         TestUtils.configureLogging();
     }
 
-    @Test
-    public void testBlackholeMitigationRequest() {
-        EditMitigationActivity activity = createActivityWithValidators();
-        EditMitigationRequest request = sampleEditBlackholeMitigationRequest("LKT-TestBlackholeMitigation");
-
-        MitigationModificationResponse response = activity.enact(request);
-
-        assertThat(response.getDeviceName(), is(DeviceName.ARBOR.name()));
-        assertThat(response.getMitigationName(), is("LKT-TestBlackholeMitigation"));
-        assertThat(response.getMitigationTemplate(), is(MitigationTemplate.Blackhole_Mitigation_ArborCustomer));
-        assertThat(response.getServiceName(), is(ServiceName.Blackhole));
-    }
-
-    @Test
-    public void defaultLocationForBlackholeMitigationRequest() {
-        RequestStorageManager requestStorageManagerMock = mock(RequestStorageManager.class);
-        EditMitigationActivity activity = createActivityWithValidators(requestStorageManagerMock);
-        EditMitigationRequest request = sampleEditBlackholeMitigationRequest("LKT-TestBlackholeMitigation");
-
-        MitigationModificationResponse response = activity.enact(request);
-
-        assertThat(response.getMitigationName(), is("LKT-TestBlackholeMitigation"));
-        verify(requestStorageManagerMock)
-                .storeRequestForWorkflow(
-                    eq(request),
-                    eq(Sets.newHashSet(StandardLocations.ARBOR)),
-                    eq(RequestType.EditRequest),
-                    any(TSDMetrics.class));
-    }
-
     private EditMitigationActivity createActivityWithValidators() {
         return createActivityWithValidators(mock(RequestStorageManager.class));
     }
@@ -100,38 +69,12 @@ public class EditMitigationActivityTest {
                     mock(BlackWatchBorderLocationValidator.class),
                     mock(BlackWatchEdgeLocationValidator.class)),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class), BlackholeTestUtils.mockMitigationHelper(),
+                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
                     mock(BlackWatchBorderLocationValidator.class),
                     mock(BlackWatchEdgeLocationValidator.class)),
                 requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
             new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class),
                     mock(BlackWatchTemplateLocationHelper.class)));
-    }
-
-    private EditMitigationRequest sampleEditBlackholeMitigationRequest(String mitigationName) {
-        EditMitigationRequest request = new EditMitigationRequest();
-        request.setMitigationName(mitigationName);
-        request.setServiceName(ServiceName.Blackhole);
-        request.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
-        request.setMitigationVersion(2);
-
-        MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
-        actionMetadata.setUser("username");
-        actionMetadata.setToolName("unit-tests");
-        actionMetadata.setDescription("description");
-        request.setMitigationActionMetadata(actionMetadata);
-
-        MitigationDefinition mitigationDefinition = new MitigationDefinition();
-        mitigationDefinition.setAction(new DropAction());
-
-        ArborBlackholeConstraint constraint = new ArborBlackholeConstraint();
-        constraint.setIp("1.2.3.4/32");
-        constraint.setEnabled(true);
-        constraint.setTransitProviderIds(Collections.singletonList(BlackholeTestUtils.VALID_SUPPORTED_TRANSIT_PROVIDER_ID_16509_1));
-        mitigationDefinition.setConstraint(constraint);
-
-        request.setMitigationDefinition(mitigationDefinition);
-        return request;
     }
 }

@@ -169,7 +169,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     @Test
     public void testDeleteNonExistentMitigationWithSameNameOnDifferentDevice() {
         DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(
-                MitigationTemplate.Blackhole_Mitigation_ArborCustomer,
+                MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer,
                 existingRequest1.getMitigationName(),
                 existingRequest1.getServiceName(),
                 2);

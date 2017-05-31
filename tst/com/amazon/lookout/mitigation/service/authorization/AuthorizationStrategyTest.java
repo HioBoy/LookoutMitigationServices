@@ -26,27 +26,19 @@ import com.amazon.coral.service.BasicAuthorizationInfo;
 import com.amazon.coral.service.Context;
 import com.amazon.coral.service.Identity;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
-import com.amazon.lookout.mitigation.service.CreateBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
-import com.amazon.lookout.mitigation.service.CreateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
-import com.amazon.lookout.mitigation.service.GetBlackholeDeviceRequest;
 import com.amazon.lookout.mitigation.service.GetLocationHostStatusRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
-import com.amazon.lookout.mitigation.service.GetTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
-import com.amazon.lookout.mitigation.service.ListBlackholeDevicesRequest;
-import com.amazon.lookout.mitigation.service.ListTransitProvidersRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
-import com.amazon.lookout.mitigation.service.UpdateBlackholeDeviceRequest;
-import com.amazon.lookout.mitigation.service.UpdateTransitProviderRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
@@ -377,56 +369,6 @@ public class AuthorizationStrategyTest {
         // test BW API Relateive ID
         String bwMitigationRelativeId = AuthorizationStrategy.getBlackWatchAPIRelativeId();
         assertEquals("BLACKWATCH_API/BLACKWATCH_MITIGATION", bwMitigationRelativeId);
-    }
-
-    @SuppressWarnings("unused")
-    private static Object[][] getBlackholeDeviceOperations() {
-        return new Object[][] {
-                new Object[] { "ListBlackholeDevices", true, new ListBlackholeDevicesRequest() },
-                new Object[] { "GetBlackholeDevice", true, new GetBlackholeDeviceRequest() },
-                new Object[] { "CreateBlackholeDevice", false, new CreateBlackholeDeviceRequest() },
-                new Object[] { "UpdateBlackholeDevice", false, new UpdateBlackholeDeviceRequest() },
-        };
-    }
-    
-    // validate the authorization info generated from getMitigationInfoRequest
-    @Test @Parameters(method="getBlackholeDeviceOperations")
-    public void testBlackholeDeviceOperations(String operation, boolean readOnly, Object request) throws Throwable {
-        setOperationNameForContext(operation);
-        List<AuthorizationInfo> authInfoList = authStrategy.getAuthorizationInfoList(context, request);
-        assertTrue(authInfoList.size() == 1);
-        
-        String expectedActivity = "lookout:" + (readOnly ? "read" : "write") + "-" + operation;
-        
-        BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
-        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo(
-                expectedActivity, EXPECTED_ARN_PREFIX + "metadata/blackhole-device");
-        assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
-    }
-    
-    
-    @SuppressWarnings("unused")
-    private static Object[][] getTransitProviderOperations() {
-        return new Object[][] {
-                new Object[] { "ListTransitProviders", true, new ListTransitProvidersRequest() },
-                new Object[] { "GetTransitProvider", true, new GetTransitProviderRequest() },
-                new Object[] { "CreateTransitProvider", false, new CreateTransitProviderRequest() },
-                new Object[] { "UpdateTransitProvider", false, new UpdateTransitProviderRequest() },
-        };
-    }
-    
-    @Test @Parameters(method="getTransitProviderOperations")
-    public void testTransitProviderOperations(String operation, boolean readOnly, Object request) throws Throwable {
-        setOperationNameForContext(operation);
-        List<AuthorizationInfo> authInfoList = authStrategy.getAuthorizationInfoList(context, request);
-        assertTrue(authInfoList.size() == 1);
-        
-        String expectedActivity = "lookout:" + (readOnly ? "read" : "write") + "-" + operation;
-        
-        BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
-        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo(
-                expectedActivity, EXPECTED_ARN_PREFIX + "metadata/transit-provider");
-        assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
     }
 
     @Test

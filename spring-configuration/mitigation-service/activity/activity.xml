@@ -15,48 +15,8 @@
 
     <!-- Activities that doesnt go in activity_border.xml goes here -->
     
-    <bean id="blackholeMetadataActivityBase" abstract="true">
-        <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
-    </bean>
-    
-    <bean class="com.amazon.lookout.mitigation.service.activity.CreateBlackholeDeviceActivity"
-        parent="blackholeMetadataActivityBase">
-    </bean>
-    
-    <bean class="com.amazon.lookout.mitigation.service.activity.UpdateBlackholeDeviceActivity"
-        parent="blackholeMetadataActivityBase">
-    </bean>
-    
-    <bean class="com.amazon.lookout.mitigation.service.activity.GetBlackholeDeviceActivity"
-        parent="blackholeMetadataActivityBase">
-    </bean>
-    
-    <bean class="com.amazon.lookout.mitigation.service.activity.ListBlackholeDevicesActivity">
-        <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
-    </bean>
-    
-    <bean class="com.amazon.lookout.mitigation.service.activity.CreateTransitProviderActivity"
-        parent="blackholeMetadataActivityBase">
-    </bean>
-    
-    <bean class="com.amazon.lookout.mitigation.service.activity.UpdateTransitProviderActivity"
-        parent="blackholeMetadataActivityBase">
-    </bean>
-    
-    <bean class="com.amazon.lookout.mitigation.service.activity.GetTransitProviderActivity"
-        parent="blackholeMetadataActivityBase">
-    </bean>
-    
-    <bean class="com.amazon.lookout.mitigation.service.activity.ListTransitProvidersActivity">
-        <constructor-arg name="blackholeMitigationHelper" ref="blackholeMitigationHelper"/>
-    </bean>
-
     <!-- All the beans required by the activities go here -->
  
-    <bean id="blackholeTable" factory-bean="blackholeMitigationHelper" factory-method="getBlackholeTableDefinition"/>
-    <bean id="transitProviderTable" factory-bean="blackholeMitigationHelper" factory-method="getTransitProviderTableDefinition"/>
-
     <bean id="tableCreatorHelper" class="com.amazon.lookout.ddb.model.TableCreatorHelper">
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
@@ -65,9 +25,8 @@
                 <ref bean="mitigationRequestTable"/>
                 <ref bean="mitigationInstanceTable"/>
                 <ref bean="activeMitigationTable"/>
-                <ref bean="blackholeTable"/>
-                <ref bean="transitProviderTable"/>
             </list>
         </constructor-arg>
     </bean>
 </beans>
+

@@ -171,20 +171,22 @@ public class DDBBasedEditRequestStorageHandlerTest {
         assertThat(exception.getMessage(), containsString(request.getMitigationName()));
     }
     
+
     @Test
     public void testEditNonExistentMitigationWithSameNameOnDifferentDevice() {
         EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(
-                MitigationTemplate.Blackhole_Mitigation_ArborCustomer,
+                MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer,
                 existingRequest1.getMitigationName(),
                 existingRequest1.getServiceName(),
                 2);
-        
+    
         MissingMitigationException400 exception = AssertUtils.assertThrows(MissingMitigationException400.class,
                 () -> storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics));
-        
+    
         assertThat(exception.getMessage(), containsString(request.getMitigationName()));
     }
-    
+
+
     @Test
     public void testDuplicateEdit() {
         EditMitigationRequest request1 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);

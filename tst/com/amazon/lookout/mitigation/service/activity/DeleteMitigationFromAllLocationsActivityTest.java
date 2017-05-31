@@ -40,7 +40,6 @@ import com.amazon.lookout.mitigation.service.workflow.helper.BlackWatchTemplateL
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
-import com.amazon.lookout.mitigation.workers.helper.BlackholeMitigationHelper;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.s3.AmazonS3;
@@ -66,26 +65,6 @@ public class DeleteMitigationFromAllLocationsActivityTest {
         assertThat(actualError.getMessage(), containsString(MitigationTemplate.IPTables_Mitigation_EdgeCustomer));
     }
 
-    @Test
-    public void enactStartsWorkflowForBlackholeMitigation() {
-        SWFWorkflowStarter workflowStarterMock = mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS);
-        DeleteMitigationFromAllLocationsActivity activity = createActivityWithValidators(workflowStarterMock);
-        DeleteMitigationFromAllLocationsRequest request = sampleDeleteBlackholeMitigationRequest();
-
-        activity.enact(request);
-
-        verify(workflowStarterMock).startMitigationModificationWorkflow(
-            anyLong(),
-            eq(request),
-            eq(newHashSet(StandardLocations.ARBOR)),
-            eq(RequestType.DeleteRequest),
-            eq(MITIGATION_VERSION),
-            eq(DeviceName.ARBOR.name()),
-            eq(DeviceScope.GLOBAL.name()),
-            any(WorkflowClientExternal.class),
-            any(TSDMetrics.class));
-    }
-
     private DeleteMitigationFromAllLocationsActivity createActivityWithValidators(SWFWorkflowStarter workflowStarter) {
         RequestStorageManager requestStorageManager = mock(RequestStorageManager.class);
         Mockito.doReturn(new RequestStorageResponse(1l, MITIGATION_VERSION)).when(requestStorageManager).storeRequestForWorkflow(
@@ -96,7 +75,7 @@ public class DeleteMitigationFromAllLocationsActivityTest {
                     mock(BlackWatchBorderLocationValidator.class),
                     mock(BlackWatchEdgeLocationValidator.class)),
             new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class), mock(BlackholeMitigationHelper.class),
+                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
                     mock(BlackWatchBorderLocationValidator.class),
                     mock(BlackWatchEdgeLocationValidator.class)),
             requestStorageManager,
@@ -114,22 +93,6 @@ public class DeleteMitigationFromAllLocationsActivityTest {
         request.setMitigationName("IPTablesMitigationName");
         request.setServiceName(ServiceName.Edge);
         request.setMitigationTemplate(MitigationTemplate.IPTables_Mitigation_EdgeCustomer);
-        request.setMitigationVersion(MITIGATION_VERSION);
-
-        MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
-        actionMetadata.setUser("username");
-        actionMetadata.setToolName("unit-tests");
-        actionMetadata.setDescription("description");
-        request.setMitigationActionMetadata(actionMetadata);
-
-        return request;
-    }
-
-    private DeleteMitigationFromAllLocationsRequest sampleDeleteBlackholeMitigationRequest() {
-        DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
-        request.setMitigationName("LKT-TestBlackholeMitigation");
-        request.setServiceName(ServiceName.Blackhole);
-        request.setMitigationTemplate(MitigationTemplate.Blackhole_Mitigation_ArborCustomer);
         request.setMitigationVersion(MITIGATION_VERSION);
 
         MitigationActionMetadata actionMetadata = new MitigationActionMetadata();

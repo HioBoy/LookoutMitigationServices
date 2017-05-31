@@ -69,8 +69,6 @@ package.LookoutMitigationService = {
             LookoutMWSClientJava = 1.0;
             LookoutFakeRouterServiceJavaClient = 1.0;
             
-            ArborPeakflowJavaClient = 1.0;
-
             LookoutMitigationServiceJlbRelayConfig = 1.0;
             CoralSslProxySupport = 1.0;
             RIPJavaHelper = 1.2;
