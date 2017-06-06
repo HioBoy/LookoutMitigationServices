@@ -24,8 +24,6 @@ import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
@@ -38,7 +36,6 @@ import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazon.lookout.workflow.helper.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.BlackWatchTemplateLocationHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
-import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.util.TestUtils;
@@ -70,18 +67,16 @@ public class DeleteMitigationFromAllLocationsActivityTest {
         Mockito.doReturn(new RequestStorageResponse(1l, MITIGATION_VERSION)).when(requestStorageManager).storeRequestForWorkflow(
                 any(MitigationModificationRequest.class), anySet(), eq(RequestType.DeleteRequest), isA(TSDMetrics.class));
         return new DeleteMitigationFromAllLocationsActivity(
-            new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
-                    mock(EdgeLocationsHelper.class),
+            new RequestValidator(mock(EdgeLocationsHelper.class),
                     mock(BlackWatchBorderLocationValidator.class),
                     mock(BlackWatchEdgeLocationValidator.class)),
-            new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
+            new TemplateBasedRequestValidator(
                     mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
                     mock(BlackWatchBorderLocationValidator.class),
                     mock(BlackWatchEdgeLocationValidator.class)),
             requestStorageManager,
             workflowStarter,
-            new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class),
-                    mock(BlackWatchTemplateLocationHelper.class)));
+            new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class)));
     }
 
     private DeleteMitigationFromAllLocationsActivity createActivityWithValidators() {

@@ -35,7 +35,6 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
@@ -52,14 +51,14 @@ public class RequestValidatorTest {
     private final TSDMetrics tsdMetrics = mock(TSDMetrics.class);
     
     private final String mitigationName = "TestMitigationName";
-    private final String rateLimitMitigationTemplate = MitigationTemplate.Router_RateLimit_Route53Customer;
-    private final String countModeMitigationTemplate = MitigationTemplate.Router_CountMode_Route53Customer;
-    private final String serviceName = ServiceName.Route53;
+    private final String template1 = MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer;
+    private final String template2 = MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer;
+    private final String serviceName = ServiceName.Edge;
     private final String userName = "TestUserName";
     private final String toolName = "TestToolName";
     private final String description = "TestDesc";
     
-    private RequestValidator validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
+    private RequestValidator validator = new RequestValidator(
             mock(EdgeLocationsHelper.class),
             mock(BlackWatchBorderLocationValidator.class),
             mock(BlackWatchEdgeLocationValidator.class));
@@ -72,7 +71,7 @@ public class RequestValidatorTest {
     @Before
     public void setUpBeforeTest() {
         when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
-        validator = new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
+        validator = new RequestValidator(
             mock(EdgeLocationsHelper.class),
             mock(BlackWatchBorderLocationValidator.class),
             mock(BlackWatchEdgeLocationValidator.class));
@@ -86,7 +85,7 @@ public class RequestValidatorTest {
     	AbortDeploymentRequest abortRequest = new AbortDeploymentRequest();
     	abortRequest.setJobId(1);
     	abortRequest.setServiceName(ServiceName.Edge);
-    	abortRequest.setDeviceName(DeviceName.BLACKWATCH_POP .name());
+    	abortRequest.setDeviceName(DeviceName.BLACKWATCH_POP.name());
     	//valid template
     	for (String template : validBWTemplates) {
     		abortRequest.setMitigationTemplate(template);
@@ -102,7 +101,7 @@ public class RequestValidatorTest {
         // RateLimit MitigationTemplate
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setMitigationTemplate(template1);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -121,7 +120,7 @@ public class RequestValidatorTest {
         validator.validateCreateRequest(request);
         
         // CountMode MitigationTemplate
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setMitigationTemplate(template1);
         validator.validateCreateRequest(request);
     }
     
@@ -133,7 +132,7 @@ public class RequestValidatorTest {
     public void testMissingMitigationName() {
         // RateLimit MitigationTemplate
         CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setMitigationTemplate(template1);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -159,7 +158,7 @@ public class RequestValidatorTest {
         assertNotNull(caughtException);
         
         // CountMode MitigationTemplate
-        request.setMitigationTemplate(countModeMitigationTemplate);
+        request.setMitigationTemplate(template2);
         caughtException = null;
         try {
             validator.validateCreateRequest(request);
@@ -178,7 +177,7 @@ public class RequestValidatorTest {
     public void testInvalidMitigationNames() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName("");
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setMitigationTemplate(template1);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -299,7 +298,7 @@ public class RequestValidatorTest {
         
         // Check mitigationTemplate with non-printable ascii characters.
         char invalidChar = 0x00;
-        request.setMitigationTemplate(MitigationTemplate.Router_RateLimit_Route53Customer + String.valueOf(invalidChar));
+        request.setMitigationTemplate(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer + String.valueOf(invalidChar));
         caughtException = null;
         try {
             validator.validateCreateRequest(request);
@@ -318,7 +317,7 @@ public class RequestValidatorTest {
     public void testMissingOrInvalidServiceName() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setMitigationTemplate(template1);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -356,7 +355,7 @@ public class RequestValidatorTest {
         
         // Check serviceName with non-printable ascii characters.
         char invalidChar = 0x00;
-        request.setServiceName(ServiceName.Route53 + String.valueOf(invalidChar));
+        request.setServiceName(ServiceName.Edge + String.valueOf(invalidChar));
         caughtException = null;
         try {
             validator.validateCreateRequest(request);
@@ -375,7 +374,7 @@ public class RequestValidatorTest {
     public void testMissingMitigationActionMetadata() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setMitigationTemplate(template1);
         request.setServiceName(serviceName);
         
         SimpleConstraint constraint = new SimpleConstraint();
@@ -404,7 +403,7 @@ public class RequestValidatorTest {
     public void testMissingUserName() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setMitigationTemplate(template1);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -450,7 +449,7 @@ public class RequestValidatorTest {
     public void testMissingToolName() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setMitigationTemplate(template1);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -496,7 +495,7 @@ public class RequestValidatorTest {
     public void testMissingMitigationDescription() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setMitigationTemplate(template1);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -557,10 +556,10 @@ public class RequestValidatorTest {
         // RateLimit MitigationTemplate
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setMitigationTemplate(template1);
         request.setServiceName(serviceName);
         request.setMitigationVersion(2);
-        
+
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
         metadata.setToolName(toolName);
@@ -570,7 +569,6 @@ public class RequestValidatorTest {
         validator.validateDeleteRequest(request);
         
         // CountMode MitigationTemplate
-        request.setMitigationTemplate(countModeMitigationTemplate);
         validator.validateDeleteRequest(request);       
     }
     
@@ -583,7 +581,7 @@ public class RequestValidatorTest {
         // RateLimit MitigationTemplate
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
         request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(rateLimitMitigationTemplate);
+        request.setMitigationTemplate(template1);
         request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -600,16 +598,6 @@ public class RequestValidatorTest {
             assertTrue(ex.getMessage().startsWith("Version of the mitigation to be deleted should be set to >=1"));
         }
         assertNotNull(caughtException);        
-        
-        // CountMode MitigationTemplate
-        request.setMitigationTemplate(countModeMitigationTemplate);
-        caughtException = null;
-        try {
-            validator.validateDeleteRequest(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-            assertTrue(ex.getMessage().startsWith("Version of the mitigation to be deleted should be set to >=1"));
-        }
     }
     
     /**
@@ -619,7 +607,7 @@ public class RequestValidatorTest {
     @Test
     public void testCreateRequestWithDuplicateRelatedTickets() {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest(
-                rateLimitMitigationTemplate, mitigationName, serviceName);
+                template1, mitigationName, serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -645,7 +633,7 @@ public class RequestValidatorTest {
     @Test
     public void testCreateRequestWithInvalidRelatedTickets() {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest(
-                rateLimitMitigationTemplate, mitigationName, serviceName);
+                template1, mitigationName, serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -675,7 +663,7 @@ public class RequestValidatorTest {
         
         // locations is optional
         request.setServiceName(serviceName);
-        request.setDeviceName(DeviceName.POP_ROUTER.name());
+        request.setDeviceName(DeviceName.BLACKWATCH_POP.name());
         validator.validateListActiveMitigationsForServiceRequest(request);
         
         // deviceName may not be a random name.
@@ -689,7 +677,7 @@ public class RequestValidatorTest {
         assertNotNull(caughtException);
         
         // valid device name
-        request.setDeviceName("POP_ROUTER");
+        request.setDeviceName("BLACKWATCH_POP");
         validator.validateListActiveMitigationsForServiceRequest(request);
         
         // locations if set may not be empty
@@ -729,79 +717,14 @@ public class RequestValidatorTest {
             assertTrue(caughtException.getMessage().startsWith("Exceeded the number of locations that can be specified for a single request"));
         }
         assertNotNull(caughtException);
-        
-        request.setLocations(Arrays.asList("alocation"));
-        caughtException = null;
-        try {
-            validator.validateListActiveMitigationsForServiceRequest(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-            assertTrue(caughtException.getMessage().startsWith("Invalid location name"));
-        }
-        assertNotNull(caughtException);
-        
+
         EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
-        validator = new RequestValidator(new ServiceLocationsHelper(edgeLocationsHelper), mock(EdgeLocationsHelper.class),
+        request.setLocations(Arrays.asList("alocation"));
+        validator = new RequestValidator(mock(EdgeLocationsHelper.class),
                 mock(BlackWatchBorderLocationValidator.class),
                 mock(BlackWatchEdgeLocationValidator.class));
         when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("alocation", "blocation", "clocations"));
         validator.validateListActiveMitigationsForServiceRequest(request);
-    }
-    
-    @Test
-    public void testReportInactiveLocationActivity() {        
-        ReportInactiveLocationRequest request = new ReportInactiveLocationRequest();
-        
-        EdgeLocationsHelper edgeLocationsHelper = mock(EdgeLocationsHelper.class);
-        validator = new RequestValidator(new ServiceLocationsHelper(edgeLocationsHelper), mock(EdgeLocationsHelper.class),
-                mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class));
-        when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("alocation", "blocation", "clocations"));
-        
-        // locations is optional
-        request.setServiceName(serviceName);
-        request.setDeviceName(DeviceName.POP_ROUTER.name());
-        request.setLocation("alocation");
-        
-        Throwable caughtException = null;
-        try {
-            validator.validateReportInactiveLocation(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNull(caughtException);
-        
-        // invalid device name
-        request.setDeviceName("random");
-        caughtException = null;
-        try {
-            validator.validateReportInactiveLocation(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-        
-        // invalid service name
-        request.setDeviceName(DeviceName.POP_ROUTER.name());
-        request.setServiceName("random");
-        caughtException = null;
-        try {
-            validator.validateReportInactiveLocation(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-        
-        // invalid location
-        request.setServiceName(serviceName);
-        request.setLocation("random");
-        caughtException = null;
-        try {
-            validator.validateReportInactiveLocation(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
     }
     
     @Test

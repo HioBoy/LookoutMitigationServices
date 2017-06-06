@@ -13,12 +13,7 @@
     <bean id="bwbeta.edgeOperatorServiceURL" class="java.lang.String">
         <constructor-arg value="http://edge-operator-service-gamma.amazon.com:80"/> <!-- Use gamma endpoint for beta as well, since we don't have any beta POPs. -->
     </bean>
-    
-    <util:set id="bwbeta.popsWithCiscoRouter">
-        <value>G-JFK</value>
-        <value>G-SEA19</value>
-    </util:set>
-    
+
     <util:map id="bwbeta.regionEndpointsMap">
         <entry key="IAD" value="lookout-mitigation-service-us-east-1-bwbeta.corp.amazon.com"/>
     </util:map>
@@ -29,10 +24,6 @@
     
     <bean id="bwbeta.masterRegion" class="java.lang.String">
         <constructor-arg value="IAD"/>
-    </bean>
-    
-    <bean id="bwbeta.mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg value="com.amazon.lookout.mws.mitigationservice.beta"/>
     </bean>
     
     <!-- Currently (Oct 2014) there is no beta for BW, setting it to Test for making the spring configs happy. -->
@@ -51,15 +42,13 @@
     
     <util:set id="bwbeta.defaultPOPsForEdgeLocationsHelper"/>
 
-     <bean id="bwbeta.edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.FakeLocationsHelper">
+     <bean id="bwbeta.edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
         <constructor-arg name="cloudfrontClient" ref="edgeOperatorServiceClient"/>
         <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>
-        <constructor-arg name="bwLocationsHelper" ref="bwLocationsHelper"/>
         <constructor-arg name="millisToSleepBetweenRetries" value="500"/>
         <constructor-arg name="popsListDir" value="var/state/popsList"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
         <constructor-arg name="fakeBlackWatchClassicLocations" ref="bwbeta.fakeBlackWatchClassicLocations"/>
-        <constructor-arg name="qualifier" value="Base.Bwbeta"/>
     </bean>
  
     <bean id="bwbeta.edgeLocationPattern" class="java.lang.String">
@@ -69,7 +58,7 @@
     <bean id="bwbeta.allowedLocationPrefix" class="java.lang.String">
         <constructor-arg value="fakerouter"/>
     </bean>
-	
+
     <bean id="bwbeta.LocationState.readCapacityUnits" class="java.lang.Long">
         <constructor-arg value="50"/>
     </bean>

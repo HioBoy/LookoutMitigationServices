@@ -11,8 +11,6 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
@@ -24,7 +22,6 @@ import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazon.lookout.workflow.helper.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.BlackWatchTemplateLocationHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
-import com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.util.TestUtils;
@@ -64,17 +61,14 @@ public class EditMitigationActivityTest {
                 .storeRequestForWorkflow(any(MitigationModificationRequest.class), anySet(), 
                         eq(RequestType.EditRequest), isA(TSDMetrics.class));
         return new EditMitigationActivity(
-            new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
-                    mock(EdgeLocationsHelper.class),
+            new RequestValidator(mock(EdgeLocationsHelper.class),
                     mock(BlackWatchBorderLocationValidator.class),
                     mock(BlackWatchEdgeLocationValidator.class)),
-            new TemplateBasedRequestValidator(mock(ServiceSubnetsMatcher.class),
-                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
+            new TemplateBasedRequestValidator(mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
                     mock(BlackWatchBorderLocationValidator.class),
                     mock(BlackWatchEdgeLocationValidator.class)),
                 requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
-            new TemplateBasedLocationsManager(mock(Route53SingleCustomerTemplateLocationsHelper.class),
-                    mock(BlackWatchTemplateLocationHelper.class)));
+            new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class)));
     }
 }

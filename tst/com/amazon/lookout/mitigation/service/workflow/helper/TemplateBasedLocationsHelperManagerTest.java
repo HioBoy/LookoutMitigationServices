@@ -33,35 +33,12 @@ public class TemplateBasedLocationsHelperManagerTest {
     }
     
     @Test
-    public void testGetLocationsForDeploymentBasedOnTemplate() {
-        EdgeLocationsHelper locationsHelper = mock(EdgeLocationsHelper.class);
-        Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
-        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, new HashSet<String>());
-        TemplateBasedLocationsManager manager = new TemplateBasedLocationsManager(helper, mock(BlackWatchTemplateLocationHelper.class));
-        
-        when(locationsHelper.getAllNonBlackwatchClassicPOPs()).thenReturn(nonBWLocations);
-        
-        CreateMitigationRequest request = 
-                RequestTestHelper.generateCreateMitigationRequest(MitigationTemplate.Router_RateLimit_Route53Customer, "Name");
-        List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");
-        request.setLocations(requestLocations);
-        
-        Set<String> locations = manager.getLocationsForDeployment(request, mock(TSDMetrics.class));
-        assertNotNull(locations);
-        assertEquals(locations, nonBWLocations);
-    }
-    
-    @Test
     public void testGetLocationsForDeploymentBasedOnRequest() {
         EdgeLocationsHelper locationsHelper = mock(EdgeLocationsHelper.class);
-        Set<String> nonBWLocations = Sets.newHashSet("POP1", "POP2", "POP3");
-        Route53SingleCustomerTemplateLocationsHelper helper = new Route53SingleCustomerTemplateLocationsHelper(locationsHelper, nonBWLocations);
-        TemplateBasedLocationsManager manager = new TemplateBasedLocationsManager(helper, mock(BlackWatchTemplateLocationHelper.class));
-        
-        when(locationsHelper.getAllNonBlackwatchClassicPOPs()).thenReturn(nonBWLocations);
+        TemplateBasedLocationsManager manager = new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class));
         
         CreateMitigationRequest request = 
-                RequestTestHelper.generateCreateMitigationRequest(MitigationTemplate.Router_RateLimit_Route53Customer, "Name");
+                RequestTestHelper.generateCreateMitigationRequest(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, "Name");
         List<String> requestLocations = Lists.newArrayList("SomePOP1", "SomePOP2");
         request.setLocations(requestLocations);
         request.setMitigationTemplate("SomeRandomTemplate");

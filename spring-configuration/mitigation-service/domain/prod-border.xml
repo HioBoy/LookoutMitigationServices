@@ -12,8 +12,6 @@
 
     <alias name="prod.edgeOperatorServiceURL" alias="prod-border.edgeOperatorServiceURL"/>
 
-    <alias name="prod.mwsCredentialsProvider" alias="prod-border.mwsCredentialsProvider"/>
-
     <alias name="prod.blackwatchMWSMetricDataset" alias="prod-border.blackwatchMWSMetricDataset"/>
 
     <util:set id="prod-border.defaultPOPsForEdgeLocationsHelper"/>
@@ -21,8 +19,6 @@
     <alias name="prod.edgeLocationsHelper" alias="prod-border.edgeLocationsHelper"/>
 
     <alias name="prod.edgeLocationPattern" alias="prod-border.edgeLocationPattern"/>
-
-    <alias name="prod.popsWithCiscoRouter" alias="prod-border.popsWithCiscoRouter"/>
 
     <alias name="prod.regionEndpointsMap" alias="prod-border.regionEndpointsMap"/>
 

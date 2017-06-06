@@ -55,7 +55,6 @@ import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateReques
 import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
@@ -119,18 +118,15 @@ public class RequestValidator {
     
     private final Set<String> deviceNames;
     private final Set<String> deviceScopes;
-    private final ServiceLocationsHelper serviceLocationsHelper;
     private final EdgeLocationsHelper edgeLocationsHelper;
     private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
     private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
     
-    @ConstructorProperties({"serviceLocationsHelper", "edgeLocationsHelper", "blackWatchBorderLocationValidator",
+    @ConstructorProperties({"edgeLocationsHelper", "blackWatchBorderLocationValidator",
         "blackWatchEdgeLocationValidator"}) 
-    public RequestValidator(@NonNull ServiceLocationsHelper serviceLocationsHelper,
-            @NonNull EdgeLocationsHelper edgeLocationsHelper,
+    public RequestValidator(@NonNull EdgeLocationsHelper edgeLocationsHelper,
             @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator,
             @NonNull BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator) {
-        this.serviceLocationsHelper = serviceLocationsHelper;
         this.edgeLocationsHelper = edgeLocationsHelper;
         this.blackWatchBorderLocationValidator = blackWatchBorderLocationValidator;
         this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
@@ -693,17 +689,12 @@ public class RequestValidator {
                 throw new IllegalArgumentException(msg);
             }
             
-            Set<String> validLocationsForService = serviceLocationsHelper.getLocationsForService(serviceName).orNull();
             List<String> invalidLocationsInRequest = new ArrayList<>();
             for (String location : locations) {
                 if (isInvalidFreeFormText(location, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
                     String msg = "Invalid location name found! A valid location name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
                     LOG.info(msg);
                     throw new IllegalArgumentException(msg);
-                }
-                
-                if ((validLocationsForService != null) && !validLocationsForService.contains(location)) {
-                    invalidLocationsInRequest.add(location);
                 }
             }
             
@@ -850,9 +841,6 @@ public class RequestValidator {
     private void validateDeviceMatchService(DeviceName device, String service) {
         String errorMessage = String.format("Service %s does not match device %s", service, device);
         switch (device) {
-        case POP_ROUTER:
-            Validate.isTrue(ServiceName.Route53.equals(service), errorMessage);
-            break;
         case POP_HOSTS_IP_TABLES:
             Validate.isTrue(ServiceName.Edge.equals(service), errorMessage);
             break;
@@ -872,9 +860,6 @@ public class RequestValidator {
                 + " are valid locations on device %s and service name %s.", locations, device, service);
     
         switch (device) {
-        case POP_ROUTER:
-            Validate.isTrue(edgeLocationsHelper.getAllClassicPOPs().containsAll(locations), errorMessage);
-            break;
         case POP_HOSTS_IP_TABLES:
             Validate.isTrue(ImmutableSet.of("EdgeWorldwide").containsAll(locations), errorMessage);
             break;

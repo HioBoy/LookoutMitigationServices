@@ -18,7 +18,6 @@ import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
@@ -45,10 +44,7 @@ public class TemplateBasedRequestValidatorTest {
      */
     @Test
     public void testHappyCase() {
-        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
-        
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
+        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(
                 mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
                 mock(BlackWatchBorderLocationValidator.class),
                 mock(BlackWatchEdgeLocationValidator.class));
@@ -59,6 +55,7 @@ public class TemplateBasedRequestValidatorTest {
             templateBasedValidator.validateRequestForTemplate(request, tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
+            ex.printStackTrace();
         }
         assertNull(caughtException);
     }
@@ -69,10 +66,7 @@ public class TemplateBasedRequestValidatorTest {
      */
     @Test
     public void testInvalidOrBadTemplateCase() {
-        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
-        
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
+        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(
                 mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
                 mock(BlackWatchBorderLocationValidator.class),
                 mock(BlackWatchEdgeLocationValidator.class));
@@ -90,39 +84,12 @@ public class TemplateBasedRequestValidatorTest {
     }
     
     /**
-     * Test the case where we have a request that doesn't pass the validation based on its template.
-     * We expect the validation to throw back an exceptions here.
-     */
-    @Test
-    public void testInvalidCase() {
-        ServiceSubnetsMatcher serviceSubnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        when(serviceSubnetsMatcher.getServiceForSubnets(anyList())).thenReturn(null);
-        
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(serviceSubnetsMatcher,
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
-                mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class));
-        MitigationModificationRequest request = RequestTestHelper.generateCreateMitigationRequest();
-        Throwable caughtException = null;
-        try {
-            templateBasedValidator.validateRequestForTemplate(request, tsdMetrics);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-        assertTrue(caughtException instanceof IllegalArgumentException);
-    }
-    
-    /**
      * Test the case where we have a request that doesn't pass the validation based on its coexistence with an existing mitigation.
      * We expect the validation to throw back an exceptions here.
      */
     @Test
     public void testBadCoexistenceCase() {
-        ServiceSubnetsMatcher subnetsMatcher = mock(ServiceSubnetsMatcher.class);
-        when(subnetsMatcher.getServiceForSubnets(anyList())).thenReturn(ServiceName.Route53);
-        
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(subnetsMatcher,
+        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(
                 mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
                 mock(BlackWatchBorderLocationValidator.class),
                 mock(BlackWatchEdgeLocationValidator.class));
@@ -133,13 +100,12 @@ public class TemplateBasedRequestValidatorTest {
         
         Throwable caughtException = null;
         try {
-            templateBasedValidator.validateCoexistenceForTemplateAndDevice(MitigationTemplate.Router_RateLimit_Route53Customer, "Mitigation1", definition1, 
-                                                                           MitigationTemplate.Router_RateLimit_Route53Customer, "Mitigation2", definition2,
+            templateBasedValidator.validateCoexistenceForTemplateAndDevice(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, "Mitigation1", definition1, 
+                                                                           MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, "Mitigation2", definition2,
                                                                            tsdMetrics);
         } catch (Exception ex) {
             caughtException = ex;
         }
-        assertNotNull(caughtException);
-        assertTrue(caughtException instanceof DuplicateDefinitionException400);
+        assertNull(caughtException);  // BlackWatch templates allow mitigations to coexist
     }
 }

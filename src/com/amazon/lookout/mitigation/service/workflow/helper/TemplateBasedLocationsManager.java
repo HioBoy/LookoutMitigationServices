@@ -25,14 +25,9 @@ public class TemplateBasedLocationsManager {
     // Maintain a map of templateName to the locationsHelper for the template.
     private final ImmutableMap<String, TemplateBasedLocationsHelper> templateBasedLocationsHelpers;
     
-    @ConstructorProperties({"route53SingleCustomerHelper", "blackWatchTemplateLocationHelper"})
-    public TemplateBasedLocationsManager(@NonNull Route53SingleCustomerTemplateLocationsHelper route53SingleCustomerHelper,
-            BlackWatchTemplateLocationHelper blackWatchTemplateLocationHelper) {
+    @ConstructorProperties({"blackWatchTemplateLocationHelper"})
+    public TemplateBasedLocationsManager(@NonNull BlackWatchTemplateLocationHelper blackWatchTemplateLocationHelper) {
         ImmutableMap.Builder<String, TemplateBasedLocationsHelper> mapBuilder = new ImmutableMap.Builder<>();
-        mapBuilder.put(MitigationTemplate.Router_RateLimit_Route53Customer, route53SingleCustomerHelper);
-        // Router_CountMode_Route53Customer is currently used only by external monitors, and
-        // it shares the locationHelper with the Router_RateLimit_Route53Customer template
-        mapBuilder.put(MitigationTemplate.Router_CountMode_Route53Customer, route53SingleCustomerHelper);
         mapBuilder.put(MitigationTemplate.IPTables_Mitigation_EdgeCustomer,
                 new IPTablesEdgeCustomerTemplateLocationsHelper());
         mapBuilder.put(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, blackWatchTemplateLocationHelper);

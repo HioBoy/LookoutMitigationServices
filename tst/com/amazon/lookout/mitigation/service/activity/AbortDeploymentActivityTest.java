@@ -13,7 +13,6 @@ import com.amazon.lookout.mitigation.service.AbortDeploymentResponse;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
@@ -30,7 +29,7 @@ public class AbortDeploymentActivityTest extends ActivityTestHelper {
     
     @Before
     public void setupMore() {
-        requestValidator = spy(new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
+        requestValidator = spy(new RequestValidator(
                 mock(EdgeLocationsHelper.class),
                 mock(BlackWatchBorderLocationValidator.class),
                 mock(BlackWatchEdgeLocationValidator.class)));

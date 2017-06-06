@@ -96,7 +96,7 @@ public class DDBBasedGetMitigationInfoHandlerTest {
         expectedResult.add(status);
         
         doReturn(queryResult).when(spiedMitigationInfoHandler).queryMitigationsInDDB(any(QueryRequest.class), any(TSDMetrics.class));
-        List<MitigationInstanceStatus> list = spiedMitigationInfoHandler.getMitigationInstanceStatus("POP_ROUTER", Long.valueOf("1"), tsdMetrics);
+        List<MitigationInstanceStatus> list = spiedMitigationInfoHandler.getMitigationInstanceStatus("BLACKWATCH_POP", Long.valueOf("1"), tsdMetrics);
         assertEquals(list, expectedResult);
     }
     

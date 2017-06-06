@@ -122,7 +122,7 @@ public class DDBBasedListMitigationsHandlerTest {
     public void testGetMitigationNameAndRequestStatusWhenNoRequests() {
         try {
             listHandler.getMitigationNameAndRequestStatus(
-                    DeviceName.POP_ROUTER.name(), MitigationTemplate.Router_CountMode_Route53Customer, 11, tsdMetrics);
+                    DeviceName.BLACKWATCH_POP.name(), MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, 11, tsdMetrics);
         } catch (IllegalStateException ex) {
             assertTrue(ex.getMessage().contains("Could not find an item for the requested"));
         }
@@ -157,7 +157,7 @@ public class DDBBasedListMitigationsHandlerTest {
         DDBBasedListMitigationsHandler spiedListHandler = spy(listHandler);
         
         doReturn(new QueryResult().withCount(0)).when(spiedListHandler).queryDynamoDBWithRetries(any(QueryRequest.class), any(TSDMetrics.class));
-        List<ActiveMitigationDetails> list = spiedListHandler.getActiveMitigationsForService("Route53", "foo", new ArrayList<String>(), tsdMetrics);
+        List<ActiveMitigationDetails> list = spiedListHandler.getActiveMitigationsForService("Edge", "foo", new ArrayList<String>(), tsdMetrics);
         assertEquals(list, new ArrayList<ActiveMitigationDetails>());
     }
     
@@ -183,7 +183,7 @@ public class DDBBasedListMitigationsHandlerTest {
         long requestDate = Long.parseLong("1410896163");
         String requestType = RequestType.CreateRequest.name();
         String swfRunId = "22Ans97eYkYe5pHRfsPirITXUHwowfqWWjfHQ2sKquXzI=";
-        String serviceName = ServiceName.Route53;
+        String serviceName = ServiceName.Edge;
         String toolName = "LookoutMitigationServiceUI";
         long updateWorkflowId = 0;
         String userDescription = "randomString";
@@ -274,7 +274,7 @@ public class DDBBasedListMitigationsHandlerTest {
         long requestDate = Long.parseLong("1410896163");
         String requestType = RequestType.CreateRequest.name();
         String swfRunId = "22Ans97eYkYe5pHRfsPirITXUHwowfqWWjfHQ2sKquXzI=";
-        String serviceName = ServiceName.Route53;
+        String serviceName = ServiceName.Edge;
         String toolName = "LookoutMitigationServiceUI";
         long updateWorkflowId = 0;
         String userDescription = "randomString";
@@ -890,7 +890,7 @@ public class DDBBasedListMitigationsHandlerTest {
             itemCreator.addItem();
         }
 
-        itemCreator.setDeviceName(DeviceName.POP_ROUTER.name());
+        itemCreator.setDeviceName(DeviceName.BLACKWATCH_POP.name());
         itemCreator.setMitigationVersion(11);
         itemCreator.setWorkflowId(10011);
         itemCreator.addItem();

@@ -32,7 +32,6 @@ import com.amazon.blackwatch.mitigation.resource.validator.IPAddressResourceType
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedBlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
@@ -93,7 +92,6 @@ public class DDBBasedActivityTestHelper {
     protected static ResourceAllocationHelper resourceAllocationHelper;
     protected static Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeValidator> resourceTypeValidatorMap;
 
-    protected ServiceLocationsHelper serviceLocationsHelper;
     protected EdgeLocationsHelper edgeLocationsHelper;
     protected BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
     protected BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
@@ -148,11 +146,10 @@ public class DDBBasedActivityTestHelper {
         resourceAllocationStateDDBHelper.deleteTable();
         resourceAllocationStateDDBHelper.createTableIfNotExist(readCapacityUnits, writeCapacityUnits);
         
-        serviceLocationsHelper = mock(ServiceLocationsHelper.class);
         edgeLocationsHelper = mock(EdgeLocationsHelper.class);
         blackWatchBorderLocationValidator = mock(BlackWatchBorderLocationValidator.class);
         blackWatchEdgeLocationValidator = mock(BlackWatchEdgeLocationValidator.class);
-        requestValidator = new RequestValidator(serviceLocationsHelper, edgeLocationsHelper,
+        requestValidator = new RequestValidator(edgeLocationsHelper,
                 blackWatchBorderLocationValidator, blackWatchEdgeLocationValidator);
         
 

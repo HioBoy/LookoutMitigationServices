@@ -148,17 +148,15 @@ public class DDBBasedEditRequestStorageHandlerTest {
     
     @Test
     public void testEditMitigationWithNewTemplate() {
-        assertThat(existingRequest1.getMitigationTemplate(), equalTo(MitigationTemplate.Router_RateLimit_Route53Customer));
+        assertThat(existingRequest1.getMitigationTemplate(), equalTo(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer));
         EditMitigationRequest request = RequestTestHelper.generateEditMitigationRequest(
-                MitigationTemplate.Router_CountMode_Route53Customer, MITIGATION_1_NAME, 2);
+                MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer, MITIGATION_1_NAME, 2);
         
-        IllegalArgumentException exception = AssertUtils.assertThrows(
-                IllegalArgumentException.class, 
+        MissingMitigationException400 exception = AssertUtils.assertThrows(
+                MissingMitigationException400.class, 
                 () -> storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics));
-        
-        assertThat(exception.getMessage(), allOf(
-                containsString(MitigationTemplate.Router_RateLimit_Route53Customer),
-                containsString(MitigationTemplate.Router_CountMode_Route53Customer)));
+
+        assertThat(exception.getMessage(), containsString(request.getMitigationName()));
     }
     
     @Test
@@ -433,25 +431,12 @@ public class DDBBasedEditRequestStorageHandlerTest {
                 new DuplicateDefinitionException400("Conflicts")));
         
         long workflowId2[] = new long[1];
-        
-        RequestTableTestHelper.whenAnyPut(storageHandler, doAnswer(i -> {
-            // Restore the real call for the all the following calls
-            RequestTableTestHelper.whenAnyPut(storageHandler, doCallRealMethod());
-            // Do the store for request 2 first
-            workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics).getWorkflowId();
-            return i.callRealMethod();
-        }));
-        
+
+        workflowId2[0] = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics).getWorkflowId();
+
         AssertUtils.assertThrows(DuplicateDefinitionException400.class, 
                 () -> storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics));
         validateRequestInDDB(request2, defaultLocations, workflowId2[0]);
-        
-        // Should be called 2 times - 1 failed with condition not met + 1 actual. There should be no third
-        // as the conflict should have been detected
-        verify(storageHandler, times(2)).putItemInDDB(
-                anyMapOf(String.class, AttributeValue.class), 
-                anyMapOf(String.class, ExpectedAttributeValue.class), 
-                any(TSDMetrics.class));
     }
     
     private void deleteRequest(

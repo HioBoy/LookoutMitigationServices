@@ -36,7 +36,6 @@ import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithSta
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.ActiveMitigationsFetcher;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
-import com.amazon.lookout.mitigation.service.activity.helper.DDBBasedRouterMetadataHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.OngoingRequestsFetcher;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
@@ -68,7 +67,6 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
     @NonNull private final ActiveMitigationInfoHandler activeMitigationInfoHandler;
     @NonNull private final RequestInfoHandler requestInfoHandler;
     @NonNull private final MitigationInstanceInfoHandler mitigationInstanceHandler;
-    @NonNull private final DDBBasedRouterMetadataHelper routerMetadataHelper;
     @NonNull private final ExecutorService threadPool;
     
     public static final String KEY_SEPARATOR = "#";
@@ -97,15 +95,10 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             ActiveMitigationsFetcher activeMitigationsFetcher = new ActiveMitigationsFetcher(serviceName, deviceName, locations, activeMitigationInfoHandler, requestInfoHandler, tsdMetrics);
             Future<List<MitigationRequestDescriptionWithStatuses>> activeMitigationsFuture = threadPool.submit(activeMitigationsFetcher);
             
-            // Step 3. Spawn tasks to fetch the mitigations for ongoing requests and for mitigations recorded by router mitigation UI (if this request is for the POP_ROUTER deviceName)
+            // Step 3. Spawn tasks to fetch the mitigations for ongoing requests
             OngoingRequestsFetcher ongoingRequestsFetcher = new OngoingRequestsFetcher(requestInfoHandler, serviceName, deviceName, locations, mitigationInstanceHandler, tsdMetrics);
             Future<List<MitigationRequestDescriptionWithStatuses>> ongoingRequestsFuture = threadPool.submit(ongoingRequestsFetcher);
-            
-            Future<List<MitigationRequestDescriptionWithStatuses>> routerMetadataFuture = null;
-            if (deviceName.equals(DeviceName.POP_ROUTER.name())) {
-                routerMetadataFuture = threadPool.submit(routerMetadataHelper);
-            }
-            
+
             // Step 4. Wait for the active mitigations task to be completed.
             List<MitigationRequestDescriptionWithStatuses> descriptionsWithStatusesMap = activeMitigationsFuture.get();
             
@@ -114,34 +107,7 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             
             // Step 6. Merge ongoing requests with the currently active ones to get back a Map of String (key formed using deviceName and mitigationName) to a list of MitigationRequestDescriptionWithStatuses.
             Map<String, List<MitigationRequestDescriptionWithStatuses>> mergedMitigations = mergeOngoingRequests(ongoingRequestsDescriptions, descriptionsWithStatusesMap);
-            
-            // Step 7. Wait for descriptions from router metadata (if we have issued a task for it).
-            if (routerMetadataFuture != null) {
-                List<MitigationRequestDescriptionWithStatuses> routerMitigationDescriptions = new ArrayList<>();
-                // RouterMetadataHelper gives back all router mitigations. If locations constraint is specified, then only include mitigations for that location, 
-                // else simply use all the mitigations returned back by the helper.
-                if (CollectionUtils.isEmpty(locations)) {
-                    routerMitigationDescriptions = routerMetadataFuture.get();
-                } else {
-                    List<MitigationRequestDescriptionWithStatuses> mitigationsReturnedByHelper = routerMetadataFuture.get();
-                    for (MitigationRequestDescriptionWithStatuses routerMitigation : mitigationsReturnedByHelper) {
-                        // Each mitigation returned by the router mitigation helper belongs to only 1 location.
-                        if (routerMitigation.getInstancesStatusMap().keySet().size() > 1) {
-                            String msg = "RouterMetadataHelper is expected to return a single instance of MitigationRequestDescriptionWithStatuses per location, " +
-                                         "instead found: " + routerMitigation.getInstancesStatusMap().keySet().size() + " for mitigation: " + routerMitigation +
-                                         " in the List API for service: " + serviceName + ", device: " + deviceName + " and locations: " + locations;
-                            LOG.error(msg);
-                            throw new IllegalStateException(msg);
-                        }
-                        String location = routerMitigation.getInstancesStatusMap().keySet().iterator().next();
-                        if (locations.contains(location)) {
-                            routerMitigationDescriptions.add(routerMitigation);
-                        }
-                    }
-                }
-                routerMetadataHelper.mergeMitigations(mergedMitigations, routerMitigationDescriptions, serviceName);
-            }
-            
+
             ListActiveMitigationsForServiceResponse response = new ListActiveMitigationsForServiceResponse();
             response.setServiceName(request.getServiceName());
             

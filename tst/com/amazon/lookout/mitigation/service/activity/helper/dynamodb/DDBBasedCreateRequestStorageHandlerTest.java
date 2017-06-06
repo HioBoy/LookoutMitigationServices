@@ -184,7 +184,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                 localDynamoDBClient, domain, templateBasedValidator);
         
         CreateMitigationRequest request1 = RequestTestHelper.generateCreateMitigationRequest(
-                MitigationTemplate.Router_RateLimit_Route53Customer, "Name", ServiceName.Route53);
+                MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, "Name", ServiceName.Edge);
         long workflowId1 = storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request1, locations, workflowId1);
     }
@@ -200,14 +200,14 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                 localDynamoDBClient, domain, templateBasedValidator);
         
         CreateMitigationRequest request1 = RequestTestHelper.generateCreateMitigationRequest(
-                MitigationTemplate.Router_RateLimit_Route53Customer, "Name", ServiceName.Route53);
+                MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, "Name", ServiceName.Edge);
         long workflowId1 = storageHandler.storeRequestForWorkflow(request1, locations, tsdMetrics).getWorkflowId();
         validateRequestInDDB(request1, locations, workflowId1);
         
         // There currently isn't a different service with the same template, or even device 
         // but we should handle the case if there is one
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest(
-                MitigationTemplate.Router_RateLimit_Route53Customer, "Name", "FakeService");
+                MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, "Name", "FakeService");
         AssertUtils.assertThrows(DuplicateMitigationNameException400.class,
                 () -> storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics));
     }
@@ -232,7 +232,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         deleteRequest(storageHandler, request, workflowId, locations);
         // set delete request to succeed.
-        testTableHelper.setWorkflowStatus(DeviceName.POP_ROUTER.name(), workflowId + 1, WorkflowStatus.SUCCEEDED);
+        testTableHelper.setWorkflowStatus(DeviceName.BLACKWATCH_POP.name(), workflowId + 1, WorkflowStatus.SUCCEEDED);
         
         // Recreate
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest();
@@ -267,7 +267,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         deleteRequest(storageHandler, request, workflowId, locations);
         // set delete request to succeed.
-        testTableHelper.setWorkflowStatus(DeviceName.POP_ROUTER.name(), workflowId + 1, deleteRequestWorkflowStatus);
+        testTableHelper.setWorkflowStatus(DeviceName.BLACKWATCH_POP.name(), workflowId + 1, deleteRequestWorkflowStatus);
 
         // Recreate
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest();
@@ -304,7 +304,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         editRequest(storageHandler, request, workflowId, locations);
         // set edit request status.
-        testTableHelper.setWorkflowStatus(DeviceName.POP_ROUTER.name(), workflowId + 1, editRequestWorkflowStatus);
+        testTableHelper.setWorkflowStatus(DeviceName.BLACKWATCH_POP.name(), workflowId + 1, editRequestWorkflowStatus);
 
         // Recreate
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest();
@@ -340,7 +340,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         validateRequestInDDB(request, locations, workflowId);
         
         // set edit request status.
-        testTableHelper.setWorkflowStatus(DeviceName.POP_ROUTER.name(), workflowId, createRequestWorkflowStatus);
+        testTableHelper.setWorkflowStatus(DeviceName.BLACKWATCH_POP.name(), workflowId, createRequestWorkflowStatus);
 
         // Recreate
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest();
@@ -377,7 +377,7 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         
         // set edit request status.
         rollbackRequest(storageHandler, request, workflowId, locations);
-        testTableHelper.setWorkflowStatus(DeviceName.POP_ROUTER.name(), workflowId + 1, rollbackRequestWorkflowStatus);
+        testTableHelper.setWorkflowStatus(DeviceName.BLACKWATCH_POP.name(), workflowId + 1, rollbackRequestWorkflowStatus);
 
         // Recreate
         CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest();

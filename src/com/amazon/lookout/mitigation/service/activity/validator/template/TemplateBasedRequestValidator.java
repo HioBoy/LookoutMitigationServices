@@ -18,7 +18,6 @@ import com.amazon.coral.google.common.collect.ImmutableMap;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazonaws.services.s3.AmazonS3;
@@ -42,13 +41,9 @@ public class TemplateBasedRequestValidator {
     // Map of templateName -> ServiceTemplateValidator which is responsible for validating this template.
     private final ImmutableMap<String, ServiceTemplateValidator> serviceTemplateValidatorMap;
     
-    /**
-     * @param serviceSubnetsMatcher ServiceSubnetsMatcher is taken as an input in the constructor to allow for the service template specific validators to use
-     *                              this matcher, in case they have to perform any subnet specific checks.
-     */
-    @ConstructorProperties({"serviceSubnetsMatcher", "edgeLocationsHelper", "blackWatchS3Client",
+    @ConstructorProperties({"edgeLocationsHelper", "blackWatchS3Client",
         "blackWatchBorderLocationValidator", "blackWatchEdgeLocationValidator"})
-    public TemplateBasedRequestValidator(@NonNull ServiceSubnetsMatcher serviceSubnetsMatcher,
+    public TemplateBasedRequestValidator(
             @NonNull EdgeLocationsHelper edgeLocationsHelper, @NonNull AmazonS3 blackWatchS3Client,
             @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator,
             @NonNull BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator) 
@@ -60,7 +55,7 @@ public class TemplateBasedRequestValidator {
         this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
         
         // this line should be the last line of constructor, as it might relies on the variable assigned before.
-        this.serviceTemplateValidatorMap = getServiceTemplateValidatorMap(serviceSubnetsMatcher);
+        this.serviceTemplateValidatorMap = getServiceTemplateValidatorMap();
     }
     
     /**
@@ -156,15 +151,6 @@ public class TemplateBasedRequestValidator {
     }
     
     /**
-     * Returns an instance of Route53SingleCustomerMitigationValidator. Protected to allow for unit-testing.
-     * @param subnetsMatcher
-     * @return Route53SingleCustomerMitigationValidator
-     */
-    protected Route53SingleCustomerMitigationValidator getRoute53SingleCustomerValidator(ServiceSubnetsMatcher subnetsMatcher) {
-        return new Route53SingleCustomerMitigationValidator(subnetsMatcher);
-    }
-
-    /**
      * Returns an instance of IPTablesEdgeCustomerValidator.
      * @return ServiceTemplateValidator
      */
@@ -186,19 +172,12 @@ public class TemplateBasedRequestValidator {
     
     /**
      * Returns map of templateName to ServiceTemplateValidator corresponding to the template.
-     * @param serviceSubnetsMatcher ServiceSubnetsMatcher that is used by some of the ServiceTemplateValidators.
      * @return ImmutableMap of templateName to ServiceTemplateValidator corresponding to the template.
      */
-    private ImmutableMap<String, ServiceTemplateValidator> getServiceTemplateValidatorMap(ServiceSubnetsMatcher serviceSubnetsMatcher) {
+    private ImmutableMap<String, ServiceTemplateValidator> getServiceTemplateValidatorMap() {
         ImmutableMap.Builder<String, ServiceTemplateValidator> serviceTemplateValidatorMapBuilder = ImmutableMap.builder();
         for (String mitigationTemplate : MitigationTemplate.values()) {
             switch (mitigationTemplate) {
-            case MitigationTemplate.Router_RateLimit_Route53Customer:
-                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getRoute53SingleCustomerValidator(serviceSubnetsMatcher));
-                break;
-            case MitigationTemplate.Router_CountMode_Route53Customer:
-                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getRoute53SingleCustomerValidator(serviceSubnetsMatcher));
-                break;
             case MitigationTemplate.IPTables_Mitigation_EdgeCustomer:
                 serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getIPTablesEdgeCustomerValidator());
                 break;

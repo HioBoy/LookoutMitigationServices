@@ -135,7 +135,7 @@ public class CreateMitigationActivity extends Activity {
             String swfRunId = workflowClient.getWorkflowExecution().getRunId();
             requestStorageManager.updateRunIdForWorkflowRequest(deviceName, workflowId, swfRunId, RequestType.CreateRequest, tsdMetrics);
             
-            // Step8. Return back the workflowId to the client.
+            // Step8. Return the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
             mitigationModificationResponse.setMitigationName(createRequest.getMitigationName());
             mitigationModificationResponse.setMitigationVersion(storedMitigationVersion);

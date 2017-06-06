@@ -75,9 +75,9 @@ public class AuthorizationStrategyTest {
      * are handled. 
      */ 
     private static final String mitigationName = "test-mitigation-name";
-    private static final String route35RateLimitMitigationTemplate = MitigationTemplate.Router_RateLimit_Route53Customer;
-    private static final String route53ServiceName = "Route53";
-    private static final String popRouterDeviceName = "POP_ROUTER";
+    private static final String blackwatchMitigationTemplate = MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer;
+    private static final String edgeServiceName = "Edge";
+    private static final String blackwatchDeviceName = "BLACKWATCH_POP";
     private static final int mitigationVersion = 1;
     private static final String location = "test-location";
     private static final List<String> locations = new LinkedList<String>();
@@ -103,15 +103,15 @@ public class AuthorizationStrategyTest {
         
         getRequestStatusRequest = new GetRequestStatusRequest();
         getRequestStatusRequest.setJobId((long) 1);
-        getRequestStatusRequest.setServiceName(route53ServiceName);
-        getRequestStatusRequest.setDeviceName(popRouterDeviceName);
+        getRequestStatusRequest.setServiceName(edgeServiceName);
+        getRequestStatusRequest.setDeviceName(blackwatchDeviceName);
         
         listMitigationsRequest = new ListActiveMitigationsForServiceRequest();
-        listMitigationsRequest.setServiceName(route53ServiceName);
+        listMitigationsRequest.setServiceName(edgeServiceName);
         
         getMitigationInfoRequest = new GetMitigationInfoRequest();
-        getMitigationInfoRequest.setServiceName(route53ServiceName);
-        getMitigationInfoRequest.setDeviceName(popRouterDeviceName);
+        getMitigationInfoRequest.setServiceName(edgeServiceName);
+        getMitigationInfoRequest.setDeviceName(blackwatchDeviceName);
         getMitigationInfoRequest.setDeviceScope(DeviceScope.GLOBAL.name());
         getMitigationInfoRequest.setMitigationName(mitigationName);
         
@@ -145,9 +145,9 @@ public class AuthorizationStrategyTest {
     
     private static void updateMitigationModificationRequest(MitigationModificationRequest modificationRequest) {
         modificationRequest.setMitigationName(mitigationName);
-        modificationRequest.setMitigationTemplate(route35RateLimitMitigationTemplate);
+        modificationRequest.setMitigationTemplate(blackwatchMitigationTemplate);
         modificationRequest.setMitigationActionMetadata(new MitigationActionMetadata());
-        modificationRequest.setServiceName(route53ServiceName);
+        modificationRequest.setServiceName(edgeServiceName);
     }
      
     private void setOperationNameForContext(String operationName) {
@@ -192,7 +192,7 @@ public class AuthorizationStrategyTest {
          
         BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
         BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:write-" + operation, 
-                EXPECTED_ARN_PREFIX + "Router_RateLimit_Route53Customer/Route53-POP_ROUTER");
+                EXPECTED_ARN_PREFIX + "BlackWatchPOP_PerTarget_EdgeCustomer/Edge-BLACKWATCH_POP");
         
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
     }
@@ -271,7 +271,7 @@ public class AuthorizationStrategyTest {
         
         BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
         BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:read-GetRequestStatus", 
-                EXPECTED_ARN_PREFIX + "ANY_TEMPLATE/Route53-POP_ROUTER");
+                EXPECTED_ARN_PREFIX + "ANY_TEMPLATE/Edge-BLACKWATCH_POP");
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
     }
     
@@ -285,17 +285,17 @@ public class AuthorizationStrategyTest {
         
         BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
         BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:read-ListActiveMitigationsForService", 
-                EXPECTED_ARN_PREFIX + "ANY_TEMPLATE/Route53-ANY_DEVICE");
+                EXPECTED_ARN_PREFIX + "ANY_TEMPLATE/Edge-ANY_DEVICE");
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
         
         // set device name in the request
-        listMitigationsRequest.setDeviceName(popRouterDeviceName);
+        listMitigationsRequest.setDeviceName(blackwatchDeviceName);
         authInfoList = authStrategy.getAuthorizationInfoList(context, listMitigationsRequest);
         assertTrue(authInfoList.size() == 1);
         
         authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
         expectedAuthInfo = getBasicAuthorizationInfo("lookout:read-ListActiveMitigationsForService", 
-                EXPECTED_ARN_PREFIX + "ANY_TEMPLATE/Route53-POP_ROUTER");
+                EXPECTED_ARN_PREFIX + "ANY_TEMPLATE/Edge-BLACKWATCH_POP");
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
     }
     
@@ -308,7 +308,7 @@ public class AuthorizationStrategyTest {
         
         BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
         BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:read-GetMitigationInfo", 
-                EXPECTED_ARN_PREFIX + "ANY_TEMPLATE/Route53-POP_ROUTER");
+                EXPECTED_ARN_PREFIX + "ANY_TEMPLATE/Edge-BLACKWATCH_POP");
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
     }
     
@@ -388,9 +388,9 @@ public class AuthorizationStrategyTest {
     public void testValidAbortDeploymentRequest() throws Throwable {
         setOperationNameForContext("AbortDeployment");
         AbortDeploymentRequest abortRequest = new AbortDeploymentRequest();
-        abortRequest.setServiceName(route53ServiceName);
-        abortRequest.setDeviceName(popRouterDeviceName);
-        abortRequest.setMitigationTemplate(route35RateLimitMitigationTemplate);
+        abortRequest.setServiceName(edgeServiceName);
+        abortRequest.setDeviceName(blackwatchDeviceName);
+        abortRequest.setMitigationTemplate(blackwatchMitigationTemplate);
         abortRequest.setJobId((long) 1);
         
         List<AuthorizationInfo> authInfoList = authStrategy.getAuthorizationInfoList(context, abortRequest);
@@ -398,7 +398,7 @@ public class AuthorizationStrategyTest {
          
         BasicAuthorizationInfo authInfo = (BasicAuthorizationInfo) authInfoList.get(0);
         BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo("lookout:write-" + "AbortDeployment", 
-                EXPECTED_ARN_PREFIX + route35RateLimitMitigationTemplate + "/" + route53ServiceName + "-" + popRouterDeviceName);
+                EXPECTED_ARN_PREFIX + blackwatchMitigationTemplate + "/" + edgeServiceName + "-" + blackwatchDeviceName);
         
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
     }

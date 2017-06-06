@@ -75,7 +75,7 @@ public class RequestsReaperTest {
         when(reaper.createQueryForRequests(anyString(), anyMap(), anyLong())).thenCallRealMethod();
         when(reaper.getRequestsTableName()).thenReturn("MitigationRequests_Test");
         
-        QueryRequest request = reaper.createQueryForRequests(DeviceName.POP_ROUTER.name(), null, 12345L);
+        QueryRequest request = reaper.createQueryForRequests(DeviceName.BLACKWATCH_POP.name(), null, 12345L);
         assertNotNull(request);
         
         Map<String, Condition> keyConditions = request.getKeyConditions();
@@ -84,7 +84,7 @@ public class RequestsReaperTest {
         assertTrue(keyConditions.containsKey(MitigationRequestsModel.DEVICE_NAME_KEY));
         assertNotNull(keyConditions.get(MitigationRequestsModel.DEVICE_NAME_KEY));
         assertEquals(keyConditions.get(MitigationRequestsModel.DEVICE_NAME_KEY).getAttributeValueList().size(), 1);
-        assertEquals(keyConditions.get(MitigationRequestsModel.DEVICE_NAME_KEY).getAttributeValueList().get(0).getS(), DeviceName.POP_ROUTER.name());
+        assertEquals(keyConditions.get(MitigationRequestsModel.DEVICE_NAME_KEY).getAttributeValueList().get(0).getS(), DeviceName.BLACKWATCH_POP.name());
         assertEquals(keyConditions.get(MitigationRequestsModel.DEVICE_NAME_KEY).getComparisonOperator(), ComparisonOperator.EQ.name());
         
         assertTrue(keyConditions.containsKey(MitigationRequestsModel.WORKFLOW_ID_KEY));
@@ -128,7 +128,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
         
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", null, 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
     }
 
@@ -153,7 +153,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class)))
                 .thenReturn(openWorkflowExecutions);
 
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", null, 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
     }
 
@@ -176,7 +176,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class)))
                 .thenReturn(openWorkflowExecutions);
 
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", null, 12345, newNopTsdMetrics());
         assertTrue(isWorkflowClosedInSWF);
     }
     
@@ -198,7 +198,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
 
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", null, 12345, newNopTsdMetrics());
         assertTrue(isWorkflowClosedInSWF);
         verify(swfClient, times(2)).listClosedWorkflowExecutions(any(ListClosedWorkflowExecutionsRequest.class));
     }
@@ -226,7 +226,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
 
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", null, 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
     }
 
@@ -256,7 +256,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
 
-        assertTrue(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics()));
+        assertTrue(reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", null, 12345, newNopTsdMetrics()));
     }
 
     @Test
@@ -285,7 +285,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
                 new WorkflowExecutionInfos().withExecutionInfos(Lists.newArrayList(info1)));
 
-        assertTrue(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics()));
+        assertTrue(reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", null, 12345, newNopTsdMetrics()));
     }
 
     @Test
@@ -314,7 +314,7 @@ public class RequestsReaperTest {
         when(swfClient.listOpenWorkflowExecutions(any(ListOpenWorkflowExecutionsRequest.class))).thenReturn(
                 new WorkflowExecutionInfos().withExecutionInfos(Lists.newArrayList(info2)));
 
-        assertFalse(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics()));
+        assertFalse(reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", null, 12345, newNopTsdMetrics()));
     }
 
     @Test
@@ -323,10 +323,10 @@ public class RequestsReaperTest {
         when(reaper.createQueryForInstances(anyString(), anyString(), anyMap())).thenCallRealMethod();
         when(reaper.getInstancesTableName()).thenReturn("MitigationInstances_Test");
         
-        QueryRequest request = reaper.createQueryForInstances(DeviceName.POP_ROUTER.name(), "1", null);
+        QueryRequest request = reaper.createQueryForInstances(DeviceName.BLACKWATCH_POP.name(), "1", null);
         assertNotNull(request);
         
-        String deviceWorkflowId = MitigationInstancesModel.getDeviceWorkflowId(DeviceName.POP_ROUTER.name(), 1);
+        String deviceWorkflowId = MitigationInstancesModel.getDeviceWorkflowId(DeviceName.BLACKWATCH_POP.name(), 1);
         
         Map<String, Condition> keyConditions = request.getKeyConditions();
         assertNotNull(keyConditions);
@@ -385,7 +385,7 @@ public class RequestsReaperTest {
         
         when(reaper.queryDynamoDB(any(QueryRequest.class))).thenReturn(result1).thenReturn(result2);
         
-        Map<String, Map<String, AttributeValue>> instances = reaper.queryInstancesForWorkflow(DeviceName.POP_ROUTER.name(), "1");
+        Map<String, Map<String, AttributeValue>> instances = reaper.queryInstancesForWorkflow(DeviceName.BLACKWATCH_POP.name(), "1");
         assertEquals(instances.size(), 2);
         assertTrue(instances.containsKey("TST1"));
         assertEquals(instances.get("TST1").get(MitigationInstancesModel.LOCATION_KEY).getS(), "TST1");
@@ -488,7 +488,7 @@ public class RequestsReaperTest {
         item1.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit1Template"));
         item1.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
         item1.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.CreateRequest.name()));
-        item1.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Route53));
+        item1.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Edge));
         item1.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
         items.add(item1);
         
@@ -504,10 +504,10 @@ public class RequestsReaperTest {
         item2.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit1Template"));
         item2.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
         item2.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.DeleteRequest.name()));
-        item2.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Route53));
+        item2.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Edge));
         item2.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
         items.add(item2);
-        when(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "2", "RandomRunID1", workflowRequestDate_2, metrics)).thenReturn(false);
+        when(reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "2", "RandomRunID1", workflowRequestDate_2, metrics)).thenReturn(false);
         
         // Item3, status is running for a while, but SWF API confirms that this workflow is now marked as closed in SWF.
         Map<String, AttributeValue> item3 = new HashMap<>();
@@ -521,10 +521,10 @@ public class RequestsReaperTest {
         item3.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit3Template"));
         item3.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
         item3.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.CreateRequest.name()));
-        item3.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Route53));
+        item3.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Edge));
         item3.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
         items.add(item3);
-        when(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "3", "RandomRunID1", workflowRequestDate_3, metrics)).thenReturn(true);
+        when(reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "3", "RandomRunID1", workflowRequestDate_3, metrics)).thenReturn(true);
         Map<String, Map<String, AttributeValue>> instancesDetails = new HashMap<>();
         Map<String, AttributeValue> info = new HashMap<>();
         info.put(MitigationInstancesModel.LOCATION_KEY, new AttributeValue("TST2"));
@@ -532,7 +532,7 @@ public class RequestsReaperTest {
         info = new HashMap<>();
         info.put(MitigationInstancesModel.LOCATION_KEY, new AttributeValue("TST3"));
         instancesDetails.put("TST3", info);
-        when(reaper.queryInstancesForWorkflow(DeviceName.POP_ROUTER.name(), "3")).thenReturn(instancesDetails);
+        when(reaper.queryInstancesForWorkflow(DeviceName.BLACKWATCH_POP.name(), "3")).thenReturn(instancesDetails);
         when(reaper.filterInstancesToBeReaped(Lists.newArrayList("TST2", "TST3"), instancesDetails)).thenReturn(instancesDetails);
         
         
@@ -548,16 +548,16 @@ public class RequestsReaperTest {
         item4.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit4Template"));
         item4.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
         item4.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.DeleteRequest.name()));
-        item4.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Route53));
+        item4.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Edge));
         item4.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
         items.add(item4);
-        when(reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "4", "RandomRunID1", workflowRequestDate_4, metrics)).thenReturn(true);
+        when(reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "4", "RandomRunID1", workflowRequestDate_4, metrics)).thenReturn(true);
         instancesDetails = new HashMap<>();
         instancesDetails.put("TST1", new HashMap<String, AttributeValue>());
         instancesDetails.put("TST2", new HashMap<String, AttributeValue>());
         instancesDetails.put("TST3", new HashMap<String, AttributeValue>());
         instancesDetails.put("TST4", new HashMap<String, AttributeValue>());
-        when(reaper.queryInstancesForWorkflow(DeviceName.POP_ROUTER.name(), "4")).thenReturn(instancesDetails);
+        when(reaper.queryInstancesForWorkflow(DeviceName.BLACKWATCH_POP.name(), "4")).thenReturn(instancesDetails);
         when(reaper.filterInstancesToBeReaped(Lists.newArrayList("TST1", "TST2", "TST3", "TST4"), instancesDetails)).thenReturn(instancesDetails);
         
         result1.setItems(items);
@@ -565,14 +565,14 @@ public class RequestsReaperTest {
         result1.setScannedCount(items.size());
         result1.setLastEvaluatedKey(new HashMap<String, AttributeValue>());
         
-        when(reaper.queryForRequests(eq(DeviceName.POP_ROUTER.name()), anyMap(), anyLong())).thenReturn(result1);
+        when(reaper.queryForRequests(eq(DeviceName.BLACKWATCH_POP.name()), anyMap(), anyLong())).thenReturn(result1);
         
         List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
         assertEquals(2, requestsToReap.size());
         
         RequestToReap request3 = requestsToReap.get(0);
         assertEquals(request3.getWorkflowIdStr(), item3.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN());
-        assertEquals(request3.getDeviceName(), DeviceName.POP_ROUTER.name());
+        assertEquals(request3.getDeviceName(), DeviceName.BLACKWATCH_POP.name());
         assertEquals(request3.getDeviceScope(), DeviceScope.GLOBAL.name());
         assertEquals(request3.getLocationsToBeReaped().size(), 2);
         assertTrue(request3.getLocationsToBeReaped().containsKey("TST2"));
@@ -581,12 +581,12 @@ public class RequestsReaperTest {
         assertEquals(request3.getMitigationTemplate(), "TstMit3Template");
         assertEquals(request3.getMitigationVersion(), 2);
         assertEquals(request3.getRequestType(), RequestType.CreateRequest.name());
-        assertEquals(request3.getServiceName(), ServiceName.Route53);
+        assertEquals(request3.getServiceName(), ServiceName.Edge);
         assertEquals(request3.getWorkflowIdStr(), "3");
         
         RequestToReap request4 = requestsToReap.get(1);
         assertEquals(request4.getWorkflowIdStr(), item4.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN());
-        assertEquals(request4.getDeviceName(), DeviceName.POP_ROUTER.name());
+        assertEquals(request4.getDeviceName(), DeviceName.BLACKWATCH_POP.name());
         assertEquals(request4.getDeviceScope(), DeviceScope.GLOBAL.name());
         assertEquals(request4.getLocationsToBeReaped().size(), 4);
         assertTrue(request4.getLocationsToBeReaped().containsKey("TST1"));
@@ -597,7 +597,7 @@ public class RequestsReaperTest {
         assertEquals(request4.getMitigationTemplate(), "TstMit4Template");
         assertEquals(request4.getMitigationVersion(), 5);
         assertEquals(request4.getRequestType(), RequestType.DeleteRequest.name());
-        assertEquals(request4.getServiceName(), ServiceName.Route53);
+        assertEquals(request4.getServiceName(), ServiceName.Edge);
         assertEquals(request4.getWorkflowIdStr(), "4");
     }
 
@@ -623,7 +623,7 @@ public class RequestsReaperTest {
         item5.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit1Template"));
         item5.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
         item5.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.CreateRequest.name()));
-        item5.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Route53));
+        item5.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Edge));
         item5.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
         items.add(item5);
         Map<String, Map<String, AttributeValue>> instancesDetails = new HashMap<>();
@@ -633,21 +633,21 @@ public class RequestsReaperTest {
         info = new HashMap<>();
         info.put(MitigationInstancesModel.LOCATION_KEY, new AttributeValue("TST2"));
         instancesDetails.put("TST2", info);
-        when(reaper.queryInstancesForWorkflow(DeviceName.POP_ROUTER.name(), "5")).thenReturn(instancesDetails);
+        when(reaper.queryInstancesForWorkflow(DeviceName.BLACKWATCH_POP.name(), "5")).thenReturn(instancesDetails);
         when(reaper.filterInstancesToBeReaped(Lists.newArrayList("TST1", "TST2"), instancesDetails)).thenReturn(instancesDetails);
         
         result2.setItems(items);
         result2.setCount(items.size());
         result2.setScannedCount(items.size());
         
-        when(reaper.queryForRequests(eq(DeviceName.POP_ROUTER.name()), anyMap(), anyLong())).thenReturn(result2);
+        when(reaper.queryForRequests(eq(DeviceName.BLACKWATCH_POP.name()), anyMap(), anyLong())).thenReturn(result2);
         
         List<RequestToReap> requestsToReap = reaper.getRequestsToReap(metrics);
         assertEquals(1, requestsToReap.size());
         
         RequestToReap request5 = requestsToReap.get(0);
         assertEquals(request5.getWorkflowIdStr(), item5.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN());
-        assertEquals(request5.getDeviceName(), DeviceName.POP_ROUTER.name());
+        assertEquals(request5.getDeviceName(), DeviceName.BLACKWATCH_POP.name());
         assertEquals(request5.getDeviceScope(), DeviceScope.GLOBAL.name());
         assertEquals(request5.getLocationsToBeReaped().size(), 2);
         assertTrue(request5.getLocationsToBeReaped().containsKey("TST1"));
@@ -656,7 +656,7 @@ public class RequestsReaperTest {
         assertEquals(request5.getMitigationTemplate(), "TstMit1Template");
         assertEquals(request5.getMitigationVersion(), 2);
         assertEquals(request5.getRequestType(), RequestType.CreateRequest.name());
-        assertEquals(request5.getServiceName(), ServiceName.Route53);
+        assertEquals(request5.getServiceName(), ServiceName.Edge);
         assertEquals(request5.getWorkflowIdStr(), "5");
     }
     
@@ -732,23 +732,23 @@ public class RequestsReaperTest {
         List<RequestToReap> requestsToReap = new ArrayList<>();
         RequestToReap requestToReap1 = new RequestToReap();
         requestToReap1.setWorkflowIdStr("1");
-        requestToReap1.setDeviceName(DeviceName.POP_ROUTER.name());
+        requestToReap1.setDeviceName(DeviceName.BLACKWATCH_POP.name());
         requestsToReap.add(requestToReap1);
-        String swfWorkflowId1 = DeviceName.POP_ROUTER.name() + "_1_Reaper";
+        String swfWorkflowId1 = DeviceName.BLACKWATCH_POP.name() + "_1_Reaper";
         when(workflowStarter.createReaperWorkflowClient(swfWorkflowId1, metrics)).thenReturn(workflowClient).thenThrow(new RuntimeException());
         
         RequestToReap requestToReap2 = new RequestToReap();
         requestToReap2.setWorkflowIdStr("2");
-        requestToReap2.setDeviceName(DeviceName.POP_ROUTER.name());
+        requestToReap2.setDeviceName(DeviceName.BLACKWATCH_POP.name());
         requestsToReap.add(requestToReap2);
-        String swfWorkflowId2 = DeviceName.POP_ROUTER.name() + "_2_Reaper";
+        String swfWorkflowId2 = DeviceName.BLACKWATCH_POP.name() + "_2_Reaper";
         when(workflowStarter.createReaperWorkflowClient(swfWorkflowId2, metrics)).thenReturn(workflowClient).thenThrow(new RuntimeException());
         
         RequestToReap requestToReap3 = new RequestToReap();
         requestToReap3.setWorkflowIdStr("3");
-        requestToReap3.setDeviceName(DeviceName.POP_ROUTER.name());
+        requestToReap3.setDeviceName(DeviceName.BLACKWATCH_POP.name());
         requestsToReap.add(requestToReap3);
-        String swfWorkflowId3 = DeviceName.POP_ROUTER.name() + "_3_Reaper";
+        String swfWorkflowId3 = DeviceName.BLACKWATCH_POP.name() + "_3_Reaper";
         when(workflowStarter.createReaperWorkflowClient(swfWorkflowId3, metrics)).thenReturn(workflowClient).thenThrow(new RuntimeException());
         
         when(reaper.getRequestsToReap(any(TSDMetrics.class))).thenReturn(requestsToReap);
@@ -783,15 +783,15 @@ public class RequestsReaperTest {
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
         
         // if swf run id is null, it will not filter result
-        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
+        boolean isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", null, 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
         
         // swf run id matches result
-        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID1", 12345, newNopTsdMetrics());
+        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", "SWF-runID1", 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
          
         // swf run id does not match result
-        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID2", 12345, newNopTsdMetrics());
+        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", "SWF-runID2", 12345, newNopTsdMetrics());
         assertTrue(isWorkflowClosedInSWF);
         
         
@@ -808,15 +808,15 @@ public class RequestsReaperTest {
                 new WorkflowExecutionInfos().withExecutionInfos(Collections.emptyList()));
          
         // if swf run id is null, it will not filter result
-        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", null, 12345, newNopTsdMetrics());
+        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", null, 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
         
         // swf run id matches result
-        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID1", 12345, newNopTsdMetrics());
+        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", "SWF-runID1", 12345, newNopTsdMetrics());
         assertFalse(isWorkflowClosedInSWF);
          
         // swf run id does not match result
-        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.POP_ROUTER.name(), "1", "SWF-runID2", 12345, newNopTsdMetrics());
+        isWorkflowClosedInSWF = reaper.isWorkflowClosedInSWF(DeviceName.BLACKWATCH_POP.name(), "1", "SWF-runID2", 12345, newNopTsdMetrics());
         assertTrue(isWorkflowClosedInSWF);
     }
     

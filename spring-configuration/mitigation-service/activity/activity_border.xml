@@ -61,7 +61,6 @@
         <constructor-arg name="activeMitigationInfoHandler" ref="ddbBasedRequestInfoHandler"/>
         <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
         <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
-        <constructor-arg name="routerMetadataHelper" ref="routerMetadataHelper"/>
         <constructor-arg name="threadPool" ref="listMitigationsActivityThreadPool"/>
     </bean>
 
@@ -140,16 +139,11 @@
     
     <!-- All the beans required by the activities go here -->
     <bean id="requestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.RequestValidator">
-        <constructor-arg name="serviceLocationsHelper" ref="serviceLocationsHelper"/>
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
         <constructor-arg name="blackWatchBorderLocationValidator" ref="blackWatchBorderLocationValidator"/>
         <constructor-arg name="blackWatchEdgeLocationValidator" ref="blackWatchEdgeLocationValidator"/>
     </bean>
     
-    <bean id="serviceLocationsHelper" class="com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper">
-        <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
-    </bean>
-
     <bean id="s3OdinCredential" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
         <constructor-arg value="com.amazon.lookout.mitigationservice.s3.fullaccess.${realm}.${domain}"/>
     </bean>
@@ -174,7 +168,6 @@
     </bean>
     
     <bean id="templateBasedRequestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator">
-        <constructor-arg name="serviceSubnetsMatcher" ref="serviceSubnetsMatcher"/>
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
         <constructor-arg name="blackWatchS3Client" ref="blackWatchS3Client"/>
         <constructor-arg name="blackWatchBorderLocationValidator" ref="blackWatchBorderLocationValidator"/>
@@ -262,8 +255,7 @@
     <bean id="regionAirportCode" class="java.lang.String">
         <constructor-arg value="#{ripRegion.getAirportCode()}" />
     </bean>
-    
-    
+
     <bean id="dogfishHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper">
         <constructor-arg name="region" ref="regionAirportCode"/>
         <constructor-arg name="masterRegion" ref="${domain}.masterRegion"/>
@@ -328,50 +320,7 @@
     </bean>
 
     <bean id="templateBasedLocationsManager" class="com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager">
-        <constructor-arg name="route53SingleCustomerHelper" ref="route53SingleCustomerTemplateLocationsHelper"/>
         <constructor-arg name="blackWatchTemplateLocationHelper" ref="blackWatchTemplateLocationHelper"/>
-    </bean>
-    
-    <bean id="route53SingleCustomerTemplateLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.Route53SingleCustomerTemplateLocationsHelper">
-        <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
-        <constructor-arg name="popsWithCiscoRouter" ref="${domain}.popsWithCiscoRouter"/>
-    </bean>
-    
-    <bean id="monitoringQueryClientProvider" class="com.amazon.lookout.mitigation.service.workflow.helper.MonitoringQueryClientProvider">
-        <constructor-arg name="odinAWSCredsProvider" ref="${domain}.mwsCredentialsProvider"/>
-        <constructor-arg name="regionName" value="${realm}"/>
-    </bean>
-    
-    <bean id="bwLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.BlackwatchLocationsHelper">
-        <constructor-arg name="ldapProvider" ref="ldapProvider"/>
-        <constructor-arg name="overrideGammaBWPOPAsNonBW" value="true"/> <!-- Toggle this value accordingly if we want the Gamma BW POP to be considered as a non-BW POP instead -->
-        <constructor-arg name="mwsClientProvider" ref="monitoringQueryClientProvider"/>
-        <constructor-arg name="mwsMetricDataset" ref="${domain}.blackwatchMWSMetricDataset"/>
-        <constructor-arg name="blackwatchMWSMetricName" value="Total_Mitigated_Packets_RX"/>
-        <constructor-arg name="blackwatchInlineThreshold" value="30000"/>
-    </bean>
-    
-    <bean id="ldapProvider" class="com.amazon.ldaputils.DefaultLdapProvider"/>
-    
-    <bean id="serviceSubnetsMatcher" class="com.amazon.lookout.mitigation.service.activity.helper.ServiceSubnetsMatcher">
-        <constructor-arg>
-            <list>
-                <ref bean="route53SubnetFetcher"/>
-                <ref bean="cloudFrontFMSSubnetsFetcher"/>
-            </list>
-        </constructor-arg>
-    </bean>
-    
-    <bean id="route53SubnetFetcher" class="com.amazon.aws158.commons.customer.Route53SubnetsFetcher">
-       <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
-    </bean>
-   
-    <bean id="cloudFrontExternalVipsSubnetsFetcher" class="com.amazon.aws158.commons.customer.CloudFrontExternalVipsSubnetsFetcher">
-       <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
-    </bean>
-   
-    <bean id="cloudFrontFMSSubnetsFetcher" class="com.amazon.aws158.commons.customer.CloudFrontFMSSubnetsFetcher">
-       <constructor-arg value="${root}/etc/EdgeSetupVLAN/edge-setup-vlans.conf"/>
     </bean>
 
     <bean id="amazonPrefixesMetadataTracker" class="com.amazon.lookout.util.prefixes.AmazonPrefixesMetadataTracker.AllPrefixesTracker"/>
@@ -394,22 +343,6 @@
     <!-- New coral Activities are created per request, by creating a pool here, we ensure Spring shuts down this pool during shutdown sequence and all Activity instances share the same singleton ThreadPool instance. -->
     <bean id="listMitigationsActivityThreadPool" class="java.util.concurrent.Executors" factory-method="newFixedThreadPool">
         <constructor-arg index="0"><value>15</value></constructor-arg>
-    </bean>
-    
-    <bean id="routerMetadataHelper" class="com.amazon.lookout.mitigation.service.activity.helper.DDBBasedRouterMetadataHelper">
-        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
-        <constructor-arg name="domain" value="${domain}"/>
-        <constructor-arg name="serviceSubnetsMatcher" ref="serviceSubnetsMatcher"/>
-        <constructor-arg name="locationRouterMapper" ref="popLocationToRouterNameHelper"/>
-    </bean>
-    
-    <bean id="popLocationToRouterNameHelper" class="com.amazon.lookout.mitigation.utilities.POPLocationToRouterNameHelper">
-        <constructor-arg name="popLocationtoRoutersOverridesMap">
-            <map>
-                <entry key="G-IAD5" value="iad5-gm-tra-r1"/>
-                <entry key="G-SFO5" value="sfo5-gm-tra-r1"/>
-            </map>
-        </constructor-arg>
     </bean>
     
     <bean id="mitigationRequestTable" class="com.amazon.lookout.ddb.model.MitigationRequestsModel" factory-method="getInstance"/>

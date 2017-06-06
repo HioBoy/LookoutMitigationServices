@@ -61,12 +61,9 @@ public class EdgeLocationsHelper implements Runnable {
     private static final String ROUTE53_POP_NAMES_REFRESH_FAILED_METRIC = "Route53RefreshFailed";
     private static final String CLOUDFRONT_POP_NAMES_REFRESH_METRIC = "EdgeServicesRefresh";
     private static final String CLOUDFRONT_POP_NAMES_REFRESH_FAILED_METRIC = "EdgeServicesRefreshFailed";
-    private static final String BLACKWATCH_POP_CHECK_METRIC = "BlackwatchCheck";
-    private static final String BLACKWATCH_POP_CHECK_FAILED_METRIC = "BlackwatchCheckFailed";
-    
+
     public static final String POPS_LIST_FILE_NAME = "popsList";
     private static final String FILE_NEW_SUFFIX = ".new";
-    public static final String POPS_LIST_FILE_FIELDS_DELIMITER = ",";
     public static final String POPS_LIST_FILE_COMMENTS_KEY = "#";
     public static final String POPS_LIST_FILE_CHARSET = "UTF-8";
     
@@ -79,25 +76,20 @@ public class EdgeLocationsHelper implements Runnable {
     // Maintain a copy of all classic (non-Metro) POPs known to this locations helper.
     private final CopyOnWriteArraySet<String> allClassicPOPs = new CopyOnWriteArraySet<>();
     
-    // Maintain a copy of all classic POPs known to this locations helper which have Blackwatch hosts installed.
-    private final CopyOnWriteArraySet<String> blackwatchClassicPOPs = new CopyOnWriteArraySet<>();
-    
     private final EdgeOperatorServiceClient cloudfrontClient;
     private final DaasControlAPIServiceV20100701Client daasClient;
-    private final BlackwatchLocationsHelper bwLocationsHelper;
     private final int sleepBetweenRetriesInMillis;
     private final String popsListDiskCacheDirName;
     private final MetricsFactory metricsFactory;
     private final List<String> fakeBlackWatchClassicLocations;
 
-    @ConstructorProperties({"cloudfrontClient", "daasClient", "bwLocationsHelper", "millisToSleepBetweenRetries", "popsListDir", "metricsFactory", "fakeBlackWatchClassicLocations"})
+    @ConstructorProperties({"cloudfrontClient", "daasClient", "millisToSleepBetweenRetries", "popsListDir", "metricsFactory", "fakeBlackWatchClassicLocations"})
     public EdgeLocationsHelper(@NonNull EdgeOperatorServiceClient cloudfrontClient, @NonNull DaasControlAPIServiceV20100701Client daasClient,
-                               @NonNull BlackwatchLocationsHelper bwLocationsHelper, int sleepBetweenRetriesInMillis, 
+                               int sleepBetweenRetriesInMillis, 
                                @NonNull String popsListDiskCacheDirName, @NonNull MetricsFactory metricsFactory,
                                @NonNull List<String> fakeBlackWatchClassicLocations) {
         this.cloudfrontClient = cloudfrontClient;
         this.daasClient = daasClient;
-        this.bwLocationsHelper = bwLocationsHelper;
         
         Validate.isTrue(sleepBetweenRetriesInMillis > 0);
         this.sleepBetweenRetriesInMillis = sleepBetweenRetriesInMillis;
@@ -123,38 +115,16 @@ public class EdgeLocationsHelper implements Runnable {
         return Stream.concat(allClassicPOPs.stream(), fakeBlackWatchClassicLocations.stream())
                 .collect(Collectors.toSet());
     }
-    
-    public Set<String> getBlackwatchClassicPOPs() {
-        if (!locationsRefreshAtleastOnce.get()) {
-            refreshPOPLocations();
-        }
 
-        // Return blackwatchClassicPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
-        // (from either of the edge service calls succeeding) hence, there is no need to fail the create request. Users will have visibility into the instances being worked upon.
-        return Stream.concat(blackwatchClassicPOPs.stream(), fakeBlackWatchClassicLocations.stream())
-                .collect(Collectors.toSet());
-    }
-    
-    public Set<String> getAllNonBlackwatchClassicPOPs() {
-        if (!locationsRefreshAtleastOnce.get()) {
-            refreshPOPLocations();
-        }
-        
-        // Return the different of allClassicPOPs and blackwatchClassicPOPs based on the current view. Even if locationsRefreshAtleastOnce isn't true, we might have partial results 
-        // (from either of the edge service calls succeeding) hence, there is no need to fail the create request. Users will have visibility into the instances being worked upon.
-        return (Sets.difference(allClassicPOPs, blackwatchClassicPOPs));
-    }
-    
     public void run() {
         refreshPOPLocations();
     }
     
     /**
-     * Refreshes the list of all pops and pops with/without blackwatch. Currently (01/2015) skipping all the non-classic POPs and only keeping track of the classic (non-metro) POPs.
+     * Refreshes the list of all classic pops.
      * 
      * We also add a counter for CloudFront/Route53 with a value of 1 if the API calls to their respective customer API for refreshing the POP names succeed, 
      * else we populate a 0 - this will help us to see the trend of how often we fail/succeed the refresh the POP names from these services.
-     * We publish a similar metric for the check indicating whether a POP has Blackwatch hosts or not using LDAP search.
      */
     private void refreshPOPLocations() {
         TSDMetrics metrics = new TSDMetrics(metricsFactory, "refreshPOPLocations");
@@ -206,38 +176,7 @@ public class EdgeLocationsHelper implements Runnable {
                     allClassicPOPs.retainAll(refreshedPOPsList);
                 }
             }
-            
-            // Also refresh the list of BW POPs here.
-            boolean allPOPsCheckedForBlackwatch = true;
-            for (String popName : allClassicPOPs) {
-                try {
-                    if (bwLocationsHelper.isBlackwatchPOP(popName, metrics)) {
-                        LOG.info("Adding POP: " + popName + " as a BW POP.");
-                        blackwatchClassicPOPs.add(popName);
-                    } else {
-                        if (blackwatchClassicPOPs.contains(popName)) {
-                            LOG.info("Marking POP: " + popName + " as non-BW, though it was previously marked as a BW POP.");
-                            blackwatchClassicPOPs.remove(popName);
-                        }
-                    }
-                } catch (Exception ex) {
-                    allActionsSuccessful = false;
-                    allPOPsCheckedForBlackwatch = false;
-                    
-                    String msg = "Caught exception when checking if pop: " + popName + " is Blackwatch capable, continuing checking the other POPs now." +
-                                 " Current status for this POP having Blackwatch: " + blackwatchClassicPOPs.contains(popName) + ". Leaving this status as is.";
-                    LOG.warn(msg, ex);
-                }
-            }
-            
-            if (allPOPsCheckedForBlackwatch) {
-                metrics.addOne(BLACKWATCH_POP_CHECK_METRIC);
-                metrics.addZero(BLACKWATCH_POP_CHECK_FAILED_METRIC);
-            } else {
-                metrics.addZero(BLACKWATCH_POP_CHECK_METRIC);
-                metrics.addOne(BLACKWATCH_POP_CHECK_FAILED_METRIC);
-            }
-            
+
             if (allActionsSuccessful) {
                 locationsRefreshAtleastOnce.set(true);
             }
@@ -339,47 +278,38 @@ public class EdgeLocationsHelper implements Runnable {
             LOG.info("Loading list of POPs from file " + pathToListOfPopsOnDisk);
             
             Set<String> popsReadFromFile = new HashSet<>();
-            Set<String> bwPOPsReadFromFile = new HashSet<>();
-            
+
             List<List<String>> lines = null;
             try {
-                lines = FileUtils.readFile(pathToListOfPopsOnDisk, POPS_LIST_FILE_FIELDS_DELIMITER, POPS_LIST_FILE_COMMENTS_KEY, POPS_LIST_FILE_CHARSET);
+                lines = FileUtils.readFile(pathToListOfPopsOnDisk, ",", POPS_LIST_FILE_COMMENTS_KEY, POPS_LIST_FILE_CHARSET);
             } catch (IOException ex) {
                 LOG.error("Unable to read the file: " + pathToListOfPopsOnDisk + " containing list of POPs on disk.", ex);
                 return;
             }
             
             for (List<String> line : lines) {
-                if (line.size() < 2) {
-                    LOG.error("[UNEXPECTED_POPS_LIST_FILE_ENTRY] Found a line with less than 2 entries. " +
-                            "Expected each non-comment line to have the format: \"<POPName>,<isBW true/false>. Hence skipping line: " + line);
+                if (line.size() < 1) {
+                    LOG.error("[UNEXPECTED_POPS_LIST_FILE_ENTRY] Skipping line with more than 1 entry: " + line);
                     continue;
                 }
                 
                 String popName = line.get(0).trim();
-                boolean isBWPOP = Boolean.valueOf(line.get(1).trim());
-                
                 popsReadFromFile.add(popName);
-                if (isBWPOP) {
-                    bwPOPsReadFromFile.add(popName);
-                }
             }
             
             allClassicPOPs.addAll(popsReadFromFile);
-            blackwatchClassicPOPs.addAll(bwPOPsReadFromFile);
             tsdMetrics.addOne(POPS_LIST_READ_SUCCESSFULLY_KEY);
         }
     }
     
     /**
-     * Flushes the current set of BW POPs this helper knows about, along with their BW/non-BW status to a file on disk.
-     * The file is will have each line define the POP name and a comma separated value of true/false indicating whether the POP has BW or not. (Eg line: ARN1,true)
+     * Flushes the current set of BW POPs this helper knows about.
      */
     @PreDestroy
     public void flushCurrentListOfPOPsToDisk() {
         try (TSDMetrics tsdMetrics = new TSDMetrics(metricsFactory, "flushCurrentListOfPOPsToDisk")) {
             tsdMetrics.addZero(POPS_LIST_FLUSHED_SUCCESSFULLY_KEY);
-            LOG.info("Saving list of POPs: " + allClassicPOPs + " to disk, along with their BW/non-BW status.");
+            LOG.info("Saving list of POPs: " + allClassicPOPs + " to disk.");
     
             File popsListDiskCacheDir = new File(popsListDiskCacheDirName);
             if (!popsListDiskCacheDir.exists() && !popsListDiskCacheDir.mkdirs()) {
@@ -408,8 +338,7 @@ public class EdgeLocationsHelper implements Runnable {
             try {
                 writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(newFile), StandardCharsets.UTF_8));
                 for (String popName : allClassicPOPs) {
-                    String isBWFlag = Boolean.toString(blackwatchClassicPOPs.contains(popName)); 
-                    writer.write(popName + "," + isBWFlag + "\n");
+                    writer.write(popName + "\n");
                 }
             } catch (IOException e) {
                 LOG.error("Unable to write file for pops list ids at: " + newFile.getAbsolutePath(), e);
@@ -432,5 +361,5 @@ public class EdgeLocationsHelper implements Runnable {
             }
         }
     }
-    
 }
+

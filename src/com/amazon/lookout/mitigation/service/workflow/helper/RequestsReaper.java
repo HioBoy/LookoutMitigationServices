@@ -474,6 +474,13 @@ public class RequestsReaper implements Runnable {
                     }
                     
                     QueryResult queryResult = queryForRequests(deviceName.name(), lastEvaluatedKey, workflowIdLowerBound);
+
+                    if (queryResult == null) {
+                        // Happens in unit testing when the class is mocked
+                        LOG.warn("queryResult was null for deviceName: " + deviceName.name());
+                        continue;
+                    }
+
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("Found: " + queryResult.getItems().size() + " unsuccessful+unreaped requests: " + ReflectionToStringBuilder.toString(queryResult));
                     }

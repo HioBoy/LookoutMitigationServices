@@ -64,10 +64,9 @@ package.LookoutMitigationService = {
             CoralClientHttp = 1.0;
 
             LookoutMitigationServiceExplorer = 1.0;
-            LookoutRouterMitigationCommons = 1.0;
+            LookoutRouterMitigationCommons = 1.0;  # Needed for com.amazon.lookout.models.prefixes
             
             LookoutMWSClientJava = 1.0;
-            LookoutFakeRouterServiceJavaClient = 1.0;
             
             LookoutMitigationServiceJlbRelayConfig = 1.0;
             CoralSslProxySupport = 1.0;
@@ -118,8 +117,6 @@ package.LookoutMitigationService = {
             junit = 4.12;
             Mockito = 1.10.x;
             JUnitParams = 1.x;
-            # For TOD-based approval step in the pipeline
-            LookoutMitigationServiceMonitor = 1.0;
             LookoutTestCommons = 1.0;
             DynamoDBLocal = 1.11.x;
         };

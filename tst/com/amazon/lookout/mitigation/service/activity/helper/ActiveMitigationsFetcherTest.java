@@ -36,8 +36,8 @@ public class ActiveMitigationsFetcherTest {
      */
     @Test
     public void testLocationsConsolidation() {
-        String serviceName = ServiceName.Route53;
-        String deviceName = DeviceName.POP_ROUTER.name();
+        String serviceName = ServiceName.Edge;
+        String deviceName = DeviceName.BLACKWATCH_POP.name();
         List<String> locations = null;
         
         TSDMetrics tsdMetrics = mock(TSDMetrics.class);

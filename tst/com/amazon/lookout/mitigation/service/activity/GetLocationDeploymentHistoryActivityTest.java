@@ -18,7 +18,6 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryResponse;
 import com.amazon.lookout.mitigation.service.LocationDeploymentInfo;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
@@ -105,7 +104,7 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
     @Test(expected = BadRequest400.class)
     public void testInvalidHistoryEntrySize() {
         getLocationDeploymentHistoryActivity = 
-                spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(mock(ServiceLocationsHelper.class),
+                spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(
                         mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
                     mock(BlackWatchEdgeLocationValidator.class)), mitigationInstanceInfoHandler)); 
         request.setMaxNumberOfHistoryEntriesToFetch(10000);
@@ -118,7 +117,7 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
     @Test(expected = BadRequest400.class)
     public void testInvalidHistoryEntrySize2() {
         getLocationDeploymentHistoryActivity = 
-                spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(mock(ServiceLocationsHelper.class),
+                spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(
                         mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
                     mock(BlackWatchEdgeLocationValidator.class)), mitigationInstanceInfoHandler)); 
         request.setMaxNumberOfHistoryEntriesToFetch(-1);

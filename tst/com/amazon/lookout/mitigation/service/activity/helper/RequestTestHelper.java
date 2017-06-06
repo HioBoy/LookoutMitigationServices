@@ -2,20 +2,26 @@ package com.amazon.lookout.mitigation.service.activity.helper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import org.joda.time.DateTime;
 
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.lookout.mitigation.service.BlastRadiusCheck;
+import com.amazon.lookout.mitigation.service.AlarmCheck;
+import com.amazon.lookout.mitigation.service.Alarm;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
-import com.amazon.lookout.mitigation.service.SimpleConstraint;
+import com.amazon.lookout.mitigation.service.S3Object;
+import com.amazon.lookout.mitigation.service.BlackWatchConfigBasedConstraint;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
+import com.amazon.lookout.mitigation.service.DropAction;
 import com.google.common.collect.Lists;
 
 public class RequestTestHelper {
@@ -30,8 +36,13 @@ public class RequestTestHelper {
         request.setMitigationActionMetadata(metadata);
         
         MitigationDefinition definition = defaultMitigationDefinition();
+        definition.setAction(new DropAction());
         request.setMitigationDefinition(definition);
-        
+
+        List<String> locations = new ArrayList<>();
+        locations.add("POP1");
+        request.setLocations(locations);
+
         BlastRadiusCheck check1 = new BlastRadiusCheck();
         DateTime now = new DateTime();
         check1.setEndDateTime(now.toString());
@@ -48,6 +59,22 @@ public class RequestTestHelper {
         checks.add(check2);
         request.setPreDeploymentChecks(checks);
         
+        List<MitigationDeploymentCheck> postChecks = new ArrayList<>();
+        AlarmCheck alarmCheck = new AlarmCheck();
+        alarmCheck.setCheckEveryNSec(5);
+        alarmCheck.setCheckTotalPeriodSec(5);
+        alarmCheck.setDelaySec(1);
+        alarmCheck.setCheckTotalPeriodSec(6);
+        Map<String, List<Alarm>> alarms = new HashMap<>();
+        List<Alarm> alarmList = new ArrayList<>();
+        Alarm covfefe = new Alarm();
+        covfefe.setName("covfefe");
+        alarmList.add(covfefe);
+        alarms.put("covefefe", alarmList);
+        alarmCheck.setAlarms(alarms);
+        postChecks.add(alarmCheck);
+        request.setPostDeploymentChecks(postChecks);
+
         return request;
     }
 
@@ -76,6 +103,7 @@ public class RequestTestHelper {
         
         MitigationDefinition definition = 
                 createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.5"));
+        definition.setAction(new DropAction());
         request.setMitigationDefinition(definition);
         
         BlastRadiusCheck check1 = new BlastRadiusCheck();
@@ -117,15 +145,15 @@ public class RequestTestHelper {
     }
 
     public static CreateMitigationRequest generateCreateMitigationRequest(String template, String name) {
-        return generateCreateMitigationRequest(template, name, ServiceName.Route53);
+        return generateCreateMitigationRequest(template, name, ServiceName.Edge);
     }
     
     public static EditMitigationRequest generateEditMitigationRequest(String template, String name, int version) {
-        return generateEditMitigationRequest(template, name, ServiceName.Route53, version);
+        return generateEditMitigationRequest(template, name, ServiceName.Edge, version);
     }
     
     public static DeleteMitigationFromAllLocationsRequest generateDeleteMitigationRequest(String template, String name, int version) {
-        return generateDeleteMitigationRequest(template, name, ServiceName.Route53, version);
+        return generateDeleteMitigationRequest(template, name, ServiceName.Edge, version);
     }
 
     public static CreateMitigationRequest generateCreateMitigationRequest() {
@@ -133,15 +161,15 @@ public class RequestTestHelper {
     }
     
     public static CreateMitigationRequest generateCreateMitigationRequest(String name) {
-        return generateCreateMitigationRequest(MitigationTemplate.Router_RateLimit_Route53Customer, name);
+        return generateCreateMitigationRequest(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, name);
     }
     
     public static EditMitigationRequest generateEditMitigationRequest(String name, int version) {
-        return generateEditMitigationRequest(MitigationTemplate.Router_RateLimit_Route53Customer, name, version);
+        return generateEditMitigationRequest(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, name, version);
     }
     
     public static DeleteMitigationFromAllLocationsRequest generateDeleteMitigationRequest(String name, int version) {
-        return generateDeleteMitigationRequest(MitigationTemplate.Router_RateLimit_Route53Customer, name, version);
+        return generateDeleteMitigationRequest(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, name, version);
     }
 
     public static MitigationDefinition defaultMitigationDefinition() {
@@ -149,9 +177,12 @@ public class RequestTestHelper {
     }
 
     public static MitigationDefinition createMitigationDefinition(String attrName, List<String> attrValues) {
-        SimpleConstraint constraint = new SimpleConstraint();
-        constraint.setAttributeName(attrName);
-        constraint.setAttributeValues(attrValues);
+        BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
+        S3Object s3object = new S3Object();
+        s3object.setBucket("bucket");
+        s3object.setKey("key");
+        s3object.setMd5("md5");
+        constraint.setConfig(s3object);
         MitigationDefinition definition = new MitigationDefinition();
         definition.setConstraint(constraint);
         return definition;

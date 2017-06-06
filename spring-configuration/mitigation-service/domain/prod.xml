@@ -13,12 +13,7 @@
     <bean id="prod.edgeOperatorServiceURL" class="java.lang.String">
         <constructor-arg value="http://edge-operator-service.amazon.com:8080"/>
     </bean>
-    
-    <util:set id="prod.popsWithCiscoRouter">
-        <value>EWR2</value>
-        <value>HKG1</value>
-    </util:set>
-    
+
     <util:map id="prod.regionEndpointsMap">
         <entry key="BOM" value="lookout-mitigation-service.ap-south-1.amazonaws.com"/>
         <entry key="CMH" value="lookout-mitigation-service.us-east-2.amazonaws.com"/>
@@ -46,10 +41,6 @@
     
     <util:list id="prod.fakeBlackWatchClassicLocations"/>
     
-    <bean id="prod.mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg value="com.amazon.lookout.mws.mitigationservice.prod"/>
-    </bean>
-    
     <bean id="prod.blackwatchMWSMetricDataset" class="java.lang.String">
         <constructor-arg value="Prod"/>
     </bean>
@@ -59,7 +50,6 @@
     <bean id="prod.edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
         <constructor-arg name="cloudfrontClient" ref="edgeOperatorServiceClient"/>
         <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>
-        <constructor-arg name="bwLocationsHelper" ref="bwLocationsHelper"/>
         <constructor-arg name="millisToSleepBetweenRetries" value="500"/>
         <constructor-arg name="popsListDir" value="var/state/popsList"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>

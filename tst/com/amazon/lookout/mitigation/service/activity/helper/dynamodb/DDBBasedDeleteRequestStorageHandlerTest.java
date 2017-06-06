@@ -45,6 +45,7 @@ import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
+import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazon.lookout.test.common.util.AssertUtils;
@@ -143,17 +144,15 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
     
     @Test
     public void testDeleteMitigationWithNewTemplate() {
-        assertThat(existingRequest1.getMitigationTemplate(), equalTo(MitigationTemplate.Router_RateLimit_Route53Customer));
+        assertThat(existingRequest1.getMitigationTemplate(), equalTo(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer));
         DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(
-                MitigationTemplate.Router_CountMode_Route53Customer, MITIGATION_1_NAME, 1);
+                MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer, MITIGATION_1_NAME, ServiceName.AWS, 1);
         
-        IllegalArgumentException exception = AssertUtils.assertThrows(
-                IllegalArgumentException.class, 
+        MissingMitigationException400 exception = AssertUtils.assertThrows(
+                MissingMitigationException400.class, 
                 () -> storageHandler.storeRequestForWorkflow(request, defaultLocations, tsdMetrics));
-        
-        assertThat(exception.getMessage(), allOf(
-                containsString(MitigationTemplate.Router_RateLimit_Route53Customer),
-                containsString(MitigationTemplate.Router_CountMode_Route53Customer)));
+
+        assertThat(exception.getMessage(), containsString(request.getMitigationName()));
     }
     
     @Test

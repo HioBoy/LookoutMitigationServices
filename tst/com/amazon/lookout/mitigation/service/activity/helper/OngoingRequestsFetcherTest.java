@@ -28,8 +28,8 @@ public class OngoingRequestsFetcherTest {
     private static final List<String> LOCATIONS_2 = Arrays.asList("C", "D", "E");
     private static final MitigationRequestDescription REQUEST_DESCRIPTION_1 = new MitigationRequestDescription();
     private static final MitigationRequestDescription REQUEST_DESCRIPTION_2 = new MitigationRequestDescription();
-    private static final String SERVICE_NAME = ServiceName.Route53;
-    private static final String DEVICE_NAME = DeviceName.POP_ROUTER.name();
+    private static final String SERVICE_NAME = ServiceName.Edge;
+    private static final String DEVICE_NAME = DeviceName.BLACKWATCH_POP.name();
     private static final long JOB_ID_1 = 1l;
     private static final long JOB_ID_2 = 2l;
     private static final MitigationRequestDescriptionWithLocations REQUEST_1 = new MitigationRequestDescriptionWithLocations();

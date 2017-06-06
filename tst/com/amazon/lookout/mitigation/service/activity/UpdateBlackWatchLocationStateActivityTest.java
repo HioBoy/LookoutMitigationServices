@@ -12,7 +12,6 @@ import com.amazon.blackwatch.location.state.model.LocationType;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateResponse;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
-import com.amazon.lookout.mitigation.service.activity.helper.ServiceLocationsHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
@@ -27,8 +26,7 @@ public class UpdateBlackWatchLocationStateActivityTest extends ActivityTestHelpe
     
     @Before
     public void setup() {
-        requestValidator = spy(new RequestValidator(new ServiceLocationsHelper(mock(EdgeLocationsHelper.class)),
-                mock(EdgeLocationsHelper.class),
+        requestValidator = spy(new RequestValidator(mock(EdgeLocationsHelper.class),
                 mock(BlackWatchBorderLocationValidator.class),
                 mock(BlackWatchEdgeLocationValidator.class)));
         updateBlackWatchLocationStateActivity = 
