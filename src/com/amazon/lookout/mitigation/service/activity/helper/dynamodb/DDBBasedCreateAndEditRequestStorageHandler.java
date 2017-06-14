@@ -284,7 +284,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
     /**
      * Creates the queryFilters to use when querying DDB to check for active mitigations that could conflict
      * with the new request. This includes all requests that aren't delete requests,
-     * FAILED or INDETERMINATE or marked as defunct using DEFUNCT_DATE .
+     * FAILED or INDETERMINATE.
      * 
      * @return map representing the queryFilter to use for the DDB query.
      */
@@ -309,12 +309,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
             condition.setAttributeValueList(Arrays.asList(attrVal));
             queryFilters.put(MitigationRequestsModel.REQUEST_TYPE_KEY, condition);
         }
-        
-        {
-            Condition condition = new Condition().withComparisonOperator(ComparisonOperator.NULL);
-            queryFilters.put(MitigationRequestsModel.DEFUNCT_DATE, condition);
-        }
-        
+
         return queryFilters;
     }
 

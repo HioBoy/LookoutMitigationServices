@@ -35,7 +35,6 @@ import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
-import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
@@ -278,11 +277,6 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
         addRequestInfoParser(
                 GetMitigationInfoRequest.class, 
-                (action, request) -> 
-                generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
-
-        addRequestInfoParser(
-                ReportInactiveLocationRequest.class, 
                 (action, request) -> 
                 generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(), request.getDeviceName(), null));
 

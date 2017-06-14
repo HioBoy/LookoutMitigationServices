@@ -87,12 +87,6 @@
         <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
     </bean>
 
-    <bean class="com.amazon.lookout.mitigation.service.activity.ReportInactiveLocationActivity">
-        <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="activeMitigationInfoHandler" ref="ddbBasedRequestInfoHandler"/>
-        <constructor-arg name="domain" value="${domain}"/>
-    </bean>
-   
     <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationHostStatusActivity">
       <constructor-arg name="requestValidator" ref="requestValidator"/>
        <constructor-arg name="hostStatusHandler" ref="ddbBasedHostStatusInfoHandler"/>
@@ -181,8 +175,6 @@
     </bean>
 
     <bean id="activeMitigationsStatusHelper" class="com.amazon.lookout.mitigation.status.helper.ActiveMitigationsStatusHelper">
-        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
-        <constructor-arg name="domain" value="${domain}"/>
     </bean>
 
     <bean id="ddbBasedRequestInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedListMitigationsHandler">

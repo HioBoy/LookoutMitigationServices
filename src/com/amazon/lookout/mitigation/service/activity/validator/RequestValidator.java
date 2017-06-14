@@ -48,7 +48,6 @@ import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
-import com.amazon.lookout.mitigation.service.ReportInactiveLocationRequest;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
@@ -452,16 +451,6 @@ public class RequestValidator {
         validateServiceName(serviceName);
         DeviceName device = validateDeviceName(deviceName);
         validateDeviceMatchService(device, serviceName);
-    }
-    
-    /**
-     * Validates if the request object passed to the ReportInactiveLocation API is valid
-     * @param A ReportInactiveLocationRequest object representing the input to the ReportInactiveLocation API
-     * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
-     */
-    public void validateReportInactiveLocation(@NonNull ReportInactiveLocationRequest request) {
-        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
-        validateListOfLocations(Lists.newArrayList(request.getLocation()), request.getServiceName());
     }
     
     /**

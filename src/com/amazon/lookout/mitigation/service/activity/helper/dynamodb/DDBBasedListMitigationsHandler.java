@@ -171,8 +171,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
             // Generate query filters to use when querying.
             Map<String, Condition> queryFilter = new HashMap<>();
             queryFilter.put(ActiveMitigationsModel.DELETION_DATE_KEY, new Condition().withComparisonOperator(ComparisonOperator.NULL));
-            queryFilter.put(ActiveMitigationsModel.DEFUNCT_DATE_KEY, new Condition().withComparisonOperator(ComparisonOperator.NULL));
-            
+
             // If we have locations, then add locations as a query filter.
             if (!CollectionUtils.isEmpty(locations)) {
                 queryFilter.putAll(generateMitigationLocationQueryFilter(Sets.newHashSet(locations)));
@@ -751,27 +750,7 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
             return descs;
         }
     }
-    
-    /**
-     * 
-     * @param serviceName Service whose mitigation needs to be marked defunct.
-     * @param mitigationName Mitigation which needs to be marked defunct.
-     * @param deviceName Device on which the mitigation to be marked defunct exists.
-     * @param location Location where this mitigation should be marked as defunct.
-     * @param jobId WorkflowId responsible for creating the mitigation which now needs to be marked as defunct.
-     * @param lastDeployDate Last date when this mitigation was modified, required to ensure the mitigation hasn't changed since the caller requested this mitigation to be marked as defunct.
-     * @param tsdMetrics
-     * @return UpdateItemResult as a result of performing DDB update.
-     * @throws ConditionalCheckFailedException
-     * @throws AmazonClientException
-     * @throws AmazonServiceException
-     */
-    @Override
-    public UpdateItemResult markMitigationAsDefunct(@NonNull String serviceName, @NonNull String mitigationName, @NonNull String deviceName, @NonNull String location, 
-                                                    long jobId, long lastDeployDate, @NonNull TSDMetrics tsdMetrics) throws ConditionalCheckFailedException, AmazonClientException, AmazonServiceException {
-        return activeMitigationStatusHelper.markMitigationAsDefunct(serviceName, mitigationName, deviceName, location, jobId, lastDeployDate, tsdMetrics);
-    }
-    
+
     protected void sleepForActivityRetry(int numAttempts) {
         if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
             try {
@@ -782,3 +761,4 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
         }
     }
 }
+
