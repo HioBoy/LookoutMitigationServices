@@ -16,6 +16,7 @@
 
     <util:map id="prod.regionEndpointsMap">
         <entry key="BOM" value="lookout-mitigation-service.ap-south-1.amazonaws.com"/>
+        <entry key="CDG" value="lookout-mitigation-service.eu-west-3.amazonaws.com"/>
         <entry key="CMH" value="lookout-mitigation-service.us-east-2.amazonaws.com"/>
         <entry key="DUB" value="lookout-mitigation-service.eu-west-1.amazonaws.com"/>
         <entry key="FRA" value="lookout-mitigation-service.eu-central-1.amazonaws.com"/>
