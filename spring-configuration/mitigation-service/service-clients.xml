@@ -5,17 +5,17 @@
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
     
     <bean id="dynamoDBClientBuilder" class="com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder">
-    	<property name="credentials" ref="${realm}.dynamoDBCredentialsProvider"/>
-    	<property name="requestHandlers">
-    		<list>
-    			<bean class="com.amazon.metrics.dynamodb.AwsDynamoDBMetricsRequestHandler">
-    				<constructor-arg index="0" ref="metricsFactory"/>
-    				<constructor-arg index="1" value="DynamoDB."/>
-    				<constructor-arg index="2" value="true"/>
-    			</bean>
-    		</list>
-    	</property>
-    	<property name="region" value="${realm}"/>
+        <property name="credentials" ref="${domain}.dynamoDBCredentialsProvider"/>
+        <property name="requestHandlers">
+            <list>
+                <bean class="com.amazon.metrics.dynamodb.AwsDynamoDBMetricsRequestHandler">
+                    <constructor-arg index="0" ref="metricsFactory"/>
+                    <constructor-arg index="1" value="DynamoDB."/>
+                    <constructor-arg index="2" value="true"/>
+                </bean>
+            </list>
+        </property>
+        <property name="region" value="${realm}"/>
     </bean>
     
     <bean id="baseDynamoDBClient" factory-bean="dynamoDBClientBuilder" factory-method="build"/>
@@ -27,7 +27,7 @@
     </bean>
     
     <bean id="swfClient" class="com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient">
-        <constructor-arg index="0" ref="${realm}.swfCredentialsProvider"/>
+        <constructor-arg index="0" ref="${domain}.swfCredentialsProvider"/>
         <constructor-arg index="1" ref="swfClientConfig"/>
         <property name="endpoint" value="https://swf.${realm}.amazonaws.com"/>
     </bean>

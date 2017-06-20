@@ -20,6 +20,5 @@
     <import resource="file:${spring.config.root}/environment/*.xml"/>
     <import resource="file:${spring.config.root}/*.xml"/>
     <import resource="file:${spring.config.root}/location_type/${MITSVC_LOCATION_TYPE}.xml"/>
-    <import resource="file:${spring.config.root}/region/${realm}.xml"/>
     <import resource="file:${spring.config.root}/domain/${domain}.xml"/>
 </beans>

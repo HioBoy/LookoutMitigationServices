@@ -82,4 +82,14 @@
     <bean id="beta.ResourceAllocationState.writeCapacityUnits" class="java.lang.Long">
         <constructor-arg value="50"/>
     </bean>
+
+    <bean id="beta.dynamoDBCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.dynamodb.mitigationservice.beta"/>
+    </bean>
+
+    <bean id="beta.swfCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.swf.mitigationservice.beta"/>
+    </bean>
+
+    <import resource="file:${spring.config.root}/domain/other-locations-generated.xml"/>
 </beans>

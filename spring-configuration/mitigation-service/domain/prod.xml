@@ -14,24 +14,6 @@
         <constructor-arg value="http://edge-operator-service.amazon.com:8080"/>
     </bean>
 
-    <util:map id="prod.regionEndpointsMap">
-        <entry key="BOM" value="lookout-mitigation-service.ap-south-1.amazonaws.com"/>
-        <entry key="CDG" value="lookout-mitigation-service.eu-west-3.amazonaws.com"/>
-        <entry key="CMH" value="lookout-mitigation-service.us-east-2.amazonaws.com"/>
-        <entry key="DUB" value="lookout-mitigation-service.eu-west-1.amazonaws.com"/>
-        <entry key="FRA" value="lookout-mitigation-service.eu-central-1.amazonaws.com"/>
-        <entry key="GRU" value="lookout-mitigation-service.sa-east-1.amazonaws.com"/>
-        <entry key="IAD" value="lookout-mitigation-service.us-east-1.amazonaws.com"/>
-        <entry key="ICN" value="lookout-mitigation-service.ap-northeast-2.amazonaws.com"/>
-        <entry key="LHR" value="lookout-mitigation-service.eu-west-2.amazonaws.com"/>
-        <entry key="NRT" value="lookout-mitigation-service.ap-northeast-1.amazonaws.com"/>
-        <entry key="PDX" value="lookout-mitigation-service.us-west-2.amazonaws.com"/>
-        <entry key="SFO" value="lookout-mitigation-service.us-west-1.amazonaws.com"/>
-        <entry key="SIN" value="lookout-mitigation-service.ap-southeast-1.amazonaws.com"/>
-        <entry key="SYD" value="lookout-mitigation-service.ap-southeast-2.amazonaws.com"/>
-        <entry key="YUL" value="lookout-mitigation-service.ca-central-1.amazonaws.com"/>
-    </util:map>
-
     <bean id="prod.dogfishBucketSuffix" class="java.lang.String">
         <constructor-arg value="prod" />
     </bean>
@@ -88,4 +70,14 @@
     <bean id="prod.ResourceAllocationState.writeCapacityUnits" class="java.lang.Long">
         <constructor-arg value="200"/>
     </bean>
+
+    <bean id="prod.dynamoDBCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.dynamodb.mitigationservice.${realm}.prod"/>
+    </bean>
+
+    <bean id="prod.swfCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.swf.mitigationservice.${realm}.prod"/>
+    </bean>
+
+    <import resource="file:${spring.config.root}/domain/prod-locations-generated.xml"/>
 </beans>
