@@ -518,17 +518,15 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * 
      * @param serviceName ServiceName for which we need to get the list of active mitigation descriptions.
      * @param deviceName DeviceName from which we need to read the list of active mitigation descriptions.
-     * @param deviceScope DeviceScope to constraint the query to get the list of active mitigation descriptions.
      * @param mitigationName MitigationName constraint for the active mitigations.
      * @param tsdMetrics 
      * @return List of MitigationRequestDescription instances, should contain a single request representing the latest (create/edit) mitigation request for this mitigationName.
      */
     @Override
-    public List<MitigationRequestDescription> getMitigationRequestDescriptionsForMitigation(@NonNull String serviceName, @NonNull String deviceName, String deviceScope,
+    public List<MitigationRequestDescription> getMitigationRequestDescriptionsForMitigation(@NonNull String serviceName, @NonNull String deviceName,
                                                                                             @NonNull String mitigationName, @NonNull TSDMetrics tsdMetrics) {
         Validate.notEmpty(serviceName);
         Validate.notEmpty(deviceName);
-        Validate.notEmpty(deviceScope);
         Validate.notEmpty(mitigationName);
         
         final TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedListMitigationsHandler.getMitigationDescriptionsForMitigation");
@@ -554,11 +552,6 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
             value = new AttributeValue(serviceName);
             Condition serviceNameCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
             queryFilter.put(MitigationRequestsModel.SERVICE_NAME_KEY, serviceNameCondition);
-            
-            // Restrict results to this deviceName
-            value = new AttributeValue(deviceScope);
-            Condition deviceScopeCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
-            queryFilter.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, deviceScopeCondition);
             
             // Ignore the delete requests, since they don't contain any mitigation definitions.
             value = new AttributeValue(RequestType.DeleteRequest.name());
@@ -694,7 +687,6 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      * This API queries GSI, result is eventually consistent.
      * @param serviceName : service name of the mitigation
      * @param deviceName : device name of the mitigation
-     * @param deviceScope : device scope of the mitigation
      * @param mitigationName : mitigation name of the mitigation
      * @param exclusiveStartVersion : the start version of history retrieval, result will not include this version
      * @param maxNumberOfHistoryEntriesToFetch : the max number of history entries to retrieve
@@ -703,18 +695,16 @@ public class DDBBasedListMitigationsHandler extends DDBBasedRequestStorageHandle
      */
     @Override
     public List<MitigationRequestDescriptionWithLocations> getMitigationHistoryForMitigation(
-            String serviceName, String deviceName, String deviceScope,
+            String serviceName, String deviceName,
             String mitigationName, Integer exclusiveStartVersion, 
             Integer maxNumberOfHistoryEntriesToFetch, TSDMetrics tsdMetrics) {
         Validate.notEmpty(serviceName);
         Validate.notEmpty(deviceName);
-        Validate.notEmpty(deviceScope);
         Validate.notEmpty(mitigationName);
         Validate.notNull(maxNumberOfHistoryEntriesToFetch);
         Validate.notNull(tsdMetrics);
         QuerySpec query = new QuerySpec().withHashKey(MitigationRequestsModel.MITIGATION_NAME_KEY, mitigationName)
                 .withQueryFilters(new QueryFilter(MitigationRequestsModel.SERVICE_NAME_KEY).eq(serviceName),
-                        new QueryFilter(MitigationRequestsModel.DEVICE_SCOPE_KEY).eq(deviceScope),
                         new QueryFilter(MitigationRequestsModel.DEVICE_NAME_KEY).eq(deviceName),
                         new QueryFilter(MitigationRequestsModel.WORKFLOW_STATUS_KEY).ne(WorkflowStatus.FAILED))
                 .withMaxResultSize(maxNumberOfHistoryEntriesToFetch

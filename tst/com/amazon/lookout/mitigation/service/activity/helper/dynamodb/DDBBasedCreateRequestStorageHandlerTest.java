@@ -50,7 +50,6 @@ import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
@@ -130,10 +129,10 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                 locations, workflowId);
     }
     private static void validateRequestNotInDDB(CreateMitigationRequest request) {
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request.getMitigationTemplate());
         
-        ItemCollection<QueryOutcome> items = testTableHelper.getRequestsWithName(deviceNameAndScope.getDeviceName().toString(), request.getMitigationName());
+        ItemCollection<QueryOutcome> items = testTableHelper.getRequestsWithName(deviceName.toString(), request.getMitigationName());
         
         Iterator<Item> itr = items.iterator();
         int count = 0;
@@ -164,11 +163,11 @@ public class DDBBasedCreateRequestStorageHandlerTest {
                 DuplicateMitigationNameException400.class, 
                 () -> storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics));
         
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request.getMitigationTemplate());
         
         assertThat(exception.getMessage(), 
-                allOf(containsString(request.getMitigationName()), containsString(deviceNameAndScope.getDeviceName().toString())));
+                allOf(containsString(request.getMitigationName()), containsString(deviceName.toString())));
         
         validateRequestInDDB(request, locations, workflowId);
     }
@@ -392,11 +391,11 @@ public class DDBBasedCreateRequestStorageHandlerTest {
             DDBBasedRequestStorageHandler storeHandler, CreateMitigationRequest request, long requestWorkflowId,
             ImmutableSet<String> locations) 
     {
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request.getMitigationTemplate());
         
         long maxWorkflowId = storeHandler.getMaxWorkflowIdForDevice(
-                deviceNameAndScope.getDeviceName().toString(), deviceNameAndScope.getDeviceScope().toString(), null, tsdMetrics);
+                deviceName.toString(), null, tsdMetrics);
         
         // We shouldn't need to use another handler for this but the code is factored badly
         DeleteMitigationFromAllLocationsRequest deleteRequest = new DeleteMitigationFromAllLocationsRequest();
@@ -412,20 +411,20 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         deleteRequest.setMitigationVersion(DDBBasedRequestStorageHandler.INITIAL_MITIGATION_VERSION);
         long newWorkflowId = maxWorkflowId + 1;
         storeHandler.storeRequestInDDB(
-                deleteRequest, null, locations, deviceNameAndScope, maxWorkflowId + 1, RequestType.DeleteRequest, 2, tsdMetrics);
+                deleteRequest, null, locations, deviceName, maxWorkflowId + 1, RequestType.DeleteRequest, 2, tsdMetrics);
         
-        testTableHelper.setUpdateWorkflowId(deviceNameAndScope.getDeviceName().toString(), requestWorkflowId, newWorkflowId);
+        testTableHelper.setUpdateWorkflowId(deviceName.toString(), requestWorkflowId, newWorkflowId);
     }
      
     private void editRequest(
             DDBBasedRequestStorageHandler storeHandler, CreateMitigationRequest request, long requestWorkflowId,
             ImmutableSet<String> locations) 
     {
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request.getMitigationTemplate());
         
         long maxWorkflowId = storeHandler.getMaxWorkflowIdForDevice(
-                deviceNameAndScope.getDeviceName().toString(), deviceNameAndScope.getDeviceScope().toString(), null, tsdMetrics);
+                deviceName.toString(), null, tsdMetrics);
         
         // We shouldn't need to use another handler for this but the code is factored badly
         EditMitigationRequest editRequest = new EditMitigationRequest();
@@ -441,20 +440,20 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         editRequest.setMitigationVersion(DDBBasedRequestStorageHandler.INITIAL_MITIGATION_VERSION);
         long newWorkflowId = maxWorkflowId + 1;
         storeHandler.storeRequestInDDB(
-                editRequest, null, locations, deviceNameAndScope, maxWorkflowId + 1, RequestType.EditRequest, 2, tsdMetrics);
+                editRequest, null, locations, deviceName, maxWorkflowId + 1, RequestType.EditRequest, 2, tsdMetrics);
         
-        testTableHelper.setUpdateWorkflowId(deviceNameAndScope.getDeviceName().toString(), requestWorkflowId, newWorkflowId);
+        testTableHelper.setUpdateWorkflowId(deviceName.toString(), requestWorkflowId, newWorkflowId);
     }
     
     private void rollbackRequest(
             DDBBasedRequestStorageHandler storeHandler, CreateMitigationRequest request, long requestWorkflowId,
             ImmutableSet<String> locations) 
     {
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request.getMitigationTemplate());
         
         long maxWorkflowId = storeHandler.getMaxWorkflowIdForDevice(
-                deviceNameAndScope.getDeviceName().toString(), deviceNameAndScope.getDeviceScope().toString(), null, tsdMetrics);
+                deviceName.toString(), null, tsdMetrics);
         
         // We shouldn't need to use another handler for this but the code is factored badly
         RollbackMitigationRequest rollbackRequest = new RollbackMitigationRequest();
@@ -470,9 +469,9 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         rollbackRequest.setMitigationVersion(DDBBasedRequestStorageHandler.INITIAL_MITIGATION_VERSION);
         long newWorkflowId = maxWorkflowId + 1;
         storeHandler.storeRequestInDDB(
-                rollbackRequest, null, locations, deviceNameAndScope, maxWorkflowId + 1, RequestType.RollbackRequest, 2, tsdMetrics);
+                rollbackRequest, null, locations, deviceName, maxWorkflowId + 1, RequestType.RollbackRequest, 2, tsdMetrics);
         
-        testTableHelper.setUpdateWorkflowId(deviceNameAndScope.getDeviceName().toString(), requestWorkflowId, newWorkflowId);
+        testTableHelper.setUpdateWorkflowId(deviceName.toString(), requestWorkflowId, newWorkflowId);
     }
     
     @Test
@@ -820,42 +819,6 @@ public class DDBBasedCreateRequestStorageHandlerTest {
             validateRequestInDDB(request, locations, workflowId);
         }
     }
-    
-    @Test
-    public void testHittingWorkflowIdLimit() {
-        ImmutableSet<String> locations = ImmutableSet.of("POP1");
-        
-        TemplateBasedRequestValidator templateBasedValidator = mock(TemplateBasedRequestValidator.class);
-        when(templateBasedValidator.requiresCheckForDuplicateAndConflictingRequests(anyString())).thenReturn(true);
-        
-        AmazonDynamoDBClient spyClient = spy(localDynamoDBClient);
-        
-        DDBBasedCreateRequestStorageHandler storageHandler = 
-                new DDBBasedCreateRequestStorageHandler(spyClient, domain, templateBasedValidator);
-        
-        CreateMitigationRequest request1 = RequestTestHelper.generateCreateMitigationRequest("Mitigation1");
-        
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request1.getMitigationTemplate());
-        
-        // bypass the normal API to store a request with 1 less than the max workflow id
-        storageHandler.storeRequestInDDB(
-                request1, request1.getMitigationDefinition(), locations, 
-                deviceNameAndScope, deviceNameAndScope.getDeviceScope().getMaxWorkflowId() - 1, 
-                RequestType.CreateRequest, DDBBasedRequestStorageHandler.INITIAL_MITIGATION_VERSION,
-                tsdMetrics);
-        
-        CreateMitigationRequest request2 = RequestTestHelper.generateCreateMitigationRequest("Mitigation2");
-        long workflowId = storageHandler.storeRequestForWorkflow(request2, locations, tsdMetrics).getWorkflowId();
-        validateRequestInDDB(request2, locations, workflowId);
-        assertEquals(deviceNameAndScope.getDeviceScope().getMaxWorkflowId(), workflowId);
-        
-        CreateMitigationRequest request3 = RequestTestHelper.generateCreateMitigationRequest("Mitigation3");
-        
-        AssertUtils.assertThrows(
-                InternalServerError500.class, 
-                () -> storageHandler.storeRequestForWorkflow(request3, locations, tsdMetrics));
-    }
 
     @SuppressWarnings("deprecation")
     @Test
@@ -874,12 +837,12 @@ public class DDBBasedCreateRequestStorageHandlerTest {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
         long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
 
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request.getMitigationTemplate());
         
         // There isn't a way to retrieve the id we stored
         storageHandler.updateRunIdForWorkflowRequest(
-                deviceNameAndScope.getDeviceName().toString(), workflowId, "FakeRunId", tsdMetrics);
+                deviceName.toString(), workflowId, "FakeRunId", tsdMetrics);
         validateRequestInDDB(request, locations, workflowId);
     }
 }

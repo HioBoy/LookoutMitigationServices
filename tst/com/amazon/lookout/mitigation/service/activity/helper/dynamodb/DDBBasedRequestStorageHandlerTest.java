@@ -21,7 +21,7 @@ import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
@@ -86,21 +86,20 @@ public class DDBBasedRequestStorageHandlerTest {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
         long workflowId = 1;
         //store a request in DDB
-        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
-        storageHandler.storeRequestInDDB(request, request.getMitigationDefinition(), locations, deviceNameAndScope, workflowId, RequestType.CreateRequest, DDBBasedRequestStorageHandler.INITIAL_MITIGATION_VERSION, tsdMetrics);
+        DeviceName deviceName = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request.getMitigationTemplate());
+        storageHandler.storeRequestInDDB(request, request.getMitigationDefinition(), locations, deviceName, workflowId, RequestType.CreateRequest, DDBBasedRequestStorageHandler.INITIAL_MITIGATION_VERSION, tsdMetrics);
        
         //first validate the request is successfully stored in DDB. 
         validateRequestInDDB(request, locations, workflowId);
         
         //set the abortflag to be true;
-        String deviceName = deviceNameAndScope.getDeviceName().name();
-        storageHandler.updateAbortFlagForWorkflowRequest(deviceName, workflowId, true, tsdMetrics);
+        storageHandler.updateAbortFlagForWorkflowRequest(deviceName.name(), workflowId, true, tsdMetrics);
         //validate the abortflag is set correctly in the request
-        validateAbortFlagInRequestInDDB(deviceName, workflowId, true);
+        validateAbortFlagInRequestInDDB(deviceName.name(), workflowId, true);
         
         //set the abortflag to be false;
-        storageHandler.updateAbortFlagForWorkflowRequest(deviceName, workflowId, false, tsdMetrics);
+        storageHandler.updateAbortFlagForWorkflowRequest(deviceName.name(), workflowId, false, tsdMetrics);
         //validate the abortflag is set correctly in the request
-        validateAbortFlagInRequestInDDB(deviceName, workflowId, false);
+        validateAbortFlagInRequestInDDB(deviceName.name(), workflowId, false);
     }
 }

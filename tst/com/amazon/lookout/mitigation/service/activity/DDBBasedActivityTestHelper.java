@@ -37,7 +37,6 @@ import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
@@ -51,7 +50,6 @@ import com.google.common.collect.ImmutableMap;
 public class DDBBasedActivityTestHelper {
     protected static final String serviceName = ServiceName.AWS;
     protected static final String deviceName = DeviceName.BLACKWATCH_BORDER.name();
-    protected static final String deviceScope = DeviceScope.GLOBAL.name();
     protected static final String mitigationName = "mitigation1";
     protected static final int rollbackMitigationVersion = 100;
     protected static final int mitigationVersion = 200;

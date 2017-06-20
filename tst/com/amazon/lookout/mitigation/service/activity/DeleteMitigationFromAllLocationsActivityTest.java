@@ -29,7 +29,6 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWa
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;

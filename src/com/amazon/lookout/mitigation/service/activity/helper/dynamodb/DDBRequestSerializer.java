@@ -22,7 +22,7 @@ import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.document.Item;
@@ -47,7 +47,7 @@ public class DDBRequestSerializer {
      * @param request Request to be persisted.
      * @param mitigationDefinition : mitigation definition to be stored, can be null.
      * @param locations Set of String where this request applies.
-     * @param deviceNameAndScope DeviceNameAndScope corresponding to this request.
+     * @param deviceName DeviceName corresponding to this request.
      * @param workflowId WorkflowId to store this request with.
      * @param requestType Type of request (eg: create/edit/delete).
      * @param mitigationVersion Version number to use for storing the mitigation in this request.
@@ -57,21 +57,18 @@ public class DDBRequestSerializer {
             @NonNull MitigationModificationRequest request,
             MitigationDefinition mitigationDefinition, 
             @NonNull Set<String> locations,
-            @NonNull DeviceNameAndScope deviceNameAndScope, long workflowId,
+            @NonNull DeviceName deviceName, long workflowId,
             @NonNull RequestType requestType, int mitigationVersion, long updateWorkflowId)
     {
         Validate.notEmpty(locations);
         
         Map<String, AttributeValue> attributesInItemToStore = new HashMap<>();
         
-        AttributeValue attributeValue = new AttributeValue(deviceNameAndScope.getDeviceName().name());
+        AttributeValue attributeValue = new AttributeValue(deviceName.name());
         attributesInItemToStore.put(DEVICE_NAME_KEY, attributeValue);
         
         attributeValue = new AttributeValue().withN(String.valueOf(workflowId));
         attributesInItemToStore.put(WORKFLOW_ID_KEY, attributeValue);
-        
-        attributeValue = new AttributeValue(deviceNameAndScope.getDeviceScope().name());
-        attributesInItemToStore.put(DEVICE_SCOPE_KEY, attributeValue);
         
         attributeValue = new AttributeValue(WorkflowStatus.RUNNING);
         attributesInItemToStore.put(WORKFLOW_STATUS_KEY, attributeValue);
@@ -282,14 +279,6 @@ public class DDBRequestSerializer {
             .withAttributeValueList(attributeListOf(UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS)));
     }
     
-    public static void addDeviceScopeCondition(@NonNull Map<String, Condition> conditions, @NonNull String deviceScope) {
-        Validate.notEmpty(deviceScope);
-        
-        conditions.put(DEVICE_SCOPE_KEY, new Condition()
-            .withComparisonOperator(ComparisonOperator.EQ)
-            .withAttributeValueList(attributeListOf(deviceScope)));
-    }
-    
     public static void addNotFailedCondition(@NonNull Map<String, Condition> conditions) {
         conditions.put(WORKFLOW_STATUS_KEY, new Condition()
             .withComparisonOperator(ComparisonOperator.NE)
@@ -341,7 +330,6 @@ public class DDBRequestSerializer {
         mitigationDescription.setMitigationVersion(Integer.parseInt(keyValues.get(MITIGATION_VERSION_KEY).getN()));
         mitigationDescription.setRequestDate(Long.parseLong(keyValues.get(REQUEST_DATE_IN_MILLIS_KEY).getN()));
         mitigationDescription.setRequestStatus(keyValues.get(WORKFLOW_STATUS_KEY).getS());
-        mitigationDescription.setDeviceScope(keyValues.get(DEVICE_SCOPE_KEY).getS());
         mitigationDescription.setRequestType(keyValues.get(REQUEST_TYPE_KEY).getS());
         mitigationDescription.setServiceName(keyValues.get(SERVICE_NAME_KEY).getS());
         mitigationDescription.setUpdateJobId(Long.parseLong(keyValues.get(UPDATE_WORKFLOW_ID_KEY).getN()));
@@ -408,7 +396,6 @@ public class DDBRequestSerializer {
         mitigationDescription.setMitigationVersion(item.getInt(MITIGATION_VERSION_KEY));
         mitigationDescription.setRequestDate(item.getLong(REQUEST_DATE_IN_MILLIS_KEY));
         mitigationDescription.setRequestStatus(item.getString(WORKFLOW_STATUS_KEY));
-        mitigationDescription.setDeviceScope(item.getString(DEVICE_SCOPE_KEY));
         mitigationDescription.setRequestType(item.getString(REQUEST_TYPE_KEY));
         mitigationDescription.setServiceName(item.getString(SERVICE_NAME_KEY));
         mitigationDescription.setUpdateJobId(item.getLong(UPDATE_WORKFLOW_ID_KEY));

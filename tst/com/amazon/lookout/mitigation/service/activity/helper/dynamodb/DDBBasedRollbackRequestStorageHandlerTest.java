@@ -122,7 +122,7 @@ public class DDBBasedRollbackRequestStorageHandlerTest {
         
         request.setMitigationVersion(maxMitigationVersion + 1);
         MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(
-                deviceName, serviceName, mitigationName, deviceScope);
+                deviceName, serviceName, mitigationName);
         itemCreator.setMitigationVersion(maxMitigationVersion);
         itemCreator.setWorkflowId(maxWorkflowId - 1);
         itemCreator.addItem();

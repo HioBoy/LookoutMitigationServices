@@ -13,7 +13,7 @@ import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazonaws.services.s3.AmazonS3;
@@ -49,7 +49,7 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
     @Override
     public void validateRequestForTemplateAndDevice(
             MitigationModificationRequest request, String mitigationTemplate,
-            DeviceNameAndScope deviceNameAndScope, 
+            DeviceName deviceName,
             TSDMetrics metrics) {
         Validate.notEmpty(mitigationTemplate, "mitigation template can not be empty");
 

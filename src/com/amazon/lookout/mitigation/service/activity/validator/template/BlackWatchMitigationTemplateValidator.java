@@ -24,7 +24,7 @@ import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.S3Object;
 import com.amazon.lookout.mitigation.service.activity.helper.blackwatch.TrafficFilterConfiguration;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazonaws.AmazonServiceException.ErrorType;
@@ -58,19 +58,19 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
     public void validateRequestForTemplate(MitigationModificationRequest request, String mitigationTemplate, TSDMetrics tsdMetric) {
         Validate.notEmpty(mitigationTemplate, "mitigation template can not be empty");
 
-        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper
-                .getDeviceNameAndScopeForTemplate(mitigationTemplate);
+        DeviceName deviceName = MitigationTemplateToDeviceMapper
+                .getDeviceNameForTemplate(mitigationTemplate);
 
-        if (deviceNameAndScope == null) {
+        if (deviceName == null) {
             String message = String.format(
-                    "%s: No DeviceNameAndScope mapping found for template: %s. Request being validated: %s",
+                    "%s: No DeviceName mapping found for template: %s. Request being validated: %s",
                     MitigationTemplateToDeviceMapper.MISSING_DEVICE_MAPPING_KEY, mitigationTemplate,
                     ReflectionToStringBuilder.toString(request, new RecursiveToStringStyle()));
             LOG.error(message);
             throw new InternalServerError500(message);
         }
 
-        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope, tsdMetric);
+        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceName, tsdMetric);
     }
     
     protected void validateDeploymentChecks(MitigationModificationRequest request) {

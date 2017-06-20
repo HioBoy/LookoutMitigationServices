@@ -9,7 +9,7 @@ import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.BlackWatchConfigBasedConstraint;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.S3Object;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazonaws.services.s3.AmazonS3;
 
 public class BlackWatchMitigationTemplateValidatorTest {
@@ -31,7 +31,7 @@ public class BlackWatchMitigationTemplateValidatorTest {
         @Override
         public void validateRequestForTemplateAndDevice(
                 MitigationModificationRequest request, String mitigationTemplate,
-                DeviceNameAndScope deviceNameAndScope, TSDMetrics metrics) {
+                DeviceName deviceName, TSDMetrics metrics) {
             throw new UnsupportedOperationException("validateRequestForTemplateAndDevice");
         }
     }

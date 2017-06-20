@@ -57,7 +57,6 @@ import com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsA
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
@@ -116,7 +115,6 @@ public class RequestValidator {
     private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
     
     private final Set<String> deviceNames;
-    private final Set<String> deviceScopes;
     private final EdgeLocationsHelper edgeLocationsHelper;
     private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
     private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
@@ -133,11 +131,6 @@ public class RequestValidator {
         this.deviceNames = new HashSet<>();
         for (DeviceName deviceName : DeviceName.values()) {
             deviceNames.add(deviceName.name());
-        }
-        
-        this.deviceScopes = new HashSet<>();
-        for (DeviceScope deviceScope : DeviceScope.values()) {
-            deviceScopes.add(deviceScope.name());
         }
     }
 
@@ -307,7 +300,6 @@ public class RequestValidator {
      * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
      */
     public void validateGetMitigationInfoRequest(@NonNull GetMitigationInfoRequest request) {
-        validateDeviceScope(request.getDeviceScope());
         validateMitigationName(request.getMitigationName());
         validateDeviceAndService(request.getDeviceName(), request.getServiceName());
     }
@@ -320,7 +312,6 @@ public class RequestValidator {
     public void validateGetMitigationHistoryRequest(
             GetMitigationHistoryRequest request) {
         validateDeviceAndService(request.getDeviceName(), request.getServiceName());
-        validateDeviceScope(request.getDeviceScope());
         validateMitigationName(request.getMitigationName());
         Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
         int maxHistoryEntryCount = GetMitigationHistoryActivity.MAX_NUMBER_OF_HISTORY_TO_FETCH;
@@ -481,7 +472,7 @@ public class RequestValidator {
         }
         
         String template = request.getMitigationTemplate();
-        DeviceName device = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(template).getDeviceName();
+        DeviceName device = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(template);
         validateDeviceAndService(device.name(), request.getServiceName());
     }
     
@@ -515,24 +506,7 @@ public class RequestValidator {
             throw new IllegalArgumentException(msg);
         }
     }
-    
-    private void validateDeviceScope(String deviceScope) {
-        if (isInvalidFreeFormText(deviceScope, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
-            String msg = "Invalid device scope found! Valid device scopes: " + deviceScopes;
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        // This will throw an exception if the deviceScope is not defined within the DeviceScope enum.
-        try {
-            DeviceScope.valueOf(deviceScope);
-        } catch (Exception ex) {
-            String msg = "The device scope that was provided, " + deviceScope + ", is not valid. Valid device scopes: " + deviceScopes;
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-    }
-    
+
     private static void validateMitigationName(String mitigationName) {
         if (isInvalidFreeFormText(mitigationName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
             String msg = "Invalid mitigation name found! A valid mitigation name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
@@ -812,12 +786,12 @@ public class RequestValidator {
     }
     
     public static void validateTemplateMatch(String mitigationNameToChange, String existingMitigationTemplate,
-            String templateForMitigationToChange, String deviceName, String deviceScope) {
+            String templateForMitigationToChange, String deviceName) {
         
         if (!existingMitigationTemplate.equals(templateForMitigationToChange)) {
             String msg = "Found an active mitigation: " + mitigationNameToChange + " but for template: "
                     + existingMitigationTemplate + " instead of the template: " + templateForMitigationToChange
-                    + " passed in the request for device: " + deviceName + " in deviceScope: " + deviceScope; 
+                    + " passed in the request for device: " + deviceName;
             LOG.warn(msg);
             throw new IllegalArgumentException(msg);
         }

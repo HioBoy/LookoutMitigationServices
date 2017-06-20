@@ -24,7 +24,7 @@ import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBRequestSerializer.RequestSummary;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
@@ -62,7 +62,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
     /**
      * Store the request for a workflow.
      * 
-     * @param deviceNameAndScope
+     * @param deviceName
      * @param requestType
      * @param request
      * @param locations
@@ -91,10 +91,8 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
                DuplicateDefinitionException400, StaleRequestException400, InternalServerError500, IllegalArgumentException
     {
         String mitigationTemplate = request.getMitigationTemplate();
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
-        String deviceName = deviceNameAndScope.getDeviceName().name();
-        String deviceScope = deviceNameAndScope.getDeviceScope().name();
+        DeviceName deviceName = 
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate);
         String mitigationName = request.getMitigationName();
         
         int numAttempts = 0;
@@ -112,40 +110,39 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
             prevMaxWorkflowId = currMaxWorkflowId;
             
             long newWorkflowId = 0;
-            // First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
-            currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName, deviceScope, prevMaxWorkflowId, metrics);
+            // First, retrieve the current maxWorkflowId for the mitigations for the same device.
+            currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName.name(), prevMaxWorkflowId, metrics);
             
-            // If we didn't get any workflows for the same deviceName and deviceScope, we simply assign the newWorkflowId to be the min for this deviceScope.
+            // If we didn't get any workflows for the same deviceName, we simply assign the newWorkflowId to be the min.
             if (currMaxWorkflowId == null) {
-                newWorkflowId = deviceNameAndScope.getDeviceScope().getMinWorkflowId();
+                newWorkflowId = 1;
             } else {
                 // Increment the maxWorkflowId to use as the newWorkflowId and sanity check to ensure the new workflowId is still within the expected range.
                 newWorkflowId = currMaxWorkflowId + 1;
-                sanityCheckWorkflowId(newWorkflowId, deviceNameAndScope);
             }
 
-            // retrieve the current latest mitigation version for the same mitigation on the same device+scope
+            // retrieve the current latest mitigation version for the same mitigation on the same device
             latestRequestSummary = getLatestRequestSummary(
-                    deviceName, deviceScope, mitigationName, latestRequestSummary, metrics);
+                    deviceName.name(), mitigationName, latestRequestSummary, metrics);
 
             if (isUpdate) {
-                // If we didn't get any version for the same deviceName, deviceScope and
+                // If we didn't get any version for the same deviceName and
                 // mitigation name, throw MissingMitigationException400.
                 if (latestRequestSummary == null || currMaxWorkflowId == null) {
-                    String msg = "No existing mitigation found in DDB for deviceName: " + deviceName
-                                 + " and deviceScope: " + deviceScope + " and mitigationName: " + mitigationName
+                    String msg = "No existing mitigation found in DDB for deviceName: " + deviceName.name()
+                                 + " and mitigationName: " + mitigationName
                                  + ". For request: " + requestToString(request);
                     LOG.info(msg);
                     throw new MissingMitigationException400(msg);
                 }
                 
                 checkMitigationVersion(
-                        request, deviceNameAndScope, mitigationVersion, latestRequestSummary.getMitigationVersion());
+                        request, deviceName, mitigationVersion, latestRequestSummary.getMitigationVersion());
                 
                 // reject edit request that is editing a deleted request
                 if (latestRequestSummary.getRequestType().equals(RequestType.DeleteRequest.name()) && isEdit) {
-                    String msg = "Mitigation " + mitigationName + " for deviceName: " + deviceName 
-                            + " and deviceScope: " + deviceScope + " has already been deleted"
+                    String msg = "Mitigation " + mitigationName + " for deviceName: " + deviceName.name()
+                            + " has already been deleted"
                             + ". For request: " + requestToString(request);
                     LOG.info(msg);
                     throw new MissingMitigationException400(msg);
@@ -153,7 +150,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
                 
                 if (!latestRequestSummary.getMitigationTemplate().equals(request.getMitigationTemplate())) {
                     String msg = "The template type for a mitigation cannot be changed. Mitigation " + mitigationName 
-                            + " for deviceName: " + deviceName + " and deviceScope: " + deviceScope 
+                            + " for deviceName: " + deviceName.name()
                             + " has template type " + latestRequestSummary.getMitigationTemplate() + " but was requested"
                             + " to change to template type " + request.getMitigationTemplate()
                             + ". For request: " + requestToString(request);
@@ -170,8 +167,8 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
                         // re-create it again. If not, reject request
                         mitigationVersion = latestRequestSummary.getMitigationVersion() + 1;
                     } else {
-                        String msg = "Mitigation " + mitigationName + " for deviceName: " + deviceName 
-                                + " and deviceScope: " + deviceScope + " has already existed"
+                        String msg = "Mitigation " + mitigationName + " for deviceName: " + deviceName.name()
+                                + " has already existed"
                                 + ". For request: " + requestToString(request);
                         LOG.info(msg);
                         throw new DuplicateMitigationNameException400(msg);
@@ -181,16 +178,16 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
 
             if (templateValidator.requiresCheckForDuplicateAndConflictingRequests(mitigationTemplate)) {
                 // Next, check if we have any duplicate mitigations already in place.
-                checkForDuplicateAndConflictingRequests(deviceName, deviceScope, definition, mitigationName, mitigationTemplate, 
+                checkForDuplicateAndConflictingRequests(deviceName.name(), definition, mitigationName, mitigationTemplate, 
                                                   isUpdate, prevMaxWorkflowId, metrics);
             }
             
             try {
                 storeRequestInDDB(request, definition,
-                       locations, deviceNameAndScope, newWorkflowId, requestType, mitigationVersion, metrics);
+                       locations, deviceName, newWorkflowId, requestType, mitigationVersion, metrics);
                 return new RequestStorageResponse(newWorkflowId, mitigationVersion);
             } catch (ConditionalCheckFailedException ex) {
-                String baseMsg = "Another process created workflow " + newWorkflowId + " first for " + deviceName;
+                String baseMsg = "Another process created workflow " + newWorkflowId + " first for " + deviceName.name();
                 if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
                     LOG.warn(baseMsg + ". Attempt: " + numAttempts);
                     sleepForPutRetry(numAttempts);
@@ -200,8 +197,8 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
                     throw ex;
                 }
             } catch (AmazonClientException ex) {
-                String msg = errorTag + " - Caught \"" + ex.toString()  + "\" when storing " + requestType + " in DDB with newWorkflowId: " + newWorkflowId + " for DeviceName: " + deviceName + 
-                             " and deviceScope: " + deviceScope + " AttemptNum: " + numAttempts + ". For request: " + ReflectionToStringBuilder.toString(request);
+                String msg = errorTag + " - Caught \"" + ex.toString()  + "\" when storing " + requestType + " in DDB with newWorkflowId: " + newWorkflowId + " for DeviceName: " + deviceName.name() + 
+                             " AttemptNum: " + numAttempts + ". For request: " + ReflectionToStringBuilder.toString(request);
                 LOG.warn(msg);
                 throw ex;
             }
@@ -211,7 +208,6 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
     /**
      * Query DDB and check if there exists a duplicate request for the request being processed.
      * @param deviceName DeviceName for which the new mitigation needs to be created.
-     * @param deviceScope DeviceScope for the device where the new mitigation needs to be created.
      * @param mitigationDefinition Mitigation definition for the new create request.
      * @param mitigationName Name of the new mitigation being created.
      * @param mitigationTemplate Template being used for the new mitigation being created.
@@ -219,14 +215,14 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
      *   to avoid rechecking the same requests if we have to retry if the insert failed because of 
      *   a new request being added by another thread/process.
      * @param metrics the metrics object to use to record metrics
-     * @return Max WorkflowId for existing mitigations. Null if no mitigations exist for this deviceName and deviceScope.
+     * @return Max WorkflowId for existing mitigations. Null if no mitigations exist for this deviceName.
      * 
      * @throws AmazonClientException if the attempt to read from DynamoDB failed too many times
      * @throws DuplicateDefinitionException400 if a conflicting mitigation already exists. The definition of conflicting 
      *   depends on the template type
      */
     private void checkForDuplicateAndConflictingRequests(
-            String deviceName, String deviceScope, MitigationDefinition mitigationDefinition, String mitigationName, 
+            String deviceName, MitigationDefinition mitigationDefinition, String mitigationName, 
             String mitigationTemplate, boolean isUpdate, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics)
         throws AmazonClientException, DuplicateDefinitionException400
     {
@@ -262,12 +258,12 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
             do {
                 QueryResult result = null;
                 try {
-                    result = getActiveMitigationsForDevice(deviceName, deviceScope, null, keyConditions, 
+                    result = getActiveMitigationsForDevice(deviceName, null, keyConditions, 
                                                            lastEvaluatedKey, indexToUse, filterForActiveRequests, subMetrics);
                     lastEvaluatedKey = result.getLastEvaluatedKey();
                     subMetrics.addCount(NUM_ACTIVE_MITIGATIONS_FOR_DEVICE, result.getCount());
                 } catch (AmazonClientException ex) {
-                    String msg = "Caught exception when querying active mitigations from DDB for device: " + deviceName + " and deviceScope: " + deviceScope + 
+                    String msg = "Caught exception when querying active mitigations from DDB for device: " + deviceName +
                                  ", keyConditions: " + keyConditions + ", indexToUse: " + indexToUse;
                     LOG.warn(msg, ex);
                     throw ex;
@@ -323,7 +319,7 @@ public class DDBBasedCreateAndEditRequestStorageHandler extends DDBBasedRequestS
      * @param newMitigationName Name of the new mitigation being created.
      * @param newDefinitionTemplate Template used for the new mitigation being created.
      * @param metrics
-     * @return Max workflowId for existing mitigations for the same deviceName and deviceScope. Null if there are no such active mitigations.
+     * @return Max workflowId for existing mitigations for the same deviceName. Null if there are no such active mitigations.
      * 
      * @throws DuplicateDefinitionException400 if a conflicting mitigation already exists. The definition of conflicting 
      *   depends on the template type

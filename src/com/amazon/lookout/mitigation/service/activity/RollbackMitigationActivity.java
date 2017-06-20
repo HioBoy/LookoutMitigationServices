@@ -38,7 +38,7 @@ import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
@@ -110,11 +110,8 @@ public class RollbackMitigationActivity extends Activity {
             int rollbackToMitigationVersion = rollbackRequest.getRollbackToMitigationVersion();
             
             String mitigationTemplate = rollbackRequest.getMitigationTemplate();
-            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
-            String deviceName = deviceNameAndScope.getDeviceName().name();
+            String deviceName = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate).name();
             ActivityHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
-            String deviceScope = deviceNameAndScope.getDeviceScope().name();
-            ActivityHelper.addDeviceScopeCountMetrics(deviceScope, tsdMetrics);
 
             MitigationRequestDescriptionWithLocations originalModificationRequest = requestInfoHandler.getMitigationDefinition(
                     deviceName, serviceName, mitigationName, rollbackToMitigationVersion, tsdMetrics);
@@ -141,7 +138,7 @@ public class RollbackMitigationActivity extends Activity {
 
             // Step6. Start running the workflow.
             swfWorkflowStarter.startMitigationModificationWorkflow(workflowId, internalRequest, locationsToDeploy,
-                    RequestType.RollbackRequest, storedMitigationVersion, deviceName, deviceScope,
+                    RequestType.RollbackRequest, storedMitigationVersion, deviceName,
                     workflowClient, tsdMetrics);
 
             // Step7. Update the record for this workflow request and store the runId that SWF associates with this workflow.

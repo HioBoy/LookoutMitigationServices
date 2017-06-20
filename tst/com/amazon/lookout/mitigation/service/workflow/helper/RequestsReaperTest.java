@@ -40,7 +40,6 @@ import com.amazon.lookout.activities.model.SchedulingStatus;
 import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
@@ -486,7 +485,6 @@ public class RequestsReaperTest {
         item1.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue("TstMit1"));
         item1.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN("2"));
         item1.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit1Template"));
-        item1.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
         item1.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.CreateRequest.name()));
         item1.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Edge));
         item1.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
@@ -502,7 +500,6 @@ public class RequestsReaperTest {
         item2.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue("TstMit2"));
         item2.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN("1"));
         item2.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit1Template"));
-        item2.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
         item2.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.DeleteRequest.name()));
         item2.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Edge));
         item2.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
@@ -519,7 +516,6 @@ public class RequestsReaperTest {
         item3.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue("TstMit3"));
         item3.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN("2"));
         item3.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit3Template"));
-        item3.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
         item3.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.CreateRequest.name()));
         item3.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Edge));
         item3.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
@@ -546,7 +542,6 @@ public class RequestsReaperTest {
         item4.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue("TstMit1"));
         item4.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN("5"));
         item4.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit4Template"));
-        item4.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
         item4.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.DeleteRequest.name()));
         item4.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Edge));
         item4.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
@@ -573,7 +568,6 @@ public class RequestsReaperTest {
         RequestToReap request3 = requestsToReap.get(0);
         assertEquals(request3.getWorkflowIdStr(), item3.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN());
         assertEquals(request3.getDeviceName(), DeviceName.BLACKWATCH_POP.name());
-        assertEquals(request3.getDeviceScope(), DeviceScope.GLOBAL.name());
         assertEquals(request3.getLocationsToBeReaped().size(), 2);
         assertTrue(request3.getLocationsToBeReaped().containsKey("TST2"));
         assertTrue(request3.getLocationsToBeReaped().containsKey("TST3"));
@@ -587,7 +581,6 @@ public class RequestsReaperTest {
         RequestToReap request4 = requestsToReap.get(1);
         assertEquals(request4.getWorkflowIdStr(), item4.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN());
         assertEquals(request4.getDeviceName(), DeviceName.BLACKWATCH_POP.name());
-        assertEquals(request4.getDeviceScope(), DeviceScope.GLOBAL.name());
         assertEquals(request4.getLocationsToBeReaped().size(), 4);
         assertTrue(request4.getLocationsToBeReaped().containsKey("TST1"));
         assertTrue(request4.getLocationsToBeReaped().containsKey("TST2"));
@@ -621,7 +614,6 @@ public class RequestsReaperTest {
         item5.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue("TstMit1"));
         item5.put(MitigationRequestsModel.MITIGATION_VERSION_KEY, new AttributeValue().withN("2"));
         item5.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue("TstMit1Template"));
-        item5.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(DeviceScope.GLOBAL.name()));
         item5.put(MitigationRequestsModel.REQUEST_TYPE_KEY, new AttributeValue(RequestType.CreateRequest.name()));
         item5.put(MitigationRequestsModel.SERVICE_NAME_KEY, new AttributeValue(ServiceName.Edge));
         item5.put(MitigationRequestsModel.SWF_RUN_ID_KEY, new AttributeValue("RandomRunID1"));
@@ -648,7 +640,6 @@ public class RequestsReaperTest {
         RequestToReap request5 = requestsToReap.get(0);
         assertEquals(request5.getWorkflowIdStr(), item5.get(MitigationRequestsModel.WORKFLOW_ID_KEY).getN());
         assertEquals(request5.getDeviceName(), DeviceName.BLACKWATCH_POP.name());
-        assertEquals(request5.getDeviceScope(), DeviceScope.GLOBAL.name());
         assertEquals(request5.getLocationsToBeReaped().size(), 2);
         assertTrue(request5.getLocationsToBeReaped().containsKey("TST1"));
         assertTrue(request5.getLocationsToBeReaped().containsKey("TST2"));

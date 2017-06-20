@@ -34,7 +34,7 @@ import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
@@ -99,12 +99,8 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             String mitigationTemplate = deleteRequest.getMitigationTemplate();
             ActivityHelper.addTemplateNameCountMetrics(mitigationTemplate, tsdMetrics);
             
-            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
-            String deviceName = deviceNameAndScope.getDeviceName().name();
+            String deviceName = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate).name();
             ActivityHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
-            
-            String deviceScope = deviceNameAndScope.getDeviceScope().name();
-            ActivityHelper.addDeviceScopeCountMetrics(deviceScope, tsdMetrics);
             
             String serviceName = deleteRequest.getServiceName();
             ActivityHelper.addServiceNameCountMetrics(serviceName, tsdMetrics);
@@ -133,7 +129,7 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             
             // Step6. Start running the workflow.
             workflowStarter.startMitigationModificationWorkflow(workflowId, deleteRequest, locationsToDeploy,
-                    RequestType.DeleteRequest, storedMitigationVersion, deviceName, deviceScope, workflowClient, tsdMetrics);
+                    RequestType.DeleteRequest, storedMitigationVersion, deviceName, workflowClient, tsdMetrics);
             
             // Step7. Once the workflow is running, it should have an associated swfRunId, update the request record for this workflow request and store the associated runId.
             String swfRunId = workflowClient.getWorkflowExecution().getRunId();

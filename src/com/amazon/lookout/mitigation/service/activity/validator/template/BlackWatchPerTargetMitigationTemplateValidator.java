@@ -11,7 +11,7 @@ import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsReq
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazonaws.services.s3.AmazonS3;
 
@@ -30,7 +30,7 @@ public abstract class BlackWatchPerTargetMitigationTemplateValidator extends Bla
     @Override
     public void validateRequestForTemplateAndDevice(
             MitigationModificationRequest request, String mitigationTemplate,
-            DeviceNameAndScope deviceNameAndScope, TSDMetrics tsdMetric) {
+            DeviceName deviceName, TSDMetrics tsdMetric) {
         Validate.notEmpty(mitigationTemplate, "mitigation template can not be empty");
         Validate.notNull(request, "missing request definition");
         Validate.notEmpty(request.getMitigationName(), "missing mitigation name");

@@ -106,7 +106,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationNameAndRequestStatus() {
         MitigationRequestItemCreator itemCreator = 
-                requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+                requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
         itemCreator.setWorkflowStatus("DEPLOYED");
         itemCreator.setWorkflowId(10);
         itemCreator.setMitigationVersion(1);
@@ -136,7 +136,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationNameAndRequestStatusWhenWrongTemplate() {
         MitigationRequestItemCreator itemCreator = 
-                requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+                requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
         itemCreator.setWorkflowStatus("DEPLOYED");
         itemCreator.setWorkflowId(10);
         itemCreator.setMitigationVersion(1);
@@ -171,7 +171,6 @@ public class DDBBasedListMitigationsHandlerTest {
         
         String deviceName = "testDevice";
         long workflowId = 5;
-        String deviceScope = "testScope";
         List<String> locations = Lists.newArrayList("TST1", "TST2", "TST3");
         String mitigationName = "testMitigation";
         String mitigationTemplate = "testTemplate";
@@ -208,7 +207,6 @@ public class DDBBasedListMitigationsHandlerTest {
         getItemResult.setItem(item);
         item.put(MitigationRequestsModel.DEVICE_NAME_KEY, new AttributeValue(deviceName));
         item.put(MitigationRequestsModel.WORKFLOW_ID_KEY, new AttributeValue().withN(String.valueOf(workflowId)));
-        item.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(deviceScope));
         item.put(MitigationRequestsModel.LOCATIONS_KEY, new AttributeValue().withSS(locations));
         item.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue(mitigationName));
         item.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue(mitigationTemplate));
@@ -233,7 +231,6 @@ public class DDBBasedListMitigationsHandlerTest {
         MitigationRequestDescription description = listHandler.getMitigationRequestDescription(deviceName, workflowId, tsdMetrics);
         assertEquals(description.getDeviceName(), deviceName);
         assertEquals(description.getJobId(), workflowId);
-        assertEquals(description.getDeviceScope(), deviceScope);
         assertEquals(description.getMitigationName(), mitigationName);
         assertEquals(description.getMitigationTemplate(), mitigationTemplate);
         assertEquals(description.getMitigationVersion(), mitigationVersion);
@@ -262,7 +259,6 @@ public class DDBBasedListMitigationsHandlerTest {
         
         String deviceName = "testDevice";
         long workflowId = 5;
-        String deviceScope = "testScope";
         List<String> locations = Lists.newArrayList("TST1", "TST2", "TST3");
         String mitigationName = "testMitigation";
         String mitigationTemplate = "testTemplate";
@@ -297,11 +293,6 @@ public class DDBBasedListMitigationsHandlerTest {
         Condition serviceNameCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
         queryFilter.put(MitigationRequestsModel.SERVICE_NAME_KEY, serviceNameCondition);
         
-        // Restrict results to this deviceName
-        value = new AttributeValue(deviceScope);
-        Condition deviceScopeCondition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
-        queryFilter.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, deviceScopeCondition);
-        
         // Restrict results to only requests which are "active" (i.e. there hasn't been a subsequent workflow updating the actions of this workflow)
         value = new AttributeValue().withN("0");
         Condition condition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(value);
@@ -322,7 +313,6 @@ public class DDBBasedListMitigationsHandlerTest {
         Map<String, AttributeValue> item = new HashMap<>();
         item.put(MitigationRequestsModel.DEVICE_NAME_KEY, new AttributeValue(deviceName));
         item.put(MitigationRequestsModel.WORKFLOW_ID_KEY, new AttributeValue().withN(String.valueOf(workflowId)));
-        item.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(deviceScope));
         item.put(MitigationRequestsModel.LOCATIONS_KEY, new AttributeValue().withSS(locations));
         item.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue(mitigationName));
         item.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue(mitigationTemplate));
@@ -346,13 +336,12 @@ public class DDBBasedListMitigationsHandlerTest {
         
         when(dynamoDBClient.query(any(QueryRequest.class))).thenReturn(queryResult);
         
-        List<MitigationRequestDescription> descriptions = listHandler.getMitigationRequestDescriptionsForMitigation(serviceName, deviceName, deviceScope, mitigationName, tsdMetrics);
+        List<MitigationRequestDescription> descriptions = listHandler.getMitigationRequestDescriptionsForMitigation(serviceName, deviceName, mitigationName, tsdMetrics);
         
         assertEquals(descriptions.size(), 1);
         MitigationRequestDescription description = descriptions.get(0);
         assertEquals(description.getDeviceName(), deviceName);
         assertEquals(description.getJobId(), workflowId);
-        assertEquals(description.getDeviceScope(), deviceScope);
         assertEquals(description.getMitigationName(), mitigationName);
         assertEquals(description.getMitigationTemplate(), mitigationTemplate);
         assertEquals(description.getMitigationVersion(), mitigationVersion);
@@ -377,7 +366,7 @@ public class DDBBasedListMitigationsHandlerTest {
     public void testGetInProgressRequestsDescription() {
         
         //create request in the  mitigation request table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
         Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
         List<String> queryLocations = Lists.newArrayList("TST1");
         itemCreator.setLocations(locations);
@@ -391,7 +380,6 @@ public class DDBBasedListMitigationsHandlerTest {
         MitigationRequestDescriptionWithLocations descriptionWithLocations = descriptions.get(0);
         MitigationRequestDescription description = descriptionWithLocations.getMitigationRequestDescription();
         assertEquals(description.getDeviceName(), deviceName);
-        assertEquals(description.getDeviceScope(), deviceScope);
         assertEquals(description.getMitigationName(), mitigationName);
         assertEquals(description.getMitigationTemplate(), mitigationTemplate);
         assertEquals(description.getServiceName(), serviceName);
@@ -403,7 +391,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetInProgressRequestsDescription_NoLocationFilter() {
         
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
         Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
         List<String> queryLocations = null;
         itemCreator.setLocations(locations);
@@ -438,7 +426,7 @@ public class DDBBasedListMitigationsHandlerTest {
     public void testGetInProgressRequestsDescription_NoRunningRequest() {
         
         //create request in the  mitigation request table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
         Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
         List<String> queryLocations = Lists.newArrayList("TST1");
         itemCreator.setLocations(locations);
@@ -458,7 +446,7 @@ public class DDBBasedListMitigationsHandlerTest {
     public void testGetInProgressRequestsDescription_LocationNotInRequest() {
         
         //create request in the  mitigation request table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
         Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
         List<String> queryLocations = Lists.newArrayList("TSTxxx");
         itemCreator.setLocations(locations);
@@ -477,7 +465,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetInProgressRequestsDescription_WorkflowID_ReverseScan() {
         
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
         Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
         List<String> queryLocations = Lists.newArrayList("TST1");
         itemCreator.setLocations(locations);
@@ -513,7 +501,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetInProgressRequestsDescription_FailRequestInMiddle() {
         
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
         MitigationInstanceItemCreator instanceCreator = instanceTableTestHelper.getItemCreator(deviceName, serviceName);
         Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
         List<String> queryLocations = Lists.newArrayList("TST1");
@@ -548,7 +536,7 @@ public class DDBBasedListMitigationsHandlerTest {
     public void testGetInProgressRequestsDescription_KeepSearchingAfterBlockedAndCompletedInstance() {
         
         DDBBasedListMitigationsHandler spylistHandler = spy(listHandler);
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
 
         MitigationInstanceItemCreator instanceCreator = instanceTableTestHelper.getItemCreator(deviceName, serviceName);
         Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
@@ -590,7 +578,7 @@ public class DDBBasedListMitigationsHandlerTest {
     public void testGetInProgressRequestsDescription_StopSearchingAfterCompletedInstance() {
         
         DDBBasedListMitigationsHandler spylistHandler = spy(listHandler);
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
 
         MitigationInstanceItemCreator instanceCreator = instanceTableTestHelper.getItemCreator(deviceName, serviceName);
         Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2", "TST3"));
@@ -632,7 +620,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetInProgressRequestsDescription_Multiple_Locations() {
         
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
         Set<String> locations = new HashSet<String>(Lists.newArrayList("TST1", "TST2"));
         List<String> queryLocations = Lists.newArrayList("TST2", "TST1");
         itemCreator.setLocations(locations);
@@ -660,7 +648,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistory() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -674,7 +662,7 @@ public class DDBBasedListMitigationsHandlerTest {
         Integer startVersion = 15;
         Integer maxNumberOfHistoryEntriesToFetch = 20;
         List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, mitigationName, startVersion, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
+                mitigationName, startVersion, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
 
         assertEquals(versionCounts, descs.size());
         for (int v = versionCounts; v >= 1; --v) {
@@ -689,7 +677,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMissingStartVersion() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -702,7 +690,7 @@ public class DDBBasedListMitigationsHandlerTest {
         // validate all history can be retrieved, when startVersion is null
         Integer maxNumberOfHistoryEntriesToFetch = 20;
         List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, mitigationName, null, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
+                mitigationName, null, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
 
         assertEquals(versionCounts, descs.size());
         for (int v = versionCounts; v >= 1; --v) {
@@ -716,7 +704,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMaxNumberOfHistoryEntriesToFetch() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -729,7 +717,7 @@ public class DDBBasedListMitigationsHandlerTest {
         // validate all history can be retrieved, when startVersion is null
         int maxNumberOfHistoryEntriesToFetch = 4;
         List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, mitigationName, null, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
+                mitigationName, null, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
 
         assertEquals(maxNumberOfHistoryEntriesToFetch, descs.size());
         for (int i = 0; i < maxNumberOfHistoryEntriesToFetch; ++i) {
@@ -743,7 +731,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryStartVersion() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -757,7 +745,7 @@ public class DDBBasedListMitigationsHandlerTest {
         Integer startVersion = 8;
         int maxNumberOfHistoryEntriesToFetch = 4;
         List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, mitigationName, startVersion, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
+                mitigationName, startVersion, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
 
         assertEquals(maxNumberOfHistoryEntriesToFetch, descs.size());
         for (int i = 1; i <= maxNumberOfHistoryEntriesToFetch; ++i) {
@@ -771,7 +759,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMitigationNotExist() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -783,7 +771,7 @@ public class DDBBasedListMitigationsHandlerTest {
 
         // validate all history can be retrieved, when startVersion is null
         assertTrue(listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, "nonExistMitigation", null, 20, tsdMetrics).isEmpty());
+                "nonExistMitigation", null, 20, tsdMetrics).isEmpty());
     }
     
     /**
@@ -792,7 +780,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMitigationRequestType() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -814,7 +802,7 @@ public class DDBBasedListMitigationsHandlerTest {
         
         // validate all history can be retrieved, when startVersion is null
         List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, mitigationName, null, 2, tsdMetrics);
+                mitigationName, null, 2, tsdMetrics);
 
         assertEquals(2, descs.size());
         assertEquals(12, descs.get(0).getMitigationRequestDescription().getMitigationVersion());
@@ -827,7 +815,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMitigationServiceName() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -839,48 +827,19 @@ public class DDBBasedListMitigationsHandlerTest {
 
         // validate all history can be retrieved, when startVersion is null
         List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, mitigationName, null, 1, tsdMetrics);
+                mitigationName, null, 1, tsdMetrics);
 
         assertEquals(1, descs.size());
         assertEquals(10, descs.get(0).getMitigationRequestDescription().getMitigationVersion());
     }
-    
-    /**
-     * Test query filter, device scope
-     */
-    @Test
-    public void testGetMitigationHistoryMitigationDeviceScope() {
-        // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
 
-        int versionCounts = 10;
-        // add versions 1 ~ versionCounts
-        for (int v = 1; v <= versionCounts; ++v) {
-            itemCreator.setMitigationVersion(v);
-            itemCreator.setWorkflowId(v + 10000);
-            itemCreator.addItem();
-        }
-
-        itemCreator.setDeviceScope("NRT");
-        itemCreator.setMitigationVersion(11);
-        itemCreator.setWorkflowId(10011);
-        itemCreator.addItem();
-
-        // validate all history can be retrieved, when startVersion is null
-        List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, mitigationName, null, 1, tsdMetrics);
-
-        assertEquals(1, descs.size());
-        assertEquals(10, descs.get(0).getMitigationRequestDescription().getMitigationVersion());
-    }
-    
     /**
      * Test query filter, device name
      */
     @Test
     public void testGetMitigationHistoryMitigationDeviceName() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
 
         int versionCounts = 10;
         // add versions 1 ~ versionCounts
@@ -897,7 +856,7 @@ public class DDBBasedListMitigationsHandlerTest {
 
         // validate all history can be retrieved, when startVersion is null
         List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, mitigationName, null, 1, tsdMetrics);
+                mitigationName, null, 1, tsdMetrics);
 
         assertEquals(1, descs.size());
         assertEquals(10, descs.get(0).getMitigationRequestDescription().getMitigationVersion());
@@ -910,7 +869,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationHistoryMitigationWorkflowStatus() throws JsonProcessingException {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
 
         // create one request for each workflow status
         // and find the failed workflow status version 
@@ -931,7 +890,7 @@ public class DDBBasedListMitigationsHandlerTest {
 
         // validate history is correctly retrieved without Failed status request
         List<MitigationRequestDescriptionWithLocations> descs = listHandler.getMitigationHistoryForMitigation(serviceName, deviceName,
-                deviceScope, mitigationName, null, 10, tsdMetrics);
+                mitigationName, null, 10, tsdMetrics);
 
         assertEquals(expectedRequestsCount, descs.size());
         int validateVersion = version;
@@ -952,7 +911,7 @@ public class DDBBasedListMitigationsHandlerTest {
     @Test
     public void testGetMitigationDefinition() {
         // create history for a mitigation in ddb table
-        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName, deviceScope);
+        MitigationRequestItemCreator itemCreator = requestTableTestHelper.getItemCreator(deviceName, serviceName, mitigationName);
         itemCreator.setLocations(locations);
         int workflowId = 10000;
 

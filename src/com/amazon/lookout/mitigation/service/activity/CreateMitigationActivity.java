@@ -33,7 +33,7 @@ import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManag
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
@@ -96,13 +96,9 @@ public class CreateMitigationActivity extends Activity {
             String mitigationTemplate = createRequest.getMitigationTemplate();
             ActivityHelper.addTemplateNameCountMetrics(mitigationTemplate, tsdMetrics);
             
-            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
-            String deviceName = deviceNameAndScope.getDeviceName().name();
+            String deviceName = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate).name();
             ActivityHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
-            
-            String deviceScope = deviceNameAndScope.getDeviceScope().name();
-            ActivityHelper.addDeviceScopeCountMetrics(deviceScope, tsdMetrics);
-            
+
             String serviceName = createRequest.getServiceName();
             ActivityHelper.addServiceNameCountMetrics(serviceName, tsdMetrics);
             
@@ -129,7 +125,7 @@ public class CreateMitigationActivity extends Activity {
             
             // Step6. Start running the workflow.
             workflowStarter.startMitigationModificationWorkflow(workflowId, createRequest, locationsToDeploy,
-                    RequestType.CreateRequest, storedMitigationVersion, deviceName, deviceScope, workflowClient, tsdMetrics);
+                    RequestType.CreateRequest, storedMitigationVersion, deviceName, workflowClient, tsdMetrics);
             
             // Step7. Update the record for this workflow request and store the runId that SWF associates with this workflow.
             String swfRunId = workflowClient.getWorkflowExecution().getRunId();
