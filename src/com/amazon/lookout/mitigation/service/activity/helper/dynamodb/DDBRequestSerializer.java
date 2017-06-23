@@ -70,6 +70,10 @@ public class DDBRequestSerializer {
         attributeValue = new AttributeValue().withN(String.valueOf(workflowId));
         attributesInItemToStore.put(WORKFLOW_ID_KEY, attributeValue);
         
+        // TODO remove remove remove
+        // Only needed for migration to scopeless mitigation service
+        attributesInItemToStore.put("DeviceScope", new AttributeValue("GLOBAL"));
+
         attributeValue = new AttributeValue(WorkflowStatus.RUNNING);
         attributesInItemToStore.put(WORKFLOW_STATUS_KEY, attributeValue);
         
