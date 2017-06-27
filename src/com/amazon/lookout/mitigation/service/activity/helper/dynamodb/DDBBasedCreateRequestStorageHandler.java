@@ -12,14 +12,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.mitigation.service.ActionType;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
-import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToFixedActionMapper;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 
@@ -63,23 +61,8 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedCreateAndEditRe
         CreateMitigationRequest createMitigationRequest = (CreateMitigationRequest) request;
 
         try (TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedCreateRequestStorageHandler.storeRequestForWorkflow")) {
-            String mitigationTemplate = createMitigationRequest.getMitigationTemplate();
-
             MitigationDefinition mitigationDefinition = createMitigationRequest.getMitigationDefinition();
-            
-            // If action is null, check with the MitigationTemplateToFixedActionMapper to get the action for this template.
-            // This is required to get the action stored with the mitigation definition in DDB, allowing it to be later displayed on the UI.
-            if (mitigationDefinition.getAction() == null) {
-                ActionType actionType = MitigationTemplateToFixedActionMapper.getActionTypesForTemplate(mitigationTemplate);
-                if (actionType == null) {
-                    String msg = "Validation for this request went through successfully, but this request doesn't have any action associated with it and no " +
-                                 "mapping found in the MitigationTemplateToFixedActionMapper for the template in this request. Request: " + ReflectionToStringBuilder.toString(createMitigationRequest);
-                    LOG.error(msg);
-                    throw new RuntimeException(msg);
-                }
-                mitigationDefinition.setAction(actionType);
-            }
-            
+
             return storeRequestForWorkflow(
                     RequestType.CreateRequest, createMitigationRequest, locations,  mitigationDefinition, 
                     INITIAL_MITIGATION_VERSION, CREATE_REQUEST_STORAGE_FAILED_LOG_PREFIX, subMetrics); 

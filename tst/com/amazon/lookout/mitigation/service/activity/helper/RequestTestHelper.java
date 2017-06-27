@@ -21,7 +21,6 @@ import com.amazon.lookout.mitigation.service.S3Object;
 import com.amazon.lookout.mitigation.service.BlackWatchConfigBasedConstraint;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
-import com.amazon.lookout.mitigation.service.DropAction;
 import com.google.common.collect.Lists;
 
 public class RequestTestHelper {
@@ -36,7 +35,6 @@ public class RequestTestHelper {
         request.setMitigationActionMetadata(metadata);
         
         MitigationDefinition definition = defaultMitigationDefinition();
-        definition.setAction(new DropAction());
         request.setMitigationDefinition(definition);
 
         List<String> locations = new ArrayList<>();
@@ -103,7 +101,6 @@ public class RequestTestHelper {
         
         MitigationDefinition definition = 
                 createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.5"));
-        definition.setAction(new DropAction());
         request.setMitigationDefinition(definition);
         
         BlastRadiusCheck check1 = new BlastRadiusCheck();
