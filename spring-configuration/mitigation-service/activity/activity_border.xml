@@ -265,7 +265,7 @@
 
     <bean id="elbResourceHelper" class="com.amazon.blackwatch.mitigation.resource.helper.ELBResourceHelper">
         <constructor-arg name="awsCredentialsProvider" ref="elbInternalServiceCredentialsProvider.${realm}.${domain}"/>
-        <constructor-arg name="elbInternalClient" ref="elbInternalAPIClient.${realm}.${domain}"/>
+        <constructor-arg name="elbInternalClient" ref="elbInternalAPIClientBean"/>
         <constructor-arg name="regionIPv6Prefix" ref="elbIPv6Prefix.${realm}.${domain}"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory" />
     </bean>
