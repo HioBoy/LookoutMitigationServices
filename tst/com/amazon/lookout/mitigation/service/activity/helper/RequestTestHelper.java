@@ -8,7 +8,6 @@ import java.util.HashMap;
 import org.joda.time.DateTime;
 
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
-import com.amazon.lookout.mitigation.service.BlastRadiusCheck;
 import com.amazon.lookout.mitigation.service.AlarmCheck;
 import com.amazon.lookout.mitigation.service.Alarm;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
@@ -41,22 +40,6 @@ public class RequestTestHelper {
         locations.add("POP1");
         request.setLocations(locations);
 
-        BlastRadiusCheck check1 = new BlastRadiusCheck();
-        DateTime now = new DateTime();
-        check1.setEndDateTime(now.toString());
-        check1.setStartDateTime(now.minusHours(1).toString());
-        check1.setFailureThreshold(5.0);
-        
-        BlastRadiusCheck check2 = new BlastRadiusCheck();
-        check2.setEndDateTime(now.toString());
-        check2.setStartDateTime(now.minusHours(2).toString());
-        check2.setFailureThreshold(10.0);
-        
-        List<MitigationDeploymentCheck> checks = new ArrayList<>();
-        checks.add(check1);
-        checks.add(check2);
-        request.setPreDeploymentChecks(checks);
-        
         List<MitigationDeploymentCheck> postChecks = new ArrayList<>();
         AlarmCheck alarmCheck = new AlarmCheck();
         alarmCheck.setCheckEveryNSec(5);
@@ -102,23 +85,7 @@ public class RequestTestHelper {
         MitigationDefinition definition = 
                 createMitigationDefinition(PacketAttributesEnumMapping.DESTINATION_IP.name(), Lists.newArrayList("1.2.3.5"));
         request.setMitigationDefinition(definition);
-        
-        BlastRadiusCheck check1 = new BlastRadiusCheck();
-        DateTime now = new DateTime();
-        check1.setEndDateTime(now.toString());
-        check1.setStartDateTime(now.minusHours(1).toString());
-        check1.setFailureThreshold(5.0);
-        
-        BlastRadiusCheck check2 = new BlastRadiusCheck();
-        check2.setEndDateTime(now.toString());
-        check2.setStartDateTime(now.minusHours(2).toString());
-        check2.setFailureThreshold(10.0);
-        
-        List<MitigationDeploymentCheck> checks = new ArrayList<>();
-        checks.add(check1);
-        checks.add(check2);
-        request.setPreDeploymentChecks(checks);
-        
+
         return request;
     }
     
