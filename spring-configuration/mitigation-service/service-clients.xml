@@ -5,7 +5,7 @@
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
     
     <bean id="dynamoDBClientBuilder" class="com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder">
-        <property name="credentials" ref="${domain}.dynamoDBCredentialsProvider"/>
+        <property name="credentials" ref="dynamodbCredentials"/>
         <property name="requestHandlers">
             <list>
                 <bean class="com.amazon.metrics.dynamodb.AwsDynamoDBMetricsRequestHandler">
@@ -27,7 +27,7 @@
     </bean>
     
     <bean id="swfClient" class="com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient">
-        <constructor-arg index="0" ref="${domain}.swfCredentialsProvider"/>
+        <constructor-arg index="0" ref="swfCredentials"/>
         <constructor-arg index="1" ref="swfClientConfig"/>
         <property name="endpoint" value="https://swf.${realm}.amazonaws.com"/>
     </bean>

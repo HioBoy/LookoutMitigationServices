@@ -5,6 +5,14 @@
     xmlns:util="http://www.springframework.org/schema/util"
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
+    <bean id="dynamodbCredentials" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.dynamodb.mitigationservice.${realm}.${domain}"/>
+    </bean>
+
+    <bean id="swfCredentials" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.swf.mitigationservice.${realm}.${domain}"/>
+    </bean>
+
     <!-- EDGE location -->
     <bean id="marketplaceName" class="java.lang.String">
         <constructor-arg value="edge.${domain}.${realm}"/>

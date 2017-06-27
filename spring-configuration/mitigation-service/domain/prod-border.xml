@@ -44,11 +44,5 @@
 
     <alias name="prod.ResourceAllocationState.writeCapacityUnits" alias="prod-border.ResourceAllocationState.writeCapacityUnits"/>
     
-    <bean id="prod-border.dynamoDBCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg value="com.amazon.lookout.dynamodb.mitigationservice.prod-border"/>
-    </bean>
-
-    <bean id="prod-border.swfCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg value="com.amazon.lookout.swf.mitigationservice.prod-border"/>
-    </bean>
+    <import resource="file:${spring.config.root}/domain/prod-locations-generated.xml"/>
 </beans>
