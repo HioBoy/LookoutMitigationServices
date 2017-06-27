@@ -40,7 +40,6 @@ import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.test.common.util.AssertUtils;
 import com.amazon.lookout.test.common.util.TestUtils;
@@ -112,7 +111,6 @@ public class AuthorizationStrategyTest {
         getMitigationInfoRequest = new GetMitigationInfoRequest();
         getMitigationInfoRequest.setServiceName(edgeServiceName);
         getMitigationInfoRequest.setDeviceName(blackwatchDeviceName);
-        getMitigationInfoRequest.setDeviceScope(DeviceScope.GLOBAL.name());
         getMitigationInfoRequest.setMitigationName(mitigationName);
         
         getLocationHostStatusRequest = new GetLocationHostStatusRequest();

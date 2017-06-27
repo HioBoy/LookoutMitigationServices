@@ -18,7 +18,6 @@ import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsReq
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 
 public class BlackWatchTemplateLocationHelperTest {
@@ -49,7 +48,6 @@ public class BlackWatchTemplateLocationHelperTest {
         
         String serviceName = "R53";
         String deviceName = DeviceName.BLACKWATCH_BORDER.name();
-        String deviceScope = DeviceScope.GLOBAL.name();
         String mitigationName = "miti1";
         
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
@@ -60,7 +58,7 @@ public class BlackWatchTemplateLocationHelperTest {
         MitigationRequestDescriptionWithLocations requestDesc = new MitigationRequestDescriptionWithLocations();
         requestDesc.setLocations(locations);
         Mockito.doReturn(Arrays.asList(requestDesc)).when(requestInfoHanlder).getMitigationHistoryForMitigation(eq(serviceName),
-                eq(deviceName), eq(deviceScope), eq(mitigationName), eq(null), eq(Integer.valueOf(1)),
+                eq(deviceName), eq(mitigationName), eq(null), eq(Integer.valueOf(1)),
                 isA(TSDMetrics.class));
         
         assertEquals(new HashSet<String>(locations), helper.getLocationsForDeployment(request, tsdMetrics));

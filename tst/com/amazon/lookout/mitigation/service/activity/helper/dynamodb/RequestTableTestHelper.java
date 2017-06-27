@@ -24,8 +24,6 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
-import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
@@ -76,7 +74,6 @@ public class RequestTableTestHelper {
         private String userName;
         private String userDesc;
         private String toolName;
-        private String deviceScope;
 
         void addItem() {
             Item item = new Item();
@@ -93,7 +90,6 @@ public class RequestTableTestHelper {
             item.withString(USER_NAME_KEY, userName);
             item.withString(USER_DESCRIPTION_KEY, userDesc);
             item.withString(TOOL_NAME_KEY, toolName);
-            item.withString(DEVICE_SCOPE_KEY, deviceScope);
             if (locations != null) {
                 item.withStringSet(LOCATIONS_KEY, locations);
             }
@@ -104,7 +100,6 @@ public class RequestTableTestHelper {
             Map<String, AttributeValue> item = new HashMap<>();
             item.put(MitigationRequestsModel.DEVICE_NAME_KEY, new AttributeValue(deviceName));
             item.put(MitigationRequestsModel.WORKFLOW_ID_KEY, new AttributeValue().withN(String.valueOf(workflowId)));
-            item.put(MitigationRequestsModel.DEVICE_SCOPE_KEY, new AttributeValue(deviceScope));
             item.put(MitigationRequestsModel.LOCATIONS_KEY, new AttributeValue().withSS(locations));
             item.put(MitigationRequestsModel.MITIGATION_NAME_KEY, new AttributeValue(mitigationName));
             item.put(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY, new AttributeValue(mitigationTemplate));
@@ -124,8 +119,7 @@ public class RequestTableTestHelper {
             return item;
         }
     }
-    public MitigationRequestItemCreator getItemCreator(String deviceName, String serviceName, String mitigationName,
-            String deviceScope) {
+    public MitigationRequestItemCreator getItemCreator(String deviceName, String serviceName, String mitigationName) {
         MitigationRequestItemCreator itemCreator = new MitigationRequestItemCreator();
         itemCreator.setTable(requestsTable);
         itemCreator.setDeviceName(deviceName);
@@ -136,7 +130,6 @@ public class RequestTableTestHelper {
         itemCreator.setUpdateWorkflowId(1000);
         itemCreator.setMitigationName(mitigationName);
         itemCreator.setRequestType(RequestType.EditRequest.name());
-        itemCreator.setDeviceScope(deviceScope);
         itemCreator.setLocations(locations);
 
         itemCreator.setUserName("abc");
@@ -148,7 +141,6 @@ public class RequestTableTestHelper {
 
     public static final String deviceName = DeviceName.BLACKWATCH_BORDER.toString();
     public static final String serviceName = ServiceName.AWS;
-    public static final String deviceScope = DeviceScope.GLOBAL.toString();
     public static final String mitigationName = "mitigation1";
     public static final Set<String> locations = Sets.newHashSet("AMS1", "ARN1");
     public static final MitigationDefinition mitigationDefinition = new MitigationDefinition();
@@ -195,12 +187,12 @@ public class RequestTableTestHelper {
             MitigationModificationRequest request, MitigationDefinition mitigationDefinition, int mitigationVersion,
             Set<String> locations, long workflowId) 
     {
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        DeviceName deviceName = 
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request.getMitigationTemplate());
         
         MitigationRequestDescriptionWithLocations storedDefinition = 
                 getRequestDescriptionWithLocations(
-                        deviceNameAndScope.getDeviceName().toString(), workflowId);
+                        deviceName.toString(), workflowId);
         
         MitigationRequestDescription storedDescription = storedDefinition.getMitigationRequestDescription();
         assertEquals(toJson(mitigationDefinition), toJson(storedDescription.getMitigationDefinition()));

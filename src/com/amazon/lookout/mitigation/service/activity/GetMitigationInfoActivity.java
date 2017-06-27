@@ -33,10 +33,10 @@ import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceC
 import com.google.common.collect.Sets;
 
 /**
- * Activity to get details for a particular mitigationName associated with a particular service/device/deviceScope.
+ * Activity to get details for a particular mitigationName associated with a particular service/device.
  * 
  * Note that when a new mitigation is being updated, there might exist 2 records with the same mitigationName for the
- * same serviceName+deviceName+deviceScope - hence this API returns a list of mitigation descriptions, letting the client 
+ * same serviceName+deviceName- hence this API returns a list of mitigation descriptions, letting the client 
  * decide which one is the appropriate one for it to consume. 
  *
  */
@@ -79,7 +79,6 @@ public class GetMitigationInfoActivity extends Activity {
         boolean requestSuccessfullyProcessed = true;
         
         String deviceName = request.getDeviceName();
-        String deviceScope = request.getDeviceScope();
         String serviceName = request.getServiceName();
         String mitigationName = request.getMitigationName();
         
@@ -92,10 +91,10 @@ public class GetMitigationInfoActivity extends Activity {
             
             List<MitigationRequestDescriptionWithStatus> mitigationDescriptionWithStatuses = new ArrayList<>();
             
-            // Step 2. Get list of "active" mitigation requests for this service, device, deviceScope and mitigationName from the requests table.
-            List<MitigationRequestDescription> mitigationDescriptions = requestInfoHandler.getMitigationRequestDescriptionsForMitigation(serviceName, deviceName, deviceScope, mitigationName, tsdMetrics);
+            // Step 2. Get list of "active" mitigation requests for this service, device, and mitigationName from the requests table.
+            List<MitigationRequestDescription> mitigationDescriptions = requestInfoHandler.getMitigationRequestDescriptionsForMitigation(serviceName, deviceName, mitigationName, tsdMetrics);
             if (mitigationDescriptions.isEmpty()) {
-                throw new MissingMitigationException400("Mitigation: " + mitigationName + " for service: " + serviceName + " doesn't exist on device: " + deviceName + " with deviceScope:" + deviceScope);
+                throw new MissingMitigationException400("Mitigation: " + mitigationName + " for service: " + serviceName + " doesn't exist on device: " + deviceName);
             }
             
             // Step 3. For each of the requests fetched above, query the individual instance status and populate a new MitigationRequestDescriptionWithStatus instance to wrap this information.
@@ -111,7 +110,6 @@ public class GetMitigationInfoActivity extends Activity {
             // Step 4. Create the response object to return back to the client.
             GetMitigationInfoResponse response = new GetMitigationInfoResponse();
             response.setDeviceName(deviceName);
-            response.setDeviceScope(deviceScope);
             response.setMitigationName(mitigationName);
             response.setServiceName(serviceName);
             response.setMitigationRequestDescriptionsWithStatus(mitigationDescriptionWithStatuses);

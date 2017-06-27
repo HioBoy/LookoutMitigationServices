@@ -26,7 +26,6 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWa
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
@@ -105,7 +104,6 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         originalModificationRequest.setLocations(locations);
         MitigationRequestDescription mitigationRequestDescription = new MitigationRequestDescription();
         originalModificationRequest.setMitigationRequestDescription(mitigationRequestDescription);
-        mitigationRequestDescription.setDeviceScope(deviceScope);
         mitigationRequestDescription.setMitigationTemplate("differentTemplate");
         
         doReturn(originalModificationRequest).when(requestInfoHandler)
@@ -125,7 +123,6 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         originalModificationRequest.setLocations(locations);
         MitigationRequestDescription mitigationRequestDescription = new MitigationRequestDescription();
         originalModificationRequest.setMitigationRequestDescription(mitigationRequestDescription);
-        mitigationRequestDescription.setDeviceScope(deviceName);
         mitigationRequestDescription.setMitigationTemplate(mitigationTemplate);
         mitigationRequestDescription.setRequestType(RequestType.DeleteRequest.toString());
         
@@ -248,7 +245,7 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         doThrow(new IllegalStateException()).when(swfWorkflowStarter)
                 .startMitigationModificationWorkflow(eq(workflowId), eq(request), eq(new HashSet<>(locations)),
                         eq(RequestType.RollbackRequest), eq(mitigationVersion), eq(deviceName),
-                        eq(deviceScope), eq(workflowClient), isA(TSDMetrics.class));
+                        eq(workflowClient), isA(TSDMetrics.class));
         
         rollbackMitigationActivity.enact(request);
     }
@@ -265,7 +262,6 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         mitigationRequestDescription.setMitigationTemplate(MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer);
         mitigationRequestDescription.setServiceName(ServiceName.AWS);
         mitigationRequestDescription.setDeviceName(DeviceName.BLACKWATCH_BORDER.name());
-        mitigationRequestDescription.setDeviceScope(DeviceScope.GLOBAL.name());
         mitigationRequestDescription.setMitigationName(mitigationName);
         originalModificationRequest.setMitigationRequestDescription(mitigationRequestDescription);
         
@@ -284,7 +280,7 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         doNothing().when(swfWorkflowStarter).startMitigationModificationWorkflow(
                 eq(workflowId), eq(request), eq(new HashSet<>(locations)),
                 eq(RequestType.RollbackRequest), eq(mitigationVersion), eq(deviceName),
-                eq(deviceScope), eq(workflowClient), isA(TSDMetrics.class));
+                eq(workflowClient), isA(TSDMetrics.class));
         
         String swfRunId = "runid";
         WorkflowExecution workflowExecution = mock(WorkflowExecution.class);

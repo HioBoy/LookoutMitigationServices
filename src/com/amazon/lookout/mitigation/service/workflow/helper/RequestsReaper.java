@@ -504,7 +504,6 @@ public class RequestsReaper implements Runnable {
                         String mitigationName = item.get(MitigationRequestsModel.MITIGATION_NAME_KEY).getS();
                         int mitigationVersion = Integer.parseInt(item.get(MitigationRequestsModel.MITIGATION_VERSION_KEY).getN());
                         String mitigationTemplate = item.get(MitigationRequestsModel.MITIGATION_TEMPLATE_NAME_KEY).getS();
-                        String deviceScope = item.get(MitigationRequestsModel.DEVICE_SCOPE_KEY).getS();
                         String requestType = item.get(MitigationRequestsModel.REQUEST_TYPE_KEY).getS();
                         String serviceName = item.get(MitigationRequestsModel.SERVICE_NAME_KEY).getS();
                         AttributeValue reapedFlagValue = item.get(MitigationRequestsModel.REAPED_FLAG_KEY);
@@ -577,7 +576,7 @@ public class RequestsReaper implements Runnable {
                                   ReflectionToStringBuilder.toString(instancesToBeReaped));
                         
                         // Wrap up this request and its instances in a RequestToReap object. 
-                        RequestToReap workflowInfo = new RequestToReap(workflowIdStr, swfRunId, deviceName.name(), deviceScope, serviceName, mitigationName, 
+                        RequestToReap workflowInfo = new RequestToReap(workflowIdStr, swfRunId, deviceName.name(), serviceName, mitigationName, 
                                                                        mitigationVersion, mitigationTemplate, requestType, requestDateInMillis, instancesToBeReaped);
                         LOG.info("Request that needs to be reaped: " + workflowInfo);
                         requestsToBeReaped.add(workflowInfo);
@@ -708,7 +707,6 @@ public class RequestsReaper implements Runnable {
                                                       MitigationRequestsModel.SWF_RUN_ID_KEY, 
                                                       MitigationRequestsModel.REQUEST_DATE_IN_MILLIS_KEY,
                                                       MitigationRequestsModel.WORKFLOW_STATUS_KEY, 
-                                                      MitigationRequestsModel.DEVICE_SCOPE_KEY,
                                                       MitigationRequestsModel.LOCATIONS_KEY, 
                                                       MitigationRequestsModel.MITIGATION_NAME_KEY,
                                                       MitigationRequestsModel.MITIGATION_VERSION_KEY, 

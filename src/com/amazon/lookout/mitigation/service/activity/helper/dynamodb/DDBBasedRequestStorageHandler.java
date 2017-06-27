@@ -22,8 +22,7 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.StaleRequestException400;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBRequestSerializer.RequestSummary;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
-import com.amazon.lookout.mitigation.service.constants.DeviceScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.AbortedException;
 import com.amazonaws.AmazonClientException;
@@ -120,7 +119,7 @@ public class DDBBasedRequestStorageHandler {
      * @param request Request to be stored.
      * @param mitigationDefinition : mitigation definition
      * @param locations Set of String representing the locations where this request applies.
-     * @param deviceNameAndScope DeviceNameAndScope for this request.
+     * @param deviceName DeviceName for this request.
      * @param workflowId WorkflowId to use for storing this request.
      * @param requestType Indicates the type of request made to the service.
      * @param mitigationVersion Version number to be associated with this mitigation to be stored.
@@ -128,13 +127,13 @@ public class DDBBasedRequestStorageHandler {
      * @throws ConditionalCheckFailedException : when conditional check failed in put item.
      */
     protected void storeRequestInDDB(MitigationModificationRequest request, MitigationDefinition mitigationDefinition,
-            Set<String> locations, DeviceNameAndScope deviceNameAndScope, long workflowId, 
+            Set<String> locations, DeviceName deviceName, long workflowId, 
             RequestType requestType, int mitigationVersion, TSDMetrics metrics) throws ConditionalCheckFailedException 
     {
         try (TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHandler.storeRequestInDDB")) {
             Map<String, AttributeValue> attributeValuesInItem = 
                     DDBRequestSerializer.serializeRequest(
-                            request, mitigationDefinition, locations, deviceNameAndScope, workflowId, requestType, mitigationVersion,
+                            request, mitigationDefinition, locations, deviceName, workflowId, requestType, mitigationVersion,
                             MitigationRequestsModel.UPDATE_WORKFLOW_ID_FOR_UNEDITED_REQUESTS);
             Map<String, ExpectedAttributeValue> expectedConditions = DDBRequestSerializer.expectedConditionsForNewRecord();
             
@@ -185,12 +184,11 @@ public class DDBBasedRequestStorageHandler {
     /**
      * Called by the concrete implementations of this StorageHandler to find all the currently active mitigations for a device.
      * @param deviceName Device corresponding to whom all active mitigations need to be determined.
-     * @param deviceScope Device scope for the device where all the active mitigations need to be determined.
      * @param lastEvaluatedKey Last evaluated key, to handle paginated response.
      * @param metrics
      * @return Long representing the max of the workflowId from the workflows that currently exist in the DDB tables.
      */
-    protected Long getMaxWorkflowIdForDevice(String deviceName, String deviceScope, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
+    protected Long getMaxWorkflowIdForDevice(String deviceName, Long maxWorkflowIdOnLastAttempt, TSDMetrics metrics) {
         TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getMaxWorkflowIdForDevice");
         try {
             Map<String, Condition> keyConditions = 
@@ -212,11 +210,6 @@ public class DDBBasedRequestStorageHandler {
                 request.setScanIndexForward(false);
                 request.setLimit(NUM_RECORDS_TO_FETCH_FOR_MAX_WORKFLOW_ID);
                 
-                // Filter out any records whose DeviceScope isn't the same.
-                AttributeValue deviceScopeAttrVal = new AttributeValue(deviceScope);
-                Condition condition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(Arrays.asList(deviceScopeAttrVal));
-                request.addQueryFilterEntry(MitigationRequestsModel.DEVICE_SCOPE_KEY, condition);
-                
                 QueryResult queryResult = queryDynamoDBWithRetries(request, subMetrics);
                 
                 lastEvaluatedKey = queryResult.getLastEvaluatedKey();
@@ -233,9 +226,8 @@ public class DDBBasedRequestStorageHandler {
     }
     
     /**
-     * Get the latest request summary for given mitigation on the given device and scope
+     * Get the latest request summary for given mitigation on the given device
      * @param deviceName Device corresponding to whom the latest mitigation version needs to be determined.
-     * @param deviceScope Device scope corresponding to whom the latest mitigation version needs to be determined.
      * @param mitigationName Mitigation Name corresponding to whom the latest mitigation version needs to be determined.
      * @param latestFromLastAttempt latest version and type from last attempt, could be null.
      * @param metrics
@@ -243,7 +235,7 @@ public class DDBBasedRequestStorageHandler {
      *      if mitigation does not exist, return null.
      */
     protected RequestSummary getLatestRequestSummary(
-            @NonNull String deviceName, @NonNull String deviceScope, @NonNull String mitigationName, 
+            @NonNull String deviceName, @NonNull String mitigationName, 
             RequestSummary latestFromLastAttempt, @NonNull TSDMetrics metrics) 
     {
         try (TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getLatestVersionForMitigationOnDevice")) {
@@ -253,7 +245,6 @@ public class DDBBasedRequestStorageHandler {
                     deviceName, mitigationName);
             
             Map<String, Condition> queryFilter = new HashMap<>();
-            DDBRequestSerializer.addDeviceScopeCondition(queryFilter, deviceScope);
             DDBRequestSerializer.addNotFailedCondition(queryFilter);
             if (latestFromLastAttempt != null) {
                 DDBRequestSerializer.addMinVersionCondition(queryFilter, latestFromLastAttempt.getMitigationVersion());
@@ -294,7 +285,6 @@ public class DDBBasedRequestStorageHandler {
     /**
      * Called by the concrete implementations of this StorageHandler to find all the currently active mitigations for a device.
      * @param deviceName Device corresponding to whom all active mitigations need to be determined.
-     * @param deviceScope Device scope for the device where all the active mitigations need to be determined.
      * @param attributesToGet Set of attributes to retrieve for each active mitigation.
      * @param keyConditions Map of String (attributeName) and Condition - Condition represents constraint on the attribute. Eg: >= 5.
      * @param lastEvaluatedKey Last evaluated key, to handle paginated response.
@@ -303,7 +293,7 @@ public class DDBBasedRequestStorageHandler {
      * @param metrics
      * @return QueryResult representing the result from issuing this query to DDB.
      */
-    protected QueryResult getActiveMitigationsForDevice(String deviceName, String deviceScope, Set<String> attributesToGet, Map<String, Condition> keyConditions, 
+    protected QueryResult getActiveMitigationsForDevice(String deviceName, Set<String> attributesToGet, Map<String, Condition> keyConditions, 
                                                         Map<String, AttributeValue> lastEvaluatedKey, String indexToUse, Map<String, Condition> queryFilters, TSDMetrics metrics) {
         try (TSDMetrics subMetrics = metrics.newSubMetrics("DDBBasedRequestStorageHelper.getActiveMitigationsForDevice")) {
             QueryRequest request = new QueryRequest();
@@ -315,14 +305,7 @@ public class DDBBasedRequestStorageHandler {
             request.withQueryFilter(queryFilters);
             request.setExclusiveStartKey(lastEvaluatedKey);
             request.setIndexName(indexToUse);
-            
-            // Filter out any records whose DeviceScope isn't the same.
-            if ((request.getQueryFilter() == null) || !request.getQueryFilter().containsKey(MitigationRequestsModel.DEVICE_SCOPE_KEY)) {
-                AttributeValue deviceScopeAttrVal = new AttributeValue(deviceScope);
-                Condition condition = new Condition().withComparisonOperator(ComparisonOperator.EQ).withAttributeValueList(Arrays.asList(deviceScopeAttrVal));
-                request.addQueryFilterEntry(MitigationRequestsModel.DEVICE_SCOPE_KEY, condition);
-            }
-        
+
             return queryDynamoDBWithRetries(request, subMetrics);
         }
     }
@@ -548,33 +531,16 @@ public class DDBBasedRequestStorageHandler {
             dynamoDBClient.updateItem(request);
         }
     }
-    
-    /**
-     * Check if the new workflowId we're going to use is within the valid range for this deviceScope.
-     * @param workflowId
-     * @param deviceNameAndScope
-     */
-    protected void sanityCheckWorkflowId(long workflowId, DeviceNameAndScope deviceNameAndScope) {
-        DeviceScope deviceScope = deviceNameAndScope.getDeviceScope();
-        if ((workflowId < deviceScope.getMinWorkflowId()) || (workflowId > deviceScope.getMaxWorkflowId())) {
-            String msg = WORKFLOW_ID_SANITY_CHECK_FAILURE_LOG_PREFIX + "Received workflowId = " + workflowId + " which is out of the valid range for the device scope: " + 
-                         deviceScope.name() + " expectedMin: " + deviceScope.getMinWorkflowId() + " expectedMax: " + deviceScope.getMaxWorkflowId();
-            LOG.warn(msg);
-            throw new InternalServerError500(msg);
-        }
-    }
-    
+
     protected void checkMitigationVersion(
-            MitigationModificationRequest request, DeviceNameAndScope deviceNameAndScope,
+            MitigationModificationRequest request, DeviceName deviceName,
             int newMitigationVersion, int latestVersion) 
     {
         String mitigationName = request.getMitigationName();
-        String deviceName = deviceNameAndScope.getDeviceName().name();
-        String deviceScope = deviceNameAndScope.getDeviceScope().name();
         
         if (newMitigationVersion <= latestVersion) {
-            String msg = "Mitigation found in DDB for deviceName: " + deviceName
-                    + " and deviceScope: " + deviceScope + " and mitigationName: "
+            String msg = "Mitigation found in DDB for deviceName: " + deviceName.name()
+                    + " and mitigationName: "
                     + mitigationName + " has a newer version: " + latestVersion
                     + " than one in request: " + newMitigationVersion + ". For request: "
                     + requestToString(request);
@@ -584,8 +550,8 @@ public class DDBBasedRequestStorageHandler {
 
         final int expectedMitigationVersion = latestVersion + 1;
         if (newMitigationVersion != expectedMitigationVersion) {
-            String msg = "Unexpected mitigation version in request for deviceName: " + deviceName
-                    + " and deviceScope: " + deviceScope + " and mitigationName: " + mitigationName
+            String msg = "Unexpected mitigation version in request for deviceName: " + deviceName.name()
+                    + " and mitigationName: " + mitigationName
                     + " Expected mitigation version: " + expectedMitigationVersion
                     + " , but mitigation version in request was: " + newMitigationVersion
                     + ". Request: " + requestToString(request);

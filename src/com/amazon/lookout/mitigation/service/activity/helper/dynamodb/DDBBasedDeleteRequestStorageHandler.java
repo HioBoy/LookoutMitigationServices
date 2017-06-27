@@ -17,7 +17,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBRequestSerializer.RequestSummary;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
@@ -48,7 +48,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
     /**
      * Stores the delete request into the DDB Table. While storing, it identifies the new workflowId to be associated with this request and returns back the same.
      * The algorithm it uses to identify the workflowId to use is:
-     * 1. Identify the deviceNameAndScope that corresponds to this request.
+     * 1. Identify the deviceName that corresponds to this request.
      * 2. Query for all active mitigations for this device.
      * 3. Get the max workflowId from all the mitigations that currently exists for this device.
      * 4. Evaluate the currently active mitigations to ensure this is not a duplicate request and also that the mitigation to delete actually exists.
@@ -74,10 +74,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
             String mitigationTemplate = deleteRequest.getMitigationTemplate();
             int mitigationVersion = deleteRequest.getMitigationVersion();
 
-            DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
-
-            String deviceName = deviceNameAndScope.getDeviceName().name();
-            String deviceScope = deviceNameAndScope.getDeviceScope().name();
+            DeviceName deviceName = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate);
 
             Long prevMaxWorkflowId = null;
             Long currMaxWorkflowId = null;
@@ -88,36 +85,35 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
             while (true) {
                 prevMaxWorkflowId = currMaxWorkflowId;
                 
-                // First, retrieve the current maxWorkflowId for the mitigations for the same device+scope.
-                currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName, deviceScope, prevMaxWorkflowId, subMetrics);
+                // First, retrieve the current maxWorkflowId for the mitigations for the same device.
+                currMaxWorkflowId = getMaxWorkflowIdForDevice(deviceName.name(), prevMaxWorkflowId, subMetrics);
                 
                 // Evaluate the currently active mitigations to get back a boolean flag indicating if the mitigation to delete exists.
                 // The evaluation will also throw a DuplicateRequestException in case it finds that this delete request is a duplicate.
-                latestRequestSummary = evaluateActiveMitigations(deviceName, deviceScope, mitigationName,
+                latestRequestSummary = evaluateActiveMitigations(deviceName.name(), mitigationName,
                         mitigationTemplate, mitigationVersion, prevMaxWorkflowId, latestRequestSummary, deleteRequest, subMetrics);
                 
                 long newWorkflowId = 0;
-                // If we didn't get any active workflows for the same deviceName and deviceScope or if we didn't find any mitigation corresponding to our delete request, throw back an exception.
+                // If we didn't get any active workflows for the same deviceName or if we didn't find any mitigation corresponding to our delete request, throw back an exception.
                 if ((currMaxWorkflowId == null) || (latestRequestSummary == null)) {
-                    String msg = "No active mitigation to delete found when querying for deviceName: " + deviceName + " deviceScope: " + deviceScope + 
+                    String msg = "No active mitigation to delete found when querying for deviceName: " + deviceName.name() +
                                  ", for request: " + ReflectionToStringBuilder.toString(deleteRequest);
                     LOG.warn(msg);
                     throw new MissingMitigationException400(msg);
                 } else {
                     // Increment the maxWorkflowId to use as the newWorkflowId and sanity check to ensure the new workflowId is still within the expected range.
                     newWorkflowId = currMaxWorkflowId + 1;
-                    sanityCheckWorkflowId(newWorkflowId, deviceNameAndScope);
                 }
 
                 try {
                     // Note: Unlike other requests we store the delete with a version one higher than the passed in version
                     // as the passed in version is the version of the mitigation to delete
                     storeRequestInDDB(
-                            deleteRequest, null, locations, deviceNameAndScope, newWorkflowId, RequestType.DeleteRequest, 
+                            deleteRequest, null, locations, deviceName, newWorkflowId, RequestType.DeleteRequest, 
                             deleteRequest.getMitigationVersion() + 1, subMetrics);
                     return new RequestStorageResponse(newWorkflowId, deleteRequest.getMitigationVersion() + 1);
                 } catch (ConditionalCheckFailedException ex) {
-                    String baseMsg = "Another process created workflow " + newWorkflowId + " first for " + deviceName;
+                    String baseMsg = "Another process created workflow " + newWorkflowId + " first for " + deviceName.name();
                     if (numAttempts < DDB_ACTIVITY_MAX_ATTEMPTS) {
                         LOG.warn(baseMsg + ". Attempt: " + numAttempts);
                     } else {
@@ -126,8 +122,8 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                         throw ex;
                     }
                 } catch (AmazonClientException ex) {
-                    String msg = DELETE_REQUEST_STORAGE_FAILED_LOG_PREFIX + " - Caught \"" + ex.toString()  + "\" when storing " + RequestType.DeleteRequest + " in DDB with newWorkflowId: " + newWorkflowId + " for DeviceName: " + deviceName + 
-                                 " and deviceScope: " + deviceScope + " AttemptNum: " + numAttempts + ". For request: " + ReflectionToStringBuilder.toString(request);
+                    String msg = DELETE_REQUEST_STORAGE_FAILED_LOG_PREFIX + " - Caught \"" + ex.toString()  + "\" when storing " + RequestType.DeleteRequest + " in DDB with newWorkflowId: " + newWorkflowId + " for DeviceName: " + deviceName.name() +
+                                 " AttemptNum: " + numAttempts + ". For request: " + ReflectionToStringBuilder.toString(request);
                     LOG.warn(msg);
                     throw ex;
                 }
@@ -139,10 +135,9 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
     }
     
     /**
-     * Evaluate the active mitigations currently in place for this device and scope - to check if the mitigation that needs to be deleted is currently 
+     * Evaluate the active mitigations currently in place for this device - to check if the mitigation that needs to be deleted is currently 
      * active and also ensure that this isn't a duplicate delete request. Protected for unit-testing.
      * @param deviceName DeviceName on which the mitigation needs to be deleted.
-     * @param deviceScope DeviceScope for the device where the mitigation needs to be deleted.
      * @param mitigationName Name of the mitigation being deleted.
      * @param mitigationTemplate Template that was used for creating the mitigation being deleted.
      * @param versionToDelete Version of the mitigation that the client requests to be deleted. This helps us ensure the client has latest view of the mitigation to be deleted.
@@ -156,14 +151,14 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
      * @return the summary of the request to be deleted
      */
     protected RequestSummary evaluateActiveMitigations(
-            String deviceName, String deviceScope, String mitigationName, String mitigationTemplate, 
+            String deviceName, String mitigationName, String mitigationTemplate, 
             int versionToDelete, Long maxWorkflowIdOnLastAttempt, RequestSummary latestFromLastAttempt, 
             DeleteMitigationFromAllLocationsRequest deleteRequest, TSDMetrics metrics) 
     {
         TSDMetrics subMetrics = metrics.newSubMetrics("evaluateActiveMitigations");
         try {
             RequestSummary latestRequestSummary = getLatestRequestSummary(
-                    deviceName, deviceScope, mitigationName, latestFromLastAttempt, subMetrics);
+                    deviceName, mitigationName, latestFromLastAttempt, subMetrics);
             
             if (latestRequestSummary == null) {
                 return null;
@@ -173,7 +168,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                     && latestRequestSummary.getMitigationVersion() > versionToDelete) {
                 String msg = "Found an active version (" + latestRequestSummary.getMitigationVersion() + ") for mitigation: " + 
                         mitigationName + " greater than the version to delete: " + versionToDelete + " for device: " + deviceName + 
-                        " in deviceScope: " + deviceScope + " corresponding to template: " + mitigationTemplate;
+                        " corresponding to template: " + mitigationTemplate;
                 LOG.warn(msg);
                 throw new IllegalArgumentException(msg);
             } else if (latestRequestSummary.getMitigationVersion() < versionToDelete) {
@@ -187,8 +182,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
             if (!latestRequestSummary.getMitigationTemplate().equals(mitigationTemplate)) {
                 String msg = "Found an active mitigation: " + mitigationName + " but for template: " +
                         latestRequestSummary.getMitigationTemplate() + " instead of the template: " + 
-                        mitigationTemplate + " passed in the request for device: " + deviceName + 
-                        " in deviceScope: " + deviceScope;
+                        mitigationTemplate + " passed in the request for device: " + deviceName;
                 LOG.warn(msg);
                 throw new IllegalArgumentException(msg);
             }
@@ -199,7 +193,7 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                 if (status.equals(WorkflowStatus.PARTIAL_SUCCESS) || status.equals(WorkflowStatus.INDETERMINATE)) {
                     // Allow retrying deletes
                     LOG.info("Found an existing delete request with jobId: " + latestRequestSummary.getWorkflowId() + " for mitigation: " + 
-                            mitigationName + " for device: " + deviceName + " in deviceScope: " + deviceScope + 
+                            mitigationName + " for device: " + deviceName +
                             " corresponding to template: " + mitigationTemplate + " whose status is: " +
                              status + ". Hence not considering this existing delete request as a duplicate.");
                 } else {
@@ -208,12 +202,12 @@ public class DDBBasedDeleteRequestStorageHandler extends DDBBasedRequestStorageH
                         String msg = "Found an existing delete request with jobId: " + latestRequestSummary.getWorkflowId() + 
                                 " for mitigation: " + mitigationName + " when requesting delete for " +
                                 "version: " + versionToDelete + " for device: " + deviceName + 
-                                " in deviceScope: " + deviceScope + " corresponding to template: " + mitigationTemplate;
+                                " corresponding to template: " + mitigationTemplate;
                         LOG.warn(msg);
                         throw new DuplicateRequestException400(msg);
                     } else {
                         String msg = "No active mitigation to delete found when querying for deviceName: " + deviceName
-                                + " deviceScope: " + deviceScope + ", for request: "
+                                + ", for request: "
                                 + ReflectionToStringBuilder.toString(deleteRequest);
                         LOG.warn(msg);
                         throw new MissingMitigationException400(msg);

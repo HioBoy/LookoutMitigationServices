@@ -94,7 +94,6 @@ public class GetMitigationHistoryActivity extends Activity {
             List<MitigationRequestDescriptionWithLocationAndStatus> listOfMitigationDescriptions = new ArrayList<>();
             
             String deviceName = request.getDeviceName();
-            String deviceScope = request.getDeviceScope();
             String serviceName = request.getServiceName();
             String mitigationName = request.getMitigationName();
             Integer exclusiveStartVersion = request.getExclusiveStartVersion();
@@ -106,7 +105,7 @@ public class GetMitigationHistoryActivity extends Activity {
 
             // Step 2. Fetch list of mitigation history
             List<MitigationRequestDescriptionWithLocations> mitigationDescriptionsWithLocations = requestInfoHandler.
-                    getMitigationHistoryForMitigation(serviceName, deviceName, deviceScope, mitigationName,
+                    getMitigationHistoryForMitigation(serviceName, deviceName, mitigationName,
                             exclusiveStartVersion, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
 
             // Step 3. For each of the requests fetched above, query the individual instance status and 
@@ -125,7 +124,6 @@ public class GetMitigationHistoryActivity extends Activity {
             // Step 4. Create the response object to return back to the client.
             GetMitigationHistoryResponse response = new GetMitigationHistoryResponse();
             response.setDeviceName(deviceName);
-            response.setDeviceScope(deviceScope);
             response.setMitigationName(mitigationName);
             response.setServiceName(serviceName);
             response.setListOfMitigationRequestDescriptionsWithLocationAndStatus(listOfMitigationDescriptions);

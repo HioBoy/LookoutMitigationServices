@@ -43,10 +43,10 @@ public class DDBBasedCreateRequestStorageHandler extends DDBBasedCreateAndEditRe
     /**
      * Stores the create request into the DDB Table. While storing, it identifies the new workflowId to be associated with this request and returns back the same.
      * The algorithm it uses to identify the workflowId to use is:
-     * 1. Identify the deviceNameAndScope that corresponds to this request.
+     * 1. Identify the deviceName that corresponds to this request.
      * 2. Query for all active mitigations for this device.
-     * 3. If no active mitigations exist for this device, check with the deviceScope enum and start with the minimum value corresponding to the scope.
-     * 4. Else identify the max workflowId for the active mitigations for this device and scope and try to use this maxWorkflowId+1 as the new workflowId
+     * 3. If no active mitigations exist for this device, start with 1.
+     * 4. Else identify the max workflowId for the active mitigations for this device and try to use this maxWorkflowId+1 as the new workflowId
      *    when storing the request.
      * 5. If when storing the request we encounter an exception, it could be either because someone else started using the maxWorkflowId+1 workflowId for that device
      *    or it is some transient exception. In either case, we query the DDB table once again for mitigations >= maxWorkflowId for the device and

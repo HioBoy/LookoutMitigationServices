@@ -39,7 +39,6 @@ import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 
 /**
@@ -231,18 +230,17 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                         throw new AccessDeniedException("Missing mitigationTemplate");
                     }
 
-                    DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
-                    if (deviceNameAndScope == null) {
+                    DeviceName deviceName = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate);
+                    if (deviceName == null) {
                         throw new AccessDeniedException("Unrecognized template " + mitigationTemplate);
                     }
-                    String deviceName = deviceNameAndScope.getDeviceName().name();
 
                     String serviceName = request.getServiceName();
                     if (StringUtils.isEmpty(serviceName)) {
                         throw new AccessDeniedException("Missing serviceName");
                     }
 
-                    return generateMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, serviceName, deviceName, mitigationTemplate);
+                    return generateMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, serviceName, deviceName.name(), mitigationTemplate);
                 });
 
         // abort deployment authorization policy
@@ -253,16 +251,15 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                     if (StringUtils.isEmpty(mitigationTemplate)) {
                         throw new AccessDeniedException("Missing mitigationTemplate");
                     }
-                    DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(mitigationTemplate);
-                    if (deviceNameAndScope == null) {
+                    DeviceName deviceName = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate);
+                    if (deviceName == null) {
                         throw new AccessDeniedException("Unrecognized template " + mitigationTemplate);
                     }
-                    String deviceName = deviceNameAndScope.getDeviceName().name();
                     String serviceName = request.getServiceName();
                     if (StringUtils.isEmpty(serviceName)) {
                         throw new AccessDeniedException("Missing serviceName");
                     }
-                    return generateMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, serviceName, deviceName, mitigationTemplate);
+                    return generateMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, serviceName, deviceName.name(), mitigationTemplate);
                 });
 
         addRequestInfoParser(

@@ -21,7 +21,7 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer.IPTablesJsonValidator;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
@@ -46,7 +46,7 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
     public void validateRequestForTemplateAndDevice(
             @NonNull MitigationModificationRequest request,
             @NonNull String mitigationTemplate,
-            @NonNull DeviceNameAndScope deviceNameAndScope,
+            @NonNull DeviceName deviceName,
             @NonNull TSDMetrics metrics) {
         Validate.notEmpty(mitigationTemplate);
 
@@ -73,11 +73,11 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
             @NonNull TSDMetrics metrics) {
         Validate.notEmpty(mitigationTemplate);
 
-        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(
+        DeviceName deviceName = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(
                 mitigationTemplate);
-        if (deviceNameAndScope == null) {
+        if (deviceName == null) {
             String message = String.format(
-                    "%s: No DeviceNameAndScope mapping found for template: %s. Request being validated: %s",
+                    "%s: No DeviceName mapping found for template: %s. Request being validated: %s",
                     MitigationTemplateToDeviceMapper.MISSING_DEVICE_MAPPING_KEY,
                     mitigationTemplate,
                     ReflectionToStringBuilder.toString(request));
@@ -85,7 +85,7 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
             throw new InternalServerError500(message);
         }
 
-        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceNameAndScope, metrics);
+        validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceName, metrics);
     }
 
     /**

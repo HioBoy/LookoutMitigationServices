@@ -14,7 +14,7 @@ import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 
 public class BlackWatchTemplateLocationHelper implements TemplateBasedLocationsHelper {
@@ -37,17 +37,16 @@ public class BlackWatchTemplateLocationHelper implements TemplateBasedLocationsH
             return locationsInRequest;
         }
 
-        DeviceNameAndScope deviceNameAndScope = MitigationTemplateToDeviceMapper
-                .getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        String deviceName = MitigationTemplateToDeviceMapper
+                .getDeviceNameForTemplate(request.getMitigationTemplate())
+                .name();
         
-        String deviceName = deviceNameAndScope.getDeviceName().name();
-        String deviceScope = deviceNameAndScope.getDeviceScope().name();
         List<MitigationRequestDescriptionWithLocations> mitigationDescriptions =
                 requestInfoHandler.getMitigationHistoryForMitigation(request.getServiceName(), 
-                        deviceName, deviceScope, request.getMitigationName(), null, 1, tsdMetrics);
+                        deviceName, request.getMitigationName(), null, 1, tsdMetrics);
         if (mitigationDescriptions.isEmpty()) {
             throw new MissingMitigationException400(
-                    "No active mitigation to delete found when querying for deviceName: " + deviceName + " deviceScope: " + deviceScope + 
+                    "No active mitigation to delete found when querying for deviceName: " + deviceName +
                     ", for request: " + ReflectionToStringBuilder.toString(request));
         }
         return new HashSet<>(mitigationDescriptions.get(0).getLocations());

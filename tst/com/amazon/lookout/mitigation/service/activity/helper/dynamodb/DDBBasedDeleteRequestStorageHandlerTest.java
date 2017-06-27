@@ -41,7 +41,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
-import com.amazon.lookout.mitigation.service.constants.DeviceNameAndScope;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
@@ -209,10 +209,10 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         
         validateRequestInDDB(request1, defaultLocations, workflowId);
         
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request1.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request1.getMitigationTemplate());
         
-        testTableHelper.setWorkflowStatus(deviceNameAndScope.getDeviceName().name(), workflowId, WorkflowStatus.FAILED);
+        testTableHelper.setWorkflowStatus(deviceName.name(), workflowId, WorkflowStatus.FAILED);
         
         // Retrying the same request should be allowed
         long newWorkflowId = storageHandler.storeRequestForWorkflow(request1, defaultLocations, tsdMetrics).getWorkflowId();
@@ -228,10 +228,10 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         
         validateRequestInDDB(request1, defaultLocations, workflowId);
         
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request1.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request1.getMitigationTemplate());
         
-        testTableHelper.setWorkflowStatus(deviceNameAndScope.getDeviceName().name(), workflowId, WorkflowStatus.PARTIAL_SUCCESS);
+        testTableHelper.setWorkflowStatus(deviceName.name(), workflowId, WorkflowStatus.PARTIAL_SUCCESS);
         
         // Need a new request with an updated version
         DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 2);
@@ -248,10 +248,10 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         
         validateRequestInDDB(request1, defaultLocations, workflowId);
         
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request1.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request1.getMitigationTemplate());
         
-        testTableHelper.setWorkflowStatus(deviceNameAndScope.getDeviceName().name(), workflowId, WorkflowStatus.INDETERMINATE);
+        testTableHelper.setWorkflowStatus(deviceName.name(), workflowId, WorkflowStatus.INDETERMINATE);
         
         // Need a new request with an updated version
         DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 2);
@@ -268,10 +268,10 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         
         validateRequestInDDB(request1, defaultLocations, workflowId);
         
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request1.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request1.getMitigationTemplate());
         
-        testTableHelper.setWorkflowStatus(deviceNameAndScope.getDeviceName().name(), workflowId, WorkflowStatus.SUCCEEDED);
+        testTableHelper.setWorkflowStatus(deviceName.name(), workflowId, WorkflowStatus.SUCCEEDED);
         
         // New request with an updated version
         DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
@@ -292,10 +292,10 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         
         validateRequestInDDB(request1, defaultLocations, workflowId);
         
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request1.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request1.getMitigationTemplate());
         
-        testTableHelper.setWorkflowStatus(deviceNameAndScope.getDeviceName().name(), workflowId, WorkflowStatus.SUCCEEDED);
+        testTableHelper.setWorkflowStatus(deviceName.name(), workflowId, WorkflowStatus.SUCCEEDED);
         
         // New request with an updated version
         DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 2);
@@ -523,33 +523,7 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
             assertEquals(i, attemptCountCaptor.getAllValues().get(i-1).intValue());
         }
     }
-    
-    @Test
-    public void testHittingWorkflowIdLimit() {
-        EditMitigationRequest request1 = RequestTestHelper.generateEditMitigationRequest(MITIGATION_1_NAME, 2);
-        
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request1.getMitigationTemplate());
-        
-        // bypass the normal API to store a request with 1 less than the max workflow id
-        storageHandler.storeRequestInDDB(
-                request1, request1.getMitigationDefinition(), defaultLocations, 
-                deviceNameAndScope, deviceNameAndScope.getDeviceScope().getMaxWorkflowId() - 1, 
-                RequestType.EditRequest, 2, tsdMetrics);
-        
-        DeleteMitigationFromAllLocationsRequest request2 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_2_NAME, 1);
-        
-        long workflowId = storageHandler.storeRequestForWorkflow(request2, defaultLocations, tsdMetrics).getWorkflowId();
-        validateRequestInDDB(request2, defaultLocations, workflowId);
-        assertEquals(deviceNameAndScope.getDeviceScope().getMaxWorkflowId(), workflowId);
-        
-        DeleteMitigationFromAllLocationsRequest request3 = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 2);
-        
-        AssertUtils.assertThrows(
-                InternalServerError500.class, 
-                () -> storageHandler.storeRequestForWorkflow(request3, defaultLocations, tsdMetrics));
-    }
-    
+
     @Test
     public void testUpdateRunIdForWorkflowRequest() {
         DeleteMitigationFromAllLocationsRequest request = RequestTestHelper.generateDeleteMitigationRequest(MITIGATION_1_NAME, 1);
@@ -557,12 +531,12 @@ public class DDBBasedDeleteRequestStorageHandlerTest {
         ImmutableSet<String> locations = ImmutableSet.of("POP1");
         long workflowId = storageHandler.storeRequestForWorkflow(request, locations, tsdMetrics).getWorkflowId();
 
-        DeviceNameAndScope deviceNameAndScope = 
-                MitigationTemplateToDeviceMapper.getDeviceNameAndScopeForTemplate(request.getMitigationTemplate());
+        DeviceName deviceName =
+                MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(request.getMitigationTemplate());
         
         // There isn't a way to retrieve the id we stored
         storageHandler.updateRunIdForWorkflowRequest(
-                deviceNameAndScope.getDeviceName().toString(), workflowId, "FakeRunId", tsdMetrics);
+                deviceName.toString(), workflowId, "FakeRunId", tsdMetrics);
         validateRequestInDDB(request, locations, workflowId);
     }
 

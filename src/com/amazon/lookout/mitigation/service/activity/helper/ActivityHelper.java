@@ -9,7 +9,6 @@ import org.apache.commons.lang.Validate;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.DeviceScope;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 
@@ -21,7 +20,6 @@ public class ActivityHelper {
     
     private static final String TEMPLATE_NAME_COUNT_METRIC_PREFIX = "TemplateName:";
     private static final String DEVICE_NAME_COUNT_METRIC_PREFIX = "DeviceName:";
-    private static final String DEVICE_SCOPE_COUNT_METRIC_PREFIX = "DeviceScope:";
     private static final String SERVICE_NAME_COUNT_METRIC_PREFIX = "ServiceName:";
     
     // Declared as public to allow individual Activities to prefix the exceptions they receive with this.
@@ -56,19 +54,6 @@ public class ActivityHelper {
             tsdMetrics.addCount(DEVICE_NAME_COUNT_METRIC_PREFIX + device.name(), 0);
         }
         tsdMetrics.addCount(DEVICE_NAME_COUNT_METRIC_PREFIX + deviceNameInRequest, 1);
-    }
-    
-    /**
-     * Add metrics to be able to track the deviceScope for which a request was made.
-     * @param deviceScopeInRequest String representing the deviceScope that was passed in the request.
-     * @param tsdMetrics TSDMetrics instance to which we need to add the count metrics.
-     */
-    public static void addDeviceScopeCountMetrics(@NonNull String deviceScopeInRequest, @NonNull TSDMetrics tsdMetrics) {
-        // Add the metric to track the device for which this request was made.
-        for (DeviceScope deviceScope : DeviceScope.values()) {
-            tsdMetrics.addCount(DEVICE_SCOPE_COUNT_METRIC_PREFIX + deviceScope.name(), 0);
-        }
-        tsdMetrics.addCount(DEVICE_SCOPE_COUNT_METRIC_PREFIX + deviceScopeInRequest, 1);
     }
     
     /**

@@ -32,7 +32,6 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
     public void setup() {
         request = new GetMitigationHistoryRequest();
         request.setDeviceName(deviceName);
-        request.setDeviceScope(deviceScope);
         request.setMitigationName(mitigationName);
         request.setServiceName(serviceName);
         request.setExclusiveStartVersion(exclusiveStartVersion);
@@ -86,11 +85,10 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
         Mockito.doReturn(descs).when(mitigationInstanceInfoHandler).getMitigationInstanceStatus(eq(deviceName), eq(jobId2), isA(TSDMetrics.class));
         Mockito.doReturn(requestId).when(getMitigationHistoryActivity).getRequestId();
         Mockito.doReturn(listOfMitigationRequestDescription).when(requestInfoHandler)
-                .getMitigationHistoryForMitigation(eq(serviceName), eq(deviceName), eq(deviceScope), eq(mitigationName), 
+                .getMitigationHistoryForMitigation(eq(serviceName), eq(deviceName), eq(mitigationName), 
                         eq(exclusiveStartVersion), eq(maxNumberOfHistoryEntriesToFetch), isA(TSDMetrics.class));
         GetMitigationHistoryResponse response = getMitigationHistoryActivity.enact(request);
         assertEquals(deviceName, response.getDeviceName());
-        assertEquals(deviceScope, response.getDeviceScope());
         assertEquals(mitigationVersion2, response.getExclusiveStartVersion());
         assertEquals(mitigationName, response.getMitigationName());
         assertEquals(requestId, response.getRequestId());
@@ -122,7 +120,7 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
         GetMitigationHistoryActivity getMitigationHistoryActivity = 
                 spy(new GetMitigationHistoryActivity(requestValidator, requestInfoHandler, mitigationInstanceInfoHandler));
         Mockito.doReturn(new ArrayList<MitigationRequestDescriptionWithLocations>()).when(requestInfoHandler)
-                .getMitigationHistoryForMitigation(eq(serviceName), eq(deviceName), eq(deviceScope), eq(mitigationName), 
+                .getMitigationHistoryForMitigation(eq(serviceName), eq(deviceName), eq(mitigationName), 
                 eq(exclusiveStartVersion), eq(maxNumberOfHistoryEntriesToFetch), isA(TSDMetrics.class));
         GetMitigationHistoryResponse response = getMitigationHistoryActivity.enact(request);
         assertTrue(response.getListOfMitigationRequestDescriptionsWithLocationAndStatus().isEmpty());
