@@ -1,11 +1,14 @@
 package com.amazon.lookout.mitigation.service.activity;
 
+import org.apache.commons.lang3.Validate;
+
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.HashSet;
 import java.util.stream.Collectors;
 
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
@@ -36,13 +39,15 @@ import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageRespo
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
-import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.workflow.helper.SWFWorkflowStarter;
 import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
+
+import com.amazon.lookout.mitigation.RequestCreator;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
@@ -68,19 +73,26 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
     private final RequestStorageManager requestStorageManager;
     private final SWFWorkflowStarter workflowStarter;
     private final TemplateBasedLocationsManager templateBasedLocationsManager;
+    @NonNull private final RequestCreator requestCreator;
+    @NonNull private final SwitcherooDAO switcherooDao;
 
-    @ConstructorProperties({"requestValidator", "templateBasedValidator", "requestStorageManager", "swfWorkflowStarter",
-            "templateBasedLocationsManager"})
+    @ConstructorProperties({"requestValidator", "templateBasedValidator",
+    "requestStorageManager", "swfWorkflowStarter", "templateBasedLocationsManager",
+    "requestCreator", "switcherooDao"})
     public DeleteMitigationFromAllLocationsActivity(@NonNull RequestValidator requestValidator,
-                                                    @NonNull TemplateBasedRequestValidator templateBasedValidator,
-                                                    @NonNull RequestStorageManager requestStorageManager,
-                                                    @NonNull SWFWorkflowStarter workflowStarter,
-                                                    @NonNull TemplateBasedLocationsManager templateBasedLocationsManager) {
+            @NonNull TemplateBasedRequestValidator templateBasedValidator,
+            @NonNull RequestStorageManager requestStorageManager,
+            @NonNull SWFWorkflowStarter workflowStarter,
+            @NonNull TemplateBasedLocationsManager templateBasedLocationsManager,
+            @NonNull final RequestCreator requestCreator,
+            @NonNull final SwitcherooDAO switcherooDao) {
         this.requestValidator = requestValidator;
         this.templateBasedValidator = templateBasedValidator;
         this.requestStorageManager = requestStorageManager;
         this.workflowStarter = workflowStarter;
         this.templateBasedLocationsManager = templateBasedLocationsManager;
+        this.requestCreator = requestCreator;
+        this.switcherooDao = switcherooDao;
     }
 
     @Validated
@@ -99,7 +111,8 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             String mitigationTemplate = deleteRequest.getMitigationTemplate();
             ActivityHelper.addTemplateNameCountMetrics(mitigationTemplate, tsdMetrics);
             
-            String deviceName = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate).name();
+            String deviceName = deleteRequest.getDeviceName();
+            final DeviceName device = DeviceName.valueOf(deviceName);  // A real typed device
             ActivityHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
             
             String serviceName = deleteRequest.getServiceName();
@@ -111,30 +124,45 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             // Step2. Validate this request based on the template.
             templateBasedValidator.validateRequestForTemplate(deleteRequest, tsdMetrics);
 
-            // Step3. Get the locations where we need to start running the workflow.
-            // In most cases it is provided by the client, but for some templates we might have locations based on the templateName, 
-            // hence checking with the templateBasedLocationsHelper and also passing it the original request to have the entire context.
-            Set<String> locationsToDeploy = templateBasedLocationsManager.getLocationsForDeployment(deleteRequest, tsdMetrics);
-            
-            // Step4. Persist this request in DDB and get back the workflowId associated with this request.
-            RequestStorageResponse requestStorageResponse = requestStorageManager.storeRequestForWorkflow(
-                    deleteRequest, locationsToDeploy, RequestType.DeleteRequest, tsdMetrics);
-            
-            long workflowId = requestStorageResponse.getWorkflowId();
-            int storedMitigationVersion = requestStorageResponse.getMitigationVersion();
-            
-            // Step5. Create new workflow client to be used for running the workflow.
-            WorkflowClientExternal workflowClient = workflowStarter.createMitigationModificationWorkflowClient(
-                    workflowId, deleteRequest, deviceName, tsdMetrics);
-            
-            // Step6. Start running the workflow.
-            workflowStarter.startMitigationModificationWorkflow(workflowId, deleteRequest, locationsToDeploy,
-                    RequestType.DeleteRequest, storedMitigationVersion, deviceName, workflowClient, tsdMetrics);
-            
-            // Step7. Once the workflow is running, it should have an associated swfRunId, update the request record for this workflow request and store the associated runId.
-            String swfRunId = workflowClient.getWorkflowExecution().getRunId();
-            requestStorageManager.updateRunIdForWorkflowRequest(deviceName, workflowId, swfRunId, RequestType.DeleteRequest, tsdMetrics);
-            
+            final String location = deleteRequest.getLocation();
+
+            final long workflowId;
+            final int storedMitigationVersion;
+
+            if (switcherooDao.useNewMitigationService(device, location)) {
+                LOG.info(String.format("Using new mitigation service for request %s", requestId));
+
+                final MitigationModificationResponse response = requestCreator.queueRequest(
+                        deleteRequest, RequestType.DeleteRequest, null);
+
+                // TODO: just return the response, instead of doing this
+                workflowId = response.getJobId();
+                storedMitigationVersion = response.getMitigationVersion();
+            } else {
+                // Use location from the request
+                final Set<String> locationsToDeploy = new HashSet<>();
+                locationsToDeploy.add(location);
+
+                // Step4. Persist this request in DDB and get back the workflowId associated with this request.
+                RequestStorageResponse requestStorageResponse = requestStorageManager.storeRequestForWorkflow(
+                        deleteRequest, locationsToDeploy, RequestType.DeleteRequest, tsdMetrics);
+                
+                workflowId = requestStorageResponse.getWorkflowId();
+                storedMitigationVersion = requestStorageResponse.getMitigationVersion();
+                
+                // Step5. Create new workflow client to be used for running the workflow.
+                WorkflowClientExternal workflowClient = workflowStarter.createMitigationModificationWorkflowClient(
+                        workflowId, deleteRequest, deviceName, tsdMetrics);
+                
+                // Step6. Start running the workflow.
+                workflowStarter.startMitigationModificationWorkflow(workflowId, deleteRequest, locationsToDeploy,
+                        RequestType.DeleteRequest, storedMitigationVersion, deviceName, workflowClient, tsdMetrics);
+                
+                // Step7. Once the workflow is running, it should have an associated swfRunId, update the request record for this workflow request and store the associated runId.
+                String swfRunId = workflowClient.getWorkflowExecution().getRunId();
+                requestStorageManager.updateRunIdForWorkflowRequest(deviceName, workflowId, swfRunId, RequestType.DeleteRequest, tsdMetrics);
+            }
+
             // Step8. Return back the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
             mitigationModificationResponse.setMitigationName(deleteRequest.getMitigationName());
@@ -145,13 +173,12 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             mitigationModificationResponse.setJobId(workflowId);
             mitigationModificationResponse.setRequestStatus(WorkflowStatus.RUNNING);
             
+            // TODO we only support one location, don't return a list
             List<MitigationInstanceStatus> instanceStatuses = new ArrayList<>();
-            for (String location : locationsToDeploy) {
-                MitigationInstanceStatus instanceStatus = new MitigationInstanceStatus();
-                instanceStatus.setLocation(location);
-                instanceStatus.setMitigationStatus(MitigationStatus.CREATED);
-                instanceStatuses.add(instanceStatus);
-            }
+            MitigationInstanceStatus instanceStatus = new MitigationInstanceStatus();
+            instanceStatus.setLocation(location);
+            instanceStatus.setMitigationStatus(MitigationStatus.CREATED);
+            instanceStatuses.add(instanceStatus);
             mitigationModificationResponse.setMitigationInstanceStatuses(instanceStatuses);
             
             return mitigationModificationResponse;
@@ -190,3 +217,4 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
         }
     } 
 }
+

@@ -26,13 +26,23 @@ import com.amazon.lookout.mitigation.service.GetMitigationHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationHistoryResponse;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
-import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocationAndStatus;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocationAndStatus;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
+
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
+import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
+import com.amazon.lookout.mitigation.datastore.model.RequestPage;
+import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
+import com.amazon.lookout.mitigation.datastore.RequestsDAO;
+import com.amazon.lookout.mitigation.datastore.RequestsDAOImpl;
 
 /**
  * Get mitigation history by mitigation name and device name.
@@ -62,10 +72,20 @@ public class GetMitigationHistoryActivity extends Activity {
     private final RequestValidator requestValidator;
     private final RequestInfoHandler requestInfoHandler;
     private final MitigationInstanceInfoHandler mitigationInstanceHandler;
+
+    @NonNull private final CurrentRequestsDAO currentDao;
+    @NonNull private final ArchivedRequestsDAO archiveDao;
+    @NonNull private final SwitcherooDAO switcherooDao;
+    @NonNull private final RequestsDAO requestsDao;
     
-    @ConstructorProperties({"requestValidator", "requestInfoHandler", "mitigationInstanceHandler"})
-    public GetMitigationHistoryActivity(@NonNull RequestValidator requestValidator, @NonNull RequestInfoHandler requestInfoHandler, 
-                                     @NonNull MitigationInstanceInfoHandler mitigationInstanceHandler) {
+    @ConstructorProperties({"requestValidator", "requestInfoHandler", "mitigationInstanceHandler",
+    "currentDao", "archiveDao", "switcherooDao"})
+    public GetMitigationHistoryActivity(@NonNull RequestValidator requestValidator,
+            @NonNull RequestInfoHandler requestInfoHandler, 
+            @NonNull MitigationInstanceInfoHandler mitigationInstanceHandler,
+            @NonNull final CurrentRequestsDAO currentDao,
+            @NonNull final ArchivedRequestsDAO archiveDao,
+            @NonNull final SwitcherooDAO switcherooDao) {
         Validate.notNull(requestValidator);
         this.requestValidator = requestValidator;
         
@@ -74,6 +94,11 @@ public class GetMitigationHistoryActivity extends Activity {
         
         Validate.notNull(mitigationInstanceHandler);
         this.mitigationInstanceHandler = mitigationInstanceHandler;
+
+        this.currentDao = currentDao;
+        this.archiveDao = archiveDao;
+        this.switcherooDao = switcherooDao;
+        this.requestsDao = new RequestsDAOImpl(currentDao, archiveDao);
     }
 
     @Validated
@@ -103,24 +128,50 @@ public class GetMitigationHistoryActivity extends Activity {
             }
             maxNumberOfHistoryEntriesToFetch = Math.min(maxNumberOfHistoryEntriesToFetch, MAX_NUMBER_OF_HISTORY_TO_FETCH);
 
-            // Step 2. Fetch list of mitigation history
-            List<MitigationRequestDescriptionWithLocations> mitigationDescriptionsWithLocations = requestInfoHandler.
-                    getMitigationHistoryForMitigation(serviceName, deviceName, mitigationName,
-                            exclusiveStartVersion, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
+            // A real typed device
+            final DeviceName device = DeviceName.valueOf(deviceName);
 
-            // Step 3. For each of the requests fetched above, query the individual instance status and 
-            //     populate a new MitigationRequestDescriptionWithStatus instance to wrap this information.
-            for (MitigationRequestDescriptionWithLocations description : mitigationDescriptionsWithLocations) {
-                List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler
-                        .getMitigationInstanceStatus(deviceName, description.getMitigationRequestDescription().getJobId(), tsdMetrics);
-                
-                MitigationRequestDescriptionWithLocationAndStatus mitigationDescriptionWithStatus =
-                        new MitigationRequestDescriptionWithLocationAndStatus();
-                mitigationDescriptionWithStatus.setMitigationRequestDescriptionWithLocations(description);
-                mitigationDescriptionWithStatus.setInstancesStatus(instanceStatuses);
-                listOfMitigationDescriptions.add(mitigationDescriptionWithStatus);
+            final String location = request.getLocation();
+
+            String lastEvaluatedKey = null;
+
+            if (switcherooDao.useNewMitigationService(device, location)) {
+                // Get the mitigation history
+                final RequestPage<CurrentRequest> page = requestsDao.getMitigationRequestsPage(
+                        device, location, mitigationName, maxNumberOfHistoryEntriesToFetch,
+                        request.getExclusiveLastEvaluatedKey());
+
+                for (CurrentRequest currentRequest : page.getPage()) {
+                    listOfMitigationDescriptions.add(
+                            currentRequest.asMitigationRequestDescriptionWithLocationAndStatus());
+                }
+
+                lastEvaluatedKey = page.getLastEvaluatedKey();
+            } else {
+                // Step 2. Fetch list of mitigation history
+                List<MitigationRequestDescriptionWithLocations> mitigationDescriptionsWithLocations = requestInfoHandler.
+                        getMitigationHistoryForMitigation(serviceName, deviceName, mitigationName,
+                                exclusiveStartVersion, maxNumberOfHistoryEntriesToFetch, tsdMetrics);
+
+                // Step 3. For each of the requests fetched above, query the individual instance status and 
+                //     populate a new MitigationRequestDescriptionWithStatus instance to wrap this information.
+                for (MitigationRequestDescriptionWithLocations description : mitigationDescriptionsWithLocations) {
+                    List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler
+                            .getMitigationInstanceStatus(deviceName, description.getMitigationRequestDescription().getJobId(), tsdMetrics);
+                    
+                    MitigationRequestDescriptionWithLocationAndStatus mitigationDescriptionWithStatus =
+                            new MitigationRequestDescriptionWithLocationAndStatus();
+                    mitigationDescriptionWithStatus.setMitigationRequestDescriptionWithLocations(description);
+                    mitigationDescriptionWithStatus.setInstancesStatus(instanceStatuses);
+                    listOfMitigationDescriptions.add(mitigationDescriptionWithStatus);
+                }
+
+                if (!mitigationDescriptionsWithLocations.isEmpty()) {
+                    exclusiveStartVersion = mitigationDescriptionsWithLocations.get(mitigationDescriptionsWithLocations.size() - 1)
+                            .getMitigationRequestDescription().getMitigationVersion();
+                }
             }
-            
+
             // Step 4. Create the response object to return back to the client.
             GetMitigationHistoryResponse response = new GetMitigationHistoryResponse();
             response.setDeviceName(deviceName);
@@ -128,10 +179,8 @@ public class GetMitigationHistoryActivity extends Activity {
             response.setServiceName(serviceName);
             response.setListOfMitigationRequestDescriptionsWithLocationAndStatus(listOfMitigationDescriptions);
             response.setRequestId(requestId);
-            if (!mitigationDescriptionsWithLocations.isEmpty()) {
-                response.setExclusiveStartVersion(mitigationDescriptionsWithLocations.get(mitigationDescriptionsWithLocations.size() - 1)
-                        .getMitigationRequestDescription().getMitigationVersion());
-            }
+            response.setExclusiveLastEvaluatedKey(lastEvaluatedKey);
+            response.setExclusiveStartVersion(exclusiveStartVersion);
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
             String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "GetMitigationHistoryActivity", ex.getMessage());
@@ -153,3 +202,4 @@ public class GetMitigationHistoryActivity extends Activity {
         }
     }
 }
+

@@ -23,6 +23,10 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWa
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 
+import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
+
 public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper {
     private static final String location = "location1";
     private static final Long exclusiveLastEvaluatedTimestamp = 10000001l;
@@ -33,7 +37,11 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
     @Before
     public void setup() {
         getLocationDeploymentHistoryActivity = 
-                spy(new GetLocationDeploymentHistoryActivity(requestValidator, mitigationInstanceInfoHandler));
+                spy(new GetLocationDeploymentHistoryActivity(requestValidator,
+                            mitigationInstanceInfoHandler,
+                            mock(CurrentRequestsDAO.class),
+                            mock(ArchivedRequestsDAO.class),
+                            mock(SwitcherooDAO.class)));
         
         request = new GetLocationDeploymentHistoryRequest();
         request.setDeviceName(deviceName);
@@ -105,8 +113,13 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
     public void testInvalidHistoryEntrySize() {
         getLocationDeploymentHistoryActivity = 
                 spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(
-                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
-                    mock(BlackWatchEdgeLocationValidator.class)), mitigationInstanceInfoHandler)); 
+                                mock(EdgeLocationsHelper.class),
+                                mock(BlackWatchBorderLocationValidator.class),
+                                mock(BlackWatchEdgeLocationValidator.class)),
+                            mitigationInstanceInfoHandler,
+                            mock(CurrentRequestsDAO.class),
+                            mock(ArchivedRequestsDAO.class),
+                            mock(SwitcherooDAO.class)));
         request.setMaxNumberOfHistoryEntriesToFetch(10000);
         getLocationDeploymentHistoryActivity.enact(request); 
     }
@@ -118,8 +131,13 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
     public void testInvalidHistoryEntrySize2() {
         getLocationDeploymentHistoryActivity = 
                 spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(
-                        mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
-                    mock(BlackWatchEdgeLocationValidator.class)), mitigationInstanceInfoHandler)); 
+                                mock(EdgeLocationsHelper.class),
+                                mock(BlackWatchBorderLocationValidator.class),
+                                mock(BlackWatchEdgeLocationValidator.class)),
+                            mitigationInstanceInfoHandler,
+                            mock(CurrentRequestsDAO.class),
+                            mock(ArchivedRequestsDAO.class),
+                            mock(SwitcherooDAO.class))); 
         request.setMaxNumberOfHistoryEntriesToFetch(-1);
         getLocationDeploymentHistoryActivity.enact(request); 
     }

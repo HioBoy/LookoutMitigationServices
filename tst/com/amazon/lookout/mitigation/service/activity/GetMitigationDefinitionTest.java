@@ -24,6 +24,10 @@ import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 
+import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
+
 @RunWith(JUnitParamsRunner.class)
 public class GetMitigationDefinitionTest extends ActivityTestHelper {
     private static GetMitigationDefinitionActivity getMitigationDefinitionActivity;
@@ -38,7 +42,9 @@ public class GetMitigationDefinitionTest extends ActivityTestHelper {
     @Before
     public void setupMore() {
         getMitigationDefinitionActivity = spy(new GetMitigationDefinitionActivity(
-                requestValidator, requestInfoHandler, mitigationInstanceInfoHandler));
+                requestValidator, requestInfoHandler, mitigationInstanceInfoHandler,
+                mock(CurrentRequestsDAO.class), mock(ArchivedRequestsDAO.class),
+                mock(SwitcherooDAO.class)));
     }
     
     /**

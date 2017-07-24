@@ -24,6 +24,10 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWa
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.test.common.util.TestUtils;
 
+import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
+
 public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
 
     private GetMitigationHistoryRequest request;
@@ -76,7 +80,8 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
     @Test
     public void test2HistoryFound() {
         GetMitigationHistoryActivity getMitigationHistoryActivity = 
-                spy(new GetMitigationHistoryActivity(requestValidator, requestInfoHandler, mitigationInstanceInfoHandler));
+                spy(new GetMitigationHistoryActivity(requestValidator, requestInfoHandler, mitigationInstanceInfoHandler,
+                            mock(CurrentRequestsDAO.class), mock(ArchivedRequestsDAO.class), mock(SwitcherooDAO.class)));
 
         Mockito.doNothing().when(requestValidator).validateGetMitigationHistoryRequest(request);
         List<MitigationRequestDescription> descs = new ArrayList<>();
@@ -106,7 +111,8 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
     @Test(expected = BadRequest400.class)
     public void testInvalidRequest() {
         GetMitigationHistoryActivity getMitigationHistoryActivity = 
-                spy(new GetMitigationHistoryActivity(requestValidator, requestInfoHandler, mitigationInstanceInfoHandler));
+                spy(new GetMitigationHistoryActivity(requestValidator, requestInfoHandler, mitigationInstanceInfoHandler,
+                            mock(CurrentRequestsDAO.class), mock(ArchivedRequestsDAO.class), mock(SwitcherooDAO.class)));
 
         Mockito.doThrow(new IllegalArgumentException()).when(requestValidator).validateGetMitigationHistoryRequest(request);
         getMitigationHistoryActivity.enact(request);
@@ -118,7 +124,8 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
     @Test
     public void testEmptyResult() {
         GetMitigationHistoryActivity getMitigationHistoryActivity = 
-                spy(new GetMitigationHistoryActivity(requestValidator, requestInfoHandler, mitigationInstanceInfoHandler));
+                spy(new GetMitigationHistoryActivity(requestValidator, requestInfoHandler, mitigationInstanceInfoHandler,
+                            mock(CurrentRequestsDAO.class), mock(ArchivedRequestsDAO.class), mock(SwitcherooDAO.class)));
         Mockito.doReturn(new ArrayList<MitigationRequestDescriptionWithLocations>()).when(requestInfoHandler)
                 .getMitigationHistoryForMitigation(eq(serviceName), eq(deviceName), eq(mitigationName), 
                 eq(exclusiveStartVersion), eq(maxNumberOfHistoryEntriesToFetch), isA(TSDMetrics.class));
@@ -134,7 +141,8 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
         GetMitigationHistoryActivity getMitigationHistoryActivity = 
                 spy(new GetMitigationHistoryActivity(new RequestValidator(
                         mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
-                    mock(BlackWatchEdgeLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler)); 
+                    mock(BlackWatchEdgeLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler,
+                            mock(CurrentRequestsDAO.class), mock(ArchivedRequestsDAO.class), mock(SwitcherooDAO.class))); 
         request.setMaxNumberOfHistoryEntriesToFetch(10000);
         getMitigationHistoryActivity.enact(request); 
     }
@@ -147,7 +155,8 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
         GetMitigationHistoryActivity getMitigationHistoryActivity = 
                 spy(new GetMitigationHistoryActivity(new RequestValidator(
                         mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
-                    mock(BlackWatchEdgeLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler)); 
+                    mock(BlackWatchEdgeLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler,
+                            mock(CurrentRequestsDAO.class), mock(ArchivedRequestsDAO.class), mock(SwitcherooDAO.class))); 
         request.setMaxNumberOfHistoryEntriesToFetch(-1);
         getMitigationHistoryActivity.enact(request);  
     }

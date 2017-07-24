@@ -51,6 +51,9 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import com.amazon.lookout.mitigation.RequestCreator;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
+
 @RunWith(JUnitParamsRunner.class)
 public class CreateMitigationActivityTest {
     @BeforeClass
@@ -113,7 +116,9 @@ public class CreateMitigationActivityTest {
                     mock(BlackWatchEdgeLocationValidator.class)),
             requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
-            new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class)));
+            new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class)),
+            mock(RequestCreator.class),
+            mock(SwitcherooDAO.class));
     }
 
     private CreateMitigationActivity createActivityWithValidators(RequestStorageManager requestStorageManager) {
@@ -129,7 +134,9 @@ public class CreateMitigationActivityTest {
                     mock(BlackWatchEdgeLocationValidator.class)),
                 requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
-            new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class)));
+            new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class)),
+            mock(RequestCreator.class),
+            mock(SwitcherooDAO.class));
     }
 
     private CreateMitigationRequest sampleCreateIPTablesMitigationRequest(String mitigationName) {
@@ -138,6 +145,8 @@ public class CreateMitigationActivityTest {
         request.setServiceName(ServiceName.Edge);
         request.setMitigationTemplate(MitigationTemplate.IPTables_Mitigation_EdgeCustomer);
         request.setLocations(null);
+        request.setLocation(StandardLocations.EDGE_WORLD_WIDE);
+        request.setDeviceName(DeviceName.POP_HOSTS_IP_TABLES.name());
 
         MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
         actionMetadata.setUser("username");
