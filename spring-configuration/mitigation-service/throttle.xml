@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="
+    http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+
+    <!-- Request key generators -->
+    <bean id="IdentityKeyGeneratorBuilder" class="com.amazon.coral.avail.key.KeyGeneratorBuilder">
+        <property name="identities">
+            <list>
+                <value>aws-user-arn</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="OperationKeyGeneratorBuilder" class="com.amazon.coral.avail.key.KeyGeneratorBuilder" />
+
+    <bean id="IdentityKeyGenerator" factory-bean="IdentityKeyGeneratorBuilder" factory-method="buildForIdentity" />
+    <bean id="OperationKeyGenerator" factory-bean="OperationKeyGeneratorBuilder" factory-method="buildForOperation" />
+    <bean id="IdentityOperationKeyGenerator" factory-bean="IdentityKeyGeneratorBuilder" factory-method="buildForIdentityOperation" />
+    <bean id="OperationIdentityKeyGenerator" factory-bean="IdentityKeyGeneratorBuilder" factory-method="buildForOperationIdentity" />
+
+    <bean id="ThrottlerBuilder" class="com.amazon.coral.avail.throttlers.EmbeddedDistributedThrottler$Builder"
+        depends-on="appConfigHelper">
+        <property name="metricsFactory">
+            <ref bean="metricsFactory" />
+        </property>
+    </bean>
+
+    <bean id="Throttler" class="com.amazon.coral.avail.throttlers.EmbeddedDistributedThrottler"
+        factory-bean="ThrottlerBuilder" factory-method="build" />
+
+    <bean id="IdentityThrottlerHandlerBuilder" class="com.amazon.coral.avail.flow.ThrottlingHandler" factory-method="newBuilder">
+        <property name="keyGenerator">
+            <ref local="IdentityKeyGenerator" />
+        </property>
+        <property name="throttler">
+            <ref local="Throttler" />
+        </property>
+    </bean>
+
+    <!-- Use this handler to set a per-identity rate limit -->
+    <bean id="IdentityThrottlingHandler" factory-bean="IdentityThrottlerHandlerBuilder" factory-method="build" />
+
+    <bean id="OperationThrottlerHandlerBuilder" class="com.amazon.coral.avail.flow.ThrottlingHandler" factory-method="newBuilder">
+        <property name="keyGenerator">
+            <ref local="OperationKeyGenerator" />
+        </property>
+        <property name="throttler">
+            <ref local="Throttler" />
+        </property>
+    </bean>
+
+    <!-- Use this handler to set a per-operation rate limit (global, not customer specific).
+        This must come after the protocol handler. -->
+    <bean id="OperationThrottlingHandler" factory-bean="OperationThrottlerHandlerBuilder" factory-method="build" />
+
+    <bean id="IdentityOperationThrottlerHandlerBuilder" class="com.amazon.coral.avail.flow.ThrottlingHandler"
+        factory-method="newBuilder">
+        <property name="keyGenerator">
+            <ref local="IdentityOperationKeyGenerator" />
+        </property>
+        <property name="throttler">
+            <ref local="Throttler" />
+        </property>
+    </bean>
+
+    <!-- Use this handler to set a per-customer, per-operation rate limit. Useful for giving a
+         specific customer a certain call rate for certain operations. Must come after the protocol
+         and auth handlers. -->
+    <bean id="IdentityOperationThrottlingHandler" factory-bean="IdentityOperationThrottlerHandlerBuilder" factory-method="build" />
+
+    <bean id="OperationIdentityThrottlingHandlerBuilder" class="com.amazon.coral.avail.flow.ThrottlingHandler"
+        factory-method="newBuilder">
+        <property name="keyGenerator">
+            <ref local="OperationIdentityKeyGenerator" />
+        </property>
+        <property name="throttler">
+            <ref local="Throttler" />
+        </property>
+    </bean>
+
+    <!-- Use this handler to set a per-operation, per-user-arn rate limit. Useful for setting a
+         per-operation limit per user arn, such as "each customer can do 1 apply mitigation requests
+         per 100 seconds". Must come after the protocol and auth handlers. -->
+    <bean id="OperationIdentityThrottlingHandler" factory-bean="OperationIdentityThrottlingHandlerBuilder" factory-method="build" />
+</beans>
