@@ -93,7 +93,7 @@
             </list>
         </property>
         <property name="program" value="LookoutMitigationService"/>
-        <property name="marketplace" value="#{stageFactory}"/>
+        <property name="marketplace" ref="marketplaceName"/>
     </bean>
 
     <!--  Initialize AppConfig -->
