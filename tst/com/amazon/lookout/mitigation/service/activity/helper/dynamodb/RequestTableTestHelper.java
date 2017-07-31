@@ -18,7 +18,6 @@ import org.mockito.stubbing.Stubber;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
 import com.amazon.lookout.mitigation.service.BlackWatchConfigBasedConstraint;
-import com.amazon.lookout.mitigation.service.DropAction;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
@@ -146,7 +145,6 @@ public class RequestTableTestHelper {
     public static final MitigationDefinition mitigationDefinition = new MitigationDefinition();
     public static final String mitigationTemplate = MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer;
     static {
-        mitigationDefinition.setAction(new DropAction());
         mitigationDefinition.setConstraint(new BlackWatchConfigBasedConstraint());
     }
 

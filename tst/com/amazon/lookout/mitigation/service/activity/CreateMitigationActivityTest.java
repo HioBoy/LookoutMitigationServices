@@ -25,9 +25,7 @@ import org.mockito.Mockito;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.google.common.collect.ImmutableList;
-import com.amazon.lookout.mitigation.service.ApplyIPTablesRulesAction;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
-import com.amazon.lookout.mitigation.service.DropAction;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
@@ -148,7 +146,6 @@ public class CreateMitigationActivityTest {
         request.setMitigationActionMetadata(actionMetadata);
 
         MitigationDefinition mitigationDefinition = new MitigationDefinition();
-        mitigationDefinition.setAction(new ApplyIPTablesRulesAction());
 
         SimpleConstraint constraint = new SimpleConstraint();
         constraint.setAttributeName("IP_TABLES_RULES");

@@ -8,11 +8,11 @@
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
     http://schema.amazon.com/spring-extensions/coral/v1.0 http://schema.amazon.com/spring-extensions/coral/v1.0/coral.xsd">
 
-    <coral:client id="elbInternalAPIClient.${realm}.${domain}"
+    <coral:client id="elbInternalAPIClientBean"
             service-client-class="com.amazon.elb.internal.LBServiceInternalClient"
             qualifier="Base.Prod.${realm}"/>
 
-    <!-- ELB internal clients for all the regions and ELB region ipv6 prefix -->
+    <!-- ELB region ipv6 prefix for all regions-->
 {% for stack in locations.values() %}
     {% for realm_domain, location in stack.items() %}
             <coral:client id="elbInternalAPIClient.{{ realm_domain }}"

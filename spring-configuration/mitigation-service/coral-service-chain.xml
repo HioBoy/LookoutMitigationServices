@@ -53,6 +53,11 @@
                 <ref bean="AuthorizationHandler"/>
 
                 <bean class="com.amazon.coral.validate.ValidationHandler"/>
+                
+                <!-- add our throttling handlers -->                                      
+                <ref bean="IdentityThrottlingHandler" />                                  
+                <ref bean="OperationThrottlingHandler" />                                 
+                <ref bean="OperationIdentityThrottlingHandler" />                         
 
                 <!-- This always comes last.-->
                 <bean class="com.amazon.coral.spring.SpringActivityHandler">

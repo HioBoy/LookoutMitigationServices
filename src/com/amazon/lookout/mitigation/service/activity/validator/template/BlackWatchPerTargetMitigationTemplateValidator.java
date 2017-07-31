@@ -62,8 +62,14 @@ public abstract class BlackWatchPerTargetMitigationTemplateValidator extends Bla
 
     private void validateEditRequest(EditMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
-        
-        validateLocation(request.getLocation());
+
+        List<String> locations = request.getLocations();
+
+        if (locations == null || locations.isEmpty()) {
+            locations = request.getLocation();
+        }
+
+        validateLocation(locations);
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
         validateDeploymentChecks(request);
     }

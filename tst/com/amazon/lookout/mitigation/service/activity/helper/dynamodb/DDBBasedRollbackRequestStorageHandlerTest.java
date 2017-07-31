@@ -13,7 +13,6 @@ import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
-import com.amazon.lookout.mitigation.service.DropAction;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
@@ -115,7 +114,6 @@ public class DDBBasedRollbackRequestStorageHandlerTest {
         request.setServiceName(serviceName);
         request.setMitigationDefinition(mitigationDefinition);
         MitigationDefinition mitigationDefinition = new MitigationDefinition();
-        mitigationDefinition.setAction(new DropAction());
         
         int maxMitigationVersion = 10;
         int maxWorkflowId = 20;

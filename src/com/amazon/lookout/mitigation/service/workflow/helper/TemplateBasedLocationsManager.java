@@ -74,7 +74,14 @@ public class TemplateBasedLocationsManager {
             requestLocations = ((CreateMitigationRequest) request).getLocations();
             Validate.notEmpty(requestLocations, "locations may not be empty for create");
         } else if (request instanceof EditMitigationRequest) {
-            requestLocations = ((EditMitigationRequest) request).getLocation();
+            final EditMitigationRequest r = (EditMitigationRequest) request;
+
+            requestLocations = r.getLocations();
+
+            if (requestLocations == null || requestLocations.isEmpty()) {
+                requestLocations = r.getLocation();
+            }
+
             Validate.notEmpty(requestLocations, "location may not be empty for edit");
         }
         if (requestLocations != null) {

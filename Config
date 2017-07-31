@@ -82,13 +82,17 @@ package.LookoutMitigationService = {
             # Runtime dependencies for coral
             JakartaCommons-logging-adapters = 1.1;
             Bobcat = 2.1;
+
             CoralSpringDirector = 4.2;
-            
             CoralService = 1.0;
             CoralMetricsQuerylogReporter = 1.0;            
             # Coral protocol handlers
             CoralRpcSupport = 1.0;                          
             CoralClientSpringSupport = 4.2;
+
+            CoralThrottle = 1.1;
+            CoralAvailabilityEmbedded = 1.0;
+
             LookoutMitigationServiceExplorer = 1.0;
             
             # ProcessManager.

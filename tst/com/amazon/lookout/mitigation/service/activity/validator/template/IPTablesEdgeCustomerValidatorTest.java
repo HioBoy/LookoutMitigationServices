@@ -4,8 +4,6 @@ import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.google.common.collect.ImmutableList;
-import com.amazon.lookout.mitigation.service.ApplyIPTablesRulesAction;
-import com.amazon.lookout.mitigation.service.CompositeAndConstraint;
 import com.amazon.lookout.mitigation.service.Constraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
@@ -122,17 +120,6 @@ public class IPTablesEdgeCustomerValidatorTest {
         IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, request);
 
         assertThat(actualError.getMessage(), containsString("mitigationDefinition"));
-    }
-
-    @Test
-    public void validateRequestForTemplateWhenConstraintHasInvalidType() throws Exception {
-        Constraint invalidConstraint = new CompositeAndConstraint();
-        CreateMitigationRequest request = generateCreateMitigationRequest();
-        request.setMitigationDefinition(generateMitigationDefinition(invalidConstraint));
-
-        IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, request);
-
-        assertThat(actualError.getMessage(), containsString("constraint"));
     }
 
     @Test
@@ -298,7 +285,6 @@ public class IPTablesEdgeCustomerValidatorTest {
 
     private static MitigationDefinition generateMitigationDefinition(Constraint constraint) {
         MitigationDefinition mitigationDefinition = new MitigationDefinition();
-        mitigationDefinition.setAction(new ApplyIPTablesRulesAction());
         mitigationDefinition.setConstraint(constraint);
         return mitigationDefinition;
     }
