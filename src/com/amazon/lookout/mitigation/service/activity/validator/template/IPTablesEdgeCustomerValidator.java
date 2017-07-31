@@ -58,7 +58,15 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
             validateLocations(((CreateMitigationRequest) request).getLocations());
             validateCreateRequest((CreateMitigationRequest) request);
         } else if (request instanceof EditMitigationRequest) {
-            validateLocations(((EditMitigationRequest) request).getLocation());
+            // First try to get "locations", and try "location" if it is missing
+            final EditMitigationRequest r = (EditMitigationRequest) request;
+            List<String> locations = r.getLocations();
+
+            if (locations == null || locations.isEmpty()) {
+                locations = r.getLocation();
+            }
+
+            validateLocations(locations);
             validateEditRequest((EditMitigationRequest) request);
         } else {
             throw new IllegalArgumentException(
