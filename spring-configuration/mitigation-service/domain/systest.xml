@@ -70,4 +70,6 @@
     <bean id="systest.MitigationState.writeCapacityUnits" class="java.lang.Long">
         <constructor-arg value="50"/>
     </bean>
+
+    <import resource="file:${spring.config.root}/domain/other-locations-generated.xml"/>
 </beans>

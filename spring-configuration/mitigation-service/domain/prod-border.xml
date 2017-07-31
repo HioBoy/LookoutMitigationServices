@@ -44,4 +44,5 @@
 
     <alias name="prod.ResourceAllocationState.writeCapacityUnits" alias="prod-border.ResourceAllocationState.writeCapacityUnits"/>
     
+    <import resource="file:${spring.config.root}/domain/prod-locations-generated.xml"/>
 </beans>
