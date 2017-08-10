@@ -4,12 +4,13 @@
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
-{% for realm_domain, location in locations['border_prod'].items() %}
 
+{% for stack in locations['border_prod'], locations['edge_prod'] %}
+    {% for realm_domain, location in stack.items() %}
         <bean id="authAccount.{{ realm_domain }}" class="java.lang.String">
             <constructor-arg value="{{ location['account'] }}"/>
         </bean>
-
+    {% endfor %}
 {% endfor %}
 
     <util:map id="prod.regionEndpointsMap">
