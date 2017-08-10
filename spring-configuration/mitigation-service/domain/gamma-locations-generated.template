@@ -13,10 +13,10 @@
 {% endfor %}
 
     <util:map id="gamma.regionEndpointsMap">
-        {% for stack in locations['border_gamma'], locations['edge_gamma'] %}
-            {% for location in stack.values() %}
-                <entry key="{{ location['mitigation_region'] }}" value="{{ location['mitsvc_endpoint'].split('//')[1] }}"/>
-            {% endfor %}
+        {% for location in locations['border_gamma'].values() %}
+            <entry key="{{ location['mitigation_region'] }}" value="{{ location['mitsvc_endpoint'].split('//')[1] }}"/>
         {% endfor %}
+        <!-- edge gamma endpoint -->
+        <entry key="IAD" value="lookout-mitigation-service-us-east-1-gamma-iad.iad.proxy.amazon.com"/>
     </util:map>
 </beans>
