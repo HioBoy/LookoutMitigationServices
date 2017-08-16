@@ -4,13 +4,20 @@
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
-{% for stack in locations['border_gamma'], locations['edge_gamma'] %}
-    {% for realm_domain, location in stack.items() %}
+    {% for realm_domain, location in locations['border_gamma'].items() %}
     <bean id="authAccount.{{ realm_domain }}" class="java.lang.String">
         <constructor-arg value="{{ location['account'] }}"/>
     </bean>
     {% endfor %}
-{% endfor %}
+
+    <!-- TODO edge weirdness
+         This is actually the PDX border gamma account but it is used for edge gamma
+         authentication.  Migrate to using an actual edge account.
+         https://sim.amazon.com/issues/BLACKWATCH-2223 -->
+    <bean id="authAccount.us-east-1.gamma" class="java.lang.String">
+        <constructor-arg value="557458189618"/> <!-- lookout-dev+lktmitsvc+gamma+pdx+auth@amazon.com -->
+    </bean>
+
 
     <util:map id="gamma.regionEndpointsMap">
         {% for location in locations['border_gamma'].values() %}
