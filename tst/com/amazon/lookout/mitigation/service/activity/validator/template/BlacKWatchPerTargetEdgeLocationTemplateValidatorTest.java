@@ -376,7 +376,7 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         request.setServiceName(ServiceName.Edge);
-        request.setLocation(Arrays.asList("E-NRT54"));
+        request.setLocation("E-NRT54");
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -401,7 +401,7 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         request.setServiceName(ServiceName.Edge);
-        request.setLocation(Arrays.asList("E-AMS1"));
+        request.setLocation("E-AMS1");
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");

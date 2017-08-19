@@ -70,7 +70,7 @@ public class TemplateBasedLocationsHelperManagerTest {
     @Test
     public void testGetLocationsForEditRequestWithLocation() {
         EditMitigationRequest request = new EditMitigationRequest();
-        request.setLocation(locations);
+        request.setLocations(locations);
         assertEquals(new HashSet<>(locations), TemplateBasedLocationsManager.getLocationsFromRequest(request));
     }
 

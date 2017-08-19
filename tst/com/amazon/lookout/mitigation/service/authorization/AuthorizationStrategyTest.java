@@ -137,7 +137,7 @@ public class AuthorizationStrategyTest {
         updateMitigationModificationRequest(editRequest);
         editRequest.setMitigationDefinition(mock(MitigationDefinition.class));
         editRequest.setMitigationVersion(mitigationVersion);
-        editRequest.setLocation(locations);
+        editRequest.setLocations(locations);
         return editRequest;
     }
     

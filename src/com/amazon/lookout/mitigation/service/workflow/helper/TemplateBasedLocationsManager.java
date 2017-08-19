@@ -3,6 +3,7 @@ package com.amazon.lookout.mitigation.service.workflow.helper;
 import java.beans.ConstructorProperties;
 import java.util.HashSet;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Set;
 
 import lombok.NonNull;
@@ -75,11 +76,15 @@ public class TemplateBasedLocationsManager {
             Validate.notEmpty(requestLocations, "locations may not be empty for create");
         } else if (request instanceof EditMitigationRequest) {
             final EditMitigationRequest r = (EditMitigationRequest) request;
-
             requestLocations = r.getLocations();
 
             if (requestLocations == null || requestLocations.isEmpty()) {
-                requestLocations = r.getLocation();
+                requestLocations = new ArrayList<>();
+                final String location = r.getLocation();
+
+                if (location != null) {
+                    requestLocations.add(location);
+                }
             }
 
             Validate.notEmpty(requestLocations, "location may not be empty for edit");

@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -77,11 +78,15 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
 
         String location = findLocationFromMitigationName(request.getMitigationName());
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
-        // TODO fix location to be locations in model in a separate commit
         List<String> locations = request.getLocations();
 
         if (locations == null || locations.isEmpty()) {
-            locations = request.getLocation();
+            locations = new ArrayList<>();
+            final String loc = request.getLocation();
+
+            if (loc != null) {
+                locations.add(loc);
+            }
         }
 
         validateLocations(location, request.getMitigationName(), locations);

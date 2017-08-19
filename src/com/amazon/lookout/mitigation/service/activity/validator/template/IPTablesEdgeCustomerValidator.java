@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -63,7 +64,12 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
             List<String> locations = r.getLocations();
 
             if (locations == null || locations.isEmpty()) {
-                locations = r.getLocation();
+                locations = new ArrayList<>();
+                final String location = r.getLocation();
+
+                if (location != null) {
+                    locations.add(location);
+                }
             }
 
             validateLocations(locations);

@@ -1,6 +1,7 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.Validate;
@@ -66,7 +67,12 @@ public abstract class BlackWatchPerTargetMitigationTemplateValidator extends Bla
         List<String> locations = request.getLocations();
 
         if (locations == null || locations.isEmpty()) {
-            locations = request.getLocation();
+            locations = new ArrayList<>();
+            final String location = request.getLocation();
+
+            if (location != null) {
+                locations.add(location);
+            }
         }
 
         validateLocation(locations);
