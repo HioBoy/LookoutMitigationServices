@@ -69,7 +69,19 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
 
         String location = findLocationFromMitigationName(request.getMitigationName());
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
-        validateLocations(location, request.getMitigationName(), request.getLocations());
+
+        List<String> locations = request.getLocations();
+
+        if (locations == null || locations.isEmpty()) {
+            locations = new ArrayList<>();
+            final String loc = request.getLocation();
+
+            if (loc != null) {
+                locations.add(loc);
+            }
+        }
+
+        validateLocations(location, request.getMitigationName(), locations);
         validateDeploymentChecks(request);
     }
    

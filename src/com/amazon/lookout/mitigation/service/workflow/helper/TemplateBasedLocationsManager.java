@@ -58,7 +58,6 @@ public class TemplateBasedLocationsManager {
         throw new IllegalArgumentException("Can not find locations to deploy for request " + request);
     }
     
-    
     /**
      * Get locations from MitigationModificationRequest request.
      * if request type is create or edit, we will return the locations inside the request.
@@ -72,8 +71,19 @@ public class TemplateBasedLocationsManager {
         
         List<String> requestLocations = null;
         if (request instanceof CreateMitigationRequest) {
-            requestLocations = ((CreateMitigationRequest) request).getLocations();
-            Validate.notEmpty(requestLocations, "locations may not be empty for create");
+            final CreateMitigationRequest r = (CreateMitigationRequest) request;
+            requestLocations = r.getLocations();
+
+            if (requestLocations == null || requestLocations.isEmpty()) {
+                requestLocations = new ArrayList<>();
+                final String location = r.getLocation();
+
+                if (location != null) {
+                    requestLocations.add(location);
+                }
+            }
+
+            Validate.notEmpty(requestLocations, "location may not be empty for create");
         } else if (request instanceof EditMitigationRequest) {
             final EditMitigationRequest r = (EditMitigationRequest) request;
             requestLocations = r.getLocations();
@@ -96,3 +106,4 @@ public class TemplateBasedLocationsManager {
         }
     }
 }
+
