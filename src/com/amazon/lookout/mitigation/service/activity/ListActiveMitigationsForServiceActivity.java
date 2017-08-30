@@ -90,6 +90,14 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             String serviceName = request.getServiceName();
             String deviceName = request.getDeviceName();
             List<String> locations = request.getLocations();
+
+            if (locations == null || locations.isEmpty()) {
+                locations = new ArrayList<>();
+                final String location = request.getLocation();
+                if (location != null) {
+                    locations.add(location);
+                }
+            }
             
             // Step 2. Spawn a task to get a list of MitigationRequestDescriptionWithStatuses for mitigations created by the MitigationService which are currently deemed active.
             ActiveMitigationsFetcher activeMitigationsFetcher = new ActiveMitigationsFetcher(serviceName, deviceName, locations, activeMitigationInfoHandler, requestInfoHandler, tsdMetrics);
