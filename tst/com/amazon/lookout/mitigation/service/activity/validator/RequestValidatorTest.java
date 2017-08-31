@@ -2058,5 +2058,271 @@ public class RequestValidatorTest {
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
         validator.validateTargetConfig(targetConfig);
     }
+
+    @Test
+    public void testValidateMitigationSettingsValidSuspicionScore_1() {
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    },"
+            + "    \"suspicion_score\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"baseline_fractions\": {"
+            + "          \"BA_DNS_ANY_QUERY\": 2.40454500034E-4,"
+            + "          \"BA_DNS_BAD_ANSWER_COUNT\": 1.34885045647E-10,"
+            + "          \"BA_DNS_BAD_EDNS0_NAME\": 1.05123052372E-9"
+            + "        }"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        assertNotNull(targetConfig);
+        assertNotNull(targetConfig.getMitigation_config());
+        assertNotNull(targetConfig.getMitigation_config().getSuspicion_score());
+        assertNotNull(targetConfig.getMitigation_config().getSuspicion_score().getConfig());
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test
+    public void testValidateMitigationSettingsValidSuspicionScore_2() {
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    },"
+            + "    \"suspicion_score\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"@inherit\": \"blackwatch.suspicion_score.global.config.default\""
+            + "        }"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        assertNotNull(targetConfig);
+        assertNotNull(targetConfig.getMitigation_config());
+        assertNotNull(targetConfig.getMitigation_config().getSuspicion_score());
+        assertNotNull(targetConfig.getMitigation_config().getSuspicion_score().getConfig());
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test
+    public void testValidateMitigationSettingsValidSuspicionScore_3() {
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    },"
+            + "    \"suspicion_score\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"@inherit\": \"blackwatch.suspicion_score.baseline.config.default\""
+            + "        }"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        assertNotNull(targetConfig);
+        assertNotNull(targetConfig.getMitigation_config());
+        assertNotNull(targetConfig.getMitigation_config().getSuspicion_score());
+        assertNotNull(targetConfig.getMitigation_config().getSuspicion_score().getConfig());
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsInvalidSuspicionScore_1() {
+        // empty config
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    },"
+            + "    \"suspicion_score\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        }"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsInvalidSuspicionScore_2() {
+        // includes both a baseline_fractions and @inherit macro
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    },"
+            + "    \"suspicion_score\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"baseline_fractions\": {"
+            + "          \"BA_DNS_ANY_QUERY\": 2.40454500034E-4,"
+            + "          \"BA_DNS_BAD_ANSWER_COUNT\": 1.34885045647E-10,"
+            + "          \"BA_DNS_BAD_EDNS0_NAME\": 1.05123052372E-9"
+            + "        },"
+            + "        \"@inherit\": \"blackwatch.suspicion_score.global.config.default\""
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testValidateMitigationSettingsInvalidSuspicionScore_3() {
+        // @inherit macro is not in right format
+        String json = "{"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      },"
+            + "      \"named_one\": {"
+            + "        \"global_bps\": 0,"
+            + "        \"global_pps\": 12"
+            + "      }"
+            + "    },"
+            + "    \"network_acl\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"rules\": [{"
+            + "          \"action\": \"DENY\","
+            + "          \"dst\": \"0.0.0.0/0\","
+            + "          \"src_country\": \"AU\","
+            + "          \"name\": \"RANDOM_ACL_RULE_NAME\","
+            + "          \"l4_proto\": {"
+            + "            \"value\": 6"
+            + "          }"
+            + "        }]"
+            + "      }"
+            + "    },"
+            + "    \"suspicion_score\": {"
+            + "      \"action\": \"DROP\","
+            + "      \"config\": {"
+            + "        \"@inherit\": \"blahblahblah\""
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+        BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
+        validator.validateTargetConfig(targetConfig);
+    }
 }
 

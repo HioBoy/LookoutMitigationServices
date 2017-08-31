@@ -1112,6 +1112,28 @@ public class RequestValidator {
             String msg = "A default rate limit must be specified";
             throw new IllegalArgumentException(msg);
         }
+
+        // Validate suspicion score has a non-empty Map<String, Double> baseline_fractions XOR
+        // an @inherit macro with value in format blackwatch.suspicion_score.baseline.config.*
+        if (targetConfig.getMitigation_config() != null
+                && targetConfig.getMitigation_config().getSuspicion_score() != null
+                && targetConfig.getMitigation_config().getSuspicion_score().getConfig() != null) {
+            if ((targetConfig.getMitigation_config().getSuspicion_score().getConfig().getInherited_macro() == null) ==
+                (targetConfig.getMitigation_config().getSuspicion_score().getConfig().getBaseline_fractions() == null)) {
+                String msg = "Suspicion_score needs either a populated baseline_fractions or an @inherit macro (not both)";
+                throw new IllegalArgumentException(msg);
+            }
+
+            if (targetConfig.getMitigation_config().getSuspicion_score().getConfig().getBaseline_fractions() == null) {
+                // check that @inherit has the right format
+                if (!targetConfig.getMitigation_config().getSuspicion_score().getConfig().getInherited_macro().startsWith("blackwatch.suspicion_score.baseline.config.") &&
+                       !targetConfig.getMitigation_config().getSuspicion_score().getConfig().getInherited_macro().equals("blackwatch.suspicion_score.global.config.default")) {
+                    String msg = "Suspicion_score @inherit should point to a macro with format blackwatch.suspicion_score.baseline.config.* " +
+                        "or blackwatch.suspicion_score.global.config.default";
+                    throw new IllegalArgumentException(msg);
+                }
+            }
+        }
     }
 }
 
