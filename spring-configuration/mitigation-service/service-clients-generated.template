@@ -8,16 +8,51 @@
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
     http://schema.amazon.com/spring-extensions/coral/v1.0 http://schema.amazon.com/spring-extensions/coral/v1.0/coral.xsd">
 
-    <coral:client id="elbInternalAPIClientBean"
-            service-client-class="com.amazon.elb.internal.LBServiceInternalClient"
-            qualifier="Base.Prod.${realm}"/>
-
-    <!-- ELB region ipv6 prefix for all regions-->
 {% for stack in locations.values() %}
     {% for realm_domain, location in stack.items() %}
-        <bean id="elbIPv6Prefix.{{ realm_domain }}" class="java.lang.String">
-            <constructor-arg value="{{ location['elb_classic_ipv6_prefix'] }}"/>
-        </bean>
+        {% if location['elb_internal_api_client_qualifier'] %}
+
+            <coral:client id="elbInternalAPIClientBean.{{ realm_domain }}"
+            service-client-class="com.amazon.elb.internal.LBServiceInternalClient"
+            qualifier="{{ location['elb_internal_api_client_qualifier'] }}"/>
+
+            <bean id="elbIPv6Prefix.{{ realm_domain }}" class="java.lang.String">
+                <constructor-arg value="{{ location['elb_classic_ipv6_prefix'] }}"/>
+            </bean>
+
+            <bean id="elbResourceHelper.{{ realm_domain }}" class="com.amazon.blackwatch.mitigation.resource.helper.ELBResourceHelper">
+                <constructor-arg name="awsCredentialsProvider" ref="elbInternalServiceCredentialsProvider.${realm}.${domain}"/>
+                <constructor-arg name="elbInternalClient" ref="elbInternalAPIClientBean.{{ realm_domain }}"/>
+                <constructor-arg name="regionIPv6Prefix" ref="elbIPv6Prefix.{{ realm_domain }}"/>
+                <constructor-arg name="metricsFactory" ref="metricsFactory" />
+            </bean>
+
+            <bean id="elbResourceTypeHelper.{{ realm_domain }}" class="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchELBResourceTypeHelper">
+                <constructor-arg name="elbResourceHelper" ref="elbResourceHelper.{{ realm_domain }}" />
+                <constructor-arg name="metricsFactory" ref="metricsFactory" />
+            </bean>
+
+        {% endif %}
+
+        <util:map id="resourceTypeHelpers.{{ realm_domain }}"
+            key-type="com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType" 
+            value-type="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceTypeHelper">
+            <entry key="IPAddress" value-ref="ipaddressResourceTypeHelper"/>
+            <entry key="IPAddressList" value-ref="ipaddressListResourceTypeHelper"/>
+            {% if location['elb_internal_api_client_qualifier'] %}
+                <entry key="ELB" value-ref="elbResourceTypeHelper.{{ realm_domain }}"/>
+            {% endif %}
+        </util:map>
+
+        <util:map id="resourceTypeValidatorMap.{{ realm_domain }}"
+            key-type="com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType" 
+            value-type="com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator">
+            <entry key="IPAddress" value-ref="IPAddressTypeValidator"/>
+            <entry key="IPAddressList" value-ref="IPAddressListTypeValidator"/>
+            {% if location['elb_internal_api_client_qualifier'] %}
+                <entry key="ELB" value-ref="ELBTypeValidator"/>
+            {% endif %}
+        </util:map>
     {% endfor %}
 {% endfor %}
 
