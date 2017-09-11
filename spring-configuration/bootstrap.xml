@@ -13,12 +13,16 @@
     -->
     <bean id="environment" class="com.amazon.coral.spring.EnvironmentHelper"/>
 
+    <!-- Include from LookoutMitigationServiceCommons -->
+    <import resource="file:${spring.config.root}/common/common.xml"/>
+    <import resource="file:${spring.config.root}/common/domain/${domain}.xml"/>
+
     <!--
     The following statements import the spring-configuration files in the listed
     order.
     -->
-    <import resource="file:${spring.config.root}/environment/*.xml"/>
-    <import resource="file:${spring.config.root}/*.xml"/>
-    <import resource="file:${spring.config.root}/location_type/${MITSVC_LOCATION_TYPE}.xml"/>
-    <import resource="file:${spring.config.root}/domain/${domain}.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/environment/*.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/*.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/location_type/${MITSVC_LOCATION_TYPE}.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/domain/${domain}.xml"/>
 </beans>

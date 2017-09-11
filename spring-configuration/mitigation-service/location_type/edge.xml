@@ -17,6 +17,6 @@
     <bean id="marketplaceName" class="java.lang.String">
         <constructor-arg value="edge.${domain}.${realm}"/>
     </bean>
-    <import resource="file:${spring.config.root}/activity/activity.xml"/>
-    <import resource="file:${spring.config.root}/periodic/periodic.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/activity/activity.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/periodic/periodic.xml"/>
 </beans>

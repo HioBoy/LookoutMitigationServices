@@ -3,7 +3,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
-    
+
     <bean id="dynamoDBClientBuilder" class="com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder">
         <property name="credentials" ref="dynamodbCredentials"/>
         <property name="requestHandlers">
@@ -25,7 +25,7 @@
     <bean id="dynamoDBClient" factory-bean="returnConsumedCapacityDecorator" factory-method="decorate">
         <constructor-arg ref="baseDynamoDBClient"/>
     </bean>
-    
+
     <bean id="swfClient" class="com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient">
         <constructor-arg index="0" ref="swfCredentials"/>
         <constructor-arg index="1" ref="swfClientConfig"/>

@@ -71,5 +71,5 @@
         <constructor-arg value="50"/>
     </bean>
 
-    <import resource="file:${spring.config.root}/domain/other-locations-generated.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/domain/other-locations-generated.xml"/>
 </beans>

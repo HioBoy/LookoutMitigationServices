@@ -8,8 +8,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -36,9 +38,15 @@ import com.amazon.aws158.commons.dynamo.DynamoDBHelper;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.activities.model.SchedulingStatus;
+import com.amazon.lookout.ddb.model.ActiveMitigationsModel;
 import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.ddb.model.MitigationRequestsModel;
+import com.amazon.lookout.mitigation.datastore.model.JsonDataConverter;
+import com.amazon.lookout.mitigation.datastore.model.MitigationConfigSymlinks;
+import com.amazon.lookout.mitigation.datastore.MitigationConfigSymlinksDAO;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
+import com.amazon.lookout.mitigation.service.MitigationDefinition;
+import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.workflow.helper.SWFWorkflowStarter;
 import com.amazon.lookout.workflow.model.RequestToReap;
@@ -95,7 +103,8 @@ import com.google.common.util.concurrent.Uninterruptibles;
 @ThreadSafe
 public class RequestsReaper implements Runnable {
     private static final Log LOG = LogFactory.getLog(RequestsReaper.class);
-    
+    private static final JsonDataConverter jsonConverter = new JsonDataConverter();
+
     // A buffer of number of seconds for the MitigationService activity to start a workflow.
     private static final int BUFFER_SECONDS_BEFORE_STARTING_WORKFLOW = 10;
     
@@ -124,6 +133,7 @@ public class RequestsReaper implements Runnable {
     private final AmazonDynamoDB dynamoDBClient;
     private final AmazonSimpleWorkflowClient swfClient;
     private final MetricsFactory metricsFactory;
+    private final String activeMitigationsTableName;
     private final String mitigationRequestsTableName;
     private final String mitigationInstancesTableName;
     private final String swfDomain;
@@ -180,21 +190,30 @@ public class RequestsReaper implements Runnable {
     private final String leaderElectionLockTableName;
     private final AmazonDynamoDBLockClient leaderElectionLockClient;
     private LockItem leaderElectionLock;
-    
-    @ConstructorProperties({"dynamoDBClient", "swfClient", "appDomain", "swfDomainName",
+    private final String domain;
+    private final String realm;
+    private final MitigationConfigSymlinksDAO mitigationConfigSymlinksDao;
+
+    @ConstructorProperties({"dynamoDBClient", "swfClient", "appDomain", "realm", "swfDomainName",
             "swfSocketTimeoutMillis", "swfConnTimeoutMillis", "workflowStarter", "metricsFactory",
-            "queryLimit", "leaderElectionLeaseDurationMillis"})
+            "mitigationConfigSymlinksDAO","queryLimit", "leaderElectionLeaseDurationMillis"})
     public RequestsReaper(@NonNull AmazonDynamoDB dynamoDBClient, @NonNull AmazonSimpleWorkflowClient swfClient,
-            @NonNull String appDomain, @NonNull String swfDomain, int swfSocketTimeoutMillis, int swfConnTimeoutMillis,
-            @NonNull SWFWorkflowStarter workflowStarter, @NonNull MetricsFactory metricsFactory, int queryLimit,
+            @NonNull String appDomain, @NonNull String realm, @NonNull String swfDomain, int swfSocketTimeoutMillis,
+            int swfConnTimeoutMillis, @NonNull SWFWorkflowStarter workflowStarter, @NonNull MetricsFactory metricsFactory, 
+            @NonNull MitigationConfigSymlinksDAO mitigationConfigSymlinksDao, int queryLimit,
             long leaderElectionLeaseDurationMillis) {
         this.dynamoDBClient = dynamoDBClient;
         this.swfClient = swfClient;
         
         Validate.notEmpty(appDomain);
+        this.activeMitigationsTableName = ActiveMitigationsModel.ACTIVE_MITIGATIONS_TABLE_PREFIX + appDomain.toUpperCase();
         this.mitigationRequestsTableName = MitigationRequestsModel.MITIGATION_REQUESTS_TABLE_NAME_PREFIX + appDomain.toUpperCase();
         this.mitigationInstancesTableName = MitigationInstancesModel.MITIGATION_INSTANCES_TABLE_NAME_PREFIX + appDomain.toUpperCase();
-        
+        this.domain = appDomain;
+
+        Validate.notEmpty(realm);
+        this.realm = realm;
+
         Validate.notEmpty(swfDomain);
         this.swfDomain = swfDomain;
         
@@ -204,7 +223,8 @@ public class RequestsReaper implements Runnable {
         
         this.workflowStarter = workflowStarter;
         this.metricsFactory = metricsFactory;
-        
+        this.mitigationConfigSymlinksDao = mitigationConfigSymlinksDao;
+
         Validate.isTrue(queryLimit >= 10, "queryLimit must be >= 10");
         this.queryLimit = queryLimit;
         
@@ -329,7 +349,10 @@ public class RequestsReaper implements Runnable {
                 // we are the leader and should reap requests, because the preceding code throws
                 // LockNotGrantedException when we don't own the leader election lock.
                 reapRequests(metrics);
-                
+
+                // IPtables mitigation transition from old to new Mitigation Service
+                transitionIptablesMitigation();
+
                 // send another heartbeat to keep holding the lock
                 leaderElectionLockClient.sendHeartbeat(new SendHeartbeatOptions()
                     .withLockItem(leaderElectionLock)
@@ -352,7 +375,111 @@ public class RequestsReaper implements Runnable {
             }
         }
     }
-    
+
+    // In Edge locations, IPTables mitigation metadata should be added in new symlinks
+    // table for List API to work. IPTables transition code should execute only 
+    // in Edge prod and gamma locations and also only if symlinks tables
+    // does not contain IPTables metadata
+    protected void transitionIptablesMitigation() {
+        final DeviceName ipTablesDevice = DeviceName.POP_HOSTS_IP_TABLES;
+        final String ipTablesLocation = "EdgeWorldwide";
+
+        if (realm.toLowerCase().equals("us-east-1") &&
+                (domain.toLowerCase().equals("prod")) || (domain.toLowerCase().equals("gamma"))) {
+
+            MitigationConfigSymlinks symlinksItem =
+                    mitigationConfigSymlinksDao.retrieveConfigSymlinks(
+                    ipTablesDevice, ipTablesLocation);
+
+            // if IPTables record is not found in symlinks table, get the workflow ID for 
+            // current active IPTables mitigation from ACTIVE_MITIGATIONS table
+            if (symlinksItem == null) {
+                // Generate key condition for ACTIVE_MITIGATIONS table with deviceName and location
+                Map<String, Condition> keyConditions = new HashMap<>();
+                keyConditions.put(ActiveMitigationsModel.DEVICE_NAME_KEY,
+                        new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                        .withAttributeValueList(new AttributeValue().withS(ipTablesDevice.name())));
+
+                keyConditions.put(ActiveMitigationsModel.LOCATION_KEY,
+                        new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                        .withAttributeValueList(new AttributeValue().withS(ipTablesLocation)));
+
+                // Query Filter for deletion date null
+                Map<String, Condition> queryFilter = new HashMap<>();
+                queryFilter.put(ActiveMitigationsModel.DELETION_DATE_KEY,
+                        new Condition().withComparisonOperator(ComparisonOperator.NULL));
+
+                // generate query request
+                QueryRequest queryRequest = new QueryRequest();
+                queryRequest.setTableName(activeMitigationsTableName);
+                queryRequest.setIndexName(ActiveMitigationsModel.DEVICE_NAME_LOCATION_GSI);
+                queryRequest.setKeyConditions(keyConditions);
+                queryRequest.setQueryFilter(queryFilter);
+                queryRequest.setConsistentRead(false);
+
+                QueryResult queryResult = queryDynamoDB(queryRequest);
+                if (queryResult == null || queryResult.getItems().size() != 1) {
+                    LOG.info("No IPtables mitigation found or invalid number of IPTables "+
+                            "active mitigation found in ACTIVE_MITIGATION table");
+                } else {
+                    long jobId = 0;
+                    for (Map<String, AttributeValue> item : queryResult.getItems()) {
+                        jobId = Long.parseLong(item.get(ActiveMitigationsModel.JOB_ID_KEY).getN());
+                    }
+
+                    // fetch IPTables mitigation metadata from MITIGATION_REQUESTS table
+                    if (jobId > 0) {
+                        keyConditions = new HashMap<>();
+                        keyConditions.put(MitigationRequestsModel.DEVICE_NAME_KEY,
+                                new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                .withAttributeValueList(new AttributeValue().withS(ipTablesDevice.name())));
+
+                        keyConditions.put(MitigationRequestsModel.WORKFLOW_ID_KEY,
+                                new Condition().withComparisonOperator(ComparisonOperator.EQ)
+                                .withAttributeValueList(new AttributeValue().withN(Long.toString(jobId))));
+
+                        // generate query request
+                        queryRequest = new QueryRequest();
+                        queryRequest.setTableName(getRequestsTableName());
+                        queryRequest.setKeyConditions(keyConditions);
+                        queryRequest.setConsistentRead(true);
+
+                        queryResult = queryDynamoDB(queryRequest);
+                        if (queryResult == null || queryResult.getItems().size() == 0) {
+                            LOG.info("IPtables mitigation with workflow ID " + jobId + 
+                                    " not found in MITIGATION_REQUESTS tables");
+                        } else {
+                            for (Map<String, AttributeValue> item : queryResult.getItems()) {
+                                // fetch required data from MitigationRequest table result
+                                String mitigationName = item.get(MitigationRequestsModel.MITIGATION_NAME_KEY).getS();
+                                String definition = item.get(MitigationRequestsModel.MITIGATION_DEFINITION_KEY).getS();
+                                String userName = item.get(MitigationRequestsModel.USER_NAME_KEY).getS();
+                                String userDescription = item.get(MitigationRequestsModel.USER_DESCRIPTION_KEY).getS();
+                                String toolName = item.get(MitigationRequestsModel.TOOL_NAME_KEY).getS();
+
+                                MitigationActionMetadata mitigationActionMetadata = new MitigationActionMetadata();
+                                mitigationActionMetadata.setUser(userName);
+                                mitigationActionMetadata.setDescription(userDescription);
+                                mitigationActionMetadata.setToolName(toolName);
+
+                                // add record in CONFIG_SYMLINKS table
+                                mitigationConfigSymlinksDao.createConfigSymlinksWithMetadata(
+                                        ipTablesDevice,
+                                        ipTablesLocation,
+                                        mitigationName,
+                                        jobId,
+                                        mitigationActionMetadata,
+                                        jsonConverter.fromData(definition, MitigationDefinition.class));
+
+                                LOG.info("Added IPTables mitigation record into symlinks table successfully");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // protected to be visible for mocking
     protected Map<String, AttributeValue> getLastEvaluatedKey(DeviceName deviceName) {
         return lastEvaluatedKeys.get(deviceName);
@@ -975,7 +1102,7 @@ public class RequestsReaper implements Runnable {
     protected MetricsFactory getMetricsFactory() {
         return metricsFactory;
     }
-    
+
     protected String getRequestsTableName() {
         return mitigationRequestsTableName;
     }

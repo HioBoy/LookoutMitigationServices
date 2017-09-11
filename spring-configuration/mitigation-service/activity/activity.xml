@@ -11,7 +11,7 @@
     <context:annotation-config/>
     
     <!-- Import edge and border locations activities -->
-    <import resource="file:${spring.config.root}/activity/activity_border.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/activity/activity_border.xml"/>
 
     <!-- Activities that doesnt go in activity_border.xml goes here -->
     

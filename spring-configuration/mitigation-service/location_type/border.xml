@@ -17,6 +17,6 @@
     <bean id="marketplaceName" class="java.lang.String">
         <constructor-arg value="${realm}"/>
     </bean>
-    <import resource="file:${spring.config.root}/activity/activity_border.xml"/>
-    <import resource="file:${spring.config.root}/periodic/periodic_border.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/activity/activity_border.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/periodic/periodic_border.xml"/>
 </beans>

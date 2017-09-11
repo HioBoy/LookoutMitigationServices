@@ -4,7 +4,7 @@
     xsi:schemaLocation="http://www.springframework.org/schema/beans
     http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-    <import resource="file:${spring.config.root}/periodic/periodic_border.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/periodic/periodic_border.xml"/>
 
     <!-- bean metronome in periodic_border.xml will be overwritten by this metronome bean -->
     <bean id="metronome" class="com.amazon.aws158.commons.periodic.Metronome">

@@ -46,11 +46,13 @@
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="swfClient" ref="swfClient"/>
         <constructor-arg name="appDomain" value="${domain}"/>
+        <constructor-arg name="realm" value="${realm}"/>
         <constructor-arg name="swfDomainName" value="LookoutMitigationService-${domain}"/>
         <constructor-arg name="swfSocketTimeoutMillis" ref="swfClientSocketTimeoutMillis"/>
         <constructor-arg name="swfConnTimeoutMillis" ref="swfClientConnectionTimeoutMillis"/>
         <constructor-arg name="workflowStarter" ref="swfWorkflowStarter"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+        <constructor-arg name="mitigationConfigSymlinksDAO" ref="mitigationConfigSymlinksDAO"/>
         
         <!-- RequestsReaper only performs one DynamoDB query over MITIGATION_REQUESTS each time it
              runs and passes queryLimit as the Limit parameter. This limits the amount of DDB

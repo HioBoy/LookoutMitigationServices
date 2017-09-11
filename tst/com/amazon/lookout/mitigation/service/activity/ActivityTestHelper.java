@@ -10,6 +10,7 @@ import org.junit.BeforeClass;
 import static org.mockito.Mockito.*;
 
 import com.amazon.coral.service.Identity;
+import com.amazon.lookout.mitigation.ActiveMitigationsHelper;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.HostStatusInfoHandler;
@@ -52,6 +53,7 @@ public class ActivityTestHelper {
     protected static HostStatusInfoHandler hostStatusInfoHandler;
     protected static LocationStateInfoHandler locationStateInfoHandler;
     protected static BlackWatchMitigationInfoHandler blackwatchMitigationInfoHandler;
+    protected static ActiveMitigationsHelper activeMitigationsHelper;
     
     @BeforeClass
     public static void setupOnce() {
@@ -66,5 +68,6 @@ public class ActivityTestHelper {
         hostStatusInfoHandler = mock(HostStatusInfoHandler.class);
         locationStateInfoHandler = mock(LocationStateInfoHandler.class);
         blackwatchMitigationInfoHandler = mock(BlackWatchMitigationInfoHandler.class);
+        activeMitigationsHelper = mock(ActiveMitigationsHelper.class);
     }
 }

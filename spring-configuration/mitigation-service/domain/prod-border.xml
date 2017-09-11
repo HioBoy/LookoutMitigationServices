@@ -6,7 +6,7 @@
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
-    <import resource="file:${spring.config.root}/domain/prod.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/domain/prod.xml"/>
 
     <alias name="prod.daasControlAPIServiceURL" alias="prod-border.daasControlAPIServiceURL"/>
 
@@ -44,5 +44,5 @@
 
     <alias name="prod.ResourceAllocationState.writeCapacityUnits" alias="prod-border.ResourceAllocationState.writeCapacityUnits"/>
     
-    <import resource="file:${spring.config.root}/domain/prod-locations-generated.xml"/>
+    <import resource="file:${spring.config.root}/mitigation-service/domain/prod-locations-generated.xml"/>
 </beans>

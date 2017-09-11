@@ -56,4 +56,61 @@
     {% endfor %}
 {% endfor %}
 
+    <!-- S3 Clients for all the regions -->
+{% for stack in locations.values() %}
+    {% for realm_domain, location in stack.items() %}
+    <bean id="s3Client.{{ realm_domain }}" class="com.amazonaws.services.s3.AmazonS3Client">
+        <constructor-arg name="credentialsProvider" ref="ServiceCredentialsProvider.{{ realm_domain }}"/>
+    </bean>
+    {% endfor %}
+{% endfor %}
+
+
+    <!-- Map from region to S3 Helpers for BlackWatchConfig -->
+    <bean abstract="true" id="blackWatchConfigS3Helper.template" class="com.amazon.blackwatch.config.s3.BlackWatchConfigS3Helper">
+        <!-- We do not sign, but materialset string has to be nonempty -->
+        <constructor-arg name="signatureKeyMaterialSet" value="com.amazon.blackwatch.config.signature.${realm}.${domain}.keypair"/>
+        <constructor-arg name="hasPrivateSignatureKey" value="false"/>
+    </bean>
+
+    <bean abstract="true" id="blackWatchS3HelperTemplate" class="com.amazon.lookout.mitigation.activities.helper.BlackWatchS3Helper">
+        <constructor-arg name="configSignatureRequired" value="false"/>
+    </bean>
+
+{% macro s3helperentry(realm_domain) %}
+        <entry key="{{ realm_domain.split('.')[0] }}">
+        <bean parent="blackWatchS3HelperTemplate">
+            <constructor-arg name="configS3Helper">
+                <bean parent="blackWatchConfigS3Helper.template">
+                    <constructor-arg name="s3Bucket" value="blackwatch.configuration.{{ realm_domain }}"/>
+                    <constructor-arg name="s3Client" ref="s3Client.{{ realm_domain }}"/>
+                </bean>
+            </constructor-arg>
+        </bean>
+        </entry>
+{% endmacro %}
+
+    <!--  blackwatch beta -->
+    <util:map id="AWSRegionToS3Helper.bwbeta">
+{% for realm_domain, location in locations['border_beta'].items() %}
+        {{ s3helperentry(realm_domain) }}
+{% endfor %}
+    </util:map>
+
+    <!--  blackwatch gamma -->
+    <util:map id="AWSRegionToS3Helper.gamma">
+{% for realm_domain, location in locations['border_gamma'].items() %}
+        {{ s3helperentry(realm_domain) }}
+{% endfor %}
+    </util:map>
+
+    <!-- blackwatch prod -->
+    <util:map id="AWSRegionToS3Helper.prod">
+{% for realm_domain, location in locations['border_prod'].items() %}
+        {{ s3helperentry(realm_domain) }}
+{% endfor %}
+    </util:map>
+    <!-- For us-east-1.prod-border -->
+    <alias name="AWSRegionToS3Helper.prod" alias="AWSRegionToS3Helper.prod-border"/>
+
 </beans>

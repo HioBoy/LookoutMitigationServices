@@ -58,16 +58,13 @@
     
     <bean class="com.amazon.lookout.mitigation.service.activity.ListActiveMitigationsForServiceActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="activeMitigationInfoHandler" ref="ddbBasedRequestInfoHandler"/>
-        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
-        <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
-        <constructor-arg name="threadPool" ref="listMitigationsActivityThreadPool"/>
+        <constructor-arg name="activeMitigationsHelper" ref="activeMitigationsHelper"/>
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationInfoActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
-        <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
+        <constructor-arg name="activeMitigationsHelper" ref="activeMitigationsHelper"/>
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity">
@@ -303,11 +300,6 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
     
-    <!-- New coral Activities are created per request, by creating a pool here, we ensure Spring shuts down this pool during shutdown sequence and all Activity instances share the same singleton ThreadPool instance. -->
-    <bean id="listMitigationsActivityThreadPool" class="java.util.concurrent.Executors" factory-method="newFixedThreadPool">
-        <constructor-arg index="0"><value>15</value></constructor-arg>
-    </bean>
-    
     <bean id="mitigationRequestTable" class="com.amazon.lookout.ddb.model.MitigationRequestsModel" factory-method="getInstance"/>
     <bean id="mitigationInstanceTable" class="com.amazon.lookout.ddb.model.MitigationInstancesModel" factory-method="getInstance"/>
     <bean id="activeMitigationTable" class="com.amazon.lookout.ddb.model.ActiveMitigationsModel" factory-method="getInstance"/>
@@ -348,4 +340,33 @@
         <value>LOADTEST-123</value>
         <value>LOADTEST-124</value>
     </util:set>
+
+    <bean id="blackWatchConfigS3Helper" class="com.amazon.blackwatch.config.s3.BlackWatchConfigS3Helper">
+        <constructor-arg name="s3Bucket" value="blackwatch.configuration.${realm}.${domain}"/>
+        <constructor-arg name="s3Client" ref="s3Client.${realm}.${domain}"/>
+        <constructor-arg name="signatureKeyMaterialSet" value="com.amazon.blackwatch.config.signature.${realm}.${domain}.keypair"/>
+        <constructor-arg name="hasPrivateSignatureKey" value="true"/>
+    </bean>
+
+    <bean id="blackWatchS3Helper" class="com.amazon.lookout.mitigation.activities.helper.BlackWatchS3Helper">
+        <constructor-arg name="configS3Helper" ref="blackWatchConfigS3Helper"/>
+        <!-- We cannot require config objects to be signed during the initial deployment, because
+             existing config objects will not be signed, but once we've completed a config
+             deployment to every location managed by a given Mitigation Service stack all objects
+             should be signed and we can change configSignatureRequired to "true". -->
+        <constructor-arg name="configSignatureRequired" value="false"/>
+    </bean>
+
+    <bean id="mitigationConfigSymlinksDAO" class="com.amazon.lookout.mitigation.datastore.MitigationConfigSymlinksDAOImpl">
+        <constructor-arg name="client" ref="dynamoDBClient" />
+        <constructor-arg name="tableThroughput" ref="mitigationConfigSymlinksTableThroughput" />
+        <constructor-arg name="region" value="${realm}" />
+        <constructor-arg name="domain" value="${domain}" />
+    </bean>
+
+    <bean id="activeMitigationsHelper" class="com.amazon.lookout.mitigation.ActiveMitigationsHelperImpl">
+        <constructor-arg name="mitigationConfigSymlinksDao" ref="mitigationConfigSymlinksDAO" />
+        <constructor-arg name="blackWatchS3Helper" ref="blackWatchS3Helper" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+    </bean>
 </beans>
