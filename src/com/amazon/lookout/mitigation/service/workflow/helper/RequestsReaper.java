@@ -385,7 +385,7 @@ public class RequestsReaper implements Runnable {
         final String ipTablesLocation = "EdgeWorldwide";
 
         if (realm.toLowerCase().equals("us-east-1") &&
-                (domain.toLowerCase().equals("prod")) || (domain.toLowerCase().equals("gamma"))) {
+                (domain.toLowerCase().equals("prod") || domain.toLowerCase().equals("gamma"))) {
 
             MitigationConfigSymlinks symlinksItem =
                     mitigationConfigSymlinksDao.retrieveConfigSymlinks(
