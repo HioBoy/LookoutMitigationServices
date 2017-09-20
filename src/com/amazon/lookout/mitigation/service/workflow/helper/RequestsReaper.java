@@ -456,6 +456,7 @@ public class RequestsReaper implements Runnable {
                                 String userName = item.get(MitigationRequestsModel.USER_NAME_KEY).getS();
                                 String userDescription = item.get(MitigationRequestsModel.USER_DESCRIPTION_KEY).getS();
                                 String toolName = item.get(MitigationRequestsModel.TOOL_NAME_KEY).getS();
+                                int mitigationVersion = Integer.parseInt(item.get(MitigationRequestsModel.MITIGATION_VERSION_KEY).getN());
 
                                 MitigationActionMetadata mitigationActionMetadata = new MitigationActionMetadata();
                                 mitigationActionMetadata.setUser(userName);
@@ -469,7 +470,8 @@ public class RequestsReaper implements Runnable {
                                         mitigationName,
                                         jobId,
                                         mitigationActionMetadata,
-                                        jsonConverter.fromData(definition, MitigationDefinition.class));
+                                        jsonConverter.fromData(definition, MitigationDefinition.class),
+                                        mitigationVersion);
 
                                 LOG.info("Added IPTables mitigation record into symlinks table successfully");
                             }
