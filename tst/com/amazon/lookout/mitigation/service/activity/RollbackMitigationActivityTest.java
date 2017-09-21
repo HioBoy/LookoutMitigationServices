@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.Matchers.any;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.BadRequest400;
@@ -36,6 +37,13 @@ import com.amazon.lookout.model.RequestType;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 import com.amazonaws.services.simpleworkflow.model.WorkflowExecution;
 
+import com.amazon.lookout.mitigation.RequestCreator;
+import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
+import com.amazon.lookout.mitigation.datastore.WorkflowIdsDAO;
+import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
+
 public class RollbackMitigationActivityTest extends ActivityTestHelper {
     private static RollbackMitigationActivity rollbackMitigationActivity;
     
@@ -51,7 +59,14 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         requestStorageManager = mock(RequestStorageManager.class);
         swfWorkflowStarter = mock(SWFWorkflowStarter.class);
         rollbackMitigationActivity = new RollbackMitigationActivity(requestValidator,
-                requestStorageManager, swfWorkflowStarter, requestInfoHandler, mock(TemplateBasedRequestValidator.class));
+                requestStorageManager,
+                swfWorkflowStarter,
+                requestInfoHandler,
+                mock(TemplateBasedRequestValidator.class),
+                mock(CurrentRequestsDAO.class),
+                mock(ArchivedRequestsDAO.class),
+                mock(RequestCreator.class),
+                mock(SwitcherooDAO.class));
         
         request = new RollbackMitigationRequest();
         request.setServiceName(serviceName);
@@ -60,6 +75,8 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         request.setMitigationVersion(mitigationVersion);
         request.setMitigationTemplate(mitigationTemplate);
         request.setMitigationActionMetadata(mitigationActionMetadata);
+        request.setDeviceName(DeviceName.BLACKWATCH_BORDER.name());
+        request.setLocation(locations.get(0));
     }
     
     /**
@@ -189,7 +206,7 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
                         eq(rollbackMitigationVersion), isA(TSDMetrics.class));
         
         doThrow(new StaleRequestException400()).when(requestStorageManager).storeRequestForWorkflow(
-                eq(request), eq(new HashSet<>(locations)), eq(RequestType.RollbackRequest), isA(TSDMetrics.class));
+                any(), eq(new HashSet<>(locations)), eq(RequestType.RollbackRequest), isA(TSDMetrics.class));
         
         rollbackMitigationActivity.enact(request);
     }
@@ -234,16 +251,16 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         
         doNothing().when(requestValidator).validateRollbackRequest(request, mitigationRequestDescription);
         
-        doReturn(requestStorageResponse).when(requestStorageManager).storeRequestForWorkflow(eq(request),
+        doReturn(requestStorageResponse).when(requestStorageManager).storeRequestForWorkflow(any(),
                 eq(new HashSet<>(locations)), eq(RequestType.RollbackRequest), isA(TSDMetrics.class));
         
         WorkflowClientExternal workflowClient = mock(WorkflowClientExternal.class);
         
         doReturn(workflowClient).when(swfWorkflowStarter).createMitigationModificationWorkflowClient(
-                eq(workflowId), eq(request), eq(deviceName), isA(TSDMetrics.class));
+                eq(workflowId), any(), eq(deviceName), isA(TSDMetrics.class));
         
         doThrow(new IllegalStateException()).when(swfWorkflowStarter)
-                .startMitigationModificationWorkflow(eq(workflowId), eq(request), eq(new HashSet<>(locations)),
+                .startMitigationModificationWorkflow(eq(workflowId), any(), eq(new HashSet<>(locations)),
                         eq(RequestType.RollbackRequest), eq(mitigationVersion), eq(deviceName),
                         eq(workflowClient), isA(TSDMetrics.class));
         
@@ -269,16 +286,16 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
                 .getMitigationDefinition(eq(deviceName), eq(serviceName), eq(mitigationName),
                         eq(rollbackMitigationVersion), isA(TSDMetrics.class));
         
-        doReturn(requestStorageResponse).when(requestStorageManager).storeRequestForWorkflow(eq(request),
+        doReturn(requestStorageResponse).when(requestStorageManager).storeRequestForWorkflow(any(),
                 eq(new HashSet<>(locations)), eq(RequestType.RollbackRequest), isA(TSDMetrics.class));
  
         WorkflowClientExternal workflowClient = mock(WorkflowClientExternal.class);
         
         doReturn(workflowClient).when(swfWorkflowStarter).createMitigationModificationWorkflowClient(
-                eq(workflowId), eq(request), eq(deviceName), isA(TSDMetrics.class));
+                eq(workflowId), any(), eq(deviceName), isA(TSDMetrics.class));
         
         doNothing().when(swfWorkflowStarter).startMitigationModificationWorkflow(
-                eq(workflowId), eq(request), eq(new HashSet<>(locations)),
+                eq(workflowId), any(), eq(new HashSet<>(locations)),
                 eq(RequestType.RollbackRequest), eq(mitigationVersion), eq(deviceName),
                 eq(workflowClient), isA(TSDMetrics.class));
         

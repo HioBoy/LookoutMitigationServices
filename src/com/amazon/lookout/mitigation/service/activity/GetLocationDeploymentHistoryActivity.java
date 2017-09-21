@@ -4,6 +4,7 @@ import java.beans.ConstructorProperties;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -31,6 +32,16 @@ import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceI
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
+import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
+import com.amazon.lookout.mitigation.datastore.model.ArchivedRequest;
+import com.amazon.lookout.mitigation.datastore.model.RequestPage;
+import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
+import com.amazon.lookout.mitigation.datastore.RequestsDAO;
+import com.amazon.lookout.mitigation.datastore.RequestsDAOImpl;
+
 /**
  * Get mitigation deployment history on a specific location.
  * The returned history entries is ordered from latest to earliest.
@@ -57,15 +68,43 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
     
     private final RequestValidator requestValidator;
     private final MitigationInstanceInfoHandler mitigationInstanceHandler;
+
+    @NonNull private final CurrentRequestsDAO currentDao;
+    @NonNull private final ArchivedRequestsDAO archiveDao;
+    @NonNull private final SwitcherooDAO switcherooDao;
+    @NonNull private final RequestsDAO requestsDao;
     
-    @ConstructorProperties({"requestValidator", "mitigationInstanceHandler"})
+    @ConstructorProperties({"requestValidator", "mitigationInstanceHandler",
+    "currentDao", "archiveDao", "switcherooDao"})
     public GetLocationDeploymentHistoryActivity(@NonNull RequestValidator requestValidator,
-                                     @NonNull MitigationInstanceInfoHandler mitigationInstanceHandler) {
+            @NonNull MitigationInstanceInfoHandler mitigationInstanceHandler,
+            @NonNull final CurrentRequestsDAO currentDao,
+            @NonNull final ArchivedRequestsDAO archiveDao,
+            @NonNull final SwitcherooDAO switcherooDao) {
         Validate.notNull(requestValidator);
         this.requestValidator = requestValidator;
         
         Validate.notNull(mitigationInstanceHandler);
         this.mitigationInstanceHandler = mitigationInstanceHandler;
+
+        this.currentDao = currentDao;
+        this.archiveDao = archiveDao;
+        this.switcherooDao = switcherooDao;
+        this.requestsDao = new RequestsDAOImpl(currentDao, archiveDao);
+    }
+
+    // Turn a CurrentRequest into a LocationDeploymentInfo
+    private static LocationDeploymentInfo getLocationDeploymentInfo(
+            @NonNull final CurrentRequest currentRequest) {
+        final LocationDeploymentInfo info = new LocationDeploymentInfo();
+        info.setMitigationStatus(currentRequest.getStatus());
+        info.setSchedulingStatus(currentRequest.getSchedulingStatus().name());
+        info.setDeploymentHistory(currentRequest.getDeploymentHistory());
+        info.setDeployDate(currentRequest.getCreateDate());
+        info.setMitigationName(currentRequest.getMitigationName());
+        info.setMitigationVersion(currentRequest.getMitigationVersion());
+        info.setJobId(currentRequest.getWorkflowId());
+        return info;
     }
 
     @Validated
@@ -87,6 +126,9 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
             String deviceName = request.getDeviceName();
             String location = request.getLocation();
             String serviceName = request.getServiceName();
+
+            // A real typed device
+            final DeviceName device = DeviceName.valueOf(deviceName);
             
             Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
             if (maxNumberOfHistoryEntriesToFetch == null) {
@@ -94,11 +136,29 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
             }
             maxNumberOfHistoryEntriesToFetch = Math.min(maxNumberOfHistoryEntriesToFetch, MAX_NUMBER_OF_HISTORY_TO_FETCH);
 
-            // Step 2. Fetch list of mitigation deployment history on this location
-            List<LocationDeploymentInfo> listOfLocationDeploymentInfo = 
-                    mitigationInstanceHandler.getLocationDeploymentInfoOnLocation(deviceName, serviceName, location,
-                            maxNumberOfHistoryEntriesToFetch, request.getExclusiveLastEvaluatedTimestamp(), tsdMetrics);
-            
+            String lastEvaluatedKey = null;
+            final List<LocationDeploymentInfo> listOfLocationDeploymentInfo;
+
+            if (switcherooDao.useNewMitigationService(device, location)) {
+                // Get requests
+                final RequestPage<CurrentRequest> page = requestsDao.getLocationRequestsPage(
+                        device, location, maxNumberOfHistoryEntriesToFetch,
+                        request.getExclusiveLastEvaluatedKey());
+
+                lastEvaluatedKey = page.getLastEvaluatedKey();
+
+                listOfLocationDeploymentInfo = new ArrayList<>();
+
+                for (CurrentRequest currentRequest : page.getPage()) {
+                    listOfLocationDeploymentInfo.add(getLocationDeploymentInfo(currentRequest));
+                }
+            } else {
+                // Step 2. Fetch list of mitigation deployment history on this location
+                listOfLocationDeploymentInfo = 
+                        mitigationInstanceHandler.getLocationDeploymentInfoOnLocation(deviceName, serviceName, location,
+                                maxNumberOfHistoryEntriesToFetch, request.getExclusiveLastEvaluatedTimestamp(), tsdMetrics);
+            }
+
             // Step 3. Create the response object to return back to the client.
             GetLocationDeploymentHistoryResponse response = new GetLocationDeploymentHistoryResponse();
             response.setDeviceName(deviceName);
@@ -110,6 +170,7 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
                 response.setExclusiveLastEvaluatedTimestamp(
                         MitigationInstancesModel.CREATE_DATE_FORMATTER.parseMillis(deployDateUTC));
             }
+            response.setExclusiveLastEvaluatedKey(lastEvaluatedKey);
             
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
@@ -131,3 +192,4 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
         }
     }
 }
+

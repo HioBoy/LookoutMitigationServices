@@ -44,6 +44,9 @@ import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.amazon.lookout.mitigation.RequestCreator;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
+
 @RunWith(JUnitParamsRunner.class)
 public class EditMitigationActivityTest {
     @BeforeClass
@@ -68,6 +71,8 @@ public class EditMitigationActivityTest {
                     mock(BlackWatchEdgeLocationValidator.class)),
                 requestStorageManager,
             mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS),
-            new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class)));
+            new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class)),
+            mock(RequestCreator.class),
+            mock(SwitcherooDAO.class));
     }
 }

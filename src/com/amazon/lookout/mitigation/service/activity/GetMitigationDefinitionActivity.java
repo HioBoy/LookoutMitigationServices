@@ -4,6 +4,7 @@ import java.beans.ConstructorProperties;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -33,6 +34,16 @@ import com.amazon.lookout.mitigation.service.activity.helper.MitigationInstanceI
 import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
+import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
+
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
+import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
+import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
+import com.amazon.lookout.mitigation.datastore.RequestsDAO;
+import com.amazon.lookout.mitigation.datastore.RequestsDAOImpl;
 
 /**
  * Activity to get mitigation definition based on device name, mitigation name and mitigation version
@@ -58,10 +69,20 @@ public class GetMitigationDefinitionActivity extends Activity {
     private final RequestValidator requestValidator;
     private final RequestInfoHandler requestInfoHandler;
     private final MitigationInstanceInfoHandler mitigationInstanceHandler;
-    
-    @ConstructorProperties({"requestValidator", "requestInfoHandler", "mitigationInstanceHandler"})
-    public GetMitigationDefinitionActivity(@NonNull RequestValidator requestValidator, @NonNull RequestInfoHandler requestInfoHandler, 
-                                     @NonNull MitigationInstanceInfoHandler mitigationInstanceHandler) {
+
+    @NonNull private final CurrentRequestsDAO currentDao;
+    @NonNull private final ArchivedRequestsDAO archiveDao;
+    @NonNull private final SwitcherooDAO switcherooDao;
+    @NonNull private final RequestsDAO requestsDao;
+
+    @ConstructorProperties({"requestValidator", "requestInfoHandler",
+    "mitigationInstanceHandler", "currentDao", "archiveDao", "switcherooDao"})
+    public GetMitigationDefinitionActivity(@NonNull RequestValidator requestValidator,
+            @NonNull RequestInfoHandler requestInfoHandler,
+            @NonNull MitigationInstanceInfoHandler mitigationInstanceHandler,
+            @NonNull final CurrentRequestsDAO currentDao,
+            @NonNull final ArchivedRequestsDAO archiveDao,
+            @NonNull final SwitcherooDAO switcherooDao) {
         Validate.notNull(requestValidator);
         this.requestValidator = requestValidator;
         
@@ -70,6 +91,11 @@ public class GetMitigationDefinitionActivity extends Activity {
         
         Validate.notNull(mitigationInstanceHandler);
         this.mitigationInstanceHandler = mitigationInstanceHandler;
+
+        this.currentDao = currentDao;
+        this.archiveDao = archiveDao;
+        this.switcherooDao = switcherooDao;
+        this.requestsDao = new RequestsDAOImpl(currentDao, archiveDao);
     }
 
     @Validated
@@ -88,21 +114,50 @@ public class GetMitigationDefinitionActivity extends Activity {
             
             int mitigationVersion = request.getMitigationVersion();
 
+            // A real typed device
+            final DeviceName device = DeviceName.valueOf(deviceName);
+
+            final String location = request.getLocation();
+
             LOG.info(String.format("GetMitigationDefinitionActivity called with RequestId: %s and Request: %s.",
                     requestId, ReflectionToStringBuilder.toString(request)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
             
             // Step 1. Validate this request
             requestValidator.validateGetMitigationDefinitionRequest(request);
-            
-            // Step 2. get mitigation request for this device, mitigationName and mitigation version from the requests table.
-            MitigationRequestDescriptionWithLocations mitigationDescriptionWithLocations = requestInfoHandler.getMitigationDefinition(
-                    deviceName, serviceName, mitigationName, mitigationVersion, tsdMetrics);
-            
-            // Step 3. query the individual instance status and populate a new MitigationRequestDescriptionWithStatus instance to wrap this information.
-            List<MitigationInstanceStatus> instanceStatuses = mitigationInstanceHandler.getMitigationInstanceStatus(
-                    deviceName, mitigationDescriptionWithLocations.getMitigationRequestDescription().getJobId(), tsdMetrics);
-            
+
+            final MitigationRequestDescriptionWithLocations mitigationDescriptionWithLocations;
+            final List<MitigationInstanceStatus> instanceStatuses;
+
+            if (switcherooDao.useNewMitigationService(device, location)) {
+                // Find the request
+                final CurrentRequest currentRequest = requestsDao.retrieveRequestByMitigation(
+                        device, location, mitigationName, mitigationVersion);
+
+                if (currentRequest == null) {
+                    final String msg = String.format("Unable to locate request with "
+                            + "device %s, location %s, mitigation %s, version %d",
+                            device.name(), location, mitigationName, mitigationVersion);
+                    throw new MissingMitigationVersionException404(msg);
+                }
+
+                // Turn the CurrentRequest into whatever insane structure the API demands
+                mitigationDescriptionWithLocations =
+                    currentRequest.asMitigationRequestDescriptionWithLocations();
+
+                // The instance statuses are redundantly redundant
+                instanceStatuses = currentRequest.getMitigationInstanceStatuses();
+
+            } else {
+                // Step 2. get mitigation request for this device, mitigationName and mitigation version from the requests table.
+                mitigationDescriptionWithLocations = requestInfoHandler.getMitigationDefinition(
+                        deviceName, serviceName, mitigationName, mitigationVersion, tsdMetrics);
+
+                // Step 3. query the individual instance status and populate a new MitigationRequestDescriptionWithStatus instance to wrap this information.
+                instanceStatuses = mitigationInstanceHandler.getMitigationInstanceStatus(
+                        deviceName, mitigationDescriptionWithLocations.getMitigationRequestDescription().getJobId(), tsdMetrics);
+            }
+
             MitigationRequestDescriptionWithLocationAndStatus mitigationRequestDescriptionWithLocationAndStatus = 
                     new MitigationRequestDescriptionWithLocationAndStatus();
             mitigationRequestDescriptionWithLocationAndStatus.setMitigationRequestDescriptionWithLocations(mitigationDescriptionWithLocations);
@@ -139,3 +194,4 @@ public class GetMitigationDefinitionActivity extends Activity {
         }
     }
 }
+

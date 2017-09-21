@@ -41,6 +41,10 @@ import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 
+import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
+import com.amazon.lookout.mitigation.RequestCreator;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
+
 public class DeleteMitigationFromAllLocationsActivityTest {
 
     private static final int MITIGATION_VERSION = 1;
@@ -75,7 +79,9 @@ public class DeleteMitigationFromAllLocationsActivityTest {
                     mock(BlackWatchEdgeLocationValidator.class)),
             requestStorageManager,
             workflowStarter,
-            new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class)));
+            new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class)),
+            mock(RequestCreator.class),
+            mock(SwitcherooDAO.class));
     }
 
     private DeleteMitigationFromAllLocationsActivity createActivityWithValidators() {
@@ -88,6 +94,7 @@ public class DeleteMitigationFromAllLocationsActivityTest {
         request.setServiceName(ServiceName.Edge);
         request.setMitigationTemplate(MitigationTemplate.IPTables_Mitigation_EdgeCustomer);
         request.setMitigationVersion(MITIGATION_VERSION);
+        request.setDeviceName(DeviceName.BLACKWATCH_BORDER.name());
 
         MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
         actionMetadata.setUser("username");

@@ -21,6 +21,9 @@ import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 
+import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
+
 public class AbortDeploymentActivityTest extends ActivityTestHelper {
     private static AbortDeploymentActivity abortDeploymentActivity;
     
@@ -34,7 +37,8 @@ public class AbortDeploymentActivityTest extends ActivityTestHelper {
                 mock(BlackWatchBorderLocationValidator.class),
                 mock(BlackWatchEdgeLocationValidator.class)));
         requestStorageManager = mock(RequestStorageManager.class);
-        abortDeploymentActivity = new AbortDeploymentActivity(requestValidator, requestInfoHandler, requestStorageManager);
+        abortDeploymentActivity = new AbortDeploymentActivity(requestValidator, requestInfoHandler, requestStorageManager,
+                mock(CurrentRequestsDAO.class), mock(SwitcherooDAO.class));
     }
     
     /**
