@@ -44,7 +44,7 @@ package.LookoutMitigationService = {
             AmazonDynamoDBLockClient = 1.11.x;
             LookoutMitigationWorkFlowWorker = 1.0;
 
-            CoralAwsAuthentication = 1.1; # To support authenticating/authorizing calls to LookoutMitigationService.
+            CoralAwsAuthentication = 1.2; # To support authenticating/authorizing calls to LookoutMitigationService.
             OdinAWSCredentials = 1.4;
             
             LookoutIpMath = 1.0;
@@ -129,7 +129,7 @@ package.LookoutMitigationService = {
     resolves-conflict-dependencies = {
         1.0 = {
             JakartaCommons-logging = 1.2;
-            CoralAwsAuthentication = 1.1;
+            CoralAwsAuthentication = 1.2;
             CoralSpring = 4.2;
             CoralSpringLauncher = 4.2;
             GoogleGuava = r18;

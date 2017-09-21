@@ -15,9 +15,9 @@
             <ref bean="chain"/>
         </constructor-arg>
         <!-- Waiting for 2 minutes for coral framework to clean up its threads. (Some context here: https://issues.amazon.com/SF-1578)
-             Note: This timeout HAS to be smaller then the shutdownTimeout for the ProcessManager (currently 01/2015 configured to be 200s) to be meaningful, 
+             Note: This timeout HAS to be smaller then the shutdownTimeout for the ProcessManager (currently 01/2015 configured to be 200s) to be meaningful,
                    else the process manager will simply kill the process, without letting spring shutdown the beans it has created. -->
-        <constructor-arg value="120000"/> 
+        <constructor-arg value="120000"/>
     </bean>
 
     <bean id="ShowExplorer" class="java.lang.Boolean">
@@ -38,7 +38,7 @@
 
                 <bean class="com.amazon.coral.service.HttpHandler"/>
                 <bean class="com.amazon.coral.service.PingHandler"/>
-                
+
                 <!-- Here are protocol handlers. You need at least one.-->
                 <bean class="com.amazon.coral.service.http.HttpBindingHandler"/>
                 <bean class="com.amazon.coral.service.HttpRpcHandler"/>
@@ -53,11 +53,11 @@
                 <ref bean="AuthorizationHandler"/>
 
                 <bean class="com.amazon.coral.validate.ValidationHandler"/>
-                
-                <!-- add our throttling handlers -->                                      
-                <ref bean="IdentityThrottlingHandler" />                                  
-                <ref bean="OperationThrottlingHandler" />                                 
-                <ref bean="OperationIdentityThrottlingHandler" />                         
+
+                <!-- add our throttling handlers -->
+                <ref bean="IdentityThrottlingHandler" />
+                <ref bean="OperationThrottlingHandler" />
+                <ref bean="OperationIdentityThrottlingHandler" />
 
                 <!-- This always comes last.-->
                 <bean class="com.amazon.coral.spring.SpringActivityHandler">
@@ -71,7 +71,7 @@
             </list>
         </property>
     </bean>
-    
+
     <bean class="com.amazon.coral.service.RequestLoggingInterceptor">
         <!--
         The following are the three properties available to control the output
@@ -79,9 +79,9 @@
         -->
         <property name="logInput"><value>true</value></property>
         <property name="logOutput"><value>true</value></property>
-        <property name="logOnlyOnError"><value>false</value></property>    
+        <property name="logOnlyOnError"><value>false</value></property>
     </bean>
-    
+
     <bean id="AuthenticationHandler" class="com.amazon.coral.service.ARSAuthenticationHelper" depends-on="appConfigHelper">
         <constructor-arg ref="AuthNConfig"/>
         <constructor-arg ref="AuthRuntimeClient"/>
@@ -95,16 +95,16 @@
         <property name="headersToSecure" value=""/>
     </bean>
 
-    <!-- 
-    Creating beans for authorization based on 
+    <!--
+    Creating beans for authorization based on
     https://w.amazon.com/index.php/Coral/Manual/AWSAuth/Authorization1.1,
     https://w.amazon.com/index.php/AWSAuth/AuthRuntimeClient/UpgradingTo1.1, and
-    https://code.amazon.com/packages/CoralAwsAuthRuntimeDemo/blobs/mainline/\-\-/spring-configuration/coral-service.xml 
+    https://code.amazon.com/packages/CoralAwsAuthRuntimeDemo/blobs/mainline/\-\-/spring-configuration/coral-service.xml
     -->
-    
-    <!-- 
-    LookoutMitigationService is an internal service, and is not designed for subscriptions. 
-    So just using ARSAuthorizationHandler instead of ARSAuthorizationHelper that combines ARSAuthroizationHandler and ARSSubscriptionCheckHandler 
+
+    <!--
+    LookoutMitigationService is an internal service, and is not designed for subscriptions.
+    So just using ARSAuthorizationHandler instead of ARSAuthorizationHelper that combines ARSAuthroizationHandler and ARSSubscriptionCheckHandler
     -->
     <bean id="AuthorizationHandler" class="com.amazon.coral.service.ARSAuthorizationHandler">
         <constructor-arg ref="AuthRuntimeClient"/>
@@ -116,7 +116,7 @@
             </map>
         </constructor-arg>
     </bean>
-    
+
 
     <!-- Strategy to employ for authorizing calls to LookoutMitigationService -->
     <bean id="AuthorizationStrategy" class="com.amazon.lookout.mitigation.service.authorization.AuthorizationStrategy">
@@ -128,6 +128,7 @@
     <bean id="AuthRuntimeFactory" class="aws.auth.client.impl.AuthRuntimeClientFactory">
         <property name="authenticateResultCache" ref="AuthNCache"/>
         <property name="policyCache" ref="PolicyCache"/>
+
         <property name="configuration" ref="ArcConfig"/>
     </bean>
 
@@ -173,6 +174,12 @@
         <property name="serviceCallRetryAttempts" value="2"/>
         <!-- Set the initial retry backoff milliseconds, defaults to 0 -->
         <property name="retryInitialBackoffMS" value="500"/>
+
+        <property name="CredentialsProvider" >
+          <bean id="AWSCredentialMaterialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+            <constructor-arg name="materialSetName" value="com.amazon.blackwatch.mitigation_service_crypto_offload.${realm}.${domain}"/>
+          </bean>
+        </property>
     </bean>
 
 </beans>
