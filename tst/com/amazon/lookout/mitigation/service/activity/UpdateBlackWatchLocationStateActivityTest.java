@@ -28,7 +28,8 @@ public class UpdateBlackWatchLocationStateActivityTest extends ActivityTestHelpe
     public void setup() {
         requestValidator = spy(new RequestValidator(mock(EdgeLocationsHelper.class),
                 mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class)));
+                mock(BlackWatchEdgeLocationValidator.class),
+                "/random/path/location/json"));
         updateBlackWatchLocationStateActivity = 
                 spy(new UpdateBlackWatchLocationStateActivity(requestValidator, locationStateInfoHandler));
         

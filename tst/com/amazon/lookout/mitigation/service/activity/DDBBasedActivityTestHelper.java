@@ -148,7 +148,8 @@ public class DDBBasedActivityTestHelper {
         blackWatchBorderLocationValidator = mock(BlackWatchBorderLocationValidator.class);
         blackWatchEdgeLocationValidator = mock(BlackWatchEdgeLocationValidator.class);
         requestValidator = new RequestValidator(edgeLocationsHelper,
-                blackWatchBorderLocationValidator, blackWatchEdgeLocationValidator);
+                blackWatchBorderLocationValidator, blackWatchEdgeLocationValidator,
+                "/random/path/location/json");
         
 
         dogfishHelper = mock(DogFishValidationHelper.class);

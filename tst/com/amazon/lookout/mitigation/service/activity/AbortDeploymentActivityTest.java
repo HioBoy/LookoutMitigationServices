@@ -35,7 +35,8 @@ public class AbortDeploymentActivityTest extends ActivityTestHelper {
         requestValidator = spy(new RequestValidator(
                 mock(EdgeLocationsHelper.class),
                 mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class)));
+                mock(BlackWatchEdgeLocationValidator.class),
+                "/random/path/location/json"));
         requestStorageManager = mock(RequestStorageManager.class);
         abortDeploymentActivity = new AbortDeploymentActivity(requestValidator, requestInfoHandler, requestStorageManager,
                 mock(CurrentRequestsDAO.class), mock(SwitcherooDAO.class));

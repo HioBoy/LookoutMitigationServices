@@ -72,7 +72,8 @@ public class DeleteMitigationFromAllLocationsActivityTest {
         return new DeleteMitigationFromAllLocationsActivity(
             new RequestValidator(mock(EdgeLocationsHelper.class),
                     mock(BlackWatchBorderLocationValidator.class),
-                    mock(BlackWatchEdgeLocationValidator.class)),
+                    mock(BlackWatchEdgeLocationValidator.class),
+                    "/random/path/location/json"),
             new TemplateBasedRequestValidator(
                     mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
                     mock(BlackWatchBorderLocationValidator.class),

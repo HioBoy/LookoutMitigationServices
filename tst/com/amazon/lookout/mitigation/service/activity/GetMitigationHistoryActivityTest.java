@@ -141,7 +141,7 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
         GetMitigationHistoryActivity getMitigationHistoryActivity = 
                 spy(new GetMitigationHistoryActivity(new RequestValidator(
                         mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
-                    mock(BlackWatchEdgeLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler,
+                    mock(BlackWatchEdgeLocationValidator.class), "/random/path/location/json"), requestInfoHandler, mitigationInstanceInfoHandler,
                             mock(CurrentRequestsDAO.class), mock(ArchivedRequestsDAO.class), mock(SwitcherooDAO.class))); 
         request.setMaxNumberOfHistoryEntriesToFetch(10000);
         getMitigationHistoryActivity.enact(request); 
@@ -155,7 +155,7 @@ public class GetMitigationHistoryActivityTest extends ActivityTestHelper {
         GetMitigationHistoryActivity getMitigationHistoryActivity = 
                 spy(new GetMitigationHistoryActivity(new RequestValidator(
                         mock(EdgeLocationsHelper.class), mock(BlackWatchBorderLocationValidator.class),
-                    mock(BlackWatchEdgeLocationValidator.class)), requestInfoHandler, mitigationInstanceInfoHandler,
+                    mock(BlackWatchEdgeLocationValidator.class), "/random/path/location/json"), requestInfoHandler, mitigationInstanceInfoHandler,
                             mock(CurrentRequestsDAO.class), mock(ArchivedRequestsDAO.class), mock(SwitcherooDAO.class))); 
         request.setMaxNumberOfHistoryEntriesToFetch(-1);
         getMitigationHistoryActivity.enact(request);  

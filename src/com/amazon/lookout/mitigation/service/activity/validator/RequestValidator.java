@@ -51,6 +51,7 @@ import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
+import com.amazon.lookout.mitigation.service.activity.helper.LocationConfigFileHelper;
 import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity;
@@ -62,7 +63,6 @@ import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate
 import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.model.RequestType;
-import com.amazonaws.regions.Regions;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableSet;
@@ -118,16 +118,19 @@ public class RequestValidator {
     private final EdgeLocationsHelper edgeLocationsHelper;
     private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
     private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
+    private final String mitigationServiceLocationConfigFilePath;
     
     @ConstructorProperties({"edgeLocationsHelper", "blackWatchBorderLocationValidator",
-        "blackWatchEdgeLocationValidator"}) 
+        "blackWatchEdgeLocationValidator", "mitigationServiceLocationConfigFilePath"})
     public RequestValidator(@NonNull EdgeLocationsHelper edgeLocationsHelper,
             @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator,
-            @NonNull BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator) {
+            @NonNull BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator,
+            @NonNull String mitigationServiceLocationConfigFilePath) {
         this.edgeLocationsHelper = edgeLocationsHelper;
         this.blackWatchBorderLocationValidator = blackWatchBorderLocationValidator;
         this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
-        
+        this.mitigationServiceLocationConfigFilePath = mitigationServiceLocationConfigFilePath;
+
         this.deviceNames = new HashSet<>();
         for (DeviceName deviceName : DeviceName.values()) {
             deviceNames.add(deviceName.name());
@@ -389,13 +392,10 @@ public class RequestValidator {
     public void validateListBlackWatchLocationsRequest(ListBlackWatchLocationsRequest request) {
         String region = request.getRegion();
         if (region != null) {
-            try {
-                Regions.fromName(region);
-            } catch (IllegalArgumentException ex) {
-                String msg = String.format("Invalid region name - %s", region);
-                LOG.info(msg, ex);
-                throw new IllegalArgumentException(msg);
-            }
+            Set<String> mitigationRegions =
+                    LocationConfigFileHelper.getMitigationRegions(mitigationServiceLocationConfigFilePath);
+            Validate.isTrue(mitigationRegions.contains(region.toLowerCase()),
+                    "region "+ region +" seems to be invalid, mitigation service not deployed here");
         }
     }
 

@@ -115,7 +115,8 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
                 spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(
                                 mock(EdgeLocationsHelper.class),
                                 mock(BlackWatchBorderLocationValidator.class),
-                                mock(BlackWatchEdgeLocationValidator.class)),
+                                mock(BlackWatchEdgeLocationValidator.class),
+                                "/random/path/location/json"),
                             mitigationInstanceInfoHandler,
                             mock(CurrentRequestsDAO.class),
                             mock(ArchivedRequestsDAO.class),
@@ -133,7 +134,8 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
                 spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(
                                 mock(EdgeLocationsHelper.class),
                                 mock(BlackWatchBorderLocationValidator.class),
-                                mock(BlackWatchEdgeLocationValidator.class)),
+                                mock(BlackWatchEdgeLocationValidator.class),
+                                "/random/path/location/json"),
                             mitigationInstanceInfoHandler,
                             mock(CurrentRequestsDAO.class),
                             mock(ArchivedRequestsDAO.class),

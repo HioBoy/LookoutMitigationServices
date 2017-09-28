@@ -120,18 +120,4 @@ public class BlackWatchBorderLocationValidatorTest {
         validator = new BlackWatchBorderLocationValidator(region, borderLocationConfigFilePath, whitelistedLocationPrefix);
         assertFalse(validator.isValidLocation(location));
     }
-
-    /**
-     * Test Invalid file path
-     * @throws JSONException 
-     * @throws IOException 
-     * @throws FileNotFoundException 
-     */
-    @Test(expected=FileNotFoundException.class)
-    @Parameters({
-        "LOCATION-1"
-    })
-    public void testInvalidConfigFilePath(String location) throws FileNotFoundException, IOException, JSONException {
-        new BlackWatchBorderLocationValidator(region, "/random/path/file.json", whitelistedLocationPrefix);
-    }
 }

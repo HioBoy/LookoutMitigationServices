@@ -56,11 +56,14 @@ public class RequestValidatorTest {
     private final String userName = "TestUserName";
     private final String toolName = "TestToolName";
     private final String description = "TestDesc";
-    
+    private static final String locationConfigFilePath = 
+            System.getProperty("user.dir") + "/tst-data/test_mitigation_service_locations.json";
+
     private RequestValidator validator = new RequestValidator(
             mock(EdgeLocationsHelper.class),
             mock(BlackWatchBorderLocationValidator.class),
-            mock(BlackWatchEdgeLocationValidator.class));
+            mock(BlackWatchEdgeLocationValidator.class),
+            locationConfigFilePath);
     
     @BeforeClass
     public static void setUpOnce() {
@@ -73,7 +76,8 @@ public class RequestValidatorTest {
         validator = new RequestValidator(
             mock(EdgeLocationsHelper.class),
             mock(BlackWatchBorderLocationValidator.class),
-            mock(BlackWatchEdgeLocationValidator.class));
+            mock(BlackWatchEdgeLocationValidator.class),
+            locationConfigFilePath);
     }
     
 
@@ -721,7 +725,8 @@ public class RequestValidatorTest {
         request.setLocations(Arrays.asList("alocation"));
         validator = new RequestValidator(mock(EdgeLocationsHelper.class),
                 mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class));
+                mock(BlackWatchEdgeLocationValidator.class),
+                locationConfigFilePath);
         when(edgeLocationsHelper.getAllClassicPOPs()).thenReturn(Sets.newHashSet("alocation", "blocation", "clocations"));
         validator.validateListActiveMitigationsForServiceRequest(request);
     }
@@ -1138,7 +1143,7 @@ public class RequestValidatorTest {
         ListBlackWatchLocationsRequest request = new ListBlackWatchLocationsRequest();
 
         // valid region name
-        request.setRegion("us-east-1");
+        request.setRegion("valid-region-1");
         validator.validateListBlackWatchLocationsRequest(request);
 
         // region name is optional, so valid input

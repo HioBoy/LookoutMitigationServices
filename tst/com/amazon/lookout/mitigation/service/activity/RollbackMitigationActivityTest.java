@@ -55,7 +55,8 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
     public void setupMore() {
         requestValidator = spy(new RequestValidator(mock(EdgeLocationsHelper.class),
                 mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class)));
+                mock(BlackWatchEdgeLocationValidator.class),
+                "/random/path/location/json"));
         requestStorageManager = mock(RequestStorageManager.class);
         swfWorkflowStarter = mock(SWFWorkflowStarter.class);
         rollbackMitigationActivity = new RollbackMitigationActivity(requestValidator,

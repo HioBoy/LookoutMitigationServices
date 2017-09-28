@@ -1,0 +1,18 @@
+{
+    "locations" : {
+        "border_prod" : {
+            "valid-region-1.prod" : {
+                "mitigation_region": "TIM",
+                "pipeline_wave": 1,
+            },
+            "valid-region-2.prod" : {
+                "mitigation_region": "TAM",
+                "pipeline_wave": 1,
+            },
+            "valid-region-3.prod" : {
+                "mitigation_region": "TOM",
+                "pipeline_wave": 3,
+            }
+        }
+    }
+}
