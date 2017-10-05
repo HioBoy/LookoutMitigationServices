@@ -175,9 +175,9 @@
         <!-- Set the initial retry backoff milliseconds, defaults to 0 -->
         <property name="retryInitialBackoffMS" value="500"/>
 
-        <property name="CredentialsProvider" >
-          <bean id="AWSCredentialMaterialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-            <constructor-arg name="materialSetName" value="com.amazon.blackwatch.mitigation_service_crypto_offload.${realm}.${domain}"/>
+        <property name="credentialsProvider" >
+          <bean class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+            <constructor-arg value="com.amazon.blackwatch.mitigation_service_crypto_offload.${realm}.${domain}"/>
           </bean>
         </property>
     </bean>
