@@ -176,7 +176,7 @@
         <property name="retryInitialBackoffMS" value="500"/>
 
         <property name="credentialsProvider" >
-          <bean class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+          <bean class="amazon.odin.awsauth.OdinCredentialsProvider">
             <constructor-arg value="com.amazon.blackwatch.mitigation_service_crypto_offload.${realm}.${domain}"/>
           </bean>
         </property>
