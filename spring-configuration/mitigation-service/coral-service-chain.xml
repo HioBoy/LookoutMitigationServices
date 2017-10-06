@@ -139,16 +139,33 @@
     overwhelm the cache. We do not expect that many number of diverse clients or very
     high volumes of requests to overwhelm the HashMapCache for LookoutMitigationService.
     -->
-    <bean id="AuthNCache" class="amazon.cache.Cache">
-        <constructor-arg>
-            <bean class="amazon.cache.impl.HashMapCache"/>
-        </constructor-arg>
+    <bean id="CachemerePolicyCacheBuilder" class="com.amazon.cachemere.CacheClientBuilder">
+        <!-- Previous Curacao users: these function names (and units) have changed slightly. -->
+        <!-- Local Cache -->
+        <property name="localCacheMegabytes" value="64" />
+        <property name="localCacheMaximumTtlSeconds" value="1" />
+        <!-- Remote Cache, using LDAP discovery -->
+        <property name="discoveryHostclass" value=":11012" />
+    </bean>
+    <bean id="CachemereAuthNCacheBuilder" class="com.amazon.cachemere.CacheClientBuilder">
+        <!-- Previous Curacao users: these function names (and units) have changed slightly. -->
+        <!-- Local Cache -->
+        <property name="localCacheMegabytes" value="64" />
+        <property name="localCacheMaximumTtlSeconds" value="1" />
+        <!-- Remote Cache, using LDAP discovery -->
+        <property name="discoveryHostclass" value=":11012" />
     </bean>
 
-    <bean id="PolicyCache" class="amazon.cache.Cache">
-        <constructor-arg>
-            <bean class="amazon.cache.impl.HashMapCache"/>
-        </constructor-arg>
+    <bean id="AuthNCache" class="amazon.cache.plugin.cachemere.CachemereJakalPlugin">
+        <constructor-arg ref="CachemereAuthNCacheBuilder" />
+        <property name="timeToLiveSeconds" value="300" />
+        <property name="getTimeoutMillis" value="250" />
+    </bean>
+
+    <bean id="PolicyCache" class="amazon.cache.plugin.cachemere.CachemereJakalPlugin">
+        <constructor-arg ref="CachemerePolicyCacheBuilder" />
+        <property name="timeToLiveSeconds" value="300" />
+        <property name="getTimeoutMillis" value="250" />
     </bean>
 
     <!-- for corp host(beta and bwbeta stack), we have to use prodPreview.us-east-1.
