@@ -164,6 +164,21 @@
         <entry key="prod-border" value="prod.${realm}"/>
     </util:map>
 
+    <bean id="OdinAWSCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.blackwatch.mitigation_service_crypto_offload.${realm}.${domain}"/>
+    </bean>
+
+    <bean id="OdinAWSCredentials" factory-bean="OdinAWSCredentialsProvider" factory-method="getCredentials" />
+    <!-- Recasting OdinAWSCredentialsProvider as an aws.auth.client.auth.AWSCredentialsProvider, which is used by ARC -->
+    <bean id="CastedAWSCredentialsProvider" class="aws.auth.client.auth.BasicAWSCredentialsProvider">
+        <constructor-arg>
+            <bean class="aws.auth.client.auth.BasicAWSCredentials">
+                <constructor-arg value="#{OdinAWSCredentials.getAWSAccessKeyId()}" />
+                <constructor-arg value="#{OdinAWSCredentials.getAWSSecretKey()}" />
+           </bean>
+        </constructor-arg>
+    </bean>
+
     <bean id="ArcConfig" class="aws.auth.client.config.Configuration">
         <!-- Set the qualifier for selecting the coral client config and ARS endpoint (S3 has a dedicated one, -->
         <!-- if your service does not have, simply put "${domain}.${realm}" -->
@@ -175,11 +190,7 @@
         <!-- Set the initial retry backoff milliseconds, defaults to 0 -->
         <property name="retryInitialBackoffMS" value="500"/>
 
-        <property name="credentialsProvider" >
-          <bean class="amazon.odin.awsauth.OdinCredentialsProvider">
-            <constructor-arg value="com.amazon.blackwatch.mitigation_service_crypto_offload.${realm}.${domain}"/>
-          </bean>
-        </property>
+        <property name="credentialsProvider" ref="CastedAWSCredentialsProvider" />
     </bean>
 
 </beans>
