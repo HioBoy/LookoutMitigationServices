@@ -160,7 +160,7 @@
         <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
         <constructor-arg name="blackWatchBorderLocationValidator" ref="blackWatchBorderLocationValidator"/>
         <constructor-arg name="blackWatchEdgeLocationValidator" ref="blackWatchEdgeLocationValidator"/>
-        <constructor-arg name="mitigationServiceLocationConfigFilePath" value="${root}/etc/lookout_mitigation_service_locations.json"/>
+        <constructor-arg name="currentRegion" value="${realm}"/>
     </bean>
     
     <bean id="s3OdinCredential" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">

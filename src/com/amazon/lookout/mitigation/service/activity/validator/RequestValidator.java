@@ -118,18 +118,18 @@ public class RequestValidator {
     private final EdgeLocationsHelper edgeLocationsHelper;
     private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
     private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
-    private final String mitigationServiceLocationConfigFilePath;
+    private final String currentRegion;
     
     @ConstructorProperties({"edgeLocationsHelper", "blackWatchBorderLocationValidator",
-        "blackWatchEdgeLocationValidator", "mitigationServiceLocationConfigFilePath"})
+        "blackWatchEdgeLocationValidator", "currentRegion"})
     public RequestValidator(@NonNull EdgeLocationsHelper edgeLocationsHelper,
             @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator,
             @NonNull BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator,
-            @NonNull String mitigationServiceLocationConfigFilePath) {
+            @NonNull String currentRegion) {
         this.edgeLocationsHelper = edgeLocationsHelper;
         this.blackWatchBorderLocationValidator = blackWatchBorderLocationValidator;
         this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
-        this.mitigationServiceLocationConfigFilePath = mitigationServiceLocationConfigFilePath;
+        this.currentRegion = currentRegion.toLowerCase();
 
         this.deviceNames = new HashSet<>();
         for (DeviceName deviceName : DeviceName.values()) {
@@ -392,10 +392,9 @@ public class RequestValidator {
     public void validateListBlackWatchLocationsRequest(ListBlackWatchLocationsRequest request) {
         String region = request.getRegion();
         if (region != null) {
-            Set<String> mitigationRegions =
-                    LocationConfigFileHelper.getMitigationRegions(mitigationServiceLocationConfigFilePath);
-            Validate.isTrue(mitigationRegions.contains(region.toLowerCase()),
-                    "region "+ region +" seems to be invalid, mitigation service not deployed here");
+            Validate.isTrue(currentRegion.equals(region.toLowerCase()),
+                    "region: "+ region +" seems to be invalid, current mitigation service region is: "
+                    + currentRegion);
         }
     }
 
