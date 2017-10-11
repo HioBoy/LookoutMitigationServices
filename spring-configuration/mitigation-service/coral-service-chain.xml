@@ -104,7 +104,7 @@
 
     <!--
     LookoutMitigationService is an internal service, and is not designed for subscriptions.
-    So just using ARSAuthorizationHandler instead of ARSAuthorizationHelper that combines ARSAuthroizationHandler and ARSSubscriptionCheckHandler
+    So just using ARSAuthorizationHandler instead of ARSAuthorizationHelper that combines ARSAuthorizationHandler and ARSSubscriptionCheckHandler
     -->
     <bean id="AuthorizationHandler" class="com.amazon.coral.service.ARSAuthorizationHandler">
         <constructor-arg ref="AuthRuntimeClient"/>
@@ -134,24 +134,17 @@
 
     <bean id="AuthRuntimeClient" factory-bean="AuthRuntimeFactory" factory-method="newAuthRuntimeClient"/>
 
-    <!--
-    HashMapCache are generally disapproved in Prod because real customer traffic could
-    overwhelm the cache. We do not expect that many number of diverse clients or very
-    high volumes of requests to overwhelm the HashMapCache for LookoutMitigationService.
-    -->
     <bean id="CachemerePolicyCacheBuilder" class="com.amazon.cachemere.CacheClientBuilder">
-        <!-- Previous Curacao users: these function names (and units) have changed slightly. -->
         <!-- Local Cache -->
         <property name="localCacheMegabytes" value="64" />
-        <property name="localCacheMaximumTtlSeconds" value="1" />
+        <property name="localCacheMaximumTtlSeconds" value="#{T(aws.auth.client.config.CacheConfig).DEFAULT_EVICTION_TTL_SECONDS}" />
         <!-- Remote Cache, using LDAP discovery -->
         <property name="discoveryHostclass" value=":11012" />
     </bean>
     <bean id="CachemereAuthNCacheBuilder" class="com.amazon.cachemere.CacheClientBuilder">
-        <!-- Previous Curacao users: these function names (and units) have changed slightly. -->
         <!-- Local Cache -->
         <property name="localCacheMegabytes" value="64" />
-        <property name="localCacheMaximumTtlSeconds" value="1" />
+        <property name="localCacheMaximumTtlSeconds" value="#{T(aws.auth.client.config.CacheConfig).DEFAULT_EVICTION_TTL_SECONDS}" />
         <!-- Remote Cache, using LDAP discovery -->
         <property name="discoveryHostclass" value=":11012" />
     </bean>
