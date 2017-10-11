@@ -43,6 +43,7 @@ import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
 import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
 import com.amazon.lookout.mitigation.datastore.RequestsDAO;
 import com.amazon.lookout.mitigation.datastore.RequestsDAOImpl;
+import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 
 /**
  * Get mitigation history by mitigation name and device name.
@@ -142,6 +143,11 @@ public class GetMitigationHistoryActivity extends Activity {
                         request.getExclusiveLastEvaluatedKey());
 
                 for (CurrentRequest currentRequest : page.getPage()) {
+                    // Do not include failed requests in the history
+                    if (currentRequest.getWorkflowStatus().equals(WorkflowStatus.FAILED)) {
+                        continue;
+                    }
+
                     listOfMitigationDescriptions.add(
                             currentRequest.asMitigationRequestDescriptionWithLocationAndStatus());
                 }
