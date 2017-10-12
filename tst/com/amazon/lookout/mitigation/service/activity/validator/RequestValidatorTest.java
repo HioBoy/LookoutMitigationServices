@@ -395,7 +395,6 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("No MitigationActionMetadata found"));
     }
     
     /**
