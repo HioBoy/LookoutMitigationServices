@@ -137,22 +137,28 @@ public class GetMitigationHistoryActivity extends Activity {
             String lastEvaluatedKey = null;
 
             if (switcherooDao.useNewMitigationService(device, location)) {
-                // Get the mitigation history
-                final RequestPage<CurrentRequest> page = requestsDao.getMitigationRequestsPage(
-                        device, location, mitigationName, maxNumberOfHistoryEntriesToFetch,
-                        request.getExclusiveLastEvaluatedKey());
+                lastEvaluatedKey = request.getExclusiveLastEvaluatedKey();
 
-                for (CurrentRequest currentRequest : page.getPage()) {
-                    // Do not include failed requests in the history
-                    if (currentRequest.getWorkflowStatus().equals(WorkflowStatus.FAILED)) {
-                        continue;
+                do {
+                    // Get the mitigation history
+                    final RequestPage<CurrentRequest> page = requestsDao.getMitigationRequestsPage(
+                            device, location, mitigationName, maxNumberOfHistoryEntriesToFetch,
+                            lastEvaluatedKey);
+
+                    for (CurrentRequest currentRequest : page.getPage()) {
+                        // Do not include failed requests in the history
+                        if (currentRequest.getWorkflowStatus().equals(WorkflowStatus.FAILED)) {
+                            continue;
+                        }
+
+                        listOfMitigationDescriptions.add(
+                                currentRequest.asMitigationRequestDescriptionWithLocationAndStatus());
                     }
 
-                    listOfMitigationDescriptions.add(
-                            currentRequest.asMitigationRequestDescriptionWithLocationAndStatus());
-                }
+                    lastEvaluatedKey = page.getLastEvaluatedKey();
+                } while (listOfMitigationDescriptions.size() < maxNumberOfHistoryEntriesToFetch
+                        && lastEvaluatedKey != null);
 
-                lastEvaluatedKey = page.getLastEvaluatedKey();
             } else {
                 // Step 2. Fetch list of mitigation history
                 List<MitigationRequestDescriptionWithLocations> mitigationDescriptionsWithLocations = requestInfoHandler.
