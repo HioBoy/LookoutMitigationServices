@@ -46,7 +46,7 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
     
     @Mock
     protected AmazonS3 s3Client;
-    
+
     private EdgeBlackWatchMitigationTemplateValidator validator;
     
     private static final AlarmCheck ALARM_CHECK = new AlarmCheck(); 
@@ -68,8 +68,8 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
         validator = new EdgeBlackWatchMitigationTemplateValidator(s3Client, edgeLocationsHelper,
-                new BlackWatchEdgeLocationValidator(edgeLocationsHelper, "^[GE]-([A-Z0-9]+)$", new HashSet<String>(Arrays.asList("LOADTEST-118", "LOADTEST-119")), "testWhitelistedPrefix"));
-        
+                new BlackWatchEdgeLocationValidator(edgeLocationsHelper, "^[GE]-([A-Z0-9]+)(-C[0-9]+)?$", new HashSet<String>(Arrays.asList("LOADTEST-118", "LOADTEST-119")), "testWhitelistedPrefix"));
+
         doReturn(new HashSet<String>(Arrays.asList("AMS1", "AMS50", "NRT54", "G-IAD55"))).when(edgeLocationsHelper).getAllClassicPOPs();
     }
 

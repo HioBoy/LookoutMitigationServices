@@ -17,10 +17,10 @@ import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper
  */
 public class BlackWatchEdgeLocationValidator implements LocationValidator {
     private final EdgeLocationsHelper edgeLocationsHelper;
-    private static final Pattern PROD_LOCATION_PATTERN = Pattern.compile("E-([A-Z0-9]+)");
     private final Pattern edgeLocationPattern;
     private final Set<String> preDefinedLocations;
     private final String whitelistedLocationPrefix;
+    private static final String prodLocationPrefix = "E-";
     
     @ConstructorProperties({"edgeLocationsHelper", "edgeLocationPattern", "preDefinedLocations", "allowedLocationPrefix"}) 
     public BlackWatchEdgeLocationValidator(EdgeLocationsHelper edgeLocationsHelper, String edgeLocationPattern, Set<String> preDefinedLocations, String allowedLocationPrefix) {
@@ -41,14 +41,13 @@ public class BlackWatchEdgeLocationValidator implements LocationValidator {
         if (!whitelistedLocationPrefix.isEmpty() && location.startsWith(whitelistedLocationPrefix)) {
         	return true;
         }
-        
+
         Validate.isTrue(edgeLocationPattern.matcher(location).find(), "invalid location " + location
                 + ". edge location must exactly match pattern " + edgeLocationPattern.pattern());
  
         // translate prod location style from E-MRS50 to MRS50, so it can be same style as the locations fetched from edge location helper
-        Matcher prodLocationMatcher = PROD_LOCATION_PATTERN.matcher(location);
-        if (prodLocationMatcher.find()) {
-            location = prodLocationMatcher.group(1);
+        if (location.startsWith(prodLocationPrefix)) {
+            location = location.substring(prodLocationPrefix.length());
         }
 
         return edgeLocationsHelper.getAllClassicPOPs().contains(location);
