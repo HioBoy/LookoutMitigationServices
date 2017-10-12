@@ -43,6 +43,7 @@ import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
 import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
 import com.amazon.lookout.mitigation.datastore.RequestsDAO;
 import com.amazon.lookout.mitigation.datastore.RequestsDAOImpl;
+import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 
 /**
  * Get mitigation history by mitigation name and device name.
@@ -136,17 +137,28 @@ public class GetMitigationHistoryActivity extends Activity {
             String lastEvaluatedKey = null;
 
             if (switcherooDao.useNewMitigationService(device, location)) {
-                // Get the mitigation history
-                final RequestPage<CurrentRequest> page = requestsDao.getMitigationRequestsPage(
-                        device, location, mitigationName, maxNumberOfHistoryEntriesToFetch,
-                        request.getExclusiveLastEvaluatedKey());
+                lastEvaluatedKey = request.getExclusiveLastEvaluatedKey();
 
-                for (CurrentRequest currentRequest : page.getPage()) {
-                    listOfMitigationDescriptions.add(
-                            currentRequest.asMitigationRequestDescriptionWithLocationAndStatus());
-                }
+                do {
+                    // Get the mitigation history
+                    final RequestPage<CurrentRequest> page = requestsDao.getMitigationRequestsPage(
+                            device, location, mitigationName, maxNumberOfHistoryEntriesToFetch,
+                            lastEvaluatedKey);
 
-                lastEvaluatedKey = page.getLastEvaluatedKey();
+                    for (CurrentRequest currentRequest : page.getPage()) {
+                        // Do not include failed requests in the history
+                        if (currentRequest.getWorkflowStatus().equals(WorkflowStatus.FAILED)) {
+                            continue;
+                        }
+
+                        listOfMitigationDescriptions.add(
+                                currentRequest.asMitigationRequestDescriptionWithLocationAndStatus());
+                    }
+
+                    lastEvaluatedKey = page.getLastEvaluatedKey();
+                } while (listOfMitigationDescriptions.size() < maxNumberOfHistoryEntriesToFetch
+                        && lastEvaluatedKey != null);
+
             } else {
                 // Step 2. Fetch list of mitigation history
                 List<MitigationRequestDescriptionWithLocations> mitigationDescriptionsWithLocations = requestInfoHandler.

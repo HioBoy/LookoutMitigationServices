@@ -166,9 +166,16 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
             response.setListOfLocationDeploymentInfo(listOfLocationDeploymentInfo);
             response.setRequestId(requestId);
             if (!listOfLocationDeploymentInfo.isEmpty()) {
-                String deployDateUTC = listOfLocationDeploymentInfo.get(listOfLocationDeploymentInfo.size() - 1).getDeployDate();
-                response.setExclusiveLastEvaluatedTimestamp(
-                        MitigationInstancesModel.CREATE_DATE_FORMATTER.parseMillis(deployDateUTC));
+                try {
+                    String deployDateUTC = listOfLocationDeploymentInfo.get(listOfLocationDeploymentInfo.size() - 1).getDeployDate();
+                    response.setExclusiveLastEvaluatedTimestamp(
+                            MitigationInstancesModel.CREATE_DATE_FORMATTER.parseMillis(deployDateUTC));
+                } catch (final IllegalArgumentException ex) {
+                    // This fails for new service requests, because dates are stored in ISO format
+                    // which causes this parser to throw exceptions.  Ignore it, since we are replacing
+                    // this paging key anyway.
+                    LOG.warn("Ignoring", ex);
+                }
             }
             response.setExclusiveLastEvaluatedKey(lastEvaluatedKey);
             

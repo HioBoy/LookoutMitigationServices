@@ -196,32 +196,19 @@ public class RequestValidator {
      * @return void. Doesn't return any values. Will throw back an IllegalArgumentException if any of the input parameters aren't considered valid.
      */
     public void validateDeactivateBlackWatchMitigationRequest(@NonNull DeactivateBlackWatchMitigationRequest request) {
-        validateUserName(request.getMitigationActionMetadata().getUser());
-        validateToolName(request.getMitigationActionMetadata().getToolName());
+        validateMetadata(request.getMitigationActionMetadata());
         validateMitigationId(request.getMitigationId());
     }
-    
+
     public void validateChangeBlackWatchMitigationOwnerARNRequest(@NonNull ChangeBlackWatchMitigationOwnerARNRequest request) {
-        validateUserName(request.getMitigationActionMetadata().getUser());
-        validateToolName(request.getMitigationActionMetadata().getToolName());
-        validateMitigationDescription(request.getMitigationActionMetadata().getDescription());
+        validateMetadata(request.getMitigationActionMetadata());
         validateMitigationId(request.getMitigationId());
         validateUserARN(request.getNewOwnerARN());
         validateUserARN(request.getExpectedOwnerARN());
     }
     
     public void validateListBlackWatchMitigationsRequest(@NonNull ListBlackWatchMitigationsRequest request) {
-        MitigationActionMetadata actionMetadata = request.getMitigationActionMetadata();
-        if (actionMetadata == null) {
-            String msg = "No MitigationActionMetadata found! Passing the MitigationActionMetadata is mandatory for list blackwatch mitigation.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        validateUserName(actionMetadata.getUser());
-        validateToolName(actionMetadata.getToolName());
-        validateMitigationDescription(actionMetadata.getDescription());        
-        
+        validateMetadata(request.getMitigationActionMetadata());
         String mitigationId = request.getMitigationId();
         String resourceId = request.getResourceId();
         String resourceType = request.getResourceType();
@@ -448,28 +435,11 @@ public class RequestValidator {
      * @param mitigationName Name of the mitigation passed in the request by the client.
      * @param mitigationTemplate Template corresponding to the mitigation in the request by the client.
      * @param serviceName Service corresponding to the mitigation in the request by the client.
-     * @param actionMetadata Instance of MitigationActionMetadata specifying some of the metadata related to this action.
      */
     private void validateCommonModificationRequestParameters(@NonNull MitigationModificationRequest request) {
         validateMitigationName(request.getMitigationName());
-        
         validateMitigationTemplate(request.getMitigationTemplate());
-        
-        MitigationActionMetadata actionMetadata = request.getMitigationActionMetadata();
-        if (actionMetadata == null) {
-            String msg = "No MitigationActionMetadata found! Passing the MitigationActionMetadata is mandatory for performing any actions using the MitigationService.";
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        validateUserName(actionMetadata.getUser());
-        validateToolName(actionMetadata.getToolName());
-        validateMitigationDescription(actionMetadata.getDescription());
-        
-        if (actionMetadata.getRelatedTickets() != null) {
-            validateRelatedTickets(actionMetadata.getRelatedTickets());
-        }
-        
+        validateMetadata(request.getMitigationActionMetadata());
         String template = request.getMitigationTemplate();
         DeviceName device = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(template);
         validateDeviceAndService(device.name(), request.getServiceName());
@@ -633,6 +603,20 @@ public class RequestValidator {
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
             }
+        }
+    }
+
+    private static void validateMetadata(final MitigationActionMetadata metadata) {
+        if (metadata == null) {
+            throw new IllegalArgumentException("MitigationActionMetadata is required");
+        }
+
+        validateUserName(metadata.getUser());
+        validateToolName(metadata.getToolName());
+        validateMitigationDescription(metadata.getDescription());
+
+        if (metadata.getRelatedTickets() != null) {
+            validateRelatedTickets(metadata.getRelatedTickets());
         }
     }
     
@@ -840,11 +824,7 @@ public class RequestValidator {
             @NonNull UpdateBlackWatchMitigationRequest request,
             @NonNull BlackWatchTargetConfig existingTargetConfig,
             @NonNull String userARN) {
-        validateUserName(request.getMitigationActionMetadata().getUser());
-        validateToolName(request.getMitigationActionMetadata().getToolName());
-        if (request.getMitigationActionMetadata().getRelatedTickets() != null) {
-            validateRelatedTickets(request.getMitigationActionMetadata().getRelatedTickets());
-        }
+        validateMetadata(request.getMitigationActionMetadata());
         validateMitigationId(request.getMitigationId());
         validateMinutesToLive(request.getMinutesToLive());
 
@@ -867,11 +847,7 @@ public class RequestValidator {
 
     public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(
             @NonNull ApplyBlackWatchMitigationRequest request, String userARN) {
-        validateUserName(request.getMitigationActionMetadata().getUser());
-        validateToolName(request.getMitigationActionMetadata().getToolName());
-        if (request.getMitigationActionMetadata().getRelatedTickets() != null) {
-            validateRelatedTickets(request.getMitigationActionMetadata().getRelatedTickets());
-        }
+        validateMetadata(request.getMitigationActionMetadata());
         validateResourceId(request.getResourceId());
         validateResourceType(request.getResourceType());
         validateMinutesToLive(request.getMinutesToLive());

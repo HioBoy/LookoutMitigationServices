@@ -19,6 +19,7 @@ import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazon.blackwatch.host.status.model.HostStatus;
 import com.amazon.blackwatch.host.status.model.HostType;
+import com.amazon.blackwatch.host.status.model.HostStatusEnum;
 import com.amazon.blackwatch.host.status.storage.HostStatusDynamoDBHelper;
 import com.amazon.coral.metrics.Metrics;
 import com.amazon.coral.metrics.MetricsFactory;
@@ -75,14 +76,42 @@ public class DDBBasedHostStatusInfoHandlerTest {
             
             List<HostStatus> listOfHostStatus = new ArrayList<HostStatus>();
             for(int i=0; i<recordCount; i++) {
-                hostStatus = new HostStatus(location1, host1 + i, deviceName, hardwareType, heartBeatCount, heartBeatTimestamp,
-                        configId1, configId1, ACCEPT.name(), new Random().nextBoolean(), HOST_TYPE, null, STATUS_DESCRIPTION);
+                hostStatus = HostStatus.builder()
+                    .location(location1)
+                    .hostname(host1 + i)
+                    .deviceName(deviceName)
+                    .hardwareType(hardwareType)
+                    .latestHeartBeatCount(heartBeatCount)
+                    .latestHeartBeatTimestamp(heartBeatTimestamp)
+                    .runningConfig(configId1)
+                    .agentReceivedConfig(configId1)
+                    .applyNewConfigStatus(ACCEPT.name())
+                    .isActive(new Random().nextBoolean())
+                    .currentStatus(HostStatusEnum.ACTIVE)
+                    .hostType(HOST_TYPE)
+                    .statusDescription(STATUS_DESCRIPTION)
+                    .build();
+
                 hostStatus.setStatusDetailsWithJSON(STATUS_DETAILS);
                 listOfHostStatus.add(hostStatus);
             }
             //add a record with different location name
-            hostStatus = new HostStatus(location2, host1, deviceName, hardwareType,  heartBeatCount, heartBeatTimestamp,
-                    configId1, configId1, ACCEPT.name(), new Random().nextBoolean(), HOST_TYPE, null, STATUS_DESCRIPTION);
+            hostStatus = HostStatus.builder()
+                .location(location2)
+                .hostname(host1)
+                .deviceName(deviceName)
+                .hardwareType(hardwareType)
+                .latestHeartBeatCount(heartBeatCount)
+                .latestHeartBeatTimestamp(heartBeatTimestamp)
+                .runningConfig(configId1)
+                .agentReceivedConfig(configId1)
+                .applyNewConfigStatus(ACCEPT.name())
+                .isActive(new Random().nextBoolean())
+                .currentStatus(HostStatusEnum.ACTIVE)
+                .hostType(HOST_TYPE)
+                .statusDescription(STATUS_DESCRIPTION)
+                .build();
+
             hostStatus.setStatusDetailsWithJSON(STATUS_DETAILS);
             listOfHostStatus.add(hostStatus);
 
@@ -120,8 +149,22 @@ public class DDBBasedHostStatusInfoHandlerTest {
             
             List<HostStatus> listOfHostStatus = new ArrayList<HostStatus>();
             for(int i=0; i<recordCount; i++) {
-                hostStatus = new HostStatus(location1, host1 + i, deviceName, hardwareType, heartBeatCount, heartBeatTimestamp,
-                        configId1, configId1, ACCEPT.name(), new Random().nextBoolean(), HOST_TYPE, null, STATUS_DESCRIPTION);
+                hostStatus = HostStatus.builder()
+                    .location(location1)
+                    .hostname(host1 + i)
+                    .deviceName(deviceName)
+                    .hardwareType(hardwareType)
+                    .latestHeartBeatCount(heartBeatCount)
+                    .latestHeartBeatTimestamp(heartBeatTimestamp)
+                    .runningConfig(configId1)
+                    .agentReceivedConfig(configId1)
+                    .applyNewConfigStatus(ACCEPT.name())
+                    .isActive(new Random().nextBoolean())
+                    .currentStatus(HostStatusEnum.ACTIVE)
+                    .hostType(HOST_TYPE)
+                    .statusDescription(STATUS_DESCRIPTION)
+                    .build();
+
                 hostStatus.setStatusDetailsWithJSON(STATUS_DETAILS);
                 listOfHostStatus.add(hostStatus);
             }
