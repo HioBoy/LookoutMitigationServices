@@ -126,8 +126,8 @@
     </bean>
 
     <bean id="AuthRuntimeFactory" class="aws.auth.client.impl.AuthRuntimeClientFactory">
-        <property name="authenticateResultCache" ref="AuthNCache"/>
-        <property name="policyCache" ref="PolicyCache"/>
+        <property name="authenticateResultCache" ref="CastedAuthNCache"/>
+        <property name="policyCache" ref="CastedPolicyCache"/>
 
         <property name="configuration" ref="ArcConfig"/>
     </bean>
@@ -147,6 +147,14 @@
         <property name="localCacheMaximumTtlSeconds" value="#{T(aws.auth.client.config.CacheConfig).DEFAULT_EVICTION_TTL_SECONDS}" />
         <!-- Remote Cache, using LDAP discovery -->
         <property name="discoveryHostclass" value=":11012" />
+    </bean>
+
+    <bean id="CastedAuthNCache" class="amazon.cache.Cache">
+        <constructor-arg ref="AuthNCache" />
+    </bean>
+
+    <bean id="CastedPolicyCache" class="amazon.cache.Cache">
+        <constructor-arg ref="PolicyCache" />
     </bean>
 
     <bean id="AuthNCache" class="amazon.cache.plugin.cachemere.CachemereJakalPlugin">
