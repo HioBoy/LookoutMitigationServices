@@ -263,6 +263,7 @@
     <bean id="IPAddressTypeValidator" class="com.amazon.blackwatch.mitigation.resource.validator.IPAddressResourceTypeValidator" />
     <bean id="IPAddressListTypeValidator" class="com.amazon.blackwatch.mitigation.resource.validator.IPAddressListResourceTypeValidator" />
     <bean id="ELBTypeValidator" class="com.amazon.blackwatch.mitigation.resource.validator.ELBResourceTypeValidator" />
+    <bean id="EIPTypeValidator" class="com.amazon.blackwatch.mitigation.resource.validator.EIPResourceTypeValidator" />
     
     <!-- Convert public region name to the short name via RIPHelper.getRegion("${realm}"); -->
     <bean id="ripRegion" class="com.aws.rip.RIPHelper" factory-method="getRegion">

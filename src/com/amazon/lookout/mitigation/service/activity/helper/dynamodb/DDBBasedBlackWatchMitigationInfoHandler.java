@@ -397,6 +397,11 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             LOG.debug("mitigation state after update: " + mitigationState.toString());
             saveMitigationState(mitigationState, newMitigationCreated, subMetrics);
             if (newMitigationCreated) {
+                // Since Recorded Resources recognize only IPAddress as Resource Type,
+                // we will have to set it for ElasticIP Resource Type
+                if(resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
+                    resourceTypeString = BlackWatchMitigationResourceType.IPAddress.name();
+                }
                 boolean allocationProposalSuccess = resourceAllocationHelper.proposeNewMitigationResourceAllocation(
                         mitigationId, canonicalResourceId, resourceTypeString);
                 if (!allocationProposalSuccess) {

@@ -34,6 +34,26 @@
 
         {% endif %}
 
+        {% if location['ec2_internal_api_client_qualifier'] %}
+
+            <coral:client id="eipInternalAPIClientBean.{{ realm_domain }}"
+                service-client-class="com.amazonaws.askec2.AskEC2ServiceClient"
+                qualifier="{{ location['ec2_internal_api_client_qualifier'] }}"/>
+
+            <bean id="eipResourceHelper.{{ realm_domain }}"
+                    class="com.amazon.blackwatch.mitigation.resource.helper.EIPResourceHelper">
+                <constructor-arg name="awsCredentialsProvider" ref="askEC2InternalServiceCredentialsProvider.${realm}.${domain}"/>
+                <constructor-arg name="askEC2ServiceClient" ref="eipInternalAPIClientBean.{{ realm_domain }}"/>
+                <constructor-arg name="metricsFactory" ref="metricsFactory" />
+            </bean>
+
+            <bean id="eipResourceTypeHelper.{{ realm_domain }}"
+                    class="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchEIPResourceTypeHelper">
+                <constructor-arg name="eipResourceHelper" ref="eipResourceHelper.{{ realm_domain }}" />
+            </bean>
+
+        {% endif %}
+
         <util:map id="resourceTypeHelpers.{{ realm_domain }}"
             key-type="com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType" 
             value-type="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceTypeHelper">
@@ -41,6 +61,9 @@
             <entry key="IPAddressList" value-ref="ipaddressListResourceTypeHelper"/>
             {% if location['elb_internal_api_client_qualifier'] %}
                 <entry key="ELB" value-ref="elbResourceTypeHelper.{{ realm_domain }}"/>
+            {% endif %}
+            {% if location['ec2_internal_api_client_qualifier'] %}
+                <entry key="ElasticIP" value-ref="eipResourceTypeHelper.{{ realm_domain }}"/>
             {% endif %}
         </util:map>
 
@@ -52,6 +75,10 @@
             {% if location['elb_internal_api_client_qualifier'] %}
                 <entry key="ELB" value-ref="ELBTypeValidator"/>
             {% endif %}
+            {% if location['ec2_internal_api_client_qualifier'] %}
+                <entry key="ElasticIP" value-ref="EIPTypeValidator"/>
+            {% endif %}
+
         </util:map>
     {% endfor %}
 {% endfor %}
