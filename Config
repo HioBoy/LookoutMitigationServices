@@ -46,8 +46,8 @@ package.LookoutMitigationService = {
 
             CoralAwsAuthentication = 1.2; # To support authenticating/authorizing calls to LookoutMitigationService.
             OdinAWSCredentials = 1.4;
-            Cachemere = 1.1;
-            CachemereJakalPlugin = 1.1;
+            Cachemere = 1.2;
+            CachemereJakalPlugin = 1.4;
             
             LookoutIpMath = 1.0;
             AWS158Commons = 1.1;
