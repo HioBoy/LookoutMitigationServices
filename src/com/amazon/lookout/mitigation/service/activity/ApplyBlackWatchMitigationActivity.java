@@ -24,6 +24,7 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
+import com.amazon.lookout.mitigation.service.MitigationNotOwnedByRequestor400;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -57,7 +58,7 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
     @Operation("ApplyBlackWatchMitigation")
     @Documentation("ApplyBlackWatchMitigation")
     public @NonNull ApplyBlackWatchMitigationResponse enact(@NonNull ApplyBlackWatchMitigationRequest request) {
-        
+
         TSDMetrics tsdMetrics = new TSDMetrics(getMetrics(), "ApplyBlackWatchMitigation.enact");
 
         String requestId = getRequestId().toString();
@@ -68,21 +69,29 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
             String userARN = getIdentity().getAttribute(Identity.AWS_USER_ARN);
             LOG.info(String.format("ApplyBlackWatchMitigationActivity called with RequestId: %s and request: %s "
                     + "and userARN:%s.", requestId, ReflectionToStringBuilder.toString(request), userARN));
-            
+
             // Step 1. Validate your request.
-            BlackWatchTargetConfig targetConfig = requestValidator.validateApplyBlackWatchMitigationRequest(request, userARN);
-            
+            BlackWatchTargetConfig targetConfig = requestValidator.validateApplyBlackWatchMitigationRequest(request,
+                    userARN);
+
             String resourceId = request.getResourceId();
             String resourceType = request.getResourceType();
             Integer minsToLive = request.getMinutesToLive();
             MitigationActionMetadata metadata = request.getMitigationActionMetadata();
-            
+
             ApplyBlackWatchMitigationResponse response = blackwatchMitigationInfoHandler
                     .applyBlackWatchMitigation(resourceId, resourceType, minsToLive,
                             metadata, targetConfig, userARN, tsdMetrics);
             response.setRequestId(requestId);
             return response;
 
+        } catch (MitigationNotOwnedByRequestor400 ex) {
+            String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT,
+                    requestId, "ApplyBlackWatchMitigationActivity", ex.getMessage());
+            LOG.warn(msg + " for request: " + ReflectionToStringBuilder.toString(request), ex);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX
+                    + ApplyBlackWatchMitigationExceptions.BadRequest.name(), 1);
+            throw new MitigationNotOwnedByRequestor400(msg);
         } catch (IllegalArgumentException ex) {
             String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT,
                     requestId, "ApplyBlackWatchMitigationActivity", ex.getMessage());

@@ -17,6 +17,7 @@ import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
+import com.amazon.lookout.mitigation.service.MitigationNotOwnedByRequestor400;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
@@ -372,7 +373,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 if (!mitigationState.getOwnerARN().equals(userARN)) {
                     String message = String.format("Cannot apply update to mitigationId:%s as the calling owner:%s "
                             + "does not match the recorded owner:%s", mitigationId, userARN, mitigationState.getOwnerARN());
-                    throw new IllegalArgumentException(message);
+                    throw new MitigationNotOwnedByRequestor400(message);
                 }
             } else {
                 newMitigationCreated = true;
