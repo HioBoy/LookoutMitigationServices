@@ -139,14 +139,12 @@
         <property name="localCacheMegabytes" value="64" />
         <property name="localCacheMaximumTtlSeconds" value="#{T(aws.auth.client.config.CacheConfig).DEFAULT_EVICTION_TTL_SECONDS}" />
         <!-- Remote Cache, using LDAP discovery -->
-        <property name="discoveryHostclass" value=":11012" />
     </bean>
     <bean id="CachemereAuthNCacheBuilder" class="com.amazon.cachemere.CacheClientBuilder">
         <!-- Local Cache -->
         <property name="localCacheMegabytes" value="64" />
         <property name="localCacheMaximumTtlSeconds" value="#{T(aws.auth.client.config.CacheConfig).DEFAULT_EVICTION_TTL_SECONDS}" />
         <!-- Remote Cache, using LDAP discovery -->
-        <property name="discoveryHostclass" value=":11012" />
     </bean>
 
     <bean id="CastedAuthNCache" class="amazon.cache.Cache">
