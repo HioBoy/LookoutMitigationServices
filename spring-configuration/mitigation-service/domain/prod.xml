@@ -40,7 +40,7 @@
     </bean>
      
     <bean id="prod.edgeLocationPattern" class="java.lang.String">
-        <constructor-arg value="^[GE]-([A-Z0-9]+)$"/>
+        <constructor-arg value="^E-([A-Z0-9]+)(-C[0-9]+)?$"/>
     </bean>
 
     <bean id="prod.allowedLocationPrefix" class="java.lang.String">
