@@ -351,9 +351,16 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             
             MitigationState mitigationState;
             if (resourceState != null) {
-                Validate.isTrue(resourceState.getResourceType().equals(resourceTypeString), String.format(
-                        "Recorded resourceId:%s with type:%s does not match the specified type:%s", canonicalResourceId,
-                        resourceState.getResourceType(), resourceTypeString));
+                if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
+                    Validate.isTrue(resourceState.getResourceType().equals(BlackWatchMitigationResourceType.IPAddress.name()),
+                            String.format("Recorded resourceId:%s with type:%s does not match the specified type:%s",
+                                    canonicalResourceId, resourceState.getResourceType(),
+                                    BlackWatchMitigationResourceType.IPAddress.name()));
+                } else {
+                    Validate.isTrue(resourceState.getResourceType().equals(resourceTypeString),
+                            String.format("Recorded resourceId:%s with type:%s does not match the specified type:%s",
+                                    canonicalResourceId, resourceState.getResourceType(), resourceTypeString));
+                }
                 newMitigationCreated = false;
                 mitigationId = resourceState.getMitigationId();
                 mitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
@@ -399,7 +406,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             if (newMitigationCreated) {
                 // Since Recorded Resources recognize only IPAddress as Resource Type,
                 // we will have to set it for ElasticIP Resource Type
-                if(resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
+                if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
                     resourceTypeString = BlackWatchMitigationResourceType.IPAddress.name();
                 }
                 boolean allocationProposalSuccess = resourceAllocationHelper.proposeNewMitigationResourceAllocation(
