@@ -13,6 +13,21 @@
         <constructor-arg value="com.amazon.lookout.swf.mitigationservice.${realm}.${domain}"/>
     </bean>
 
+    <!-- Credentials we use to assume the AskEC2 roles below -->
+    <bean id="askEC2InternalServiceRolesUserCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg name="materialSetName" value="com.amazon.blackwatch.askec2.private_api_user.${realm}.${domain}"/>
+    </bean>
+    <!-- Roles to assume for askEC2 internal Services -->
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            <bean id="askEC2InternalServiceCredentialsProvider.{{ realm_domain }}" class="com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider">
+                <constructor-arg name="longLivedCredentialsProvider" ref="askEC2InternalServiceRolesUserCredentialsProvider"/>
+                <constructor-arg name="roleSessionName" value="askEC2InternalAPIRoleSession"/>
+                <constructor-arg name="roleArn" value="{{ location['ec2_internal_api_role'] }}"/>
+            </bean>
+        {% endfor %}
+    {% endfor %}
+
     <!-- BORDER location -->
     <bean id="marketplaceName" class="java.lang.String">
         <constructor-arg value="${realm}"/>
