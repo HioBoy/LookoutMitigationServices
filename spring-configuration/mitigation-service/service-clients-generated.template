@@ -42,7 +42,7 @@
 
             <bean id="eipResourceHelper.{{ realm_domain }}"
                     class="com.amazon.blackwatch.mitigation.resource.helper.EIPResourceHelper">
-                <constructor-arg name="awsCredentialsProvider" ref="askEC2InternalServiceCredentialsProvider.{{ realm_domain }}"/>
+                <constructor-arg name="awsCredentialsProvider" ref="askEC2InternalServiceCredentialsProvider.${realm}.${domain}"/>
                 <constructor-arg name="askEC2ServiceClient" ref="eipInternalAPIClientBean.{{ realm_domain }}"/>
                 <constructor-arg name="metricsFactory" ref="metricsFactory" />
             </bean>

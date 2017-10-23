@@ -13,11 +13,6 @@
         <constructor-arg value="com.amazon.lookout.swf.mitigationservice.${realm}.${domain}"/>
     </bean>
 
-    <!-- Credentials we use to assume the AskEC2 roles below -->
-    <bean id="askEC2InternalServiceRolesUserCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg name="materialSetName" value="com.amazon.blackwatch.askec2.private_api_user.${realm}.${domain}"/>
-    </bean>
-
     <!-- BORDER location -->
     <bean id="marketplaceName" class="java.lang.String">
         <constructor-arg value="${realm}"/>
