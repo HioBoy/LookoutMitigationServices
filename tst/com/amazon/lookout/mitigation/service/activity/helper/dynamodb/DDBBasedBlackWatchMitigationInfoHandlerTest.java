@@ -680,7 +680,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         String mitigationId = response1.getMitigationId();
         assertNotNull(mitigationId);
         
-        thrown.expect(IllegalArgumentException.class);
+        thrown.expect(MitigationNotOwnedByRequestor400.class);
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(testIPAddressResourceId, 
                     testIPAddressResourceType, 30, testMetadata, parseJSON(testValidJSON), "ARN-1255", tsdMetrics);
     }
