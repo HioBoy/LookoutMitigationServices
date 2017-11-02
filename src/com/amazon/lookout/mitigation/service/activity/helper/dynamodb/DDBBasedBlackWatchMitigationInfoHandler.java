@@ -1,8 +1,11 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
+import com.amazon.bardock.arns.ArnValidationException;
+import com.amazon.bardock.arns.ResourceArn;
 import com.amazon.blackwatch.helper.BlackWatchHelper;
 import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceTypeHelper;
+import com.amazon.blackwatch.mitigation.resource.validator.IPAddressResourceTypeValidator;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
@@ -41,6 +44,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -308,11 +312,22 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
      * @param resourceMap Map of ResourceType to Set of resources.
      */
     private void validateResources(Map<BlackWatchMitigationResourceType, Set<String>> resourceMap) {
-        //For now, only validate IPAddresses.
+        //Validate IPAddresses.
         Set<String> ipAddresses = resourceMap.getOrDefault(BlackWatchMitigationResourceType.IPAddress, 
                 new HashSet<String>());
         Validate.inclusiveBetween(0, MAX_BW_IPADDRESSES, ipAddresses.size());
         ipAddresses.forEach(f -> dogfishHelper.validateCIDRInRegion(f));
+
+        //Validate ARNs
+        Set<String> arnValues = resourceMap.getOrDefault(BlackWatchMitigationResourceType.ElasticIP, new HashSet<>());
+        arnValues.forEach(f -> {
+            try {
+                ResourceArn.validate(f);
+            } catch (ArnValidationException e) {
+                String msg = String.format("Resource %s is not a valid ARN", f);
+                LOG.error(msg, e);
+            }
+        });
     }
 
     @Override
@@ -324,6 +339,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         Validate.notNull(targetConfig);
         Validate.notNull(userARN);
         Validate.notNull(tsdMetrics);
+
         try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler"
                 + ".applyBlackWatchMitigation")) {
         
@@ -339,6 +355,17 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 throw new IllegalArgumentException(msg);
             }
 
+            // Supporting 'ARN, IP Address' format for resources
+            String ipAddress = null;
+            if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
+                String[] resourceData = resourceId.split(",");
+                if (resourceData.length != 2) {
+                    throw new IllegalArgumentException("Must be ARN,IP format for now");
+                }
+                resourceId = resourceData[0];
+                ipAddress = resourceData[1];
+            }
+
             String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
             String mitigationSettingsJSON = targetConfig.getJsonString();
             Map<BlackWatchMitigationResourceType, Set<String>> resourceMap = 
@@ -352,16 +379,9 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             
             MitigationState mitigationState;
             if (resourceState != null) {
-                if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
-                    Validate.isTrue(resourceState.getResourceType().equals(BlackWatchMitigationResourceType.IPAddress.name()),
-                            String.format("Recorded resourceId:%s with type:%s does not match the specified type:%s",
-                                    canonicalResourceId, resourceState.getResourceType(),
-                                    BlackWatchMitigationResourceType.IPAddress.name()));
-                } else {
-                    Validate.isTrue(resourceState.getResourceType().equals(resourceTypeString),
-                            String.format("Recorded resourceId:%s with type:%s does not match the specified type:%s",
-                                    canonicalResourceId, resourceState.getResourceType(), resourceTypeString));
-                }
+                Validate.isTrue(resourceState.getResourceType().equals(resourceTypeString),
+                        String.format("Recorded resourceId:%s with type:%s does not match the specified type:%s",
+                                canonicalResourceId, resourceState.getResourceType(), resourceTypeString));
                 newMitigationCreated = false;
                 mitigationId = resourceState.getMitigationId();
                 mitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
@@ -405,11 +425,6 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             LOG.debug("mitigation state after update: " + mitigationState.toString());
             saveMitigationState(mitigationState, newMitigationCreated, subMetrics);
             if (newMitigationCreated) {
-                // Since Recorded Resources recognize only IPAddress as Resource Type,
-                // we will have to set it for ElasticIP Resource Type
-                if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
-                    resourceTypeString = BlackWatchMitigationResourceType.IPAddress.name();
-                }
                 boolean allocationProposalSuccess = resourceAllocationHelper.proposeNewMitigationResourceAllocation(
                         mitigationId, canonicalResourceId, resourceTypeString);
                 if (!allocationProposalSuccess) {
@@ -418,9 +433,15 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     mitigationStateDynamoDBHelper.deleteMitigationState(mitigationState);
                     throw new IllegalArgumentException(msg);
                 }
-                
+                if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
+                    Validate.notNull(ipAddress);
+                    Map<String, Set<String>> addMap = ImmutableMap.of(BlackWatchMitigationResourceType.IPAddress.name(),
+                            Collections.singleton(IPAddressResourceTypeValidator.convertIPToCanonicalStringRepresentation
+                                    (ipAddress)));
+                    LOG.info("Allocating Resource:" + addMap.toString() + " to mitigationId:" + mitigationId);
+                    resourceAllocationHelper.proposeAdditionalResourcesForMitigation(mitigationId, addMap);
+                }
             }
-    
             ApplyBlackWatchMitigationResponse response = new ApplyBlackWatchMitigationResponse();
             response.setNewMitigationCreated(newMitigationCreated);
             response.setMitigationId(mitigationId);
