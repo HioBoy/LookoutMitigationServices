@@ -87,9 +87,9 @@ public class RequestValidator {
     private static final int DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS = 100;
     
     private static final int DEFAULT_MAX_LENGTH_MITIGATION_ID = 100;
-    private static final int DEFAULT_MAX_LENGTH_RESOURCE_ID = 50;
+    private static final int DEFAULT_MAX_LENGTH_RESOURCE_ID = 256;
     private static final int DEFAULT_MAX_LENGTH_RESOURCE_TYPE = 20;
-    private static final int DEFAULT_MAX_LENGTH_OWNER_ARN = 100;
+    private static final int DEFAULT_MAX_LENGTH_OWNER_ARN = 256;
     //Thirty days max
     private static final int MAX_MINUTES_TO_LIVE_DAYS = 30;
     private static final int MAX_MINUTES_TO_LIVE = MAX_MINUTES_TO_LIVE_DAYS*24*60;
