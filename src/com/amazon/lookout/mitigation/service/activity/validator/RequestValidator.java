@@ -4,7 +4,6 @@ import java.beans.ConstructorProperties;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -12,10 +11,12 @@ import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.amazon.blackwatch.host.status.model.HostStatusEnum;
+import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import lombok.NonNull;
 
 import org.apache.commons.lang3.StringUtils;
@@ -51,7 +52,6 @@ import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
-import com.amazon.lookout.mitigation.service.activity.helper.LocationConfigFileHelper;
 import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity;
@@ -66,7 +66,6 @@ import com.amazon.lookout.model.RequestType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 /**
  * RequestValidator is a basic validator for requests to ensure the requests are well-formed and contain all the required inputs.
@@ -113,7 +112,14 @@ public class RequestValidator {
     private static final String DEFAULT_SHAPER_NAME = "default";
     
     private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
-    
+
+    private static final ImmutableSet<HostStatusEnum> requestStatusValues = ImmutableSet.of(
+            HostStatusEnum.ACTIVE, HostStatusEnum.STANDBY, HostStatusEnum.DISABLED);
+
+    private static final ImmutableSet<String> requestedStatusStrings = requestStatusValues.stream()
+            .map(v -> v.name())
+            .collect(ImmutableSet.toImmutableSet());
+
     private final Set<String> deviceNames;
     private final EdgeLocationsHelper edgeLocationsHelper;
     private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
@@ -371,6 +377,18 @@ public class RequestValidator {
     }
 
     /**
+     * Validates if the request object passed to RequestHostStatusChange API is valid
+     * @param request An instance of RequestHostStatusChangeRequest representing the input to the RequestHostStatusChange API
+     * @return HostStatusEnum enum value matching requestedHostStatus
+     */
+    public HostStatusEnum validateRequestHostStatusChangeRequest(RequestHostStatusChangeRequest request) {
+        validateLocation(request.getLocation());
+        validateHostName(request.getHostName());
+        validateChangeReason(request.getReason());
+        return validateRequestedStatus(request.getRequestedStatus());
+    }
+
+    /**
      * Validates if the request object passed to the ListBlackWatchLocationState API is valid
      * @param An instance of ListBlackWatchLocationStateRequest representing the input to the ListBlackWatchLocationState API
      * @throws IllegalArgumentException
@@ -461,6 +479,30 @@ public class RequestValidator {
             throw new IllegalArgumentException(msg);
         }
     }
+
+    private HostStatusEnum validateRequestedStatus(String requestedStatus) {
+        if (isInvalidFreeFormText(requestedStatus, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "Invalid requested status found! Valid requested status values: " + requestedStatusStrings;
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+
+        // This will throw an exception if the deviceName is not defined within the DeviceName enum.
+        try {
+            HostStatusEnum result = HostStatusEnum.valueOf(requestedStatus);
+            if (requestStatusValues.contains(result)) {
+                return result;
+            } else {
+                throw new IllegalArgumentException();
+            }
+        } catch (Exception ex) {
+            String msg = "The requested status that was provided, " + requestedStatus +
+                    ", is not valid. Valid requested status values: " + requestedStatusStrings;
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+
     
     private void validateServiceName(String serviceName) {
         if (isInvalidFreeFormText(serviceName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
@@ -655,6 +697,14 @@ public class RequestValidator {
     private void validateLocation(String location) {
         if (isInvalidFreeFormText(location, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
             String msg = "Invalid location name found! A valid location name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+
+    private void validateHostName(String hostName) {
+        if (isInvalidFreeFormText(hostName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
+            String msg = "Invalid host name found! A valid host name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }

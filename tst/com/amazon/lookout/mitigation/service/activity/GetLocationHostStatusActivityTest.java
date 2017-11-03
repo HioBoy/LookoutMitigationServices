@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.amazon.blackwatch.location.state.model.LocationState;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -26,7 +27,8 @@ public class GetLocationHostStatusActivityTest extends ActivityTestHelper {
     @Before
     public void setup() {
     	getLocationHostStatusActivity = 
-                spy(new GetLocationHostStatusActivity(requestValidator, hostStatusInfoHandler));
+                spy(new GetLocationHostStatusActivity(requestValidator, hostStatusInfoHandler,
+                        locationStateInfoHandler));
         
         request = new GetLocationHostStatusRequest();
         request.setLocation(location);
@@ -39,7 +41,14 @@ public class GetLocationHostStatusActivityTest extends ActivityTestHelper {
     public void testLocationHostStatus() {
         Mockito.doNothing().when(requestValidator).validateGetLocationHostStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationHostStatusActivity).getRequestId();
-        
+
+        LocationState locationState = LocationState.builder()
+                .locationName(location)
+                .build();
+
+        Mockito.doReturn(locationState).when(locationStateInfoHandler)
+                .getLocationState(eq(location), isA(TSDMetrics.class));
+
         List<HostStatusInLocation> listOfHostStatusInLocations = new ArrayList<>();
         HostStatusInLocation hostStatusinLocation = new HostStatusInLocation();
         hostStatusinLocation.setHostName("host1");
@@ -51,7 +60,8 @@ public class GetLocationHostStatusActivityTest extends ActivityTestHelper {
         hostStatusinLocation.setIsActive(false);
         listOfHostStatusInLocations.add(hostStatusinLocation);
         
-        Mockito.doReturn(listOfHostStatusInLocations).when(hostStatusInfoHandler).getHostsStatus(eq(location), isA(TSDMetrics.class));
+        Mockito.doReturn(listOfHostStatusInLocations).when(hostStatusInfoHandler)
+                .getHostsStatus(eq(locationState), isA(TSDMetrics.class));
         
         GetLocationHostStatusResponse response = getLocationHostStatusActivity.enact(request);
 
@@ -65,8 +75,16 @@ public class GetLocationHostStatusActivityTest extends ActivityTestHelper {
      */
     @Test
     public void testEmptyLocationHostStatus() {
-       List<HostStatusInLocation> listOfHostStatusInLocations = new ArrayList<>();
-        Mockito.doReturn(listOfHostStatusInLocations).when(hostStatusInfoHandler).getHostsStatus(eq(location), isA(TSDMetrics.class));
+        LocationState locationState = LocationState.builder()
+                .locationName(location)
+                .build();
+        Mockito.doReturn(locationState).when(locationStateInfoHandler)
+                .getLocationState(eq(location), isA(TSDMetrics.class));
+
+        List<HostStatusInLocation> listOfHostStatusInLocations = new ArrayList<>();
+        Mockito.doReturn(listOfHostStatusInLocations).when(hostStatusInfoHandler)
+                .getHostsStatus(eq(locationState), isA(TSDMetrics.class));
+
         GetLocationHostStatusResponse response = getLocationHostStatusActivity.enact(request);
         assertTrue(response.getListOfHostStatusesInLocation().isEmpty());
     }

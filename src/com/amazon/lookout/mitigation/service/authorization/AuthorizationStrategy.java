@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import lombok.Data;
 
 import org.apache.commons.lang.Validate;
@@ -296,6 +297,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 GetLocationHostStatusRequest.class, 
                 (action, request) -> 
                 generateHostStatusRequestInfo(action, READ_OPERATION_PREFIX, request.getLocation()));
+
+        addRequestInfoParser(
+                RequestHostStatusChangeRequest.class,
+                (action, request) ->
+                generateHostStatusRequestInfo(action, WRITE_OPERATION_PREFIX, request.getLocation()));
 
         addRequestInfoParser(
                 ListBlackWatchMitigationsRequest.class, 

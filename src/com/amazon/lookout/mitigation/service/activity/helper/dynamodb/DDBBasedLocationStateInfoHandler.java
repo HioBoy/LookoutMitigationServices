@@ -4,6 +4,7 @@ import java.beans.ConstructorProperties;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.amazon.blackwatch.host.status.model.HostStatusEnum;
 import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
@@ -31,31 +32,51 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         this.locationStateDynamoDBHelper = locationStateDynamoDBHelper;
     }
 
+    @Override
+    public LocationState getLocationState(String location, TSDMetrics tsdMetrics) {
+        Validate.notEmpty(location);
+        Validate.notNull(tsdMetrics);
+
+        try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedLocationStateInfoHandler.getLocationState")) {
+            try {
+                return locationStateDynamoDBHelper.getLocationState(location);
+            } catch (Exception ex) {
+                String msg = String.format("Caught Exception when querying with LocationName - %s", location);
+                LOG.warn(msg, ex);
+                subMetrics.addOne(DDB_QUERY_FAILURE_COUNT);
+                throw ex;
+            }
+        }
+    }
+
+    public BlackWatchLocation convertLocationState(LocationState in) {
+        BlackWatchLocation out = new BlackWatchLocation();
+        out.setLocation(in.getLocationName());
+        out.setAdminIn(in.getAdminIn());
+        out.setInService(in.getInService());
+        out.setChangeUser(in.getChangeUser());
+        out.setChangeTime(in.getChangeTime());
+        out.setChangeReason(in.getChangeReason());
+        out.setActiveBGPSpeakerHosts(in.getActiveBGPSpeakerHosts());
+        out.setActiveBlackWatchHosts(in.getActiveBlackWatchHosts());
+        out.setLocationType(in.getLocationType());
+        return out;
+    }
+
     /**
      * Generate a List with BlackWatchLocation objects.
      * @param tsdMetrics A TSDMetrics object.
      */
     @Override
-    public List<BlackWatchLocation> getBlackWatchLocation(String region, TSDMetrics tsdMetrics) {
+    public List<BlackWatchLocation> getAllBlackWatchLocations(TSDMetrics tsdMetrics) {
         Validate.notNull(tsdMetrics);
 
-        try(TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedLocationStateInfoHandler.getBlackWatchLocation")) {
+        try(TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedLocationStateInfoHandler.getAllBlackWatchLocations")) {
             List<BlackWatchLocation> listOfBlackWatchLocation = new ArrayList<>();
-            BlackWatchLocation blackWatchLocations;
             try {
                 List<LocationState> locationsWithAdminIn = locationStateDynamoDBHelper.getAllLocationStates(totalSegments);
                 for (LocationState ls : locationsWithAdminIn) {
-                    blackWatchLocations = new BlackWatchLocation();
-                    blackWatchLocations.setLocation(ls.getLocationName());
-                    blackWatchLocations.setAdminIn(ls.getAdminIn());
-                    blackWatchLocations.setInService(ls.getInService());
-                    blackWatchLocations.setChangeUser(ls.getChangeUser());
-                    blackWatchLocations.setChangeTime(ls.getChangeTime());
-                    blackWatchLocations.setChangeReason(ls.getChangeReason());
-                    blackWatchLocations.setActiveBGPSpeakerHosts(ls.getActiveBGPSpeakerHosts());
-                    blackWatchLocations.setActiveBlackWatchHosts(ls.getActiveBlackWatchHosts());
-                    blackWatchLocations.setLocationType(ls.getLocationType());
-                    listOfBlackWatchLocation.add(blackWatchLocations);
+                   listOfBlackWatchLocation.add(convertLocationState(ls));
                 }
             } catch (Exception ex) {
                 String msg = String.format("Caught Exception when scaning for the Location State");
@@ -64,6 +85,24 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
                 throw ex;
             }
             return listOfBlackWatchLocation;
+        }
+    }
+
+    private void updateLocationState(LocationState locationState, TSDMetrics tsdMetrics) {
+        try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedLocationStateInfoHandler.updateLocationState")) {
+            locationStateDynamoDBHelper.updateLocationState(locationState);
+        } catch (ConditionalCheckFailedException conditionEx) {
+            String msg = String.format("Caught Condition Check Exception updating location: %s with state: %s",
+                    locationState.getLocationName(), locationState);
+            LOG.warn(msg, conditionEx);
+            tsdMetrics.addOne(DDB_QUERY_FAILURE_COUNT);
+            throw conditionEx;
+        } catch (Exception ex) {
+            String msg = String.format("Caught Exception updating location: %s with state: %s",
+                    locationState.getLocationName(), locationState);
+            LOG.warn(msg, ex);
+            tsdMetrics.addOne(DDB_QUERY_FAILURE_COUNT);
+            throw ex;
         }
     }
 
@@ -78,7 +117,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         Validate.notEmpty(reason);
 
         try(TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedLocationStateInfoHandler.updateBlackWatchLocationAdminIn")) {
-            /* saveExpression for conditionalUpdate, update AdminIn state only if locationName(hashkey) exists in the table */
+            LocationState ls = getLocationState(location, subMetrics);
 
             LocationType setType = null;
             if (locationType != null && locationType.trim().length() != 0) {
@@ -94,58 +133,49 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
             
             if (adminIn == true) {
                 if (setType == null) {
-                    try {
-                        LocationState ls = locationStateDynamoDBHelper.getLocationState(location);
-                        if (ls == null) {
-                            String msg = "Invalid request! - " + location + " is not found in " +  locationStateDynamoDBHelper.getLocationStateTableName() + " and "
-                                    + "LocationType is not specified.";
-                            LOG.info(msg);
-                            throw new IllegalStateException(msg);
-                        }
-                        else {
-                            if (ls.getLocationType().equalsIgnoreCase(LocationType.UNKNOWN.toString())) {
-                                String msg = "LocationType for " + location + " is UNKNOWN. So AdminIn cannot be updated to True if LocationType is UNKNOWN.";
-                                LOG.info(msg);
-                                throw new IllegalStateException(msg);
-                            }
-                        }
-                    } catch (Exception ex) {
-                        String msg = String.format("Caught Exception when querying with LocationName - %s", location);
-                        LOG.warn(msg, ex);
-                        subMetrics.addOne(DDB_QUERY_FAILURE_COUNT);
-                        throw ex;
+                    if (ls == null) {
+                        String msg = "Invalid request! - " + location + " is not found in " +  locationStateDynamoDBHelper.getLocationStateTableName() + " and "
+                                + "LocationType is not specified.";
+                        LOG.info(msg);
+                        throw new IllegalStateException(msg);
                     }
-                }
-                else if (setType == LocationType.UNKNOWN) {
+                    else if (ls.getLocationType().equalsIgnoreCase(LocationType.UNKNOWN.toString())) {
+                        String msg = "LocationType for " + location + " is UNKNOWN. So AdminIn cannot be updated to True if LocationType is UNKNOWN.";
+                        LOG.info(msg);
+                        throw new IllegalStateException(msg);
+                    }
+                } else if (setType == LocationType.UNKNOWN) {
                     String msg = "Invalid Location type found! LocationType cannot take UNKNOWN if AdminIn is set to True";
                     LOG.info(msg);
                     throw new IllegalArgumentException(msg);
                 }
             }
 
-            LocationState ls = LocationState.builder()
-                    .locationName(location)
-                    .adminIn(adminIn)
-                    .changeReason(reason)
-                    .changeTime(System.currentTimeMillis())
-                    .locationType(locationType)
-                    .build();
-
-            try {
-                locationStateDynamoDBHelper.updateLocationState(ls);
-            } catch (ConditionalCheckFailedException conditionEx) {
-                String msg = String.format("Caught Condition Check Exception when updating AdminIn state to %s in location: "
-                        + "%s with reason: %s and LocationType: %s", adminIn, location, reason, (locationType == null) ? "" : locationType);
-                LOG.warn(msg, conditionEx);
-                subMetrics.addOne(DDB_QUERY_FAILURE_COUNT);
-                throw conditionEx;
-            } catch (Exception ex) {
-                String msg = String.format("Caught Exception when updating AdminIn state to %s in location: %s with reason: %s "
-                        + "and LocationType: %s", adminIn, location, reason, (locationType == null) ? "" : locationType);
-                LOG.warn(msg, ex);
-                subMetrics.addOne(DDB_QUERY_FAILURE_COUNT);
-                throw ex;
+            if (ls == null) {
+                ls = LocationState.builder().locationName(location).build();
             }
+            ls.setAdminIn(adminIn);
+            ls.setChangeReason(reason);
+            ls.setChangeTime(System.currentTimeMillis());
+            if (setType != null) {
+                ls.setLocationType(locationType);
+            }
+
+            updateLocationState(ls, subMetrics);
+        }
+    }
+
+    public LocationState requestHostStatusChange(String location, String hostName, HostStatusEnum requestedStatus,
+                                                 String changeReason, String changeUser, String changeHost,
+                                                 List<String> relatedLinks, TSDMetrics tsdMetrics) {
+        try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedLocationStateInfoHandler.requestHostStatusChange")) {
+            LocationState locationState = getLocationState(location, tsdMetrics);
+
+            if (locationState.requestHostStatusChange(hostName, requestedStatus, changeReason, changeUser, changeHost, relatedLinks)) {
+                updateLocationState(locationState, subMetrics);
+            }
+
+            return locationState;
         }
     }
 }

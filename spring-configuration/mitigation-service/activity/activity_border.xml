@@ -112,8 +112,14 @@
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationHostStatusActivity">
-      <constructor-arg name="requestValidator" ref="requestValidator"/>
-       <constructor-arg name="hostStatusHandler" ref="ddbBasedHostStatusInfoHandler"/>
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="hostStatusHandler" ref="ddbBasedHostStatusInfoHandler"/>
+        <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
+    </bean>
+
+    <bean class="com.amazon.lookout.mitigation.service.activity.RequestHostStatusChangeActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.ListBlackWatchLocationsActivity">

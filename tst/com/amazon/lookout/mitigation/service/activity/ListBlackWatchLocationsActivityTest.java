@@ -56,7 +56,7 @@ public class ListBlackWatchLocationsActivityTest extends ActivityTestHelper {
         blackWatchLocations.setChangeReason("Yes we can!");
         listOfBlackWatchLocation.add(blackWatchLocations);
         
-        Mockito.doReturn(listOfBlackWatchLocation).when(locationStateInfoHandler).getBlackWatchLocation(eq("region"), isA(TSDMetrics.class));
+        Mockito.doReturn(listOfBlackWatchLocation).when(locationStateInfoHandler).getAllBlackWatchLocations(isA(TSDMetrics.class));
         
         ListBlackWatchLocationsResponse response = listBlackWatchLocationActivity.enact(request);
 
@@ -70,7 +70,7 @@ public class ListBlackWatchLocationsActivityTest extends ActivityTestHelper {
     @Test
     public void testEmptyLocationHostStatus() {
        List<BlackWatchLocation> listOfBlackWatchLocation = new ArrayList<>();
-        Mockito.doReturn(listOfBlackWatchLocation).when(locationStateInfoHandler).getBlackWatchLocation(eq("region"), isA(TSDMetrics.class));
+        Mockito.doReturn(listOfBlackWatchLocation).when(locationStateInfoHandler).getAllBlackWatchLocations(isA(TSDMetrics.class));
         ListBlackWatchLocationsResponse response = listBlackWatchLocationActivity.enact(request);
         assertTrue(response.getListOfLocationsAndAdminState ().isEmpty());
     }

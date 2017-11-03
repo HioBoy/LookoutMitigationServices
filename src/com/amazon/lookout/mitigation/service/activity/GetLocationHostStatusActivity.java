@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.amazon.blackwatch.location.state.model.LocationState;
+import com.amazon.lookout.mitigation.service.activity.helper.LocationStateInfoHandler;
 import lombok.NonNull;
 
 import org.apache.commons.lang3.Validate;
@@ -50,15 +52,20 @@ public class GetLocationHostStatusActivity extends Activity {
 
     private final RequestValidator requestValidator;
     private final HostStatusInfoHandler hostStatusHandler;
+    private final LocationStateInfoHandler locationStateInfoHandler;
 
-    @ConstructorProperties({"requestValidator", "hostStatusHandler"})
+    @ConstructorProperties({"requestValidator", "hostStatusHandler", "locationStateInfoHandler"})
     public GetLocationHostStatusActivity(@NonNull RequestValidator requestValidator,
-            @NonNull HostStatusInfoHandler hostStatusHandler) {
+            @NonNull HostStatusInfoHandler hostStatusHandler,
+            @NonNull LocationStateInfoHandler locationStateInfoHandler) {
         Validate.notNull(requestValidator);
         this.requestValidator = requestValidator;
 
         Validate.notNull(hostStatusHandler);
         this.hostStatusHandler = hostStatusHandler;
+
+        Validate.notNull(locationStateInfoHandler);
+        this.locationStateInfoHandler = locationStateInfoHandler;
     }
 
     @Validated
@@ -77,14 +84,23 @@ public class GetLocationHostStatusActivity extends Activity {
             // Step 1. Validate this request
             requestValidator.validateGetLocationHostStatusRequest(request);
 
-            String location = request.getLocation();
+            // Step 2. Fetch state for location
+            String location = request.getLocation().toLowerCase();
+            LocationState locationState;
+            try {
+                locationState = locationStateInfoHandler.getLocationState(location, tsdMetrics);
+            } catch (Exception ex) {
+                LOG.warn(String.format("Failed to get location state for host status in location: %s", location));
+                locationState = LocationState.builder().locationName(location).build();
+            }
 
             // Step 2. Fetch list of hosts statuses on this location
-            List<HostStatusInLocation> listOfHostStatusesInLocation = hostStatusHandler.getHostsStatus(location, tsdMetrics);
+            List<HostStatusInLocation> listOfHostStatusesInLocation = hostStatusHandler.getHostsStatus(locationState, tsdMetrics);
 
             // Step 3. Create the response object to return back to the client.
             GetLocationHostStatusResponse response = new GetLocationHostStatusResponse();
             response.setLocation(location);
+            response.setLocationState(locationStateInfoHandler.convertLocationState(locationState));
             response.setListOfHostStatusesInLocation(listOfHostStatusesInLocation);
             response.setRequestId(requestId);
 

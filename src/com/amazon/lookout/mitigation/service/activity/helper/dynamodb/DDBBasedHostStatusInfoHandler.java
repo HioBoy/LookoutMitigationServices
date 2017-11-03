@@ -2,7 +2,11 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import com.amazon.blackwatch.host.status.model.HostStatusEnum;
+import com.amazon.blackwatch.location.state.model.LocationHostStatus;
+import com.amazon.blackwatch.location.state.model.LocationState;
 import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
@@ -38,15 +42,21 @@ public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
         this.table = dynamoDB.getTable(this.hostStatusTableName);
     }
 
+    private static String hostStatusEnumToString(HostStatusEnum in) {
+        return in != null ? in.name() : null;
+    }
+
     /**
      * Generate a Map with HostName as Key and its IS_ACTIVE boolean status as value for a given location.
-     * @param location : location
+     * @param locationState : location state object
      * @param tsdMetrics A TSDMetrics object.
      */
     @Override
-    public List<HostStatusInLocation> getHostsStatus(String location, TSDMetrics tsdMetrics) {
-        Validate.notEmpty(location);
+    public List<HostStatusInLocation> getHostsStatus(LocationState locationState, TSDMetrics tsdMetrics) {
+        Validate.notNull(locationState);
         Validate.notNull(tsdMetrics);
+
+        String location = locationState.getLocationName();
 
         try(TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedHostStatusInfoHandler.getHostsStatus")) {
             QuerySpec querySpec = new QuerySpec().withHashKey(HostStatus.HOST_LOCATION_KEY, location);
@@ -56,12 +66,27 @@ public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
                 ItemCollection<QueryOutcome> items = table.query(querySpec);
                 for (Item item : items) {
                     HostStatusInLocation hostStatusinLocation = new HostStatusInLocation();
-                    hostStatusinLocation.setHostName(item.getString(HostStatus.HOST_NAME_KEY));
+                    String hostName = item.getString(HostStatus.HOST_NAME_KEY);
+                    hostStatusinLocation.setHostName(hostName);
                     hostStatusinLocation.setIsActive(item.getBOOL(HostStatus.IS_ACTIVE_KEY));
                     hostStatusinLocation.setLatestHeartbeatTimestamp(item.getLong(HostStatus.LATEST_HEART_BEAT_TIMESTAMP_KEY));
                     hostStatusinLocation.setHostType(item.getString(HostStatus.HOST_TYPE_KEY));
                     hostStatusinLocation.setDeviceName(item.getString(HostStatus.DEVICE_NAME_KEY));
                     hostStatusinLocation.setHardwareType(item.getString(HostStatus.HARDWARE_TYPE_KEY));
+                    LocationHostStatus locationHostStatus = locationState.getOrCreateHosts().get(hostName);
+                    if (locationHostStatus != null) {
+                        hostStatusinLocation.setCurrentStatus(hostStatusEnumToString(locationHostStatus.getCurrentStatus()));
+                        hostStatusinLocation.setCurrentStatusChangeTime(locationHostStatus.getCurrentStatusChangeTime());
+                        hostStatusinLocation.setNextStatus(hostStatusEnumToString(locationHostStatus.getNextStatus()));
+                        hostStatusinLocation.setNextStatusChangeTime(locationHostStatus.getNextStatusChangeTime());
+                        hostStatusinLocation.setRequestedStatus(hostStatusEnumToString(locationHostStatus.getRequestedStatus()));
+                        hostStatusinLocation.setRequestedStatusChangeTime(locationHostStatus.getRequestedStatusChangeTime());
+                        hostStatusinLocation.setRequestedStatusCompletionTime(locationHostStatus.getRequestedStatusCompletionTime());
+                        hostStatusinLocation.setChangeReason(locationHostStatus.getChangeReason());
+                        hostStatusinLocation.setChangeUser(locationHostStatus.getChangeUser());
+                        hostStatusinLocation.setChangeHost(locationHostStatus.getChangeHost());
+                        hostStatusinLocation.setRelatedLinks(locationHostStatus.getOrCreateRelatedLinks().stream().collect(Collectors.toList()));
+                    }
                     listOfHostStatusInLocations.add(hostStatusinLocation);
                 }
             } catch (Exception ex) {

@@ -74,13 +74,11 @@ public class ListBlackWatchLocationsActivity extends Activity {
             LOG.info(String.format("ListBlackWatchLocationsActivity called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
             
-            String region = request.getRegion();
-            
             // Step 1. Validate this request
             requestValidator.validateListBlackWatchLocationsRequest(request);
             
             // Step 2. Fetch list of BlackWatch locations and their AdminIn state
-            List<BlackWatchLocation> listOfLocationsAndAdminInState = locationStateInfoHandler.getBlackWatchLocation(region, tsdMetrics);
+            List<BlackWatchLocation> listOfLocationsAndAdminInState = locationStateInfoHandler.getAllBlackWatchLocations(tsdMetrics);
 
             // Step 3. Create the response object to return back to the client.
             ListBlackWatchLocationsResponse response = new ListBlackWatchLocationsResponse();
