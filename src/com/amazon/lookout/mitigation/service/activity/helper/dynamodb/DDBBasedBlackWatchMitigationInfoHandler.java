@@ -311,7 +311,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
      * Validate the resource Sets
      * @param resourceMap Map of ResourceType to Set of resources.
      */
-    private void validateResources(Map<BlackWatchMitigationResourceType, Set<String>> resourceMap) {
+    void validateResources(Map<BlackWatchMitigationResourceType, Set<String>> resourceMap) {
         //Validate IPAddresses.
         Set<String> ipAddresses = resourceMap.getOrDefault(BlackWatchMitigationResourceType.IPAddress, 
                 new HashSet<String>());
@@ -324,8 +324,9 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             try {
                 ResourceArn.validate(f);
             } catch (ArnValidationException e) {
-                String msg = String.format("Resource %s is not a valid ARN", f);
-                LOG.error(msg, e);
+                String msg = String.format("Resource %s is not a valid ARN, Exception: %s", f, e);
+                LOG.warn(msg);
+                throw new IllegalArgumentException(msg);
             }
         });
     }
@@ -360,7 +361,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
                 String[] resourceData = resourceId.split(",");
                 if (resourceData.length != 2) {
-                    throw new IllegalArgumentException("Must be ARN,IP format for now");
+                    throw new IllegalArgumentException("Resource ID must be 'ARN,EIP' format for now!");
                 }
                 resourceId = resourceData[0];
                 ipAddress = resourceData[1];

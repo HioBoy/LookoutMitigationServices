@@ -1006,6 +1006,20 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 "1234", testELBResourceType, 10, testMetadata,
                 parseJSON(testValidJSON), "ARN-1222", tsdMetrics);
     }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void ValidateResource_InvalidARN() {
+        Map<BlackWatchMitigationResourceType, Set<String>> resourceMap = new HashMap<>();
+        resourceMap.put(BlackWatchMitigationResourceType.ElasticIP, Collections.singleton("foo"));
+        blackWatchMitigationInfoHandler.validateResources(resourceMap);
+    }
+
+    @Test
+    public void ValidateResource_ValidARN() {
+        Map<BlackWatchMitigationResourceType, Set<String>> resourceMap = new HashMap<>();
+        resourceMap.put(BlackWatchMitigationResourceType.ElasticIP, Collections.singleton("arn:aws:ec2:us-east-1:123456789012:eip-allocation/eipalloc-abc12345"));
+        blackWatchMitigationInfoHandler.validateResources(resourceMap);
+    }
     
 }
 
