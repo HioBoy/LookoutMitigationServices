@@ -1,8 +1,8 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.bardock.arns.ArnValidationException;
-import com.amazon.bardock.arns.ResourceArn;
+import com.amazon.arn.ARN;
+import com.amazon.arn.ARNSyntaxException;
 import com.amazon.blackwatch.helper.BlackWatchHelper;
 import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceTypeHelper;
 import com.amazon.blackwatch.mitigation.resource.validator.IPAddressResourceTypeValidator;
@@ -322,8 +322,8 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         Set<String> arnValues = resourceMap.getOrDefault(BlackWatchMitigationResourceType.ElasticIP, new HashSet<>());
         arnValues.forEach(f -> {
             try {
-                ResourceArn.validate(f);
-            } catch (ArnValidationException e) {
+                ARN.fromString(f);
+            } catch (ARNSyntaxException e) {
                 String msg = String.format("Resource %s is not a valid ARN, Exception: %s", f, e);
                 LOG.warn(msg);
                 throw new IllegalArgumentException(msg);
