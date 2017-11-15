@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+
+    {% for realm_domain, location in locations['border_prod-cn'].items() %}
+    <bean id="authAccount.{{ realm_domain }}" class="java.lang.String">
+        <constructor-arg value="{{ location['account'] }}"/>
+    </bean>
+    {% endfor %}
+
+    <util:map id="prod-cn.regionEndpointsMap">
+        {% for location in locations['border_prod-cn'].values() %}
+        <entry key="{{ location['mitigation_region'] }}" value="{{ location['mitsvc_endpoint'].split('//')[1] }}"/>
+        {% endfor %}
+    </util:map>
+</beans>
+

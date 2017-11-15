@@ -86,12 +86,17 @@
     <!-- S3 Clients for all the regions -->
 {% for stack in locations.values() %}
     {% for realm_domain, location in stack.items() %}
-    <bean id="s3Client.{{ realm_domain }}" class="com.amazonaws.services.s3.AmazonS3Client">
-        <constructor-arg name="credentialsProvider" ref="ServiceCredentialsProvider.{{ realm_domain }}"/>
-    </bean>
+        {% set parts = realm_domain.split('.') %}
+        {% set region = parts[0] %}
+
+        <bean id="s3ClientBuilder.{{ realm_domain }}" class="com.amazonaws.services.s3.AmazonS3ClientBuilder">
+            <property name="region" value="{{ region }}"/>
+            <property name="credentials" ref="ServiceCredentialsProvider.{{ realm_domain }}"/>
+        </bean>
+        <bean id="s3Client.{{ realm_domain }}" factory-bean="s3ClientBuilder.{{ realm_domain }}" factory-method="build"/>
+
     {% endfor %}
 {% endfor %}
-
 
     <!-- Map from region to S3 Helpers for BlackWatchConfig -->
     <bean abstract="true" id="blackWatchConfigS3Helper.template" class="com.amazon.blackwatch.config.s3.BlackWatchConfigS3Helper">

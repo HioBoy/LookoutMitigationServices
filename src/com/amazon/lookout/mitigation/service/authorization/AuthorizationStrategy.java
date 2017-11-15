@@ -10,6 +10,7 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import lombok.Data;
+import lombok.Getter;
 
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang3.StringUtils;
@@ -41,6 +42,9 @@ import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateReques
 import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
+import com.aws.rip.RIPHelper;
+import com.aws.rip.models.exception.RegionIsInTestException;
+import com.aws.rip.models.exception.RegionNotFoundException;
 
 /**
  * AuthorizationStrategy looks at the context and request to generate action and resource names to 
@@ -84,7 +88,6 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     private static final String BLACKWATCH_MITIGATION_RESOURCE_PREFIX = "BLACKWATCH_MITIGATION";
 
     // Constants used for generating ARN
-    private static final String PARTITION = "aws";
     private static final String VENDOR = "lookout";
     private static final String SEPARATOR = "-";
 
@@ -93,6 +96,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
     private final String ownerAccountId;
 
+    @Getter
     private final String arnPrefix;
 
     public AuthorizationStrategy(Configuration arcConfig, String region, String ownerAccountId) {
@@ -101,7 +105,16 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         Validate.notEmpty(region);
         Validate.notEmpty(ownerAccountId);
         this.ownerAccountId = ownerAccountId;
-        this.arnPrefix = "arn:" + PARTITION + ":" + VENDOR + ":" + region + ":" + ownerAccountId + ":";
+        String partition="";
+        try {
+            partition = RIPHelper.getRegion(region).getArnPartition();
+            LOG.info("Region: " + region + ", arn partition: " + partition);
+        } catch (RegionNotFoundException e) {
+            LOG.error("Region " + region +" doesn't exist");
+        } catch (RegionIsInTestException e) {
+            LOG.error("Region " + region +" is still under testing");
+        }
+        this.arnPrefix = "arn:" + partition + ":" + VENDOR + ":" + region + ":" + ownerAccountId + ":";
     }
 
     /**

@@ -21,7 +21,7 @@
     </bean>
 
     <bean id="ShowExplorer" class="java.lang.Boolean">
-        <constructor-arg value="#{'${domain}' != 'prod' and '${domain}' != 'prod-border'}"/>
+        <constructor-arg value="#{'${domain}' != 'prod' and '${domain}' != 'prod-border'} and '${domain}' != 'prod-cn'}"/>
     </bean>
 
     <!-- Configure the Chain which contains the list of Handlers to apply -->
@@ -178,6 +178,7 @@
         <entry key="systest" value="prod.${realm}"/>
         <entry key="prod" value="prod.${realm}"/>
         <entry key="prod-border" value="prod.${realm}"/>
+        <entry key="prod-cn" value="prod.${realm}"/>
     </util:map>
 
     <bean id="OdinAWSCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">

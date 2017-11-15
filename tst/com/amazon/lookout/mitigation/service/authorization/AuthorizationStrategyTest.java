@@ -47,7 +47,7 @@ import com.amazonaws.services.sqs.model.ListQueuesRequest;
 
 @RunWith(JUnitParamsRunner.class)
 public class AuthorizationStrategyTest {
-    private static final String TEST_REGION = "test-region";
+    private static final String TEST_REGION = "us-west-1";
     private static final String TEST_USER = "12345678910";
     private static final String EXPECTED_ARN_PREFIX = "arn:aws:lookout:" + TEST_REGION + ":" + TEST_USER + ":";
     
@@ -175,6 +175,20 @@ public class AuthorizationStrategyTest {
                 new Object[] { "EditMitigation", generateEditRequest() },
                 new Object[] { "DeleteMitigationFromAllLocations", generateDeleteRequest() },
         };
+    }
+    
+    @Test
+    public void testArnPartition() {
+    	String test_region = "us-east-1";
+    	AuthorizationStrategy strategy = new AuthorizationStrategy(mock(Configuration.class), test_region, TEST_USER);
+    	String expectedArnPrefix = "arn:aws:lookout:" + test_region + ":" + TEST_USER + ":";
+    	assertEquals(strategy.getArnPrefix(), expectedArnPrefix);
+    	
+    	test_region = "cn-north-1";
+    	strategy = new AuthorizationStrategy(mock(Configuration.class), test_region, TEST_USER);
+    	expectedArnPrefix = "arn:aws-cn:lookout:" + test_region + ":" + TEST_USER + ":";
+    	assertEquals(strategy.getArnPrefix(), expectedArnPrefix);
+
     }
     
     /**
