@@ -65,19 +65,18 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
                     + "%s and request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
 
-            // Step 1. Validate your request.
+            // Validate your request.
             requestValidator.validateListActiveMitigationsForServiceRequest(request);
 
-            String deviceName = request.getDeviceName();
+            final DeviceName device = DeviceName.valueOf(request.getDeviceName());
             final String location = request.getLocation();
 
-            // Step 2. Get list of Active Mitigations by looking at the current symlink S3 object
+            // Get list of Active Mitigations by looking at the current symlink S3 object
             List<MitigationRequestDescriptionWithStatuses> requestDescriptionsToReturn = 
-                    activeMitigationsHelper.getActiveMitigations(DeviceName.valueOf(deviceName), location);
+                    activeMitigationsHelper.getActiveMitigations(device, location);
 
-            // Step 3. Generate response
+            // Generate response
             ListActiveMitigationsForServiceResponse response = new ListActiveMitigationsForServiceResponse();
-            response.setServiceName(request.getServiceName());
             response.setRequestId(requestId);
             response.setMitigationRequestDescriptionsWithStatuses(requestDescriptionsToReturn);
 

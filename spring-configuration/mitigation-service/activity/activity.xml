@@ -14,19 +14,6 @@
     <import resource="file:${spring.config.root}/mitigation-service/activity/activity_border.xml"/>
 
     <!-- Activities that doesnt go in activity_border.xml goes here -->
-    
-    <!-- All the beans required by the activities go here -->
  
-    <bean id="tableCreatorHelper" class="com.amazon.lookout.ddb.model.TableCreatorHelper">
-        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
-        <constructor-arg name="domain" value="${domain}"/>
-        <constructor-arg name="tables">
-            <list>
-                <ref bean="mitigationRequestTable"/>
-                <ref bean="mitigationInstanceTable"/>
-                <ref bean="activeMitigationTable"/>
-            </list>
-        </constructor-arg>
-    </bean>
 </beans>
 

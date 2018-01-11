@@ -14,61 +14,39 @@
     
     <bean class="com.amazon.lookout.mitigation.service.activity.AbortDeploymentActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
-        <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
         <constructor-arg name="currentDao" ref="currentDao" />
-        <constructor-arg name="switcherooDao" ref="switcherooDao" />
     </bean>
     
     <bean class="com.amazon.lookout.mitigation.service.activity.CreateMitigationActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
-        <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
-        <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
-        <constructor-arg name="templateBasedLocationsManager" ref="templateBasedLocationsManager"/>
         <constructor-arg name="requestCreator" ref="requestCreator" />
-        <constructor-arg name="switcherooDao" ref="switcherooDao" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.EditMitigationActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
-        <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
-        <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
-        <constructor-arg name="templateBasedLocationsManager" ref="templateBasedLocationsManager"/>
         <constructor-arg name="requestCreator" ref="requestCreator" />
-        <constructor-arg name="switcherooDao" ref="switcherooDao" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.RollbackMitigationActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
-        <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
-        <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
-        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
         <constructor-arg name="currentDao" ref="currentDao" />
         <constructor-arg name="archiveDao" ref="archiveDao" />
         <constructor-arg name="requestCreator" ref="requestCreator" />
-        <constructor-arg name="switcherooDao" ref="switcherooDao" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.DeleteMitigationFromAllLocationsActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
-        <constructor-arg name="requestStorageManager" ref="ddbBasedRequestStorageManager"/>
-        <constructor-arg name="swfWorkflowStarter" ref="swfWorkflowStarter"/>
-        <constructor-arg name="templateBasedLocationsManager" ref="templateBasedLocationsManager"/>
         <constructor-arg name="requestCreator" ref="requestCreator" />
-        <constructor-arg name="switcherooDao" ref="switcherooDao" />
     </bean>
     
     <bean class="com.amazon.lookout.mitigation.service.activity.GetRequestStatusActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
-        <constructor-arg name="mitigationInfoHandler" ref="ddbBasedInstanceInfoHandler"/>
         <constructor-arg name="currentDao" ref="currentDao" />
         <constructor-arg name="archiveDao" ref="archiveDao" />
-        <constructor-arg name="switcherooDao" ref="switcherooDao" />
     </bean>
     
     <bean class="com.amazon.lookout.mitigation.service.activity.ListActiveMitigationsForServiceActivity">
@@ -78,37 +56,26 @@
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationInfoActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
-        <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
         <constructor-arg name="currentDao" ref="currentDao" />
         <constructor-arg name="archiveDao" ref="archiveDao" />
-        <constructor-arg name="switcherooDao" ref="switcherooDao" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
         <constructor-arg name="currentDao" ref="currentDao" />
         <constructor-arg name="archiveDao" ref="archiveDao" />
-        <constructor-arg name="switcherooDao" ref="switcherooDao" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationDefinitionActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
-        <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
         <constructor-arg name="currentDao" ref="currentDao" />
         <constructor-arg name="archiveDao" ref="archiveDao" />
-        <constructor-arg name="switcherooDao" ref="switcherooDao" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
-        <constructor-arg name="mitigationInstanceHandler" ref="ddbBasedInstanceInfoHandler"/>
         <constructor-arg name="currentDao" ref="currentDao" />
         <constructor-arg name="archiveDao" ref="archiveDao" />
-        <constructor-arg name="switcherooDao" ref="switcherooDao" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationHostStatusActivity">
@@ -199,26 +166,6 @@
         <constructor-arg name="blackWatchEdgeLocationValidator" ref="blackWatchEdgeLocationValidator"/>
     </bean>
     
-    <bean id="ddbBasedRequestStorageManager" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedRequestStorageManager">
-        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
-        <constructor-arg name="domain" value="${domain}"/>
-        <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
-    </bean>
-
-    <bean id="activeMitigationsStatusHelper" class="com.amazon.lookout.mitigation.status.helper.ActiveMitigationsStatusHelper">
-    </bean>
-
-    <bean id="ddbBasedRequestInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedListMitigationsHandler">
-        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
-        <constructor-arg name="domain" value="${domain}"/>
-        <constructor-arg name="activeMitigationStatusHelper" ref="activeMitigationsStatusHelper"/>
-    </bean>
-    
-    <bean id="ddbBasedInstanceInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedGetMitigationInfoHandler">
-        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
-        <constructor-arg name="domain" value="${domain}"/>
-    </bean>
-
     <bean id="ddbBasedHostStatusInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedHostStatusInfoHandler">
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
@@ -301,23 +248,6 @@
         <constructor-arg name="realm" value="${realm}" />
     </bean>
     
-    <bean id="swfWorkflowStarter" class="com.amazon.lookout.workflow.helper.SWFWorkflowStarterImpl">
-        <constructor-arg name="swfWorkflowProvider" ref="swfWorkflowClientProvider"/>
-    </bean>
-    
-    <bean id="swfWorkflowClientProvider" class="com.amazon.lookout.workflow.helper.SWFWorkflowClientProviderImpl">
-        <constructor-arg name="swfClient" ref="swfClient"/>
-        <constructor-arg name="swfDomain" value="LookoutMitigationService-${domain}"/>
-    </bean>
-    
-    <bean id="blackWatchTemplateLocationHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.BlackWatchTemplateLocationHelper">
-        <constructor-arg name="requestInfoHandler" ref="ddbBasedRequestInfoHandler"/>
-    </bean>
-
-    <bean id="templateBasedLocationsManager" class="com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager">
-        <constructor-arg name="blackWatchTemplateLocationHelper" ref="blackWatchTemplateLocationHelper"/>
-    </bean>
-
     <bean id="amazonPrefixesMetadataTracker" class="com.amazon.lookout.util.prefixes.AmazonPrefixesMetadataTracker.AllPrefixesTracker"/>
 
     <bean id="awsDogfishPrefixesMetadataFetcher" class="com.amazon.lookout.mitigation.service.activity.helper.AwsDogfishPrefixesMetadataFetcher">
@@ -335,21 +265,6 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
     
-    <bean id="mitigationRequestTable" class="com.amazon.lookout.ddb.model.MitigationRequestsModel" factory-method="getInstance"/>
-    <bean id="mitigationInstanceTable" class="com.amazon.lookout.ddb.model.MitigationInstancesModel" factory-method="getInstance"/>
-    <bean id="activeMitigationTable" class="com.amazon.lookout.ddb.model.ActiveMitigationsModel" factory-method="getInstance"/>
-
-    <bean id="tableCreatorHelper" class="com.amazon.lookout.ddb.model.TableCreatorHelper">
-        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
-        <constructor-arg name="domain" value="${domain}"/>
-        <constructor-arg name="tables">
-            <list>
-                <ref bean="mitigationRequestTable"/>
-                <ref bean="mitigationInstanceTable"/>
-                <ref bean="activeMitigationTable"/>
-            </list>
-        </constructor-arg>
-    </bean>
     <!-- Following hashset is used by BlackWatchEdgeLocationValidator to validate LOADTEST locations and SYSTEST locations -->
     <util:set id="preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
         <value>BRG-PDQ-1</value> 
@@ -400,12 +315,6 @@
     <bean id="locksDao" class="com.amazon.lookout.mitigation.datastore.MitigationServiceLocksDAOImpl">
         <constructor-arg name="client" ref="dynamoDBClient" />
         <constructor-arg name="tableThroughput" ref="mitigationServiceLocksTableThroughput" />
-        <constructor-arg name="region" value="${realm}" />
-        <constructor-arg name="domain" value="${domain}" />
-    </bean>
-
-    <bean id="switcherooDao" class="com.amazon.lookout.mitigation.datastore.SwitcherooDAO">
-        <constructor-arg name="client" ref="dynamoDBClient" />
         <constructor-arg name="region" value="${realm}" />
         <constructor-arg name="domain" value="${domain}" />
     </bean>

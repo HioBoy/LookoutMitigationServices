@@ -12,7 +12,6 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.SimpleConstraint;
 import com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer.IPTablesJsonValidator;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.google.common.collect.Lists;
 
 import junitparams.JUnitParamsRunner;
@@ -52,11 +51,11 @@ public class IPTablesEdgeCustomerValidatorTest {
     public void validateRequestForTemplateLocationsMustBeValid(String invalidLocation)
             throws Exception {
         CreateMitigationRequest request = generateCreateMitigationRequest(validIpTablesJson());
-        request.setLocations(Lists.newArrayList(invalidLocation));
+        request.setLocation(invalidLocation);
 
         IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, request);
 
-        assertThat(actualError.getMessage(), containsString("locations"));
+        assertThat(actualError.getMessage(), containsString("location"));
     }
 
     @SuppressWarnings("unused")
@@ -77,6 +76,7 @@ public class IPTablesEdgeCustomerValidatorTest {
                 .when(ipTablesJsonValidator)
                 .validateIPTablesJson(validIpTablesJson());
         CreateMitigationRequest request = generateCreateMitigationRequest(validIpTablesJson());
+        request.setLocation("EdgeWorldwide");
         IPTablesEdgeCustomerValidator validator = new IPTablesEdgeCustomerValidator(ipTablesJsonValidator);
 
         IllegalArgumentException actualError = assertThrows(
@@ -115,6 +115,7 @@ public class IPTablesEdgeCustomerValidatorTest {
     @Test
     public void validateRequestForTemplateWhenMitigationDefinitionIsNull() throws Exception {
         CreateMitigationRequest request = generateCreateMitigationRequest();
+        request.setLocation("EdgeWorldwide");
         request.setMitigationDefinition(null);
 
         IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, request);
@@ -142,6 +143,7 @@ public class IPTablesEdgeCustomerValidatorTest {
         ipTablesConstraint.setAttributeValues(Collections.emptyList());
         CreateMitigationRequest request = generateCreateMitigationRequest();
         request.setMitigationDefinition(generateMitigationDefinition(ipTablesConstraint));
+        request.setLocation("EdgeWorldwide");
 
         IllegalArgumentException actualError = assertValidationThrows(IllegalArgumentException.class, request);
 
@@ -262,9 +264,8 @@ public class IPTablesEdgeCustomerValidatorTest {
     private static CreateMitigationRequest generateCreateMitigationRequest() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName("TestIPTablesMitigation");
-        request.setServiceName(ServiceName.Edge);
         request.setMitigationTemplate(MitigationTemplate.IPTables_Mitigation_EdgeCustomer);
-        request.setLocations(null);
+        request.setLocation("EdgeWorldwide");
 
         MitigationActionMetadata actionMetadata = new MitigationActionMetadata();
         actionMetadata.setUser("username");

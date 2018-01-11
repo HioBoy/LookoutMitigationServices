@@ -15,7 +15,6 @@ import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazonaws.services.s3.AmazonS3;
 /**
@@ -67,49 +66,23 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
     private void validateCreateRequest(CreateMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
-        String location = findLocationFromMitigationName(request.getMitigationName());
+        final String location = request.getLocation();
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
-
-        List<String> locations = request.getLocations();
-
-        if (locations == null || locations.isEmpty()) {
-            locations = new ArrayList<>();
-            final String loc = request.getLocation();
-
-            if (loc != null) {
-                locations.add(loc);
-            }
-        }
-
-        validateLocations(location, request.getMitigationName(), locations);
+        validateLocation(location, request.getMitigationName());
         validateDeploymentChecks(request);
     }
    
     private void validateEditRequest(EditMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
-        String location = findLocationFromMitigationName(request.getMitigationName());
+        final String location = request.getLocation();
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
-        List<String> locations = request.getLocations();
-
-        if (locations == null || locations.isEmpty()) {
-            locations = new ArrayList<>();
-            final String loc = request.getLocation();
-
-            if (loc != null) {
-                locations.add(loc);
-            }
-        }
-
-        validateLocations(location, request.getMitigationName(), locations);
+        validateLocation(location, request.getMitigationName());
         validateDeploymentChecks(request);
     }
         
-    private void validateLocations(String location, String mitigationName, List<String> locations) {
-        Validate.notEmpty(locations, "locations should not be empty.");
-        Validate.isTrue(locations.size() == 1, String.format("locations %s should only contains 1 location.", locations));
-        Validate.isTrue(location.equals(locations.get(0)), String.format("locations %s should match the location %s found in mitigation name.", locations, location));
-
+    private void validateLocation(final String location, final String mitigationName) {
+        Validate.isTrue(location.equals(findLocationFromMitigationName(mitigationName)));
         blackWatchEdgeLocationValidator.validateLocation(location);
     }
 
@@ -142,9 +115,5 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
         // it also allow same mitigation definition but different mitigation name.
         // so leave this empty.
     }
-
-    @Override
-    public String getServiceNameToValidate() {
-        return ServiceName.Edge;
-    }
 }
+

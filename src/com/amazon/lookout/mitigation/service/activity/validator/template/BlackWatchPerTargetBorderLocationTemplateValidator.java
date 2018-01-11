@@ -3,7 +3,6 @@ import java.util.List;
 
 import org.apache.commons.lang.Validate;
 
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazonaws.services.s3.AmazonS3;
 
 /**
@@ -21,15 +20,9 @@ public class BlackWatchPerTargetBorderLocationTemplateValidator extends BlackWat
     }
 
     @Override
-    protected void validateLocation(List<String> locations) {
-        Validate.notEmpty(locations, "locations can not be empty");
-        Validate.isTrue(locations.size() == 1, String.format("locations %s should have exactly one location.", locations));
-        blackWatchBorderLocationValidator.validateLocations(locations);
-    }
-    
-    @Override
-    public String getServiceNameToValidate() {
-        return ServiceName.AWS;
+    protected void validateLocation(final String location) {
+        Validate.notEmpty(location, "location can not be empty");
+        blackWatchBorderLocationValidator.validateLocation(location);
     }
 }
 

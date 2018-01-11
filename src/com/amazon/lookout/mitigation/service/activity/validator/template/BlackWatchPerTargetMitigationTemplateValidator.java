@@ -13,7 +13,6 @@ import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazonaws.services.s3.AmazonS3;
 
 /**
@@ -63,46 +62,18 @@ public abstract class BlackWatchPerTargetMitigationTemplateValidator extends Bla
 
     private void validateEditRequest(EditMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
-
-        List<String> locations = request.getLocations();
-
-        if (locations == null || locations.isEmpty()) {
-            locations = new ArrayList<>();
-            final String location = request.getLocation();
-
-            if (location != null) {
-                locations.add(location);
-            }
-        }
-
-        validateLocation(locations);
+        validateLocation(request.getLocation());
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
         validateDeploymentChecks(request);
     }
 
     private void validateCreateRequest(CreateMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
-
-        List<String> locations = request.getLocations();
-
-        if (locations == null || locations.isEmpty()) {
-            locations = new ArrayList<>();
-            final String location = request.getLocation();
-
-            if (location != null) {
-                locations.add(location);
-            }
-        }
-
-        validateLocation(locations);
+        validateLocation(request.getLocation());
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
         validateDeploymentChecks(request);
     }
 
-    protected abstract void validateLocation(List<String> locations);
-
-    @Override
-    public String getServiceNameToValidate() {
-        return ServiceName.AWS;
-    }
+    protected abstract void validateLocation(final String location);
 }
+

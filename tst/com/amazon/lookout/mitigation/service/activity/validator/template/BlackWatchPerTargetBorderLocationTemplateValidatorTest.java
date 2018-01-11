@@ -27,7 +27,6 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.S3Object;
 import com.amazon.lookout.mitigation.service.alarm.AlarmType;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazonaws.services.s3.AmazonS3;
 
 public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
@@ -81,8 +80,7 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         request.setMitigationName("BLACKWATCH_POP_GLOBAL_G-IAD55");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-        request.setServiceName(ServiceName.Edge);
-        request.setLocations(Arrays.asList("G-IAD55"));
+        request.setLocation("G-IAD55");
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -105,8 +103,7 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         request.setMitigationName("BLACKWATCH_POP_GLOBAL_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-        request.setServiceName(ServiceName.Edge);
-        request.setLocations(Arrays.asList("E-AMS1"));
+        request.setLocation("E-AMS1");
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -129,8 +126,7 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         request.setMitigationName("BLACKWATCH_POP_OVERRIDE_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-        request.setServiceName(ServiceName.Edge);
-        request.setLocations(Arrays.asList("E-AMS1"));
+        request.setLocation("E-AMS1");
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -168,8 +164,7 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName("BLACKWATCH_POP_GLOBAL_E-AMS50");
         request.setMitigationTemplate(mitigationTemplate);
-        request.setServiceName(ServiceName.Edge);
-        request.setLocations(Arrays.asList("E-AMS50"));
+        request.setLocation("E-AMS50");
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -191,8 +186,7 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName("BLACKWATCH_POP_GLOBAL_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
-        request.setServiceName(ServiceName.Edge);
-        request.setLocations(Arrays.asList("E-AMS1"));
+        request.setLocation("E-AMS1");
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
         MitigationDefinition mitigationDefinition = new MitigationDefinition();
@@ -211,7 +205,6 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         request.setMitigationName("BLACKWATCH_POP_OVERRIDE_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-        request.setServiceName(ServiceName.Edge);
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
         config.setKey("s3key");
@@ -234,7 +227,6 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         request.setMitigationName("BLACKWATCH_POP_GLOBAL_E-NRT54");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-        request.setServiceName(ServiceName.Edge);
         request.setLocation("E-NRT54");
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
@@ -258,7 +250,6 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         request.setMitigationName("BLACKWATCH_POP_OVERRIDE_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-        request.setServiceName(ServiceName.Edge);
         request.setLocation("E-AMS1");
         S3Object config = new S3Object();
         config.setBucket("s3bucket");
@@ -282,7 +273,6 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         request.setMitigationName("BLACKWATCH_POP_OVERRIDE_E-AMS1");
         request.setMitigationTemplate(mitigationTemplate);
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-        request.setServiceName(ServiceName.Edge);
         validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
     }
     
@@ -293,15 +283,14 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
     public void testInvalidLocation() {
         IllegalArgumentException expectedException = new IllegalArgumentException();
         try {
-            List<String> locations = Arrays.asList("E-AMS1");
-            Mockito.doThrow(expectedException).when(blackWatchBorderLocationValidator).validateLocations(locations);
+            String location = "E-AMS1";
+            Mockito.doThrow(expectedException).when(blackWatchBorderLocationValidator).validateLocation(location);
             String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
             CreateMitigationRequest request = new CreateMitigationRequest();
             request.setMitigationName("BLACKWATCH_POP_GLOBAL_E-AMS1");
             request.setMitigationTemplate(mitigationTemplate);
             request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-            request.setServiceName(ServiceName.Edge);
-            request.setLocations(locations);
+            request.setLocation(location);
             S3Object config = new S3Object();
             config.setBucket("s3bucket");
             config.setKey("s3key");

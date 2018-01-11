@@ -24,11 +24,6 @@ public class BlackWatchMitigationTemplateValidatorTest {
         }
         
         @Override
-        public String getServiceNameToValidate() {
-            throw new UnsupportedOperationException("getServiceNameToValidate");
-        }
-        
-        @Override
         public void validateRequestForTemplateAndDevice(
                 MitigationModificationRequest request, String mitigationTemplate,
                 DeviceName deviceName, TSDMetrics metrics) {

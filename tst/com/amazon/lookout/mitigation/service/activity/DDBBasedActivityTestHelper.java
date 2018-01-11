@@ -31,14 +31,12 @@ import com.amazon.blackwatch.mitigation.resource.validator.IPAddressListResource
 import com.amazon.blackwatch.mitigation.resource.validator.IPAddressResourceTypeValidator;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
-import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedBlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.test.common.util.TestUtils;
@@ -48,7 +46,6 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.google.common.collect.ImmutableMap;
 
 public class DDBBasedActivityTestHelper {
-    protected static final String serviceName = ServiceName.AWS;
     protected static final String deviceName = DeviceName.BLACKWATCH_BORDER.name();
     protected static final String mitigationName = "mitigation1";
     protected static final int rollbackMitigationVersion = 100;
@@ -66,7 +63,6 @@ public class DDBBasedActivityTestHelper {
     }
     
     protected static final List<String> locations = Arrays.asList("G-IAD55", "G-SFO5");
-    protected static final RequestStorageResponse requestStorageResponse = new RequestStorageResponse(workflowId, mitigationVersion);
     protected static final MitigationActionMetadata mitigationActionMetadata = new MitigationActionMetadata();
     protected static final String realm = "us-east-1";
     protected static final String domain = "test";

@@ -24,28 +24,15 @@ public interface LocationValidator {
     }
      
     /**
-     * Validate a collection of locations
-     * @param locations : collection of locations
+     * Validate a location
+     * @param location : location
      * @param errorMessage : use error message, if it is not null when validate failed.
-     *                        else, construct an error message using failed locations
+     *                        else, construct an error message using failed location
      * @throws IllegalArgumentException if any one of the location is not valid
      */
-    public default void validateLocations(Collection<String> locations, String errorMessage) {
-        Validate.notEmpty(locations, "locations can not be empty");
-        Set<String> invalidLocations = locations.stream()
-                .filter(location -> !isValidLocation(location)).collect(Collectors.toSet());
-        if (errorMessage == null) {
-            errorMessage = String.format("locations %s are not valid", invalidLocations);
-        }
-        Validate.isTrue(invalidLocations.isEmpty(), errorMessage);
-    }
-    
-    /**
-     * Validate a collection of locations
-     * @param locations : collection of locations
-     * @throws IllegalArgumentException if any one of the location is not valid
-     */
-    public default void validateLocations(Collection<String> locations) {
-        validateLocations(locations, null);
+    public default void validateLocation(final String location, String errorMessage) {
+        Validate.notEmpty(location, "location can not be empty");
+        Validate.isTrue(isValidLocation(location), "location is not valid");
     }
 }
+

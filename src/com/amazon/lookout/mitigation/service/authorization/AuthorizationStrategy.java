@@ -10,6 +10,7 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import lombok.Data;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import org.apache.commons.lang.Validate;
@@ -167,6 +168,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     
 
     @Data
+    @AllArgsConstructor
     static class RequestInfo {
         private final String action;
         private final String relativeArn;

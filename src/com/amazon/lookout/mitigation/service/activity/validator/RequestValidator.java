@@ -60,7 +60,6 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWa
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.model.RequestType;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -79,9 +78,6 @@ public class RequestValidator {
     
     // Maintain a Set of the mitigationTemplate, making it easier to search if a single template is part of the set of defined templates.
     private final Set<String> mitigationTemplates = Sets.newHashSet(MitigationTemplate.values());
-    
-    // Maintain a Set of the supported serviceNames, making it easier to search if a single serviceName is part of the set of defined serviceNames.
-    private final Set<String> serviceNames = Sets.newHashSet(ServiceName.values());
     
     private static final int DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS = 100;
     
@@ -271,7 +267,6 @@ public class RequestValidator {
         }
         
         validateMitigationTemplate(request.getMitigationTemplate());
-        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
     }
 
     /**
@@ -287,7 +282,6 @@ public class RequestValidator {
         }
         
         validateBlackWatchMitigationTemplate(request.getMitigationTemplate());
-        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
     }
     
     /**
@@ -297,7 +291,6 @@ public class RequestValidator {
      */
     public void validateGetMitigationInfoRequest(@NonNull GetMitigationInfoRequest request) {
         validateMitigationName(request.getMitigationName());
-        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
     }
     
     /**
@@ -307,7 +300,6 @@ public class RequestValidator {
      */
     public void validateGetMitigationHistoryRequest(
             GetMitigationHistoryRequest request) {
-        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
         validateMitigationName(request.getMitigationName());
         Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
         int maxHistoryEntryCount = GetMitigationHistoryActivity.MAX_NUMBER_OF_HISTORY_TO_FETCH;
@@ -329,9 +321,8 @@ public class RequestValidator {
      */
     public void validateGetLocationDeploymentHistoryRequest(GetLocationDeploymentHistoryRequest request) {
         validateLocation(request.getLocation());
-        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
-        validateLocationOnDeviceAndService(DeviceName.valueOf(request.getDeviceName()),
-                request.getServiceName(), request.getLocation());
+        validateLocationOnDevice(DeviceName.valueOf(request.getDeviceName()),
+                request.getLocation());
         Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
         int maxHistoryEntryCount = GetLocationDeploymentHistoryActivity.MAX_NUMBER_OF_HISTORY_TO_FETCH;
         if (maxNumberOfHistoryEntriesToFetch != null) {
@@ -351,7 +342,6 @@ public class RequestValidator {
      * throw IllegalArgumentException if it is invalid
      */
     public void validateGetMitigationDefinitionRequest(GetMitigationDefinitionRequest request) {
-        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
         validateMitigationName(request.getMitigationName());
         Validate.isTrue(request.getMitigationVersion() > 0, "mitigationVersion should be larger than 0.");
     }
@@ -438,29 +428,18 @@ public class RequestValidator {
      * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
      */
     public void validateListActiveMitigationsForServiceRequest(@NonNull ListActiveMitigationsForServiceRequest request) {
-        validateDeviceAndService(request.getDeviceName(), request.getServiceName());
-        validateListOfLocations(request.getLocations(), request.getServiceName());
-    }
-    
-    private void validateDeviceAndService(String deviceName, String serviceName) {
-        validateServiceName(serviceName);
-        DeviceName device = validateDeviceName(deviceName);
-        validateDeviceMatchService(device, serviceName);
+        validateListOfLocations(request.getLocations());
     }
     
     /**
      * Private helper method to validate the common parameters for some of the modification requests.
      * @param mitigationName Name of the mitigation passed in the request by the client.
      * @param mitigationTemplate Template corresponding to the mitigation in the request by the client.
-     * @param serviceName Service corresponding to the mitigation in the request by the client.
      */
     private void validateCommonModificationRequestParameters(@NonNull MitigationModificationRequest request) {
         validateMitigationName(request.getMitigationName());
         validateMitigationTemplate(request.getMitigationTemplate());
         validateMetadata(request.getMitigationActionMetadata());
-        String template = request.getMitigationTemplate();
-        DeviceName device = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(template);
-        validateDeviceAndService(device.name(), request.getServiceName());
     }
     
     private DeviceName validateDeviceName(String deviceName) {
@@ -498,21 +477,6 @@ public class RequestValidator {
         } catch (Exception ex) {
             String msg = "The requested status that was provided, " + requestedStatus +
                     ", is not valid. Valid requested status values: " + requestedStatusStrings;
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-    }
-
-    
-    private void validateServiceName(String serviceName) {
-        if (isInvalidFreeFormText(serviceName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
-            String msg = "Invalid service name found: " + serviceName + ". Valid service names are: " + serviceNames;
-            LOG.info(msg);
-            throw new IllegalArgumentException(msg);
-        }
-        
-        if (!serviceNames.contains(serviceName)) {
-            String msg = "Invalid service name found: " + serviceName + ". Valid service names are: " + serviceNames;
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
@@ -662,7 +626,7 @@ public class RequestValidator {
         }
     }
     
-    private void validateListOfLocations(List<String> locations, String serviceName) {
+    private void validateListOfLocations(List<String> locations) {
         if (locations != null) {
             if (locations.size() > MAX_NUMBER_OF_LOCATIONS) {
                 String msg = "Exceeded the number of locations that can be specified for a single request. Max allowed: " + MAX_NUMBER_OF_LOCATIONS +
@@ -687,7 +651,7 @@ public class RequestValidator {
             }
             
             if (!invalidLocationsInRequest.isEmpty()) {
-                String msg = "Invalid location name found! Locations: " + invalidLocationsInRequest + " aren't valid for service: " + serviceName;
+                String msg = "Invalid location name found! Locations: " + invalidLocationsInRequest + " aren't valid";
                 LOG.info(msg);
                 throw new IllegalArgumentException(msg);
             }
@@ -830,40 +794,19 @@ public class RequestValidator {
         }
     }
      
-    private void validateLocationOnDeviceAndService(DeviceName device, String service, String location) {
-        validateLocationsOnDeviceAndService(device, service, ImmutableSet.of(location));
-    }
-    
-    private void validateDeviceMatchService(DeviceName device, String service) {
-        String errorMessage = String.format("Service %s does not match device %s", service, device);
-        switch (device) {
-        case POP_HOSTS_IP_TABLES:
-            Validate.isTrue(ServiceName.Edge.equals(service), errorMessage);
-            break;
-        case BLACKWATCH_POP:
-            Validate.isTrue(ServiceName.Edge.equals(service), errorMessage);
-            break;
-        case BLACKWATCH_BORDER:
-            Validate.isTrue(ServiceName.AWS.equals(service), errorMessage);
-            break;
-        default:
-            throw new IllegalArgumentException("Unsupported device name " + device);
-        }
-    }
-    
-    private void validateLocationsOnDeviceAndService(DeviceName device, String service, Collection<String> locations) {
-        String errorMessage = String.format("Not all of the locations %s in request,"
-                + " are valid locations on device %s and service name %s.", locations, device, service);
+    private void validateLocationOnDevice(DeviceName device, String location) {
+        String errorMessage = String.format("Location %s is not valid on %s.",
+                location, device);
     
         switch (device) {
         case POP_HOSTS_IP_TABLES:
-            Validate.isTrue(ImmutableSet.of("EdgeWorldwide").containsAll(locations), errorMessage);
+            Validate.isTrue(location.equals("EdgeWorldwide"), errorMessage);
             break;
         case BLACKWATCH_POP:
-            blackWatchEdgeLocationValidator.validateLocations(locations, errorMessage);
+            blackWatchEdgeLocationValidator.validateLocation(location, errorMessage);
             break;
         case BLACKWATCH_BORDER:
-            blackWatchBorderLocationValidator.validateLocations(locations, errorMessage);
+            blackWatchBorderLocationValidator.validateLocation(location, errorMessage);
             break;
         default:
             throw new IllegalArgumentException("Unsupported device name " + device);

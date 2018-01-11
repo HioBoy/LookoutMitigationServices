@@ -17,10 +17,7 @@ import com.amazon.coral.annotation.Operation;
 import com.amazon.coral.annotation.Service;
 import com.amazon.coral.service.Activity;
 import com.amazon.coral.validate.Validated;
-import com.amazon.lookout.activities.model.MitigationNameAndRequestStatus;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
-import com.amazon.lookout.mitigation.service.activity.helper.RequestInfoHandler;
-import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
@@ -33,7 +30,6 @@ import com.google.common.collect.Sets;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
 import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
-import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
@@ -51,24 +47,14 @@ public class AbortDeploymentActivity extends Activity {
     private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(Sets.newHashSet(AbortDeploymentExceptions.BadRequest.name(),
     		AbortDeploymentExceptions.InternalError.name()));
     
-    private final RequestStorageManager requestStorageManager;
-    private final RequestInfoHandler requestInfoHandler;
-    private final RequestValidator requestValidator;
+    @NonNull private final RequestValidator requestValidator;
     @NonNull private final CurrentRequestsDAO currentDao;
-    @NonNull private final SwitcherooDAO switcherooDao;
     
-    @ConstructorProperties({"requestValidator", "requestInfoHandler", "requestStorageManager",
-    "currentDao", "switcherooDao"})
+    @ConstructorProperties({"requestValidator", "currentDao"})
     public AbortDeploymentActivity(@NonNull RequestValidator requestValidator,
-            @NonNull RequestInfoHandler requestInfoHandler,
-            @NonNull RequestStorageManager requestStorageManager,
-            @NonNull final CurrentRequestsDAO currentDao,
-            @NonNull final SwitcherooDAO switcherooDao) {
+            @NonNull final CurrentRequestsDAO currentDao) {
         this.requestValidator = requestValidator;
-        this.requestInfoHandler = requestInfoHandler;
-        this.requestStorageManager = requestStorageManager;
         this.currentDao = currentDao;
-        this.switcherooDao = switcherooDao;
     }
 
     @Validated
@@ -82,62 +68,39 @@ public class AbortDeploymentActivity extends Activity {
         boolean requestSuccessfullyProcessed = true;
 
         try {
-            String deviceName = abortRequest.getDeviceName();
-            String templateName = abortRequest.getMitigationTemplate();
-            String serviceName = abortRequest.getServiceName();
             long jobId = abortRequest.getJobId();
             final String location = abortRequest.getLocation();
-
-            // A real typed device
-            final DeviceName device = DeviceName.valueOf(deviceName);
+            final DeviceName device = DeviceName.valueOf(abortRequest.getDeviceName());
 
             LOG.info(String.format("AbortDeploymentActivity called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(abortRequest)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
             
-            // Step 1. Validate this request
+            // Validate this request
             requestValidator.validateAbortDeploymentRequest(abortRequest);
 
             String requestStatus = null;
             String mitigationName = null;
 
-            if (switcherooDao.useNewMitigationService(device, location)) {
-                // Find the request in the current requests table
-                final CurrentRequest currentRequest = currentDao.retrieveRequest(
-                        device, location, jobId);
+            // Find the request in the current requests table
+            final CurrentRequest currentRequest = currentDao.retrieveRequest(
+                    device, location, jobId);
 
-                if (currentRequest != null) {
-                    requestStatus = currentRequest.getWorkflowStatus();
-                    mitigationName = currentRequest.getMitigationName();
+            if (currentRequest != null) {
+                requestStatus = currentRequest.getWorkflowStatus();
+                mitigationName = currentRequest.getMitigationName();
 
-                    // Set the abort flag
-                    currentRequest.setAborted(true);
-                    currentDao.updateRequest(currentRequest);
-                } else {
-                    // If it isn't in the current table, then it is either already
-                    // finished or has never existed.
-                    requestStatus = WORKFLOWCOMPLETED_ABORTFAIL_STATUS;
-                }
+                // Set the abort flag
+                currentRequest.setAborted(true);
+                currentDao.updateRequest(currentRequest);
             } else {
-                // Step 2. locate the request in DDB and get the current status
-                MitigationNameAndRequestStatus mitigationNameAndRequestStatus = requestInfoHandler.getMitigationNameAndRequestStatus(deviceName, templateName, jobId, tsdMetrics);
-                requestStatus = mitigationNameAndRequestStatus.getRequestStatus();
-                mitigationName = mitigationNameAndRequestStatus.getMitigationName();
-
-                // Step 3. take action based on the current workflow status of the request.
-                if (requestStatus.equals(WorkflowStatus.RUNNING) ) {
-                    //If the workflow is still running, set the abort flag of the request in DDB
-                    requestStorageManager.requestAbortForWorkflowRequest(deviceName, jobId, tsdMetrics);
-                } else {
-                    LOG.info(String.format("Abort failed, current request status: %s.", requestStatus));
-                    //otherwise, it is too late to abort, return abort failed
-                    requestStatus = WORKFLOWCOMPLETED_ABORTFAIL_STATUS;
-                }
+                // If it isn't in the current table, then it is either already
+                // finished or has never existed.
+                requestStatus = WORKFLOWCOMPLETED_ABORTFAIL_STATUS;
             }
 
             AbortDeploymentResponse response = new AbortDeploymentResponse();
             response.setMitigationName(mitigationName);
-            response.setServiceName(serviceName);
-            response.setDeviceName(deviceName);
+            response.setDeviceName(device.name());
             response.setRequestStatus(requestStatus);
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
@@ -159,5 +122,5 @@ public class AbortDeploymentActivity extends Activity {
             tsdMetrics.end();
         }
     }
-
 }
+

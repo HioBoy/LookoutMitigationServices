@@ -16,11 +16,6 @@
                     <property name="period" value="30"/>
                     <property name="timeUnit" ref="minutes"/>
                 </bean>
-                <bean class="com.amazon.aws158.commons.periodic.PeriodicWorkWithFixedDelay">
-                    <property name="runnable" ref="requestsReaper"/>
-                    <property name="period" value="1"/>
-                    <property name="timeUnit" ref="seconds"/>
-                </bean>
                 <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
                     <property name="runnable" ref="dogFishMetadataProvider"/>
                     <property name="period" value="180"/>

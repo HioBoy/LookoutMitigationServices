@@ -13,23 +13,16 @@ import org.mockito.Mockito;
 import static org.mockito.Mockito.*;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.lookout.ddb.model.MitigationInstancesModel;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryResponse;
-import com.amazon.lookout.mitigation.service.LocationDeploymentInfo;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 
 import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
 import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
-import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
 
 public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper {
     private static final String location = "location1";
-    private static final Long exclusiveLastEvaluatedTimestamp = 10000001l;
     private GetLocationDeploymentHistoryRequest request;
     
     private GetLocationDeploymentHistoryActivity getLocationDeploymentHistoryActivity;
@@ -38,53 +31,15 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
     public void setup() {
         getLocationDeploymentHistoryActivity = 
                 spy(new GetLocationDeploymentHistoryActivity(requestValidator,
-                            mitigationInstanceInfoHandler,
                             mock(CurrentRequestsDAO.class),
-                            mock(ArchivedRequestsDAO.class),
-                            mock(SwitcherooDAO.class)));
+                            mock(ArchivedRequestsDAO.class)));
         
         request = new GetLocationDeploymentHistoryRequest();
         request.setDeviceName(deviceName);
-        request.setExclusiveLastEvaluatedTimestamp(exclusiveLastEvaluatedTimestamp);
         request.setLocation(location);
-        request.setServiceName(serviceName);
         request.setMaxNumberOfHistoryEntriesToFetch(maxNumberOfHistoryEntriesToFetch);
     }
 
-    /**
-     * Test location history works correctly.
-     */
-    @Test
-    public void test3LocationHistory() {
-        Mockito.doNothing().when(requestValidator).validateGetLocationDeploymentHistoryRequest(request);
-        Mockito.doReturn(requestId).when(getLocationDeploymentHistoryActivity).getRequestId();
-        
-        List<LocationDeploymentInfo> listOfLocationDeploymentInfo = new ArrayList<>();
-        LocationDeploymentInfo locationDeploymentInfo = new LocationDeploymentInfo();
-        DateTime now = DateTime.now();
-        locationDeploymentInfo.setDeployDate(now.toString(MitigationInstancesModel.CREATE_DATE_FORMATTER));
-        listOfLocationDeploymentInfo.add(locationDeploymentInfo);
-        locationDeploymentInfo = new LocationDeploymentInfo();
-        locationDeploymentInfo.setDeployDate(now.minusMinutes(1).toString(MitigationInstancesModel.CREATE_DATE_FORMATTER));
-        listOfLocationDeploymentInfo.add(locationDeploymentInfo);
-        locationDeploymentInfo = new LocationDeploymentInfo();
-        locationDeploymentInfo.setDeployDate(now.minusMinutes(2).toString(MitigationInstancesModel.CREATE_DATE_FORMATTER));
-        listOfLocationDeploymentInfo.add(locationDeploymentInfo);
-        
-        Mockito.doReturn(listOfLocationDeploymentInfo).when(mitigationInstanceInfoHandler)
-                .getLocationDeploymentInfoOnLocation(eq(deviceName), eq(serviceName), eq(location),
-                        eq(maxNumberOfHistoryEntriesToFetch), eq(exclusiveLastEvaluatedTimestamp), isA(TSDMetrics.class));
-        
-        GetLocationDeploymentHistoryResponse response = getLocationDeploymentHistoryActivity.enact(request);
-        
-        assertEquals(deviceName, response.getDeviceName());
-        // ignore the milliseconds, as it get lost during conversion
-        assertEquals(now.minusMinutes(2).getMillis() / 1000, response.getExclusiveLastEvaluatedTimestamp() / 1000);
-        assertEquals(listOfLocationDeploymentInfo, response.getListOfLocationDeploymentInfo());
-        assertEquals(location, response.getLocation());
-        assertEquals(requestId, response.getRequestId());
-    }
-    
     /**
      * Invalid request
      */
@@ -93,54 +48,5 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
         Mockito.doThrow(new IllegalArgumentException()).when(requestValidator).validateGetLocationDeploymentHistoryRequest(request);
         getLocationDeploymentHistoryActivity.enact(request);
     }
-    
-    /**
-     * Test empty list of location deployment history
-     */
-    @Test
-    public void testEmptyHistoryResult() {
-        Mockito.doReturn(new ArrayList<LocationDeploymentInfo>()).when(mitigationInstanceInfoHandler)
-                .getLocationDeploymentInfoOnLocation(eq(deviceName), eq(serviceName), eq(location),
-                        eq(maxNumberOfHistoryEntriesToFetch), eq(exclusiveLastEvaluatedTimestamp), isA(TSDMetrics.class));
-        GetLocationDeploymentHistoryResponse response = getLocationDeploymentHistoryActivity.enact(request);
-        assertTrue(response.getListOfLocationDeploymentInfo().isEmpty());
-    }
-    
-    /**
-     * Test history size larger than max
-     */
-    @Test(expected = BadRequest400.class)
-    public void testInvalidHistoryEntrySize() {
-        getLocationDeploymentHistoryActivity = 
-                spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(
-                                mock(EdgeLocationsHelper.class),
-                                mock(BlackWatchBorderLocationValidator.class),
-                                mock(BlackWatchEdgeLocationValidator.class),
-                                "/random/path/location/json"),
-                            mitigationInstanceInfoHandler,
-                            mock(CurrentRequestsDAO.class),
-                            mock(ArchivedRequestsDAO.class),
-                            mock(SwitcherooDAO.class)));
-        request.setMaxNumberOfHistoryEntriesToFetch(10000);
-        getLocationDeploymentHistoryActivity.enact(request); 
-    }
-    
-    /**
-     * Test negative history size
-     */
-    @Test(expected = BadRequest400.class)
-    public void testInvalidHistoryEntrySize2() {
-        getLocationDeploymentHistoryActivity = 
-                spy(new GetLocationDeploymentHistoryActivity(new RequestValidator(
-                                mock(EdgeLocationsHelper.class),
-                                mock(BlackWatchBorderLocationValidator.class),
-                                mock(BlackWatchEdgeLocationValidator.class),
-                                "/random/path/location/json"),
-                            mitigationInstanceInfoHandler,
-                            mock(CurrentRequestsDAO.class),
-                            mock(ArchivedRequestsDAO.class),
-                            mock(SwitcherooDAO.class))); 
-        request.setMaxNumberOfHistoryEntriesToFetch(-1);
-        getLocationDeploymentHistoryActivity.enact(request); 
-    }
 }
+

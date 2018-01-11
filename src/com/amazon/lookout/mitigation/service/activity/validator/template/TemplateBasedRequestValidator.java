@@ -73,7 +73,7 @@ public class TemplateBasedRequestValidator {
             
             ServiceTemplateValidator templateBasedValidator = getValidator(mitigationTemplate);
             
-            LOG.debug("Calling validator for service: " + templateBasedValidator.getServiceNameToValidate() + " for template: " + mitigationTemplate + " for request: " +
+            LOG.debug("Calling validator for service: for template: " + mitigationTemplate + " for request: " +
                       ReflectionToStringBuilder.toString(request));
             templateBasedValidator.validateRequestForTemplate(request, mitigationTemplate, metrics);
         } finally {

@@ -19,7 +19,6 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazonaws.services.s3.AmazonS3;
 
@@ -50,6 +49,7 @@ public class TemplateBasedRequestValidatorTest {
                 mock(BlackWatchEdgeLocationValidator.class));
         MitigationModificationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         request.setPreDeploymentChecks(null);
+        request.setLocation("AMS1");
         Throwable caughtException = null;
         try {
             templateBasedValidator.validateRequestForTemplate(request, tsdMetrics);

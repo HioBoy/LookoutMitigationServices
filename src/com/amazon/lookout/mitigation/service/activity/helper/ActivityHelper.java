@@ -10,7 +10,6 @@ import org.apache.commons.lang.Validate;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 
 /**
  * Helper to perform operations which are common across all activities.
@@ -20,7 +19,6 @@ public class ActivityHelper {
     
     private static final String TEMPLATE_NAME_COUNT_METRIC_PREFIX = "TemplateName:";
     private static final String DEVICE_NAME_COUNT_METRIC_PREFIX = "DeviceName:";
-    private static final String SERVICE_NAME_COUNT_METRIC_PREFIX = "ServiceName:";
     
     // Declared as public to allow individual Activities to prefix the exceptions they receive with this.
     public static final String EXCEPTION_COUNT_METRIC_PREFIX = "Exception:";
@@ -54,19 +52,6 @@ public class ActivityHelper {
             tsdMetrics.addCount(DEVICE_NAME_COUNT_METRIC_PREFIX + device.name(), 0);
         }
         tsdMetrics.addCount(DEVICE_NAME_COUNT_METRIC_PREFIX + deviceNameInRequest, 1);
-    }
-    
-    /**
-     * Add metrics to be able to track the service for which a request was made.
-     * @param serviceNameInRequest String representing the serviceName for which the request was made.
-     * @param tsdMetrics TSDMetrics instance to which we need to add the count metrics.
-     */
-    public static void addServiceNameCountMetrics(@NonNull String serviceNameInRequest, @NonNull TSDMetrics tsdMetrics) {
-        // Add the metric to track the device for which this request was made.
-        for (String serviceName : ServiceName.values()) {
-            tsdMetrics.addCount(SERVICE_NAME_COUNT_METRIC_PREFIX + serviceName, 0);
-        }
-        tsdMetrics.addCount(SERVICE_NAME_COUNT_METRIC_PREFIX + serviceNameInRequest, 1);
     }
     
     /**

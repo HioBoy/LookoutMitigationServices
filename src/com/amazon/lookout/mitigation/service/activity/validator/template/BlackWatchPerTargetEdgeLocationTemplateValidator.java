@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.apache.commons.lang.Validate;
 
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazonaws.services.s3.AmazonS3;
 
 /**
@@ -22,15 +21,9 @@ public class BlackWatchPerTargetEdgeLocationTemplateValidator extends BlackWatch
     private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
 
     @Override
-    protected void validateLocation(List<String> locations) {
-        Validate.notEmpty(locations, "locations should not be empty.");
-        Validate.isTrue(locations.size() == 1, String.format("locations %s should only contains 1 location.", locations));
-
-        blackWatchEdgeLocationValidator.validateLocation(locations.get(0));
-    }
-    
-    @Override
-    public String getServiceNameToValidate() {
-        return ServiceName.Edge;
+    protected void validateLocation(final String location) {
+        Validate.notEmpty(location, "location should not be empty.");
+        blackWatchEdgeLocationValidator.validateLocation(location);
     }
 }
+

@@ -32,21 +32,15 @@ import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
-import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
-import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
-import com.amazon.lookout.workflow.helper.SWFWorkflowStarter;
-import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
-import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 
 import com.amazon.lookout.mitigation.RequestCreator;
-import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
@@ -69,29 +63,15 @@ public class CreateMitigationActivity extends Activity {
     
     private final RequestValidator requestValidator;
     private final TemplateBasedRequestValidator templateBasedValidator;
-    private final RequestStorageManager requestStorageManager;
-    private final SWFWorkflowStarter workflowStarter;
-    private final TemplateBasedLocationsManager templateBasedLocationsManager;
     @NonNull private final RequestCreator requestCreator;
-    @NonNull private final SwitcherooDAO switcherooDao;
     
-    @ConstructorProperties({"requestValidator", "templateBasedValidator",
-    "requestStorageManager", "swfWorkflowStarter", "templateBasedLocationsManager",
-    "requestCreator", "switcherooDao"})
+    @ConstructorProperties({"requestValidator", "templateBasedValidator", "requestCreator"})
     public CreateMitigationActivity(@NonNull RequestValidator requestValidator,
             @NonNull TemplateBasedRequestValidator templateBasedValidator,
-            @NonNull RequestStorageManager requestStorageManager,
-            @NonNull SWFWorkflowStarter workflowStarter,
-            @NonNull TemplateBasedLocationsManager templateBasedLocationsManager,
-            @NonNull final RequestCreator requestCreator,
-            @NonNull final SwitcherooDAO switcherooDao) {
+            @NonNull final RequestCreator requestCreator) {
         this.requestValidator = requestValidator;
         this.templateBasedValidator = templateBasedValidator;
-        this.requestStorageManager = requestStorageManager;
-        this.workflowStarter = workflowStarter;
-        this.templateBasedLocationsManager = templateBasedLocationsManager;
         this.requestCreator = requestCreator;
-        this.switcherooDao = switcherooDao;
     }
 
     @Validated
@@ -110,64 +90,31 @@ public class CreateMitigationActivity extends Activity {
             String mitigationTemplate = createRequest.getMitigationTemplate();
             ActivityHelper.addTemplateNameCountMetrics(mitigationTemplate, tsdMetrics);
             
-            String deviceName = createRequest.getDeviceName();
-            final DeviceName device = DeviceName.valueOf(deviceName);  // A real typed device
-            ActivityHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
+            final DeviceName device = DeviceName.valueOf(createRequest.getDeviceName());
+            ActivityHelper.addDeviceNameCountMetrics(device.name(), tsdMetrics);
 
-            String serviceName = createRequest.getServiceName();
-            ActivityHelper.addServiceNameCountMetrics(serviceName, tsdMetrics);
-            
-            // Step1. Validate this request.
+            // Validate this request.
             requestValidator.validateCreateRequest(createRequest);
             
-            // Step2. Validate this request based on the template.
+            // Validate this request based on the template.
             templateBasedValidator.validateRequestForTemplate(createRequest, tsdMetrics);
             
             final String location = createRequest.getLocation();
 
-            final long workflowId;
-            final int storedMitigationVersion;
+            final MitigationModificationResponse response = requestCreator.queueRequest(
+                    createRequest, RequestType.CreateRequest,
+                    createRequest.getMitigationDefinition());
 
-            if (switcherooDao.useNewMitigationService(device, location)) {
-                LOG.info(String.format("Using new mitigation service for request %s", requestId));
+            final long workflowId = response.getJobId();
+            final int storedMitigationVersion = response.getMitigationVersion();
 
-                final MitigationModificationResponse response = requestCreator.queueRequest(
-                        createRequest, RequestType.CreateRequest,
-                        createRequest.getMitigationDefinition());
-
-                workflowId = response.getJobId();
-                storedMitigationVersion = response.getMitigationVersion();
-            } else {
-                // Always a single location from the request
-                final Set<String> locationsToDeploy = new HashSet<>();
-                locationsToDeploy.add(location);
-
-                // Step4. Persist this request in DDB and get back the workflowId associated with this request.
-                RequestStorageResponse requestStorageResponse = requestStorageManager.storeRequestForWorkflow(
-                        createRequest, locationsToDeploy, RequestType.CreateRequest, tsdMetrics);
-                
-                workflowId = requestStorageResponse.getWorkflowId();
-                storedMitigationVersion = requestStorageResponse.getMitigationVersion();
-                
-                // Step5. Create new workflow client to be used for running the workflow.
-                WorkflowClientExternal workflowClient = workflowStarter.createMitigationModificationWorkflowClient(workflowId, createRequest, deviceName, tsdMetrics);
-                
-                // Step6. Start running the workflow.
-                workflowStarter.startMitigationModificationWorkflow(workflowId, createRequest, locationsToDeploy,
-                        RequestType.CreateRequest, storedMitigationVersion, deviceName, workflowClient, tsdMetrics);
-                
-                // Step7. Update the record for this workflow request and store the runId that SWF associates with this workflow.
-                String swfRunId = workflowClient.getWorkflowExecution().getRunId();
-                requestStorageManager.updateRunIdForWorkflowRequest(deviceName, workflowId, swfRunId, RequestType.CreateRequest, tsdMetrics);
-            }
-
-            // Step8. Return the workflowId to the client.
+            // Return the workflowId to the client.
+            // TODO just return the response, instead of doing this
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
             mitigationModificationResponse.setMitigationName(createRequest.getMitigationName());
             mitigationModificationResponse.setMitigationVersion(storedMitigationVersion);
             mitigationModificationResponse.setMitigationTemplate(createRequest.getMitigationTemplate());
-            mitigationModificationResponse.setDeviceName(deviceName);
-            mitigationModificationResponse.setServiceName(serviceName);
+            mitigationModificationResponse.setDeviceName(device.name());
             mitigationModificationResponse.setJobId(workflowId);
             mitigationModificationResponse.setRequestStatus(WorkflowStatus.RUNNING);
             

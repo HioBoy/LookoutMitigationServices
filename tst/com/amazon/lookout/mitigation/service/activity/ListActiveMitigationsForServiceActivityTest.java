@@ -37,7 +37,6 @@ public class ListActiveMitigationsForServiceActivityTest extends ActivityTestHel
         request = new ListActiveMitigationsForServiceRequest();
         request.setLocation(location);
         request.setDeviceName(device.name());
-        request.setServiceName(service);
     }
     
     @Test

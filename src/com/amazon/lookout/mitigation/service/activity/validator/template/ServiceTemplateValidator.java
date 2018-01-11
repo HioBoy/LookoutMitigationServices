@@ -18,6 +18,4 @@ public interface ServiceTemplateValidator {
                                                         TSDMetrics metrics);
     
     public boolean requiresCheckForDuplicateAndConflictingRequests();
-    
-    public String getServiceNameToValidate();
 }

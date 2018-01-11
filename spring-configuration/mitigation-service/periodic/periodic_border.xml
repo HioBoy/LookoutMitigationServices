@@ -25,11 +25,6 @@
         <property name="threadPoolSize" value="2"/>
         <property name="work">
             <set>
-                <bean class="com.amazon.aws158.commons.periodic.PeriodicWorkWithFixedDelay">
-                    <property name="runnable" ref="requestsReaper"/>
-                    <property name="period" value="1"/>
-                    <property name="timeUnit" ref="seconds"/>
-                </bean>
                 <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
                     <property name="runnable" ref="dogFishMetadataProvider"/>
                     <property name="period" value="180"/>
@@ -42,44 +37,6 @@
         <property name="shutdownTimeoutUnit" value="SECONDS"/>
     </bean>
     
-    <bean id="requestsReaper" class="com.amazon.lookout.mitigation.service.workflow.helper.RequestsReaper">
-        <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
-        <constructor-arg name="swfClient" ref="swfClient"/>
-        <constructor-arg name="appDomain" value="${domain}"/>
-        <constructor-arg name="realm" value="${realm}"/>
-        <constructor-arg name="swfDomainName" value="LookoutMitigationService-${domain}"/>
-        <constructor-arg name="swfSocketTimeoutMillis" ref="swfClientSocketTimeoutMillis"/>
-        <constructor-arg name="swfConnTimeoutMillis" ref="swfClientConnectionTimeoutMillis"/>
-        <constructor-arg name="workflowStarter" ref="swfWorkflowStarter"/>
-        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
-        <constructor-arg name="mitigationConfigSymlinksDAO" ref="mitigationConfigSymlinksDAO"/>
-        
-        <!-- RequestsReaper only performs one DynamoDB query over MITIGATION_REQUESTS each time it
-             runs and passes queryLimit as the Limit parameter. This limits the amount of DDB
-             capacity consumed each time RequestsReaper runs to approximately queryLimit*0.3. The
-             number 0.3 comes from dividing DDB read capacity used by scanned item count in a
-             collection of production requests and computing the average. The DDB capacity consumed
-             by a query operation is calculated from the total size of all items scanned, and thus
-             depends not only on scanned count but also item size, which is variable across items.
-             The number 0.3 estimates that MITIGATION_REQUESTS items have an average size of 1229
-             bytes. By setting queryLimit to 900 we actually max out reaper throughput since each
-             DDB query operation is also limited to scanning at most 1MB of total item size, which
-             ends up being ~850 items with a capacity usage of 256-257 units/second. This usage
-             level is acceptable since the reaper only runs on a single host in each stack.
-          -->
-        <constructor-arg name="queryLimit" value="900"/>
-        
-        <!-- The following setting should be significantly longer than the requestsReaper period
-             defined above in Metronome configuration, because that setting effectively controls
-             how often the leader election lock heartbeat is updated and this sets how long to
-             wait without seeing any heartbeats before another host takes over after a leader
-             fails. This should also be set long enough to not change leaders when requests to
-             DynamoDB are failing/slow because problems with DynamoDB generally won't be fixed
-             by changing leadership and could be made worse.
-          -->
-        <constructor-arg name="leaderElectionLeaseDurationMillis" value="60000"/>
-    </bean>
-
     <bean id="dogFishMetadataProvider" class="com.amazon.lookout.mitigation.service.workflow.helper.DogFishMetadataProvider">
         <constructor-arg name="dogfishFetcher" ref="awsDogfishPrefixesMetadataFetcher"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>

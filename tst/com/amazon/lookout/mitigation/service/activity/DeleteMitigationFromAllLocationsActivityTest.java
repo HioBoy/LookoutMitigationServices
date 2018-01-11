@@ -22,28 +22,19 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
-import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
-import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
-import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
-import com.amazon.lookout.workflow.helper.SWFWorkflowStarter;
-import com.amazon.lookout.mitigation.service.workflow.helper.BlackWatchTemplateLocationHelper;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
-import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 
 import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
 import com.amazon.lookout.mitigation.RequestCreator;
-import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
 
 public class DeleteMitigationFromAllLocationsActivityTest {
 
@@ -65,10 +56,7 @@ public class DeleteMitigationFromAllLocationsActivityTest {
         assertThat(actualError.getMessage(), containsString(MitigationTemplate.IPTables_Mitigation_EdgeCustomer));
     }
 
-    private DeleteMitigationFromAllLocationsActivity createActivityWithValidators(SWFWorkflowStarter workflowStarter) {
-        RequestStorageManager requestStorageManager = mock(RequestStorageManager.class);
-        Mockito.doReturn(new RequestStorageResponse(1l, MITIGATION_VERSION)).when(requestStorageManager).storeRequestForWorkflow(
-                any(MitigationModificationRequest.class), anySet(), eq(RequestType.DeleteRequest), isA(TSDMetrics.class));
+    private DeleteMitigationFromAllLocationsActivity createActivityWithValidators() {
         return new DeleteMitigationFromAllLocationsActivity(
             new RequestValidator(mock(EdgeLocationsHelper.class),
                     mock(BlackWatchBorderLocationValidator.class),
@@ -78,21 +66,12 @@ public class DeleteMitigationFromAllLocationsActivityTest {
                     mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
                     mock(BlackWatchBorderLocationValidator.class),
                     mock(BlackWatchEdgeLocationValidator.class)),
-            requestStorageManager,
-            workflowStarter,
-            new TemplateBasedLocationsManager(mock(BlackWatchTemplateLocationHelper.class)),
-            mock(RequestCreator.class),
-            mock(SwitcherooDAO.class));
-    }
-
-    private DeleteMitigationFromAllLocationsActivity createActivityWithValidators() {
-        return createActivityWithValidators(mock(SWFWorkflowStarter.class, RETURNS_DEEP_STUBS));
+            mock(RequestCreator.class));
     }
 
     private DeleteMitigationFromAllLocationsRequest sampleDeleteIPTablesMitigationRequest() {
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
         request.setMitigationName("IPTablesMitigationName");
-        request.setServiceName(ServiceName.Edge);
         request.setMitigationTemplate(MitigationTemplate.IPTables_Mitigation_EdgeCustomer);
         request.setMitigationVersion(MITIGATION_VERSION);
         request.setDeviceName(DeviceName.BLACKWATCH_BORDER.name());

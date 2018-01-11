@@ -19,16 +19,14 @@ import com.amazon.lookout.mitigation.service.MitigationDeploymentCheck;
 import com.amazon.lookout.mitigation.service.S3Object;
 import com.amazon.lookout.mitigation.service.BlackWatchConfigBasedConstraint;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.google.common.collect.Lists;
 
 public class RequestTestHelper {
 
-    public static CreateMitigationRequest generateCreateMitigationRequest(String template, String name, String service) {
+    public static CreateMitigationRequest generateCreateMitigationRequest(String template, String name) {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(name);
         request.setMitigationTemplate(template);
-        request.setServiceName(service);
         
         MitigationActionMetadata metadata = generateActionMetadata("why not create?");
         request.setMitigationActionMetadata(metadata);
@@ -68,7 +66,7 @@ public class RequestTestHelper {
         return metadata;
     }
     
-    public static EditMitigationRequest generateEditMitigationRequest(String template, String name, String service, int version) {
+    public static EditMitigationRequest generateEditMitigationRequest(String template, String name, int version) {
         if (version <= 1) {
             throw new IllegalArgumentException("version must be > 1");
         }
@@ -76,7 +74,6 @@ public class RequestTestHelper {
         EditMitigationRequest request = new EditMitigationRequest();
         request.setMitigationName(name);
         request.setMitigationTemplate(template);
-        request.setServiceName(service);
         request.setMitigationVersion(version);
         
         MitigationActionMetadata metadata = generateActionMetadata("why not edit?");
@@ -90,7 +87,7 @@ public class RequestTestHelper {
     }
     
     public static DeleteMitigationFromAllLocationsRequest generateDeleteMitigationRequest(
-            String template, String name, String service, int version) 
+            String template, String name, int version) 
     {
         if (version < 1) {
             throw new IllegalArgumentException("version must be >= 1");
@@ -99,25 +96,12 @@ public class RequestTestHelper {
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
         request.setMitigationName(name);
         request.setMitigationTemplate(template);
-        request.setServiceName(service);
         request.setMitigationVersion(version);
         
         MitigationActionMetadata metadata = generateActionMetadata("why not delete?");
         request.setMitigationActionMetadata(metadata);
         
         return request;
-    }
-
-    public static CreateMitigationRequest generateCreateMitigationRequest(String template, String name) {
-        return generateCreateMitigationRequest(template, name, ServiceName.Edge);
-    }
-    
-    public static EditMitigationRequest generateEditMitigationRequest(String template, String name, int version) {
-        return generateEditMitigationRequest(template, name, ServiceName.Edge, version);
-    }
-    
-    public static DeleteMitigationFromAllLocationsRequest generateDeleteMitigationRequest(String template, String name, int version) {
-        return generateDeleteMitigationRequest(template, name, ServiceName.Edge, version);
     }
 
     public static CreateMitigationRequest generateCreateMitigationRequest() {

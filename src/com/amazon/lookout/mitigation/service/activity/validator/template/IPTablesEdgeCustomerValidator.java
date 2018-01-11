@@ -25,7 +25,6 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.iptable
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazonaws.services.simpleworkflow.flow.DataConverter;
 import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
@@ -56,24 +55,14 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
         validateNoDeploymentChecks(request.getPostDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.POST);
 
         if (request instanceof CreateMitigationRequest) {
-            validateLocations(((CreateMitigationRequest) request).getLocations());
-            validateCreateRequest((CreateMitigationRequest) request);
+            final CreateMitigationRequest r = (CreateMitigationRequest) request;
+            validateLocation(r.getLocation());
+            validateCreateRequest(r);
         } else if (request instanceof EditMitigationRequest) {
-            // First try to get "locations", and try "location" if it is missing
             final EditMitigationRequest r = (EditMitigationRequest) request;
-            List<String> locations = r.getLocations();
-
-            if (locations == null || locations.isEmpty()) {
-                locations = new ArrayList<>();
-                final String location = r.getLocation();
-
-                if (location != null) {
-                    locations.add(location);
-                }
-            }
-
-            validateLocations(locations);
-            validateEditRequest((EditMitigationRequest) request);
+            final String location = r.getLocation();
+            validateLocation(location);
+            validateEditRequest(r);
         } else {
             throw new IllegalArgumentException(
                     String.format("request %s is not supported for mitigation template %s", request, mitigationTemplate));
@@ -148,11 +137,6 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
         return true;
     }
 
-    @Override
-    public String getServiceNameToValidate() {
-        return ServiceName.Edge;
-    }
-
     private void validateMitigationName(String mitigationName) {
         if (mitigationName == null) {
             throw new IllegalArgumentException("mitigationName cannot be null or empty.");
@@ -169,13 +153,10 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
         }
     }
 
-    private void validateLocations(List<String> locationsToDeploy) {
-        if (CollectionUtils.isNullOrEmpty(locationsToDeploy)) {
-            return;
-        }
+    private void validateLocation(String locationToDeploy) {
+        Validate.notEmpty(locationToDeploy);
 
-        if (locationsToDeploy.size() == 1 &&
-            StandardLocations.EDGE_WORLD_WIDE.equals(locationsToDeploy.get(0))) {
+        if (locationToDeploy.equals(StandardLocations.EDGE_WORLD_WIDE)) {
             return;
         }
 

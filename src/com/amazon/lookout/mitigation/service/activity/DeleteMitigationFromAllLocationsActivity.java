@@ -34,20 +34,14 @@ import com.amazon.lookout.mitigation.service.MissingMitigationException400;
 import com.amazon.lookout.mitigation.service.MitigationInstanceStatus;
 import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
-import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageManager;
-import com.amazon.lookout.mitigation.service.activity.helper.RequestStorageResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
-import com.amazon.lookout.workflow.helper.SWFWorkflowStarter;
-import com.amazon.lookout.mitigation.service.workflow.helper.TemplateBasedLocationsManager;
 import com.amazon.lookout.model.RequestType;
-import com.amazonaws.services.simpleworkflow.flow.WorkflowClientExternal;
 
 import com.amazon.lookout.mitigation.RequestCreator;
-import com.amazon.lookout.mitigation.datastore.SwitcherooDAO;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
@@ -70,29 +64,15 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
     
     private final RequestValidator requestValidator;
     private final TemplateBasedRequestValidator templateBasedValidator;
-    private final RequestStorageManager requestStorageManager;
-    private final SWFWorkflowStarter workflowStarter;
-    private final TemplateBasedLocationsManager templateBasedLocationsManager;
     @NonNull private final RequestCreator requestCreator;
-    @NonNull private final SwitcherooDAO switcherooDao;
 
-    @ConstructorProperties({"requestValidator", "templateBasedValidator",
-    "requestStorageManager", "swfWorkflowStarter", "templateBasedLocationsManager",
-    "requestCreator", "switcherooDao"})
+    @ConstructorProperties({"requestValidator", "templateBasedValidator", "requestCreator"})
     public DeleteMitigationFromAllLocationsActivity(@NonNull RequestValidator requestValidator,
             @NonNull TemplateBasedRequestValidator templateBasedValidator,
-            @NonNull RequestStorageManager requestStorageManager,
-            @NonNull SWFWorkflowStarter workflowStarter,
-            @NonNull TemplateBasedLocationsManager templateBasedLocationsManager,
-            @NonNull final RequestCreator requestCreator,
-            @NonNull final SwitcherooDAO switcherooDao) {
+            @NonNull final RequestCreator requestCreator) {
         this.requestValidator = requestValidator;
         this.templateBasedValidator = templateBasedValidator;
-        this.requestStorageManager = requestStorageManager;
-        this.workflowStarter = workflowStarter;
-        this.templateBasedLocationsManager = templateBasedLocationsManager;
         this.requestCreator = requestCreator;
-        this.switcherooDao = switcherooDao;
     }
 
     @Validated
@@ -111,65 +91,30 @@ public class DeleteMitigationFromAllLocationsActivity extends Activity {
             String mitigationTemplate = deleteRequest.getMitigationTemplate();
             ActivityHelper.addTemplateNameCountMetrics(mitigationTemplate, tsdMetrics);
             
-            String deviceName = deleteRequest.getDeviceName();
-            final DeviceName device = DeviceName.valueOf(deviceName);  // A real typed device
-            ActivityHelper.addDeviceNameCountMetrics(deviceName, tsdMetrics);
+            final DeviceName device = DeviceName.valueOf(deleteRequest.getDeviceName());
+            ActivityHelper.addDeviceNameCountMetrics(device.name(), tsdMetrics);
             
-            String serviceName = deleteRequest.getServiceName();
-            ActivityHelper.addServiceNameCountMetrics(serviceName, tsdMetrics);
-
-            // Step1. Validate this request.
+            // Validate this request.
             requestValidator.validateDeleteRequest(deleteRequest);
             
-            // Step2. Validate this request based on the template.
+            // Validate this request based on the template.
             templateBasedValidator.validateRequestForTemplate(deleteRequest, tsdMetrics);
 
             final String location = deleteRequest.getLocation();
 
-            final long workflowId;
-            final int storedMitigationVersion;
+            final MitigationModificationResponse response = requestCreator.queueRequest(
+                    deleteRequest, RequestType.DeleteRequest, null);
 
-            if (switcherooDao.useNewMitigationService(device, location)) {
-                LOG.info(String.format("Using new mitigation service for request %s", requestId));
+            // TODO: just return the response, instead of doing this
+            final long workflowId = response.getJobId();
+            final int storedMitigationVersion = response.getMitigationVersion();
 
-                final MitigationModificationResponse response = requestCreator.queueRequest(
-                        deleteRequest, RequestType.DeleteRequest, null);
-
-                // TODO: just return the response, instead of doing this
-                workflowId = response.getJobId();
-                storedMitigationVersion = response.getMitigationVersion();
-            } else {
-                // Use location from the request
-                final Set<String> locationsToDeploy = new HashSet<>();
-                locationsToDeploy.add(location);
-
-                // Step4. Persist this request in DDB and get back the workflowId associated with this request.
-                RequestStorageResponse requestStorageResponse = requestStorageManager.storeRequestForWorkflow(
-                        deleteRequest, locationsToDeploy, RequestType.DeleteRequest, tsdMetrics);
-                
-                workflowId = requestStorageResponse.getWorkflowId();
-                storedMitigationVersion = requestStorageResponse.getMitigationVersion();
-                
-                // Step5. Create new workflow client to be used for running the workflow.
-                WorkflowClientExternal workflowClient = workflowStarter.createMitigationModificationWorkflowClient(
-                        workflowId, deleteRequest, deviceName, tsdMetrics);
-                
-                // Step6. Start running the workflow.
-                workflowStarter.startMitigationModificationWorkflow(workflowId, deleteRequest, locationsToDeploy,
-                        RequestType.DeleteRequest, storedMitigationVersion, deviceName, workflowClient, tsdMetrics);
-                
-                // Step7. Once the workflow is running, it should have an associated swfRunId, update the request record for this workflow request and store the associated runId.
-                String swfRunId = workflowClient.getWorkflowExecution().getRunId();
-                requestStorageManager.updateRunIdForWorkflowRequest(deviceName, workflowId, swfRunId, RequestType.DeleteRequest, tsdMetrics);
-            }
-
-            // Step8. Return back the workflowId to the client.
+            // Return the workflowId to the client.
             MitigationModificationResponse mitigationModificationResponse = new MitigationModificationResponse();
             mitigationModificationResponse.setMitigationName(deleteRequest.getMitigationName());
             mitigationModificationResponse.setMitigationVersion(storedMitigationVersion);
             mitigationModificationResponse.setMitigationTemplate(deleteRequest.getMitigationTemplate());
-            mitigationModificationResponse.setDeviceName(deviceName);
-            mitigationModificationResponse.setServiceName(deleteRequest.getServiceName());
+            mitigationModificationResponse.setDeviceName(device.name());
             mitigationModificationResponse.setJobId(workflowId);
             mitigationModificationResponse.setRequestStatus(WorkflowStatus.RUNNING);
             

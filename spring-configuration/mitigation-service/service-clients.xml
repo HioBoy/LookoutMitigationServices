@@ -26,25 +26,6 @@
         <constructor-arg ref="baseDynamoDBClient"/>
     </bean>
 
-    <bean id="swfClient" class="com.amazonaws.services.simpleworkflow.AmazonSimpleWorkflowClient">
-        <constructor-arg index="0" ref="swfCredentials"/>
-        <constructor-arg index="1" ref="swfClientConfig"/>
-        <property name="endpoint" value="https://swf.${realm}.amazonaws.com"/>
-    </bean>
-    
-    <bean id="swfClientConnectionTimeoutMillis" class="java.lang.Integer">
-        <constructor-arg value="30000"/> <!-- Set the SWF client connection timeout for the MitigationService to be 30s. -->
-    </bean>
-    
-    <bean id="swfClientSocketTimeoutMillis" class="java.lang.Integer">
-        <constructor-arg value="30000"/> <!-- Set the timeout for the MitigationService to communicate with SWF to be 30s - long enough for all the query APIs to finish. -->
-    </bean>
-    
-    <bean id="swfClientConfig" class="com.amazonaws.ClientConfiguration">
-        <property name="socketTimeout" ref="swfClientSocketTimeoutMillis"/>
-        <property name="connectionTimeout" ref="swfClientConnectionTimeoutMillis"/>
-    </bean>
-
     <bean id="daasControlAPIServiceClient" class="com.amazon.daas.control.DaasControlAPIServiceV20100701ClientImpl">
         <constructor-arg>
             <bean class="com.amazon.coral.service.PassiveOrchestrator">

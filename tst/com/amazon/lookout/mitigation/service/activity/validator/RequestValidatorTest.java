@@ -38,7 +38,6 @@ import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWa
 import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.ServiceName;
 import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.google.common.collect.Lists;
@@ -52,7 +51,6 @@ public class RequestValidatorTest {
     private final String mitigationName = "TestMitigationName";
     private final String template1 = MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer;
     private final String template2 = MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer;
-    private final String serviceName = ServiceName.Edge;
     private final String userName = "TestUserName";
     private final String toolName = "TestToolName";
     private final String description = "TestDesc";
@@ -86,7 +84,6 @@ public class RequestValidatorTest {
     	String[] validBWTemplates = {MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer, MitigationTemplate.BlackWatchPOP_EdgeCustomer, MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer};
     	AbortDeploymentRequest abortRequest = new AbortDeploymentRequest();
     	abortRequest.setJobId(1);
-    	abortRequest.setServiceName(ServiceName.Edge);
     	abortRequest.setDeviceName(DeviceName.BLACKWATCH_POP.name());
     	//valid template
     	for (String template : validBWTemplates) {
@@ -104,7 +101,6 @@ public class RequestValidatorTest {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(template1);
-        request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -135,7 +131,6 @@ public class RequestValidatorTest {
         // RateLimit MitigationTemplate
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationTemplate(template1);
-        request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -180,7 +175,6 @@ public class RequestValidatorTest {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName("");
         request.setMitigationTemplate(template1);
-        request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -263,7 +257,6 @@ public class RequestValidatorTest {
     public void testMissingOrInvalidRateLimitMitigationTemplate() {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
-        request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -310,64 +303,7 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtException);
     }
-    
-    /**
-     * Test the case where the request is missing the serviceName 
-     * We expect an exception to be thrown in this case.
-     */
-    @Test
-    public void testMissingOrInvalidServiceName() {
-        CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationName(mitigationName);
-        request.setMitigationTemplate(template1);
-        
-        MitigationActionMetadata metadata = new MitigationActionMetadata();
-        metadata.setUser(userName);
-        metadata.setToolName(toolName);
-        metadata.setDescription(description);
-        request.setMitigationActionMetadata(metadata);
-        
-        SimpleConstraint constraint = new SimpleConstraint();
-        constraint.setAttributeName(PacketAttributesEnumMapping.DESTINATION_IP.name());
-        constraint.setAttributeValues(Lists.newArrayList("1.2.3.4"));
-        MitigationDefinition definition = new MitigationDefinition();
-        definition.setConstraint(constraint);
-        request.setMitigationDefinition(definition);
-        
-        Throwable caughtException = null;
-        try {
-            validator.validateCreateRequest(request);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-        assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("Invalid service name found"));
-        
-        request.setServiceName("BadServiceName");
-        caughtException = null;
-        try {
-            validator.validateCreateRequest(request);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
-        assertTrue(caughtException instanceof IllegalArgumentException);
-        assertTrue(caughtException.getMessage().startsWith("Invalid service name found"));
-        
-        // Check serviceName with non-printable ascii characters.
-        char invalidChar = 0x00;
-        request.setServiceName(ServiceName.Edge + String.valueOf(invalidChar));
-        caughtException = null;
-        try {
-            validator.validateCreateRequest(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-            assertTrue(ex.getMessage().startsWith("Invalid service name"));
-        }
-        assertNotNull(caughtException);
-    }
-    
+
     /**
      * Test the case where the request is missing the mitigationDefinition
      * We expect an exception to be thrown in this case.
@@ -377,7 +313,6 @@ public class RequestValidatorTest {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(template1);
-        request.setServiceName(serviceName);
         
         SimpleConstraint constraint = new SimpleConstraint();
         constraint.setAttributeName(PacketAttributesEnumMapping.DESTINATION_IP.name());
@@ -405,7 +340,6 @@ public class RequestValidatorTest {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(template1);
-        request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setToolName(toolName);
@@ -451,7 +385,6 @@ public class RequestValidatorTest {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(template1);
-        request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -497,7 +430,6 @@ public class RequestValidatorTest {
         CreateMitigationRequest request = new CreateMitigationRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(template1);
-        request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -558,7 +490,6 @@ public class RequestValidatorTest {
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(template1);
-        request.setServiceName(serviceName);
         request.setMitigationVersion(2);
 
         MitigationActionMetadata metadata = new MitigationActionMetadata();
@@ -583,7 +514,6 @@ public class RequestValidatorTest {
         DeleteMitigationFromAllLocationsRequest request = new DeleteMitigationFromAllLocationsRequest();
         request.setMitigationName(mitigationName);
         request.setMitigationTemplate(template1);
-        request.setServiceName(serviceName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -608,7 +538,7 @@ public class RequestValidatorTest {
     @Test
     public void testCreateRequestWithDuplicateRelatedTickets() {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest(
-                template1, mitigationName, serviceName);
+                template1, mitigationName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -634,7 +564,7 @@ public class RequestValidatorTest {
     @Test
     public void testCreateRequestWithInvalidRelatedTickets() {
         CreateMitigationRequest request = RequestTestHelper.generateCreateMitigationRequest(
-                template1, mitigationName, serviceName);
+                template1, mitigationName);
         
         MitigationActionMetadata metadata = new MitigationActionMetadata();
         metadata.setUser(userName);
@@ -663,26 +593,15 @@ public class RequestValidatorTest {
         ListActiveMitigationsForServiceRequest request = new ListActiveMitigationsForServiceRequest();
         
         // locations is optional
-        request.setServiceName(serviceName);
         request.setDeviceName(DeviceName.BLACKWATCH_POP.name());
         validator.validateListActiveMitigationsForServiceRequest(request);
-        
-        // deviceName may not be a random name.
-        Throwable caughtException = null;
-        request.setDeviceName("arbit");
-        try {
-            validator.validateListActiveMitigationsForServiceRequest(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-        }
-        assertNotNull(caughtException);
         
         // valid device name
         request.setDeviceName("BLACKWATCH_POP");
         validator.validateListActiveMitigationsForServiceRequest(request);
         
         // locations if set may not be empty
-        caughtException = null;
+        Throwable caughtException = null;
         request.setLocations(new ArrayList<String>());
         try {
             validator.validateListActiveMitigationsForServiceRequest(request);
