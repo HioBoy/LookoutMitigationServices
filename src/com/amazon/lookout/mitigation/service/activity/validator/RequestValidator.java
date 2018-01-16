@@ -9,7 +9,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 
@@ -86,23 +85,13 @@ public class RequestValidator {
     private static final int MAX_MINUTES_TO_LIVE_DAYS = 30;
     private static final int MAX_MINUTES_TO_LIVE = MAX_MINUTES_TO_LIVE_DAYS*24*60;
 
-    // Some nominal minimum PPS limit > 0.  It will be enforced on ALL shapers when
-    // more than just the default shaper is used.
-    private static final long MIN_PPS = 10L;
-
     //50 locations at 320Gbps per
     private static final long MAX_BPS = (long) (320L * 1e9 * 50);
-    //84Bytes is the min frame size including preamble and interframe gap.
-    private static final long MIN_FRAME_BITS = 8*84;
-    //10Gbps = 14.88Mpps
-    private static final long MAX_PPS = MAX_BPS/MIN_FRAME_BITS;
     
     private static final int DEFAULT_MAX_LENGTH_DESCRIPTION = 500;
     
     private static final int MAX_NUMBER_OF_LOCATIONS = 200;
     private static final int MAX_NUMBER_OF_TICKETS = 10;
-
-    private static final String DEFAULT_SHAPER_NAME = "default";
     
     private static final RecursiveToStringStyle recursiveToStringStyle = new RecursiveToStringStyle();
 
@@ -854,10 +843,10 @@ public class RequestValidator {
         assert globalShaper != null;
 
         // If the global default shaper doesn't exist, create it
-        if (globalShaper.get(DEFAULT_SHAPER_NAME) == null) {
-            globalShaper.put(DEFAULT_SHAPER_NAME, new BlackWatchTargetConfig.GlobalTrafficShaper());
+        if (globalShaper.get(targetConfig.DEFAULT_SHAPER_NAME) == null) {
+            globalShaper.put(targetConfig.DEFAULT_SHAPER_NAME, new BlackWatchTargetConfig.GlobalTrafficShaper());
         }
-        BlackWatchTargetConfig.GlobalTrafficShaper defaultShaper = globalShaper.get(DEFAULT_SHAPER_NAME);
+        BlackWatchTargetConfig.GlobalTrafficShaper defaultShaper = globalShaper.get(targetConfig.DEFAULT_SHAPER_NAME);
         assert defaultShaper != null;
 
         if (globalPps != null) {
@@ -885,14 +874,6 @@ public class RequestValidator {
             Validate.inclusiveBetween(1, MAX_MINUTES_TO_LIVE, minutesToLive, 
                     String.format("Minutes to live must be between 1 and %d (%d days) Invalid value:%d",
                             MAX_MINUTES_TO_LIVE, MAX_MINUTES_TO_LIVE_DAYS, minutesToLive));
-        }
-    }
-    
-    private void validatePacketsPerSecond(Long pps, String shaperName) {
-        if (pps != null) {
-            Validate.inclusiveBetween(0, MAX_PPS, pps, 
-                    String.format("Traffic shaper \"" + shaperName + "\" must specify PPS"
-                        + " (packets per second) between 0 and %d Invalid value:%d", MAX_PPS, pps));
         }
     }
 
@@ -930,145 +911,11 @@ public class RequestValidator {
         return targetConfig;
     }
 
-    // Set of allowed per-shaper actions
-    private static Set<BlackWatchTargetConfig.MitigationAction> allowedShaperActions = ImmutableSet.of(
-            BlackWatchTargetConfig.MitigationAction.PASS,
-            BlackWatchTargetConfig.MitigationAction.COUNT,
-            BlackWatchTargetConfig.MitigationAction.DROP);
-
-    private void validateShaperAction(final String shaperName,
-            final BlackWatchTargetConfig.MitigationAction shaperAction) {
-        if (shaperAction != null) {
-            if (!allowedShaperActions.contains(shaperAction)) {
-                String msg = String.format("Shaper \"%s\" has invalid action \"%s\"",
-                        shaperName, shaperAction);
-                throw new IllegalArgumentException(msg);
-            }
-        }
-    }
 
     void validateTargetConfig(BlackWatchTargetConfig targetConfig) {
-        // Don't allow specifying both ip_traffic_shaper and global_traffic_shaper
-        if (targetConfig.getMitigation_config() != null
-                && targetConfig.getMitigation_config().getIp_traffic_shaper() != null
-                && targetConfig.getMitigation_config().getGlobal_traffic_shaper() != null) {
-            throw new IllegalArgumentException("Can't configure both ip_traffic_shaper and global_traffic_shaper.");
-        }
-
-        // Validate network_acl
-        if (targetConfig.getMitigation_config() != null
-                && targetConfig.getMitigation_config().getNetwork_acl() != null
-                && targetConfig.getMitigation_config().getNetwork_acl().getConfig() != null) {
-
-            // non-fragment network ACL rules
-            if (targetConfig.getMitigation_config().getNetwork_acl().getConfig().getRules() == null) {
-                throw new IllegalArgumentException("rules key is missing in network_acl");
-            }
-            for (BlackWatchTargetConfig.NetworkAclMitigationConfig.ACLEntry rule :
-                        targetConfig.getMitigation_config().getNetwork_acl().getConfig().getRules()) {
-                if ((rule.getSrc() == null) == (rule.getSrc_country() == null)) {
-                    throw new IllegalArgumentException("ACL rule should have either source ip (src)" +
-                            " or source country (src_country) field, but not both");
-                }
-            }
-
-            // fragment network ACL rules
-            if (targetConfig.getMitigation_config().getNetwork_acl().getConfig().getFragments_rules() != null) {
-                for (BlackWatchTargetConfig.NetworkAclMitigationConfig.ACLEntryForFragmented rule :
-                            targetConfig.getMitigation_config().getNetwork_acl().getConfig().getFragments_rules()) {
-                    if ((rule.getSrc() == null) == (rule.getSrc_country() == null)) {
-                        throw new IllegalArgumentException("Fragment ACL rule should have either source ip (src)" +
-                                " or source country (src_country) field, but not both");
-                    }
-                }
-            }
-        }
-
-        // Validate global_traffic_shaper
-        if (targetConfig.getMitigation_config() != null
-                && targetConfig.getMitigation_config().getGlobal_traffic_shaper() != null) {
-            // global_traffic_shaper key was specified
-            Map<String, BlackWatchTargetConfig.GlobalTrafficShaper> globalShapers =
-                targetConfig.getMitigation_config().getGlobal_traffic_shaper();
-
-            Map<String, Long> shaperRates = new HashMap<>();
-
-            // For each global shaper, validate that the "global_pps" key was provided.
-            // Choose to do this here instead of in the model in order to eventually support
-            // BPS.  With BPS support, instead validate that PPS XOR BPS is specified.
-            for (Map.Entry<String, BlackWatchTargetConfig.GlobalTrafficShaper> entry : globalShapers.entrySet()) {
-                String shaperName = entry.getKey();
-                BlackWatchTargetConfig.GlobalTrafficShaper globalShaper = entry.getValue();
-
-                // Validate that the action is either null or one of the allowed actions
-                BlackWatchTargetConfig.MitigationAction shaperAction = globalShaper.getAction();
-                validateShaperAction(shaperName, shaperAction);
-
-                Long ppsRate = globalShaper.getGlobal_pps();
-
-                if (ppsRate == null) {
-                    String msg = "Configured global_traffic_shaper \"" + shaperName
-                        + "\" must specify \"global_pps\".";
-                    throw new IllegalArgumentException(msg);
-                }
-
-                validatePacketsPerSecond(ppsRate, shaperName);
-
-                // Error on duplicate shaper names
-                if (shaperRates.containsKey(shaperName)) {
-                    String msg = "Duplicate shaper name in global_traffic_shaper: \"" + shaperName + "\"";
-                    throw new IllegalArgumentException(msg);
-                }
-                shaperRates.put(shaperName, ppsRate);
-            }
-
-            // Require a default rate to be defined somewhere
-            if (!shaperRates.containsKey(DEFAULT_SHAPER_NAME)) {
-                String msg = "A default rate limit must be specified";
-                throw new IllegalArgumentException(msg);
-            }
-
-            // If there is more than one shaper (i.e. the default plus others),
-            // don't accept a rate limit of zero for any.
-            // In this case the user has specified config via JSON, and should
-            // do it properly (with a DENY rule instead)
-            if (shaperRates.size() > 1) {
-                for (Map.Entry<String, Long> entry : shaperRates.entrySet()) {
-                    if (entry.getValue().longValue() < MIN_PPS) {
-                        String msg = "Rate limit for traffic shaper \"" + entry.getKey() + "\" "
-                            + "must be greater than the minimum: " + MIN_PPS + " pps";
-                        throw new IllegalArgumentException(msg);
-                    }
-                }
-            }
-        } else {
-            // A default rate limit is required to be specified somewhere.  Since
-            // we don't have any global_traffic_shaper after merging, it wasn't.
-            String msg = "A default rate limit must be specified";
-            throw new IllegalArgumentException(msg);
-        }
-
-        // Validate suspicion score has a non-empty Map<String, Double> baseline_fractions XOR
-        // an @inherit macro with value in format blackwatch.suspicion_score.baseline.config.*
-        if (targetConfig.getMitigation_config() != null
-                && targetConfig.getMitigation_config().getSuspicion_score() != null
-                && targetConfig.getMitigation_config().getSuspicion_score().getConfig() != null) {
-            if ((targetConfig.getMitigation_config().getSuspicion_score().getConfig().getInherited_macro() == null) ==
-                (targetConfig.getMitigation_config().getSuspicion_score().getConfig().getBaseline_fractions() == null)) {
-                String msg = "Suspicion_score needs either a populated baseline_fractions or an @inherit macro (not both)";
-                throw new IllegalArgumentException(msg);
-            }
-
-            if (targetConfig.getMitigation_config().getSuspicion_score().getConfig().getBaseline_fractions() == null) {
-                // check that @inherit has the right format
-                if (!targetConfig.getMitigation_config().getSuspicion_score().getConfig().getInherited_macro().startsWith("blackwatch.suspicion_score.baseline.config.") &&
-                       !targetConfig.getMitigation_config().getSuspicion_score().getConfig().getInherited_macro().equals("blackwatch.suspicion_score.global.config.default")) {
-                    String msg = "Suspicion_score @inherit should point to a macro with format blackwatch.suspicion_score.baseline.config.* " +
-                        "or blackwatch.suspicion_score.global.config.default";
-                    throw new IllegalArgumentException(msg);
-                }
-            }
-        }
+        // wrap in try call?
+        // should we refactor to this returning a boolean?
+        targetConfig.validateTargetConfig();
     }
 }
 
