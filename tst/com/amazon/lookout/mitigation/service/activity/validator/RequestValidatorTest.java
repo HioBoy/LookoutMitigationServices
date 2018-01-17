@@ -1069,7 +1069,7 @@ public class RequestValidatorTest {
         String json = "{}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
         validator.mergeGlobalPpsBps(targetConfig, 5L, null);  // A default rate limit is required
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test
@@ -1078,7 +1078,7 @@ public class RequestValidatorTest {
         String json = "";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
         validator.mergeGlobalPpsBps(targetConfig, 5L, null);  // A default rate limit is required
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test
@@ -1087,7 +1087,7 @@ public class RequestValidatorTest {
         String json = null;
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
         validator.mergeGlobalPpsBps(targetConfig, 5L, null);  // A default rate limit is required
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -1110,7 +1110,7 @@ public class RequestValidatorTest {
         String json = "{ \"mitigation_config\": { \"ip_validation\": { \"action\": \"DROP\" } } }";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
         validator.mergeGlobalPpsBps(targetConfig, 5L, null);  // A default rate limit is required
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
         assertNotNull(targetConfig);
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getIp_validation());
@@ -1133,7 +1133,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
     
     @Test
@@ -1154,7 +1154,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
         assertNotNull(targetConfig);
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getGlobal_traffic_shaper());
@@ -1177,7 +1177,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
     
     @Test(expected=IllegalArgumentException.class)
@@ -1198,7 +1198,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
     
     @Test(expected=IllegalArgumentException.class)
@@ -1219,7 +1219,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
     
     @Test(expected=IllegalArgumentException.class)
@@ -1248,7 +1248,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test
@@ -1276,7 +1276,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
         assertNotNull(targetConfig);
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getGlobal_traffic_shaper());
@@ -1297,7 +1297,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -1315,7 +1315,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test
@@ -1673,7 +1673,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
         assertNotNull(targetConfig);
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getNetwork_acl());
@@ -1715,7 +1715,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
         assertNotNull(targetConfig);
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getNetwork_acl());
@@ -1757,7 +1757,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -1794,7 +1794,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -1828,7 +1828,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -1863,7 +1863,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -1898,7 +1898,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test
@@ -1933,7 +1933,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
         assertNotNull(targetConfig);
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getNetwork_acl());
@@ -1963,7 +1963,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test
@@ -2011,7 +2011,7 @@ public class RequestValidatorTest {
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getSuspicion_score());
         assertNotNull(targetConfig.getMitigation_config().getSuspicion_score().getConfig());
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test
@@ -2056,7 +2056,7 @@ public class RequestValidatorTest {
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getSuspicion_score());
         assertNotNull(targetConfig.getMitigation_config().getSuspicion_score().getConfig());
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test
@@ -2101,7 +2101,7 @@ public class RequestValidatorTest {
         assertNotNull(targetConfig.getMitigation_config());
         assertNotNull(targetConfig.getMitigation_config().getSuspicion_score());
         assertNotNull(targetConfig.getMitigation_config().getSuspicion_score().getConfig());
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -2142,7 +2142,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -2188,7 +2188,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -2229,7 +2229,7 @@ public class RequestValidatorTest {
             + "  }"
             + "}";
         BlackWatchTargetConfig targetConfig = validator.parseMitigationSettingsJSON(json);
-        validator.validateTargetConfig(targetConfig);
+        targetConfig.validate();
     }
 }
 

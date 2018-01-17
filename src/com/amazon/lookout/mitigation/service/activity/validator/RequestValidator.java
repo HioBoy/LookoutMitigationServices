@@ -84,9 +84,6 @@ public class RequestValidator {
     //Thirty days max
     private static final int MAX_MINUTES_TO_LIVE_DAYS = 30;
     private static final int MAX_MINUTES_TO_LIVE = MAX_MINUTES_TO_LIVE_DAYS*24*60;
-
-    //50 locations at 320Gbps per
-    private static final long MAX_BPS = (long) (320L * 1e9 * 50);
     
     private static final int DEFAULT_MAX_LENGTH_DESCRIPTION = 500;
     
@@ -788,7 +785,7 @@ public class RequestValidator {
 
         mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS(),
                 errorOnDuplicateRates);
-        validateTargetConfig(targetConfig);
+        targetConfig.validate();
         validateUserARN(userARN);
 
         return targetConfig;
@@ -808,7 +805,7 @@ public class RequestValidator {
         mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
 
         // Validate the new target configuration
-        validateTargetConfig(targetConfig);
+        targetConfig.validate();
 
         validateUserARN(userARN);
         return targetConfig;
@@ -877,14 +874,6 @@ public class RequestValidator {
         }
     }
 
-    private void validateBitsPerSecond(Long bps) {
-        if (bps != null) {
-            Validate.inclusiveBetween(0, MAX_BPS, bps, 
-                    String.format("BPS (bits per second) must be between 0 and %d Invalid value:%d",
-                            MAX_BPS, bps));
-        }
-    }
-
     public static BlackWatchTargetConfig parseMitigationSettingsJSON(String mitigationSettingsJSON) {
         BlackWatchTargetConfig targetConfig;
         try {
@@ -911,11 +900,5 @@ public class RequestValidator {
         return targetConfig;
     }
 
-
-    void validateTargetConfig(BlackWatchTargetConfig targetConfig) {
-        // wrap in try call?
-        // should we refactor to this returning a boolean?
-        targetConfig.validateTargetConfig();
-    }
 }
 
