@@ -12,10 +12,4 @@ public interface ServiceTemplateValidator {
     
     public void validateRequestForTemplate(MitigationModificationRequest request, String mitigationTemplate, TSDMetrics metrics);
     
-    public void validateCoexistenceForTemplateAndDevice(String templateForNewDefinition, String mitigationNameForNewDefinition, 
-                                                        MitigationDefinition newDefinition, String templateForExistingDefinition, 
-                                                        String mitigationNameForExistingDefinition, MitigationDefinition existingDefinition,
-                                                        TSDMetrics metrics);
-    
-    public boolean requiresCheckForDuplicateAndConflictingRequests();
 }

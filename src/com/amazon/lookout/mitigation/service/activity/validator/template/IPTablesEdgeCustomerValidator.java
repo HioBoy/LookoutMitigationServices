@@ -51,8 +51,14 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
         Validate.notEmpty(mitigationTemplate);
 
         validateMitigationName(request.getMitigationName());
-        validateNoDeploymentChecks(request.getPreDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.PRE);
-        validateNoDeploymentChecks(request.getPostDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.POST);
+
+        if (!(request.getPreDeploymentChecks() == null || request.getPreDeploymentChecks().isEmpty())) {
+            throw new IllegalArgumentException("Don't support pre-deployment checks");
+        }
+
+        if (!(request.getPostDeploymentChecks() == null || request.getPostDeploymentChecks().isEmpty())) {
+            throw new IllegalArgumentException("Don't support post-deployment checks");
+        }
 
         if (request instanceof CreateMitigationRequest) {
             final CreateMitigationRequest r = (CreateMitigationRequest) request;
@@ -89,52 +95,6 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
         }
 
         validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceName, metrics);
-    }
-
-    /**
-     * We currently check if 2 definitions are exactly identical. There could be cases where 2 definitions are equivalent, but not identical (eg:
-     * when they have the same constraints, but the constraints are in different order) - in those cases we don't treat them as identical for now.
-     * We could do so, by enforcing a particular ordering to the mitigation definitions when we persist the definition - however it might get tricky
-     * to do so for different use-cases, eg: for IPTables maybe the user crafted rules such that they are in a certain order for a specific reason.
-     * We could have a deeper-check based on the template - which checks if 2 mitigations are equivalent, but we don't have a strong use-case for such as of now, 
-     * hence keeping the comparison simple for now.
-     * 
-     * We also first check if the hashcode for definitions matches - which acts as a shortcut to avoid deep inspection of the definitions.
-     */
-    @Override
-    public void validateCoexistenceForTemplateAndDevice(
-            @NonNull String templateForNewDefinition,
-            @NonNull String mitigationNameForNewDefinition,
-            @NonNull MitigationDefinition newDefinition,
-            @NonNull String templateForExistingDefinition,
-            @NonNull String mitigationNameForExistingDefinition,
-            @NonNull MitigationDefinition existingDefinition,
-            @NonNull TSDMetrics metrics) {
-        Validate.notEmpty(templateForNewDefinition);
-        Validate.notEmpty(mitigationNameForNewDefinition);
-        Validate.notEmpty(templateForExistingDefinition);
-        Validate.notEmpty(mitigationNameForExistingDefinition);
-        
-        if ((existingDefinition.hashCode()== newDefinition.hashCode()) && newDefinition.equals(existingDefinition)) {
-            String msg = "Found identical mitigation definition: " + mitigationNameForExistingDefinition + " for existingTemplate: " + templateForExistingDefinition +
-                         " with definition: " + jsonDataConverter.toData(existingDefinition) + " for request with MitigationName: " + mitigationNameForNewDefinition + 
-                         " and MitigationTemplate: " + templateForNewDefinition + " with definition: " + jsonDataConverter.toData(newDefinition);
-            LOG.info(msg);
-            throw new DuplicateDefinitionException400(msg);
-        }
-
-        if (templateForNewDefinition.equals(MitigationTemplate.IPTables_Mitigation_EdgeCustomer)) {
-            checkForDuplicateDefinition(
-                    templateForNewDefinition,
-                    templateForExistingDefinition,
-                    mitigationNameForExistingDefinition
-            );
-        }
-    }
-    
-    @Override
-    public boolean requiresCheckForDuplicateAndConflictingRequests() {
-        return true;
     }
 
     private void validateMitigationName(String mitigationName) {
@@ -202,19 +162,5 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
         String ipTablesJson = ipTablesConstraint.getAttributeValues().get(0);
         ipTablesJsonValidator.validateIPTablesJson(ipTablesJson);
     }
-
-    private void checkForDuplicateDefinition(
-            String templateForNewDefinition,
-            String templateForExistingDefinition,
-            String mitigationNameForExistingDefinition) {
-        if (templateForNewDefinition.equals(templateForExistingDefinition)) {
-            String message = String.format(
-                    "For MitigationTemplate: %s we can have at most 1 mitigation active at a time. " +
-                            "Currently mitigation: %s already exists for this template",
-                    templateForNewDefinition,
-                    mitigationNameForExistingDefinition);
-            LOG.info(message);
-            throw new DuplicateDefinitionException400(message);
-        }
-    }
 }
+

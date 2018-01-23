@@ -17,26 +17,5 @@ public interface DeviceBasedServiceTemplateValidator extends ServiceTemplateVali
             MitigationModificationRequest request, String mitigationTemplate, DeviceName deviceName,
             TSDMetrics metrics);
     
-    /**
-     * deployment check type include pre-deployment check, and post-deployment check
-     */
-    public enum DeploymentCheckType {PRE, POST};
-    
-    /**
-     * Validate empty deployment checks
-     * @param deploymentChecks : list of deployment check
-     * @param template : mitigation template
-     * @param isPreDeploymentCheck : is pre-deployment check or not. If it is not pre deployment check, then assume it
-     *                                  is post-deployment check
-     */
-    default void validateNoDeploymentChecks(List<MitigationDeploymentCheck> deploymentChecks, String template,
-            DeploymentCheckType deploymentCheckType) {
-        Validate.notEmpty(template);
-        Validate.notNull(deploymentCheckType);
-        
-        if ((deploymentChecks != null) && !deploymentChecks.isEmpty()) {
-            throw new IllegalArgumentException("For MitigationTemplate: " + template + ", we expect to not have "
-                    + deploymentCheckType.name().toLowerCase() + "-deployment checks to be performed.");
-        }
-    }
 }
+

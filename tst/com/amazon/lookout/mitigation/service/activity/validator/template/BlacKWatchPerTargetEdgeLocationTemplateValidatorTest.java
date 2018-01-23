@@ -27,14 +27,10 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.S3Object;
 import com.amazon.lookout.mitigation.service.alarm.AlarmType;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazonaws.services.s3.AmazonS3;
 
 public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
        
-    @Mock
-    private EdgeLocationsHelper edgeLocationsHelper;
-    
     @Mock
     private MetricsFactory metricsFactory;
     
@@ -67,68 +63,9 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
         // mock TSDMetric
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
-        validator = new BlackWatchPerTargetEdgeLocationTemplateValidator(new BlackWatchEdgeLocationValidator(edgeLocationsHelper, "^[GE]-([A-Z0-9]+)(-C[0-9]+)?$", new HashSet<String>(Arrays.asList("LOADTEST-118", "LOADTEST-119")), ""), s3Client);
-
-        doReturn(new HashSet<String>(Arrays.asList("AMS1", "AMS50", "NRT54", "G-IAD55")))
-                .when(edgeLocationsHelper).getAllClassicPOPs();
+        validator = new BlackWatchPerTargetEdgeLocationTemplateValidator(s3Client);
     }
 
-    /**
-     * Test location validator validate location match pattern
-     */
-    @Test
-    public void testLocationValidator() {
-        try{
-            String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
-            CreateMitigationRequest request = new CreateMitigationRequest();
-            request.setMitigationName("BLACKWATCH_POP_GLOBAL_G-IAD55");
-            request.setMitigationTemplate(mitigationTemplate);
-            request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-            request.setLocation("g-iad55");
-            S3Object config = new S3Object();
-            config.setBucket("s3bucket");
-            config.setKey("s3key");
-            config.setMd5("md5");
-            BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
-            constraint.setConfig(config);
-            MitigationDefinition mitigationDefinition = new MitigationDefinition();
-            mitigationDefinition.setConstraint(constraint);
-            request.setMitigationDefinition(mitigationDefinition);
-            validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-            Assert.fail();
-        } catch (IllegalArgumentException ex) {
-            Assert.assertTrue(ex.getMessage().contains("edge location must exactly match pattern"));
-        }
-    }
-    
-    /**
-     * Test location validator validate location match pattern
-     */
-    @Test
-    public void testLocationValidator2() {
-        try {
-            String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
-            CreateMitigationRequest request = new CreateMitigationRequest();
-            request.setMitigationName("BLACKWATCH_POP_GLOBAL_G-IAD55");
-            request.setMitigationTemplate(mitigationTemplate);
-            request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-            request.setLocation("mrs50");
-            S3Object config = new S3Object();
-            config.setBucket("s3bucket");
-            config.setKey("s3key");
-            config.setMd5("md5");
-            BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
-            constraint.setConfig(config);
-            MitigationDefinition mitigationDefinition = new MitigationDefinition();
-            mitigationDefinition.setConstraint(constraint);
-            request.setMitigationDefinition(mitigationDefinition);
-            validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-            Assert.fail();
-        } catch (IllegalArgumentException ex) {
-            Assert.assertTrue(ex.getMessage().contains("edge location must exactly match pattern"));
-        }
-    }
- 
     /**
      * Create global mitigation at gamma location
      */
@@ -150,7 +87,6 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
         mitigationDefinition.setConstraint(constraint);
         request.setMitigationDefinition(mitigationDefinition);
         validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-        verify(edgeLocationsHelper, times(1)).getAllClassicPOPs();
     }
     
     /**
@@ -177,34 +113,6 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
     }
     
     /**
-     * Create global mitigation at non exist gamma location
-     */
-    @Test
-    public void testCreateMitigationFailGammaPredefinedLocation() {
-    	try {
-	        String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
-	        CreateMitigationRequest request = new CreateMitigationRequest();
-	        request.setMitigationName("BLACKWATCH_POP_GLOBAL_LOADTEST-118");
-	        request.setMitigationTemplate(mitigationTemplate);
-	        request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-	        request.setLocation("LOADTEST-1000");
-	        S3Object config = new S3Object();
-	        config.setBucket("s3bucket");
-	        config.setKey("s3key");
-	        config.setMd5("md5");
-	        BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
-	        constraint.setConfig(config);
-	        MitigationDefinition mitigationDefinition = new MitigationDefinition();
-	        mitigationDefinition.setConstraint(constraint);
-	        request.setMitigationDefinition(mitigationDefinition);
-	        validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-	        Assert.fail();
-    	} catch (IllegalArgumentException ex) {
-    		Assert.assertTrue(ex.getMessage().contains("edge location must exactly match pattern"));
-    	}
-    }
-    
-    /**
      * Create global mitigation at prod location
      */
     @Test
@@ -225,7 +133,6 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
         mitigationDefinition.setConstraint(constraint);
         request.setMitigationDefinition(mitigationDefinition);
         validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-        verify(edgeLocationsHelper, times(1)).getAllClassicPOPs();
     }
     
     /**
@@ -249,7 +156,6 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
         mitigationDefinition.setConstraint(constraint);
         request.setMitigationDefinition(mitigationDefinition);
         validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-        verify(edgeLocationsHelper, times(1)).getAllClassicPOPs();
     }
     
     /**
@@ -309,51 +215,6 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
     }
     
     /**
-     * Create pop override mitigation but didn't specify location
-     */
-    @Test(expected = IllegalArgumentException.class)
-    public void testCreateMitigationFailed7() {
-        String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
-        CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationName("BLACKWATCH_POP_OVERRIDE_E-AMS1");
-        request.setMitigationTemplate(mitigationTemplate);
-        request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-        S3Object config = new S3Object();
-        config.setBucket("s3bucket");
-        config.setKey("s3key");
-        config.setMd5("md5");
-        BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
-        constraint.setConfig(config);
-        MitigationDefinition mitigationDefinition = new MitigationDefinition();
-        mitigationDefinition.setConstraint(constraint);
-        request.setMitigationDefinition(mitigationDefinition);
-        validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-    }
- 
-    /**
-     * Create mitigation with location is not a valid edge location
-     */
-    @Test(expected = IllegalArgumentException.class)
-    public void testCreateMitigationFailed8() {
-        String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
-        CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationName("BLACKWATCH_POP_GLOBAL_AMZ1");
-        request.setMitigationTemplate(mitigationTemplate);
-        request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-        request.setLocation("AMZ1");
-        S3Object config = new S3Object();
-        config.setBucket("s3bucket");
-        config.setKey("s3key");
-        config.setMd5("md5");
-        BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
-        constraint.setConfig(config);
-        MitigationDefinition mitigationDefinition = new MitigationDefinition();
-        mitigationDefinition.setConstraint(constraint);
-        request.setMitigationDefinition(mitigationDefinition);
-        validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-    }
-    
-    /**
      * Edit global mitigation 
      */
     @Test
@@ -374,7 +235,6 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
         mitigationDefinition.setConstraint(constraint);
         request.setMitigationDefinition(mitigationDefinition);
         validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-        verify(edgeLocationsHelper, times(1)).getAllClassicPOPs();
     }
     
     /**
@@ -398,7 +258,6 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
         mitigationDefinition.setConstraint(constraint);
         request.setMitigationDefinition(mitigationDefinition);
         validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-        verify(edgeLocationsHelper, times(1)).getAllClassicPOPs();
     }
     
     /**

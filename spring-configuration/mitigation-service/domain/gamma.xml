@@ -6,14 +6,6 @@
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
     
-    <bean id="gamma.daasControlAPIServiceURL" class="java.lang.String">
-        <constructor-arg value="http://daas-control-api-gamma.amazon.com:80"/>
-    </bean>
-    
-    <bean id="gamma.edgeOperatorServiceURL" class="java.lang.String">
-        <constructor-arg value="http://edge-operator-service-gamma.amazon.com:80"/>
-    </bean>
-
     <bean id="gamma.dogfishBucketSuffix" class="java.lang.String">
         <constructor-arg value="gamma" />
     </bean>
@@ -25,63 +17,6 @@
     <!-- Currently (Oct 2014) there is no gamma for BW, setting it to Test:Prod for now, may change once we have BW back in Gamma. -->
     <bean id="gamma.blackwatchMWSMetricDataset" class="java.lang.String">
         <constructor-arg value="Test:Prod"/>
-    </bean>
-    
-    <util:set id="gamma.defaultPOPsForEdgeLocationsHelper">
-        <value>G-SFO5</value>
-    </util:set>
-    
-    <util:list id="gamma.fakeBlackWatchClassicLocations">
-        <value>G-IAD55</value> 
-        <!-- for load testing we create one location for each test lab host -->
-        <value>SEALAB-A</value>
-        <value>SEALAB-B</value>
-        <value>SEALAB-C</value>
-        <value>SEALAB-D</value>
-        <value>SEALAB-E</value>
-        <value>SEALAB-F</value>
-        <!-- for functional testing we create one location for each person's cloud dev-desktop-->
-        <value>DEV-DSK-SAVILLE</value>
-        <value>DEV-DSK-ROMANTON</value>
-        <value>DEV-DSK-BMBENSON</value>
-        <value>DEV-DSK-CHERHARR</value>
-        <value>DEV-DSK-DMARINUS</value>
-        <value>DEV-DSK-CHUCKPHI</value>
-        <value>DEV-DSK-XINGBOW</value>
-        <value>DEV-DSK-YROBOT</value>
-        <value>DEV-DSK-HUZI</value>
-        <value>DEV-DSK-LAVIGNEN</value>
-        <value>DEV-DSK-KHANESSA</value>
-        <!-- for load testing we create one location for each new G-IAD55 host with LOADTEST prefix-->
-        <value>LOADTEST-113</value>
-        <value>LOADTEST-114</value>
-        <value>LOADTEST-115</value>
-        <value>LOADTEST-116</value>
-        <value>LOADTEST-117</value>
-        <value>LOADTEST-118</value>
-        <value>LOADTEST-119</value>
-        <value>LOADTEST-120</value>
-        <value>LOADTEST-121</value>
-        <value>LOADTEST-122</value>
-        <value>LOADTEST-123</value>
-        <value>LOADTEST-124</value>
-    </util:list>
-    
-    <bean id="gamma.edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
-        <constructor-arg name="cloudfrontClient" ref="edgeOperatorServiceClient"/>
-        <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>
-        <constructor-arg name="millisToSleepBetweenRetries" value="500"/>
-        <constructor-arg name="popsListDir" value="var/state/popsList"/>
-        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
-        <constructor-arg name="fakeBlackWatchClassicLocations" ref="gamma.fakeBlackWatchClassicLocations"/>
-    </bean>
- 
-    <bean id="gamma.edgeLocationPattern" class="java.lang.String">
-        <constructor-arg value="^fakerouter-?\d+$|^G-([A-Z0-9]+)$"/>
-    </bean>
-
-    <bean id="gamma.allowedLocationPrefix" class="java.lang.String">
-        <constructor-arg value="fakerouter"/>
     </bean>
 
     <bean id="gamma.LocationState.readCapacityUnits" class="java.lang.Long">

@@ -130,9 +130,6 @@
     
     <!-- All the beans required by the activities go here -->
     <bean id="requestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.RequestValidator">
-        <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
-        <constructor-arg name="blackWatchBorderLocationValidator" ref="blackWatchBorderLocationValidator"/>
-        <constructor-arg name="blackWatchEdgeLocationValidator" ref="blackWatchEdgeLocationValidator"/>
         <constructor-arg name="currentRegion" value="${realm}"/>
     </bean>
     
@@ -144,26 +141,8 @@
         <constructor-arg ref="s3OdinCredential"/>
     </bean>
 
-    <bean id="blackWatchBorderLocationValidator" 
-            class="com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator">
-        <constructor-arg name="region" value="${realm}"/>
-        <constructor-arg name="borderLocationConfigFilePath" value="${root}/etc/blackwatch_border_locations.json"/>
-        <constructor-arg name="allowedLocationPrefix" ref="${domain}.allowedLocationPrefix"/>
-    </bean>
-
-    <bean id="blackWatchEdgeLocationValidator"
-            class="com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator">
-        <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
-        <constructor-arg name="edgeLocationPattern" ref="${domain}.edgeLocationPattern"/>
-        <constructor-arg name="preDefinedLocations" ref="preDefinedLocations"/>
-        <constructor-arg name="allowedLocationPrefix" ref="${domain}.allowedLocationPrefix"/>
-    </bean>
-    
     <bean id="templateBasedRequestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator">
-        <constructor-arg name="edgeLocationsHelper" ref="${domain}.edgeLocationsHelper"/>
         <constructor-arg name="blackWatchS3Client" ref="blackWatchS3Client"/>
-        <constructor-arg name="blackWatchBorderLocationValidator" ref="blackWatchBorderLocationValidator"/>
-        <constructor-arg name="blackWatchEdgeLocationValidator" ref="blackWatchEdgeLocationValidator"/>
     </bean>
     
     <bean id="ddbBasedHostStatusInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedHostStatusInfoHandler">
@@ -265,32 +244,6 @@
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
     
-    <!-- Following hashset is used by BlackWatchEdgeLocationValidator to validate LOADTEST locations and SYSTEST locations -->
-    <util:set id="preDefinedLocations" set-class="java.util.HashSet" value-type="java.lang.String">
-        <value>BRG-PDQ-1</value> 
-        <value>G-IAD55</value> 
-        <!-- for load testing we create one location for each test lab host -->
-        <value>SEALAB-A</value>
-        <value>SEALAB-B</value>
-        <value>SEALAB-C</value>
-        <value>SEALAB-D</value>
-        <value>SEALAB-E</value>
-        <value>SEALAB-F</value>
-        <!-- for load testing we create one location for each new G-IAD55 host with LOADTEST prefix-->
-        <value>LOADTEST-113</value>
-        <value>LOADTEST-114</value>
-        <value>LOADTEST-115</value>
-        <value>LOADTEST-116</value>
-        <value>LOADTEST-117</value>
-        <value>LOADTEST-118</value>
-        <value>LOADTEST-119</value>
-        <value>LOADTEST-120</value>
-        <value>LOADTEST-121</value>
-        <value>LOADTEST-122</value>
-        <value>LOADTEST-123</value>
-        <value>LOADTEST-124</value>
-    </util:set>
-
     <bean id="currentDao" class="com.amazon.lookout.mitigation.datastore.CurrentRequestsDAOImpl">
         <constructor-arg name="client" ref="dynamoDBClient" />
         <constructor-arg name="tableThroughput" ref="currentRequestsTableThroughput" />

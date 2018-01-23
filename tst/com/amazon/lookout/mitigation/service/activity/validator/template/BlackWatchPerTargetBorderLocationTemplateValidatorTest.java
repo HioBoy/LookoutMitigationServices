@@ -43,9 +43,6 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
     @Mock
     protected TSDMetrics tsdMetric;
     
-    @Mock
-    protected BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
-    
     private BlackWatchPerTargetBorderLocationTemplateValidator validator;
     
     private static final AlarmCheck ALARM_CHECK = new AlarmCheck(); 
@@ -66,8 +63,7 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         // mock TSDMetric
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
-        validator = new BlackWatchPerTargetBorderLocationTemplateValidator(s3Client,
-                blackWatchBorderLocationValidator);
+        validator = new BlackWatchPerTargetBorderLocationTemplateValidator(s3Client);
     }
 
     /**
@@ -196,28 +192,6 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
     }
     
     /**
-     * Create pop override mitigation but didn't specify location
-     */
-    @Test(expected = IllegalArgumentException.class)
-    public void testCreateMitigationFailed7() {
-        String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
-        CreateMitigationRequest request = new CreateMitigationRequest();
-        request.setMitigationName("BLACKWATCH_POP_OVERRIDE_E-AMS1");
-        request.setMitigationTemplate(mitigationTemplate);
-        request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-        S3Object config = new S3Object();
-        config.setBucket("s3bucket");
-        config.setKey("s3key");
-        config.setMd5("md5");
-        BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
-        constraint.setConfig(config);
-        MitigationDefinition mitigationDefinition = new MitigationDefinition();
-        mitigationDefinition.setConstraint(constraint);
-        request.setMitigationDefinition(mitigationDefinition);
-        validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-    }
-    
-    /**
      * Edit global mitigation 
      */
     @Test
@@ -275,35 +249,5 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
         validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
     }
-    
-    /**
-     * Test invalid location
-     */
-    @Test
-    public void testInvalidLocation() {
-        IllegalArgumentException expectedException = new IllegalArgumentException();
-        try {
-            String location = "E-AMS1";
-            Mockito.doThrow(expectedException).when(blackWatchBorderLocationValidator).validateLocation(location);
-            String mitigationTemplate = MitigationTemplate.BlackWatchPOP_EdgeCustomer;
-            CreateMitigationRequest request = new CreateMitigationRequest();
-            request.setMitigationName("BLACKWATCH_POP_GLOBAL_E-AMS1");
-            request.setMitigationTemplate(mitigationTemplate);
-            request.setPostDeploymentChecks(Arrays.asList(ALARM_CHECK));
-            request.setLocation(location);
-            S3Object config = new S3Object();
-            config.setBucket("s3bucket");
-            config.setKey("s3key");
-            config.setMd5("md5");
-            BlackWatchConfigBasedConstraint constraint = new BlackWatchConfigBasedConstraint();
-            constraint.setConfig(config);
-            MitigationDefinition mitigationDefinition = new MitigationDefinition();
-            mitigationDefinition.setConstraint(constraint);
-            request.setMitigationDefinition(mitigationDefinition);
-            validator.validateRequestForTemplate(request, mitigationTemplate, tsdMetric);
-            fail();
-        } catch (IllegalArgumentException ex) {
-            assertEquals(expectedException, ex);
-        }
-    }
 }
+

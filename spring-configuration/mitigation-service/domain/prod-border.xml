@@ -8,17 +8,7 @@
 
     <import resource="file:${spring.config.root}/mitigation-service/domain/prod.xml"/>
 
-    <alias name="prod.daasControlAPIServiceURL" alias="prod-border.daasControlAPIServiceURL"/>
-
-    <alias name="prod.edgeOperatorServiceURL" alias="prod-border.edgeOperatorServiceURL"/>
-
     <alias name="prod.blackwatchMWSMetricDataset" alias="prod-border.blackwatchMWSMetricDataset"/>
-
-    <util:set id="prod-border.defaultPOPsForEdgeLocationsHelper"/>
-
-    <alias name="prod.edgeLocationsHelper" alias="prod-border.edgeLocationsHelper"/>
-
-    <alias name="prod.edgeLocationPattern" alias="prod-border.edgeLocationPattern"/>
 
     <alias name="prod.regionEndpointsMap" alias="prod-border.regionEndpointsMap"/>
 
@@ -29,8 +19,6 @@
     <bean id="prod-border.dogfishBucketSuffix" class="java.lang.String">
         <constructor-arg value="prod" />
     </bean>
-
-    <alias name="prod.allowedLocationPrefix" alias="prod-border.allowedLocationPrefix"/>
 
     <alias name="prod.LocationState.readCapacityUnits" alias="prod-border.LocationState.readCapacityUnits"/>
 

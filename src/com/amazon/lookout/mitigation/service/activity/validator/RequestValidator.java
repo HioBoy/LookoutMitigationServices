@@ -55,12 +55,9 @@ import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateReques
 import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.model.RequestType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -117,20 +114,11 @@ public class RequestValidator {
             .collect(ImmutableSet.toImmutableSet());
 
     private final Set<String> deviceNames;
-    private final EdgeLocationsHelper edgeLocationsHelper;
-    private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
-    private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
     private final String currentRegion;
     
-    @ConstructorProperties({"edgeLocationsHelper", "blackWatchBorderLocationValidator",
-        "blackWatchEdgeLocationValidator", "currentRegion"})
-    public RequestValidator(@NonNull EdgeLocationsHelper edgeLocationsHelper,
-            @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator,
-            @NonNull BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator,
+    @ConstructorProperties({"currentRegion"})
+    public RequestValidator(
             @NonNull String currentRegion) {
-        this.edgeLocationsHelper = edgeLocationsHelper;
-        this.blackWatchBorderLocationValidator = blackWatchBorderLocationValidator;
-        this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
         this.currentRegion = currentRegion.toLowerCase();
 
         this.deviceNames = new HashSet<>();
@@ -321,8 +309,6 @@ public class RequestValidator {
      */
     public void validateGetLocationDeploymentHistoryRequest(GetLocationDeploymentHistoryRequest request) {
         validateLocation(request.getLocation());
-        validateLocationOnDevice(DeviceName.valueOf(request.getDeviceName()),
-                request.getLocation());
         Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
         int maxHistoryEntryCount = GetLocationDeploymentHistoryActivity.MAX_NUMBER_OF_HISTORY_TO_FETCH;
         if (maxNumberOfHistoryEntriesToFetch != null) {
@@ -794,25 +780,6 @@ public class RequestValidator {
         }
     }
      
-    private void validateLocationOnDevice(DeviceName device, String location) {
-        String errorMessage = String.format("Location %s is not valid on %s.",
-                location, device);
-    
-        switch (device) {
-        case POP_HOSTS_IP_TABLES:
-            Validate.isTrue(location.equals("EdgeWorldwide"), errorMessage);
-            break;
-        case BLACKWATCH_POP:
-            blackWatchEdgeLocationValidator.validateLocation(location, errorMessage);
-            break;
-        case BLACKWATCH_BORDER:
-            blackWatchBorderLocationValidator.validateLocation(location, errorMessage);
-            break;
-        default:
-            throw new IllegalArgumentException("Unsupported device name " + device);
-        }
-    }
-
     public BlackWatchTargetConfig validateUpdateBlackWatchMitigationRequest(
             @NonNull UpdateBlackWatchMitigationRequest request,
             @NonNull BlackWatchTargetConfig existingTargetConfig,

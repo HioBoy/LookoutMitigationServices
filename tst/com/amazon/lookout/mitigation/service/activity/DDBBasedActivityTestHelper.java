@@ -33,12 +33,9 @@ import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedBlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
@@ -86,9 +83,6 @@ public class DDBBasedActivityTestHelper {
     protected static ResourceAllocationHelper resourceAllocationHelper;
     protected static Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeValidator> resourceTypeValidatorMap;
 
-    protected EdgeLocationsHelper edgeLocationsHelper;
-    protected BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
-    protected BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
     protected RequestValidator requestValidator;
     private static ELBResourceHelper elbResourceHelper;
     private static Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeHelper> resourceTypeHelpers;
@@ -140,13 +134,7 @@ public class DDBBasedActivityTestHelper {
         resourceAllocationStateDDBHelper.deleteTable();
         resourceAllocationStateDDBHelper.createTableIfNotExist(readCapacityUnits, writeCapacityUnits);
         
-        edgeLocationsHelper = mock(EdgeLocationsHelper.class);
-        blackWatchBorderLocationValidator = mock(BlackWatchBorderLocationValidator.class);
-        blackWatchEdgeLocationValidator = mock(BlackWatchEdgeLocationValidator.class);
-        requestValidator = new RequestValidator(edgeLocationsHelper,
-                blackWatchBorderLocationValidator, blackWatchEdgeLocationValidator,
-                "/random/path/location/json");
-        
+        requestValidator = new RequestValidator("/random/path/location/json");
 
         dogfishHelper = mock(DogFishValidationHelper.class);
         blackwatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDDBHelper,

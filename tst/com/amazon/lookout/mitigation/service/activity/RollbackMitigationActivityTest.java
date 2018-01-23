@@ -20,14 +20,11 @@ import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.model.RequestType;
 
 import com.amazon.lookout.mitigation.RequestCreator;
@@ -44,9 +41,7 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
     
     @Before
     public void setupMore() {
-        requestValidator = spy(new RequestValidator(mock(EdgeLocationsHelper.class),
-                mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class),
+        requestValidator = spy(new RequestValidator(
                 "/random/path/location/json"));
         requestCreator = mock(RequestCreator.class);
         rollbackMitigationActivity = new RollbackMitigationActivity(requestValidator,

@@ -13,17 +13,8 @@ import com.amazonaws.services.s3.AmazonS3;
  */
 public class BlackWatchPerTargetEdgeLocationTemplateValidator extends BlackWatchPerTargetMitigationTemplateValidator {
     public BlackWatchPerTargetEdgeLocationTemplateValidator(
-            BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator, AmazonS3 blackWatchConfigS3Client) {
+            AmazonS3 blackWatchConfigS3Client) {
         super(blackWatchConfigS3Client);
-        this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
-    }
-
-    private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
-
-    @Override
-    protected void validateLocation(final String location) {
-        Validate.notEmpty(location, "location should not be empty.");
-        blackWatchEdgeLocationValidator.validateLocation(location);
     }
 }
 

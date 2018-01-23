@@ -19,7 +19,6 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazonaws.services.s3.AmazonS3;
 
 @SuppressWarnings("unchecked")
@@ -44,9 +43,7 @@ public class TemplateBasedRequestValidatorTest {
     @Test
     public void testHappyCase() {
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
-                mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class));
+                mock(AmazonS3.class));
         MitigationModificationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         request.setPreDeploymentChecks(null);
         request.setLocation("AMS1");
@@ -67,9 +64,7 @@ public class TemplateBasedRequestValidatorTest {
     @Test
     public void testInvalidOrBadTemplateCase() {
         TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
-                mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class));
+                mock(AmazonS3.class));
         MitigationModificationRequest request = 
                 RequestTestHelper.generateCreateMitigationRequest("BadTemplate", "Name");
         Throwable caughtException = null;
@@ -81,31 +76,5 @@ public class TemplateBasedRequestValidatorTest {
         assertNotNull(caughtException);
         assertTrue(caughtException instanceof InternalServerError500);
         assertTrue(caughtException.getMessage().startsWith("No check configured for mitigationTemplate"));
-    }
-    
-    /**
-     * Test the case where we have a request that doesn't pass the validation based on its coexistence with an existing mitigation.
-     * We expect the validation to throw back an exceptions here.
-     */
-    @Test
-    public void testBadCoexistenceCase() {
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(
-                mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
-                mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class));
-        
-        MitigationDefinition definition1 = RequestTestHelper.defaultMitigationDefinition();
-        
-        MitigationDefinition definition2 = RequestTestHelper.defaultMitigationDefinition();
-        
-        Throwable caughtException = null;
-        try {
-            templateBasedValidator.validateCoexistenceForTemplateAndDevice(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, "Mitigation1", definition1, 
-                                                                           MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer, "Mitigation2", definition2,
-                                                                           tsdMetrics);
-        } catch (Exception ex) {
-            caughtException = ex;
-        }
-        assertNull(caughtException);  // BlackWatch templates allow mitigations to coexist
     }
 }

@@ -15,7 +15,6 @@ import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazonaws.services.s3.AmazonS3;
 /**
  * Validate Edge BlackWatch mitigation request.
@@ -38,12 +37,9 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
     private static final String LOCATION_PATTERN = "[-_A-Za-z0-9]+";
     private static final Pattern VALID_GLOBAL_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_GLOBAL_(%s)", LOCATION_PATTERN));
     private static final Pattern VALID_POP_OVERRIDE_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_OVERRIDE_(%s)", LOCATION_PATTERN));
-    private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
     
-    public EdgeBlackWatchMitigationTemplateValidator(AmazonS3 blackWatchConfigS3Client,
-            EdgeLocationsHelper edgeLocationsHelper, BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator) {
+    public EdgeBlackWatchMitigationTemplateValidator(AmazonS3 blackWatchConfigS3Client) {
         super(blackWatchConfigS3Client);
-        this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
     }
     
     @Override
@@ -66,24 +62,15 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
     private void validateCreateRequest(CreateMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
-        final String location = request.getLocation();
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
-        validateLocation(location, request.getMitigationName());
         validateDeploymentChecks(request);
     }
    
     private void validateEditRequest(EditMitigationRequest request) {
         Validate.notNull(request.getMitigationDefinition(), "mitigationDefinition cannot be null.");
 
-        final String location = request.getLocation();
         validateBlackWatchConfigBasedConstraint(request.getMitigationDefinition().getConstraint());
-        validateLocation(location, request.getMitigationName());
         validateDeploymentChecks(request);
-    }
-        
-    private void validateLocation(final String location, final String mitigationName) {
-        Validate.isTrue(location.equals(findLocationFromMitigationName(mitigationName)));
-        blackWatchEdgeLocationValidator.validateLocation(location);
     }
 
     private String findLocationFromMitigationName(String mitigationName) {
@@ -100,20 +87,6 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
         String message = String.format("Invalid mitigationName %s. Name doesn't match the any mitigation name pattern.", mitigationName);
         LOG.info(message);
         throw new IllegalArgumentException(message);
-    }
-
-    @Override
-    public void validateCoexistenceForTemplateAndDevice(
-            String templateForNewDefinition,
-            String mitigationNameForNewDefinition,
-            MitigationDefinition newDefinition,
-            String templateForExistingDefinition,
-            String mitigationNameForExistingDefinition,
-            MitigationDefinition existingDefinition,
-            TSDMetrics metrics) {
-        // blackwatch allow multiple mitigations, so ignore this check.
-        // it also allow same mitigation definition but different mitigation name.
-        // so leave this empty.
     }
 }
 

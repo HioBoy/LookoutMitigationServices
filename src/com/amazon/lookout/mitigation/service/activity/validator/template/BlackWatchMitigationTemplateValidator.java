@@ -74,7 +74,10 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
     }
     
     protected void validateDeploymentChecks(MitigationModificationRequest request) {
-        validateNoDeploymentChecks(request.getPreDeploymentChecks(), request.getMitigationTemplate(), DeploymentCheckType.PRE);
+        if (!(request.getPreDeploymentChecks() == null || request.getPreDeploymentChecks().isEmpty())) {
+            throw new IllegalArgumentException("Pre-deployment checks are not supported");
+        }
+
         List<MitigationDeploymentCheck> postDeploymentChecks = request.getPostDeploymentChecks();
         if (postDeploymentChecks == null || postDeploymentChecks.isEmpty()){
             //we allow post deployment check to be empty for the blackwatch border template
@@ -216,19 +219,5 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
             }
         }
     }
-
-    @Override
-    public void validateCoexistenceForTemplateAndDevice(String templateForNewDefinition,
-            String mitigationNameForNewDefinition, MitigationDefinition newDefinition,
-            String templateForExistingDefinition, String mitigationNameForExistingDefinition,
-            MitigationDefinition existingDefinition, TSDMetrics metrics) {
-        // blackwatch allow multiple mitigations, so ignore this check.
-        // it also allow same mitigation definition but different mitigation name.
-        // so leave this empty.
-    }
-    
-    @Override
-    public boolean requiresCheckForDuplicateAndConflictingRequests() {
-        return false;
-    }
 }
+

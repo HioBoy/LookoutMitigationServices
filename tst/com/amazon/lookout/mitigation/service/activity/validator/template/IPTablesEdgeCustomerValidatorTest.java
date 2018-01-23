@@ -220,27 +220,6 @@ public class IPTablesEdgeCustomerValidatorTest {
         assertThat(actualError.getMessage(), containsString(requiredCustomer));
     }
 
-    @Test
-    public void validateCoexistenceForTemplateAndDeviceForSameTemplate() throws Exception {
-        IPTablesEdgeCustomerValidator validator = createValidator();
-        MitigationDefinition definition1 = generateMitigationDefinition(validIpTablesJson());
-        MitigationDefinition definition2 = generateMitigationDefinition(validIpTablesJson());
-
-        DuplicateDefinitionException400 actualError = assertThrows(
-                DuplicateDefinitionException400.class,
-                () -> validator.validateCoexistenceForTemplateAndDevice(
-                        MitigationTemplate.IPTables_Mitigation_EdgeCustomer,
-                        "Mitigation1",
-                        definition1,
-                        MitigationTemplate.IPTables_Mitigation_EdgeCustomer,
-                        "Mitigation2",
-                        definition2,
-                        mock(TSDMetrics.class)));
-
-        assertThat(actualError.getMessage(), containsString(MitigationTemplate.IPTables_Mitigation_EdgeCustomer));
-        assertThat(actualError.getMessage(), containsString("Mitigation2"));
-    }
-
     private static String elementTitle(String elementName) {
         return "\"" + elementName + "\":";
     }

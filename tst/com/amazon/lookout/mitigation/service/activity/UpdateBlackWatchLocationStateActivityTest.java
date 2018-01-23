@@ -13,9 +13,6 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateResponse;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 
 public class UpdateBlackWatchLocationStateActivityTest extends ActivityTestHelper {
     private static final String location = "location1";
@@ -26,9 +23,7 @@ public class UpdateBlackWatchLocationStateActivityTest extends ActivityTestHelpe
     
     @Before
     public void setup() {
-        requestValidator = spy(new RequestValidator(mock(EdgeLocationsHelper.class),
-                mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class),
+        requestValidator = spy(new RequestValidator(
                 "/random/path/location/json"));
         updateBlackWatchLocationStateActivity = 
                 spy(new UpdateBlackWatchLocationStateActivity(requestValidator, locationStateInfoHandler));

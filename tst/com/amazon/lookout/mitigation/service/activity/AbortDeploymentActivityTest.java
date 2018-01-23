@@ -11,9 +11,6 @@ import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.AbortDeploymentResponse;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 
 import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
 
@@ -24,11 +21,7 @@ public class AbortDeploymentActivityTest extends ActivityTestHelper {
     
     @Before
     public void setupMore() {
-        requestValidator = spy(new RequestValidator(
-                mock(EdgeLocationsHelper.class),
-                mock(BlackWatchBorderLocationValidator.class),
-                mock(BlackWatchEdgeLocationValidator.class),
-                "/random/path/location/json"));
+        requestValidator = spy(new RequestValidator("/random/path/location/json"));
         abortDeploymentActivity = new AbortDeploymentActivity(requestValidator,
                 mock(CurrentRequestsDAO.class));
     }

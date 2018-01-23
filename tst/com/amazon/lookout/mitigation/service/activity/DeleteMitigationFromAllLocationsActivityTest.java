@@ -23,12 +23,9 @@ import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsReq
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.s3.AmazonS3;
@@ -58,14 +55,8 @@ public class DeleteMitigationFromAllLocationsActivityTest {
 
     private DeleteMitigationFromAllLocationsActivity createActivityWithValidators() {
         return new DeleteMitigationFromAllLocationsActivity(
-            new RequestValidator(mock(EdgeLocationsHelper.class),
-                    mock(BlackWatchBorderLocationValidator.class),
-                    mock(BlackWatchEdgeLocationValidator.class),
-                    "/random/path/location/json"),
-            new TemplateBasedRequestValidator(
-                    mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
-                    mock(BlackWatchBorderLocationValidator.class),
-                    mock(BlackWatchEdgeLocationValidator.class)),
+            new RequestValidator("/random/path/location/json"),
+            new TemplateBasedRequestValidator(mock(AmazonS3.class)),
             mock(RequestCreator.class));
     }
 

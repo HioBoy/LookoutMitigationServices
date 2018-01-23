@@ -5,10 +5,7 @@ import java.util.Collections;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchBorderLocationValidator;
-import com.amazon.lookout.mitigation.service.activity.validator.template.BlackWatchEdgeLocationValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.s3.AmazonS3;
 
@@ -40,13 +37,8 @@ public class EditMitigationActivityTest {
 
     private EditMitigationActivity createActivityWithValidators() {
         return new EditMitigationActivity(
-            new RequestValidator(mock(EdgeLocationsHelper.class),
-                    mock(BlackWatchBorderLocationValidator.class),
-                    mock(BlackWatchEdgeLocationValidator.class),
-                    "/random/path/location/json"),
-            new TemplateBasedRequestValidator(mock(EdgeLocationsHelper.class), mock(AmazonS3.class),
-                    mock(BlackWatchBorderLocationValidator.class),
-                    mock(BlackWatchEdgeLocationValidator.class)),
+            new RequestValidator("/random/path/location/json"),
+            new TemplateBasedRequestValidator(mock(AmazonS3.class)),
             mock(RequestCreator.class));
     }
 }

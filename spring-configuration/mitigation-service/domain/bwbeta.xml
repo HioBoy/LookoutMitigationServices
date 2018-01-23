@@ -6,14 +6,6 @@
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
     
-    <bean id="bwbeta.daasControlAPIServiceURL" class="java.lang.String">
-        <constructor-arg value="http://daas-control-api-gamma.amazon.com:80"/> <!-- Use gamma endpoint for beta as well, since we don't have any beta POPs. -->
-    </bean>
-    
-    <bean id="bwbeta.edgeOperatorServiceURL" class="java.lang.String">
-        <constructor-arg value="http://edge-operator-service-gamma.amazon.com:80"/> <!-- Use gamma endpoint for beta as well, since we don't have any beta POPs. -->
-    </bean>
-
     <util:map id="bwbeta.regionEndpointsMap">
         <entry key="IAD" value="lookout-mitigation-service-us-east-1-bwbeta.corp.amazon.com"/>
     </util:map>
@@ -31,34 +23,6 @@
         <constructor-arg value="Test"/>
     </bean>
  
-    <util:list id="bwbeta.fakeBlackWatchClassicLocations">
-        <value>SEALAB-A</value>
-        <value>SEALAB-B</value>
-        <value>SEALAB-C</value>
-        <value>SEALAB-D</value>
-        <value>SEALAB-E</value>
-        <value>SEALAB-F</value>
-    </util:list>   
-    
-    <util:set id="bwbeta.defaultPOPsForEdgeLocationsHelper"/>
-
-     <bean id="bwbeta.edgeLocationsHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper">
-        <constructor-arg name="cloudfrontClient" ref="edgeOperatorServiceClient"/>
-        <constructor-arg name="daasClient" ref="daasControlAPIServiceClient"/>
-        <constructor-arg name="millisToSleepBetweenRetries" value="500"/>
-        <constructor-arg name="popsListDir" value="var/state/popsList"/>
-        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
-        <constructor-arg name="fakeBlackWatchClassicLocations" ref="bwbeta.fakeBlackWatchClassicLocations"/>
-    </bean>
- 
-    <bean id="bwbeta.edgeLocationPattern" class="java.lang.String">
-        <constructor-arg value="^fakerouter-?\d+$"/>
-    </bean>
-
-    <bean id="bwbeta.allowedLocationPrefix" class="java.lang.String">
-        <constructor-arg value="fakerouter"/>
-    </bean>
-
     <bean id="bwbeta.LocationState.readCapacityUnits" class="java.lang.Long">
         <constructor-arg value="50"/>
     </bean>

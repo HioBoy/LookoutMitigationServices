@@ -19,7 +19,6 @@ import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.workflow.helper.EdgeLocationsHelper;
 import com.amazonaws.services.s3.AmazonS3;
 
 /**
@@ -33,26 +32,16 @@ public class TemplateBasedRequestValidator {
     
     private static final String MITIGATION_TEMPLATE_KEY = "MitigationTemplate";
     
-    private final EdgeLocationsHelper edgeLocationsHelper;
     private final AmazonS3 blackWatchS3Client;
-    private final BlackWatchBorderLocationValidator blackWatchBorderLocationValidator;
-    private final BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator;
-    
+
     // Map of templateName -> ServiceTemplateValidator which is responsible for validating this template.
     private final ImmutableMap<String, ServiceTemplateValidator> serviceTemplateValidatorMap;
     
-    @ConstructorProperties({"edgeLocationsHelper", "blackWatchS3Client",
-        "blackWatchBorderLocationValidator", "blackWatchEdgeLocationValidator"})
-    public TemplateBasedRequestValidator(
-            @NonNull EdgeLocationsHelper edgeLocationsHelper, @NonNull AmazonS3 blackWatchS3Client,
-            @NonNull BlackWatchBorderLocationValidator blackWatchBorderLocationValidator,
-            @NonNull BlackWatchEdgeLocationValidator blackWatchEdgeLocationValidator) 
+    @ConstructorProperties({"blackWatchS3Client"})
+    public TemplateBasedRequestValidator(@NonNull AmazonS3 blackWatchS3Client) 
     {
         
         this.blackWatchS3Client = blackWatchS3Client;
-        this.edgeLocationsHelper = edgeLocationsHelper;
-        this.blackWatchBorderLocationValidator = blackWatchBorderLocationValidator;
-        this.blackWatchEdgeLocationValidator = blackWatchEdgeLocationValidator;
         
         // this line should be the last line of constructor, as it might relies on the variable assigned before.
         this.serviceTemplateValidatorMap = getServiceTemplateValidatorMap();
@@ -80,59 +69,7 @@ public class TemplateBasedRequestValidator {
             subMetrics.end();
         }
     }
-    
-    /**
-     * Validate if the new mitigation can coexist with an existing mitigation. Different templates might dictate different rules for co-existence, hence delegating this
-     * check to the ServiceTemplateValidator.
-     * @param templateForNewDefinition Template used for the new mitigation.
-     * @param nameForNewDefinition MitigationName of the new mitigation.
-     * @param newDefinition MitigationDefinition of the new mitigation.
-     * @param templateForExistingDefinition Template using which the existing mitigation was created. 
-     * @param nameForExistingDefinition MitigationName of the existing mitigation.
-     * @param existingDefinition MitigationDefinition of the existing mitigation.
-     */
-    public void validateCoexistenceForTemplateAndDevice(@NonNull String templateForNewDefinition, @NonNull String nameForNewDefinition, @NonNull MitigationDefinition newDefinition,
-                                                        @NonNull String templateForExistingDefinition, @NonNull String nameForExistingDefinition,
-                                                        @NonNull MitigationDefinition existingDefinition,
-                                                        TSDMetrics metrics) {
-        Validate.notEmpty(templateForNewDefinition);
-        Validate.notEmpty(nameForNewDefinition);
-        Validate.notEmpty(templateForExistingDefinition);
-        Validate.notEmpty(nameForExistingDefinition);
-        
-        ServiceTemplateValidator templateBasedValidator = getValidator(templateForNewDefinition);
-        
-        // Delegate the check to template specific validator.
-        templateBasedValidator.validateCoexistenceForTemplateAndDevice(templateForNewDefinition, nameForNewDefinition, newDefinition, templateForExistingDefinition, 
-                                                                       nameForExistingDefinition, existingDefinition, metrics);
-        
-        // Perform a symmetrical check if the templates are different, to ensure we check the validator for the existing mitigation as well.
-        if (!templateForExistingDefinition.equals(templateForNewDefinition)) {
-            templateBasedValidator = getValidator(templateForExistingDefinition);
-            
-            // Delegate the check to template specific validator.
-            templateBasedValidator.validateCoexistenceForTemplateAndDevice(templateForExistingDefinition, nameForExistingDefinition, existingDefinition, 
-                                                                           templateForNewDefinition, nameForNewDefinition, newDefinition, metrics);
-        }
-    }
-    
-    /**
-     * Returns whether checkForDuplicateAndConflictingRequests needs to be called in
-     * DDBBasedCreateAndEditRequestStorageHandler to search for active requests with a mitigation
-     * definition that conflicts with this request's definition. This implementation delegates
-     * to {@link ServiceTemplateValidator#requiresCheckForDuplicateAndConflictingRequests()} in
-     * the validator specific to each request's template. In general this should return true unless
-     * the template-specific validator implements
-     * {@link ServiceTemplateValidator#validateCoexistenceForTemplateAndDevice(String, String, MitigationDefinition, String, String, MitigationDefinition, TSDMetrics)}
-     * as a noop, in which case this method can probably return false.
-     * 
-     * @param mitigationTemplate template for new create/edit request
-     * @return true if the check is required, false if not.
-     */
-    public boolean requiresCheckForDuplicateAndConflictingRequests(String mitigationTemplate) {
-        return getValidator(mitigationTemplate).requiresCheckForDuplicateAndConflictingRequests();
-    }
-    
+
     /**
      * Return the ServiceTemplateValidator based on the mitigationTemplate passed as input. Protected for unit-testing.
      * @param mitigationTemplate MitigationTemplate used in the request.
@@ -159,15 +96,15 @@ public class TemplateBasedRequestValidator {
     }
     
     private ServiceTemplateValidator getBlackWatchEdgeCustomerValidator() {
-    	return new EdgeBlackWatchMitigationTemplateValidator(blackWatchS3Client, edgeLocationsHelper, blackWatchEdgeLocationValidator);
+    	return new EdgeBlackWatchMitigationTemplateValidator(blackWatchS3Client);
     }
     
     private ServiceTemplateValidator getBlackWatchBorderValidator() {
-        return new BlackWatchPerTargetBorderLocationTemplateValidator(blackWatchS3Client, blackWatchBorderLocationValidator);
+        return new BlackWatchPerTargetBorderLocationTemplateValidator(blackWatchS3Client);
     }
 
     private ServiceTemplateValidator getBlackWatchEdgeValidator() {
-    	return new BlackWatchPerTargetEdgeLocationTemplateValidator(blackWatchEdgeLocationValidator, blackWatchS3Client);
+    	return new BlackWatchPerTargetEdgeLocationTemplateValidator(blackWatchS3Client);
     }
     
     /**
