@@ -783,7 +783,7 @@ public class RequestValidator {
             errorOnDuplicateRates = true;
         }
 
-        mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS(),
+        BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS(),
                 errorOnDuplicateRates);
         targetConfig.validate();
         validateUserARN(userARN);
@@ -802,67 +802,13 @@ public class RequestValidator {
         BlackWatchTargetConfig targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
 
         // Merge global PPS/BPS into the target config
-        mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
+        targetConfig.mergeGlobalPpsBps(request.getGlobalPPS(), request.getGlobalBPS());
 
         // Validate the new target configuration
         targetConfig.validate();
 
         validateUserARN(userARN);
         return targetConfig;
-    }
-    
-    void mergeGlobalPpsBps(@NonNull BlackWatchTargetConfig targetConfig,
-            Long globalPps, Long globalBps) {
-        mergeGlobalPpsBps(targetConfig, globalPps, globalBps, true);
-    }
-
-    // Merge the GlobalPPS/GlobalBPS values provided via the API fields into the target config.
-    void mergeGlobalPpsBps(@NonNull BlackWatchTargetConfig targetConfig,
-            Long globalPps, Long globalBps, boolean errorOnDuplicateRates) {
-        if (globalPps == null && globalBps == null) {
-            return;  // There is nothing to do here
-        }
-
-        // If the mitigation_config key doesn't exist, create it
-        if (targetConfig.getMitigation_config() == null) {
-            targetConfig.setMitigation_config(new BlackWatchTargetConfig.MitigationConfig());
-        }
-        BlackWatchTargetConfig.MitigationConfig mitigationConfig = targetConfig.getMitigation_config();
-        assert mitigationConfig != null;
-
-        // If global_traffic_shaper key doesn't exist, create it
-        if (mitigationConfig.getGlobal_traffic_shaper() == null) {
-            mitigationConfig.setGlobal_traffic_shaper(
-                    new LinkedHashMap<String, BlackWatchTargetConfig.GlobalTrafficShaper>());
-        }
-        Map<String, BlackWatchTargetConfig.GlobalTrafficShaper> globalShaper =
-            mitigationConfig.getGlobal_traffic_shaper();
-        assert globalShaper != null;
-
-        // If the global default shaper doesn't exist, create it
-        if (globalShaper.get(targetConfig.DEFAULT_SHAPER_NAME) == null) {
-            globalShaper.put(targetConfig.DEFAULT_SHAPER_NAME, new BlackWatchTargetConfig.GlobalTrafficShaper());
-        }
-        BlackWatchTargetConfig.GlobalTrafficShaper defaultShaper = globalShaper.get(targetConfig.DEFAULT_SHAPER_NAME);
-        assert defaultShaper != null;
-
-        if (globalPps != null) {
-            if (errorOnDuplicateRates && defaultShaper.getGlobal_pps() != null) {
-                String msg = "Cannot specify global PPS rate limit using both API field and JSON";
-                throw new IllegalArgumentException(msg);
-            }
-
-            defaultShaper.setGlobal_pps(globalPps);
-        }
-
-        if (globalBps != null) {
-            if (errorOnDuplicateRates && defaultShaper.getGlobal_bps() != null) {
-                String msg = "Cannot specify global BPS rate limit using both API field and JSON";
-                throw new IllegalArgumentException(msg);
-            }
-
-            defaultShaper.setGlobal_bps(globalBps);
-        }
     }
 
     private void validateMinutesToLive(Integer minutesToLive) {
