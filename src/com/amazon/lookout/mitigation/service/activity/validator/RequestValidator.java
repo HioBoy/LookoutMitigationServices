@@ -802,7 +802,7 @@ public class RequestValidator {
         BlackWatchTargetConfig targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
 
         // Merge global PPS/BPS into the target config
-        targetConfig.mergeGlobalPpsBps(request.getGlobalPPS(), request.getGlobalBPS());
+        BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
 
         // Validate the new target configuration
         targetConfig.validate();
