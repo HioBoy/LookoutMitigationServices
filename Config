@@ -18,7 +18,6 @@ package.LookoutMitigationService = {
             LombokUtils = 1.1;
             # Build logic for spring integration
             CoralSpringLauncher = 4.2;
-            AWSSimpleWorkflowJavaFlowDeciderAPT = 3.3;
             CoralGenerator = 1.1;
             DynamoDBLocal = 1.11.x;
             DynamoDBLocalBuildLogic = 1.2;
@@ -41,34 +40,22 @@ package.LookoutMitigationService = {
             JakartaCommons-lang3 = 3.x;
             FindBugsAnnotations = 2.0.3;
             
-            AWSJavaSDKExternalRelease = 1.11.x;
-            AmazonDynamoDBLockClient = 1.11.x;
-            LookoutMitigationWorkFlowWorker = 1.0;
-
             CoralAwsAuthentication = 1.2; # To support authenticating/authorizing calls to LookoutMitigationService.
             OdinAWSCredentials = 1.4;
             Cachemere = 1.2;
             CachemereJakalPlugin = 1.4;
-            
-            LookoutIpMath = 1.0;
-            AWS158Commons = 1.1;
-            DaasControlAPIServiceJavaClient = 1.0;
-            EdgeOperatorServiceJavaClient = 1.0;
-            
-            OWASPOutputEncoder = 1.0; # Dependency on the binaryTrie implementation in this package, used for subnet matching.
+
             LookoutMitigationServiceCommons = 1.0;
             LookoutMitigationServiceModel = 1.0;
             HostStatusCommon = 1.0;
             BlackWatchLocationStateCommons = 1.0;
             BlackWatchMitigationCommons = 1.0;
             
-            JavaAmazonLdapUtils = 1.2;
             CoralSpringLauncher = 4.2;
-            CoralClientHttp = 1.0;
 
             LookoutMitigationServiceExplorer = 1.0;
-            LookoutRouterMitigationCommons = 1.0;  # Needed for com.amazon.lookout.models.prefixes
-            
+            LookoutNetworkInformationManager = 1.0;
+
             LookoutMWSClientJava = 1.0;
             
             LookoutMitigationServiceJlbRelayConfig = 1.0;
@@ -96,8 +83,6 @@ package.LookoutMitigationService = {
             CoralThrottle = 1.1;
             CoralAvailabilityEmbedded = 1.0;
 
-            LookoutMitigationServiceExplorer = 1.0;
-            
             # ProcessManager.
             ProcessManager = 2.2;
             ProcessManagerCommands = 2.2;
@@ -141,8 +126,6 @@ package.LookoutMitigationService = {
             JakartaCommons-codec = 1;
             log4j = 1.2;
             Log4j-api = 2.x;
-            Mockito = 1.10.x;
-            Openssl = 1.0.x;
             SpringBeans = 4.3.x;
             SpringCore = 4.3.x;
             SpringContext = 4.3.x;
@@ -150,8 +133,6 @@ package.LookoutMitigationService = {
             junit = 4.12;
             Apache-HttpComponents-HttpCore = 4.4.x;
             JakartaCommons-httpclient = 3.1;
-            JavaMail = 1.4.6;
-            Joda-time = 2.x;
             JakartaCommons-lang = 2.6;
 
             Jackson-databind = 2.8.x;
