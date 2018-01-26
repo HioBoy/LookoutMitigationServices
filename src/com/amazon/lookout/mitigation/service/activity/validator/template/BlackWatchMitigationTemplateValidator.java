@@ -1,7 +1,5 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template;
 
-import static com.amazon.lookout.workflow.helper.SWFWorkflowStarterImpl.BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,11 +39,7 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
     
     protected static final int MAX_ALARM_CHECK_PERIOD_SEC = 1800;
     protected static final int MAX_ALARM_CHECK_DELAY_SEC = 1200;
-    static {
-        // verify alarm check time is less than the workflow timeout time, and
-        // have at least 5 minutes left for other execution
-        assert (MAX_ALARM_CHECK_PERIOD_SEC + MAX_ALARM_CHECK_DELAY_SEC + 300) < BLACKWATCH_WORKFLOW_COMPLETION_TIMEOUT_SECONDS;
-    }
+
     private static final String BLACKWATCH_TRAFFIC_FILTER = "traffic_filter_config";
     protected AmazonS3 blackWatchConfigS3Client;
 

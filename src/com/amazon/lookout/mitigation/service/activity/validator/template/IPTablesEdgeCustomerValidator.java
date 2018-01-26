@@ -26,8 +26,6 @@ import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
-import com.amazonaws.services.simpleworkflow.flow.DataConverter;
-import com.amazonaws.services.simpleworkflow.flow.JsonDataConverter;
 import com.amazonaws.util.CollectionUtils;
 
 public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplateValidator {
@@ -36,7 +34,6 @@ public class IPTablesEdgeCustomerValidator implements DeviceBasedServiceTemplate
     private static final Pattern INVALID_MITIGATION_NAME_PATTERN = Pattern.compile("\n|\r|\u0085|\u2028|\u2029");
 
     private final IPTablesJsonValidator ipTablesJsonValidator;
-    private final DataConverter jsonDataConverter = new JsonDataConverter();
 
     public IPTablesEdgeCustomerValidator(IPTablesJsonValidator ipTablesJsonValidator) {
         this.ipTablesJsonValidator = ipTablesJsonValidator;
