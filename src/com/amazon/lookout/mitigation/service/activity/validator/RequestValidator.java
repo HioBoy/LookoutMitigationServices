@@ -282,10 +282,6 @@ public class RequestValidator {
                     (maxNumberOfHistoryEntriesToFetch <= maxHistoryEntryCount),
                     String.format("maxNumberOfHistoryEntriesToFetch should be larger than 0, and <= %s", maxHistoryEntryCount));
         }
-        Integer startVersion = request.getExclusiveStartVersion();
-        if (startVersion != null) {
-            Validate.isTrue(startVersion > 1, "exclusiveStartVersion number should be larger than 1");
-        }
     }
 
     /**
@@ -301,10 +297,6 @@ public class RequestValidator {
             Validate.isTrue((maxNumberOfHistoryEntriesToFetch > 0) && 
                     (maxNumberOfHistoryEntriesToFetch <= maxHistoryEntryCount),
                     String.format("maxNumberOfHistoryEntriesToFetch should be larger than 0, and <= %d", maxHistoryEntryCount));
-        }
-        Long lastEvaluatedTimestamp = request.getExclusiveLastEvaluatedTimestamp();
-        if (lastEvaluatedTimestamp != null) {
-            Validate.isTrue(lastEvaluatedTimestamp > 0, "exclusiveLastEvaluatedTimestamp should be larger than 0");
         }
     }
 
@@ -400,7 +392,6 @@ public class RequestValidator {
      * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
      */
     public void validateListActiveMitigationsForServiceRequest(@NonNull ListActiveMitigationsForServiceRequest request) {
-        validateListOfLocations(request.getLocations());
     }
     
     /**

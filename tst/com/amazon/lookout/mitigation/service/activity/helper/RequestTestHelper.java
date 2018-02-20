@@ -36,7 +36,6 @@ public class RequestTestHelper {
 
         List<String> locations = new ArrayList<>();
         locations.add("POP1");
-        request.setLocations(locations);
 
         List<MitigationDeploymentCheck> postChecks = new ArrayList<>();
         AlarmCheck alarmCheck = new AlarmCheck();

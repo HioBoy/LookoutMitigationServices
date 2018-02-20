@@ -26,7 +26,6 @@ public class ActivityTestHelper {
     protected static final int rollbackMitigationVersion = 100;
     protected static final int mitigationVersion = 200;
     protected static final String mitigationTemplate = MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer;
-    protected static final int exclusiveStartVersion = 10;
     protected static final long workflowId = 1000;
     protected static final int maxNumberOfHistoryEntriesToFetch = 20;
     protected static final String requestId = "1000001";

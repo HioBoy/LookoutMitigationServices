@@ -589,48 +589,6 @@ public class RequestValidatorTest {
         // valid device name
         request.setDeviceName("BLACKWATCH_POP");
         validator.validateListActiveMitigationsForServiceRequest(request);
-        
-        // locations if set may not be empty
-        Throwable caughtException = null;
-        request.setLocations(new ArrayList<String>());
-        try {
-            validator.validateListActiveMitigationsForServiceRequest(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-            assertTrue(caughtException.getMessage().startsWith("Empty list of locations found"));
-        }
-        assertNotNull(caughtException);
-        
-        // locations may not be empty
-        caughtException = null;
-        request.setLocations(Arrays.asList(""));
-        try {
-            validator.validateListActiveMitigationsForServiceRequest(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-            assertTrue(caughtException.getMessage().startsWith("Invalid location name"));
-        }
-        assertNotNull(caughtException);
-        
-        // Test to ensure the number of locations is restricted.
-        List<String> locations = new ArrayList<>();
-        for (int index=0; index < 500; ++index) {
-            locations.add("TST" + index);
-        }
-        request.setLocations(locations);
-        
-        caughtException = null;
-        try {
-            validator.validateListActiveMitigationsForServiceRequest(request);
-        } catch (IllegalArgumentException ex) {
-            caughtException = ex;
-            assertTrue(caughtException.getMessage().startsWith("Exceeded the number of locations that can be specified for a single request"));
-        }
-        assertNotNull(caughtException);
-
-        request.setLocations(Arrays.asList("alocation"));
-        validator = new RequestValidator(currentRegion);
-        validator.validateListActiveMitigationsForServiceRequest(request);
     }
     
     @Test
