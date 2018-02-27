@@ -1,7 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity;
 
 import java.beans.ConstructorProperties;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -94,9 +93,7 @@ public class GetMitigationHistoryActivity extends Activity {
             
             // Validate this request
             requestValidator.validateGetMitigationHistoryRequest(request);
-            List<MitigationRequestDescriptionWithLocationAndStatus> listOfMitigationDescriptions = new ArrayList<>();
-            
-            String mitigationName = request.getMitigationName();
+
             Integer maxNumberOfHistoryEntriesToFetch = request.getMaxNumberOfHistoryEntriesToFetch();
             if (maxNumberOfHistoryEntriesToFetch == null) {
                 maxNumberOfHistoryEntriesToFetch = DEFAULT_MAX_NUMBER_OF_HISTORY_TO_FETCH;
@@ -105,36 +102,21 @@ public class GetMitigationHistoryActivity extends Activity {
 
             final DeviceName device = DeviceName.valueOf(request.getDeviceName());
             final String location = request.getLocation();
+            final String mitigationName = request.getMitigationName();
+            final String lastEvaluatedKey = request.getExclusiveLastEvaluatedKey();
 
-            String lastEvaluatedKey = request.getExclusiveLastEvaluatedKey();
-
-            do {
-                // Get the mitigation history
-                final RequestPage<CurrentRequest> page = requestsDao.getMitigationRequestsPage(
-                        device, location, mitigationName, maxNumberOfHistoryEntriesToFetch,
-                        lastEvaluatedKey);
-
-                for (CurrentRequest currentRequest : page.getPage()) {
-                    // Do not include failed requests in the history
-                    if (currentRequest.getWorkflowStatus().equals(WorkflowStatus.FAILED)) {
-                        continue;
-                    }
-
-                    listOfMitigationDescriptions.add(
-                            currentRequest.asMitigationRequestDescriptionWithLocationAndStatus());
-                }
-
-                lastEvaluatedKey = page.getLastEvaluatedKey();
-            } while (listOfMitigationDescriptions.size() < maxNumberOfHistoryEntriesToFetch
-                    && lastEvaluatedKey != null);
+            // Get the mitigation history
+            final RequestPage<MitigationRequestDescriptionWithLocationAndStatus> result
+                = requestsDao.getMitigationHistory(device, location, mitigationName,
+                        maxNumberOfHistoryEntriesToFetch, lastEvaluatedKey);
 
             // Create the response object to return to the client.
             GetMitigationHistoryResponse response = new GetMitigationHistoryResponse();
             response.setDeviceName(device.name());
             response.setMitigationName(mitigationName);
-            response.setListOfMitigationRequestDescriptionsWithLocationAndStatus(listOfMitigationDescriptions);
+            response.setListOfMitigationRequestDescriptionsWithLocationAndStatus(result.getPage());
             response.setRequestId(requestId);
-            response.setExclusiveLastEvaluatedKey(lastEvaluatedKey);
+            response.setExclusiveLastEvaluatedKey(result.getLastEvaluatedKey());
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
             String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "GetMitigationHistoryActivity", ex.getMessage());
