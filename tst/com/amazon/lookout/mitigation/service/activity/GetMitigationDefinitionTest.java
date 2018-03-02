@@ -23,8 +23,7 @@ import com.amazon.lookout.mitigation.service.MissingMitigationVersionException40
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 
-import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
-import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.RequestsDAO;
 
 @RunWith(JUnitParamsRunner.class)
 public class GetMitigationDefinitionTest extends ActivityTestHelper {
@@ -39,7 +38,7 @@ public class GetMitigationDefinitionTest extends ActivityTestHelper {
     @Before
     public void setupMore() {
         getMitigationDefinitionActivity = spy(new GetMitigationDefinitionActivity(
-                requestValidator, mock(CurrentRequestsDAO.class), mock(ArchivedRequestsDAO.class)));
+                requestValidator, mock(RequestsDAO.class)));
     }
     
     /**

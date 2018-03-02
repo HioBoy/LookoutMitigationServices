@@ -42,10 +42,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 import com.amazon.lookout.model.RequestType;
 
 import com.amazon.lookout.mitigation.RequestCreator;
-import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
-import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
 import com.amazon.lookout.mitigation.datastore.RequestsDAO;
-import com.amazon.lookout.mitigation.datastore.RequestsDAOImpl;
 import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
 
 @ThreadSafe
@@ -69,24 +66,19 @@ public class RollbackMitigationActivity extends Activity {
 
     private final RequestValidator requestValidator;
     private final TemplateBasedRequestValidator templateBasedValidator;
-    @NonNull private final CurrentRequestsDAO currentDao;
-    @NonNull private final ArchivedRequestsDAO archiveDao;
     @NonNull private final RequestCreator requestCreator;
     @NonNull private final RequestsDAO requestsDao;
     
-    @ConstructorProperties({"requestValidator", "templateBasedValidator", "currentDao",
-    "archiveDao", "requestCreator"})
+    @ConstructorProperties({"requestValidator", "templateBasedValidator", "requestsDao",
+    "requestCreator"})
     public RollbackMitigationActivity(@NonNull RequestValidator requestValidator,
             @NonNull TemplateBasedRequestValidator templateBasedValidator,
-            @NonNull final CurrentRequestsDAO currentDao,
-            @NonNull final ArchivedRequestsDAO archiveDao,
+            @NonNull final RequestsDAO requestsDao,
             @NonNull final RequestCreator requestCreator) {
         this.requestValidator = requestValidator;
         this.templateBasedValidator = templateBasedValidator;
-        this.currentDao = currentDao;
-        this.archiveDao = archiveDao;
+        this.requestsDao = requestsDao;
         this.requestCreator = requestCreator;
-        this.requestsDao = new RequestsDAOImpl(currentDao, archiveDao);
     }
 
     @Validated

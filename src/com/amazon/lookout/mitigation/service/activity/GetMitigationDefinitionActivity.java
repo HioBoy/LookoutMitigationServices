@@ -37,10 +37,7 @@ import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLoc
 
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
-import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
-import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
 import com.amazon.lookout.mitigation.datastore.RequestsDAO;
-import com.amazon.lookout.mitigation.datastore.RequestsDAOImpl;
 
 /**
  * Activity to get mitigation definition based on device name, mitigation name and mitigation version
@@ -64,18 +61,13 @@ public class GetMitigationDefinitionActivity extends Activity {
             .collect(Collectors.toSet()));
     
     @NonNull private final RequestValidator requestValidator;
-    @NonNull private final CurrentRequestsDAO currentDao;
-    @NonNull private final ArchivedRequestsDAO archiveDao;
     @NonNull private final RequestsDAO requestsDao;
 
-    @ConstructorProperties({"requestValidator", "currentDao", "archiveDao"})
+    @ConstructorProperties({"requestValidator", "requestsDao"})
     public GetMitigationDefinitionActivity(@NonNull RequestValidator requestValidator,
-            @NonNull final CurrentRequestsDAO currentDao,
-            @NonNull final ArchivedRequestsDAO archiveDao) {
+            @NonNull final RequestsDAO requestsDao) {
         this.requestValidator = requestValidator;
-        this.currentDao = currentDao;
-        this.archiveDao = archiveDao;
-        this.requestsDao = new RequestsDAOImpl(currentDao, archiveDao);
+        this.requestsDao = requestsDao;
     }
 
     @Validated

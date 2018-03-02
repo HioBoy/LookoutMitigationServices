@@ -30,10 +30,7 @@ import com.google.common.collect.Sets;
 
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
-import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
-import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
 import com.amazon.lookout.mitigation.datastore.RequestsDAO;
-import com.amazon.lookout.mitigation.datastore.RequestsDAOImpl;
 
 @ThreadSafe
 @Service("LookoutMitigationService")
@@ -51,18 +48,13 @@ public class GetRequestStatusActivity extends Activity{
                                                                                                       GetRequestStatusExceptions.InternalError.name()));
     
     @NonNull private final RequestValidator requestValidator;
-    @NonNull private final CurrentRequestsDAO currentDao;
-    @NonNull private final ArchivedRequestsDAO archiveDao;
     @NonNull private final RequestsDAO requestsDao;
     
-    @ConstructorProperties({"requestValidator", "currentDao", "archiveDao"})
+    @ConstructorProperties({"requestValidator", "requestsDao"})
     public GetRequestStatusActivity(@NonNull RequestValidator requestValidator,
-            @NonNull final CurrentRequestsDAO currentDao,
-            @NonNull final ArchivedRequestsDAO archiveDao) {
+            @NonNull final RequestsDAO requestsDao) {
         this.requestValidator = requestValidator;
-        this.currentDao = currentDao;
-        this.archiveDao = archiveDao;
-        this.requestsDao = new RequestsDAOImpl(currentDao, archiveDao);
+        this.requestsDao = requestsDao;
     }
     
     @Validated

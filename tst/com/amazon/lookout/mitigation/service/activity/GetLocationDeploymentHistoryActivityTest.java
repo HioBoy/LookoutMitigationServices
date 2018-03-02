@@ -18,8 +18,7 @@ import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryRequest
 import com.amazon.lookout.mitigation.service.GetLocationDeploymentHistoryResponse;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 
-import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
-import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.RequestsDAO;
 
 public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper {
     private static final String location = "location1";
@@ -31,8 +30,7 @@ public class GetLocationDeploymentHistoryActivityTest extends ActivityTestHelper
     public void setup() {
         getLocationDeploymentHistoryActivity = 
                 spy(new GetLocationDeploymentHistoryActivity(requestValidator,
-                            mock(CurrentRequestsDAO.class),
-                            mock(ArchivedRequestsDAO.class)));
+                            mock(RequestsDAO.class)));
         
         request = new GetLocationDeploymentHistoryRequest();
         request.setDeviceName(deviceName);

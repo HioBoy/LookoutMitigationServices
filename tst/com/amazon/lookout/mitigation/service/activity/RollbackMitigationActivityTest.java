@@ -30,8 +30,7 @@ import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.mitigation.RequestCreator;
 import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
 import com.amazon.lookout.mitigation.datastore.WorkflowIdsDAO;
-import com.amazon.lookout.mitigation.datastore.CurrentRequestsDAO;
-import com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAO;
+import com.amazon.lookout.mitigation.datastore.RequestsDAO;
 
 public class RollbackMitigationActivityTest extends ActivityTestHelper {
     private static RollbackMitigationActivity rollbackMitigationActivity;
@@ -46,8 +45,7 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
         requestCreator = mock(RequestCreator.class);
         rollbackMitigationActivity = new RollbackMitigationActivity(requestValidator,
                 mock(TemplateBasedRequestValidator.class),
-                mock(CurrentRequestsDAO.class),
-                mock(ArchivedRequestsDAO.class),
+                mock(RequestsDAO.class),
                 requestCreator);
         
         request = new RollbackMitigationRequest();

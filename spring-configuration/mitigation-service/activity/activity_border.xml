@@ -32,8 +32,7 @@
     <bean class="com.amazon.lookout.mitigation.service.activity.RollbackMitigationActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="templateBasedValidator" ref="templateBasedRequestValidator"/>
-        <constructor-arg name="currentDao" ref="currentDao" />
-        <constructor-arg name="archiveDao" ref="archiveDao" />
+        <constructor-arg name="requestsDao" ref="requestsDao" />
         <constructor-arg name="requestCreator" ref="requestCreator" />
     </bean>
 
@@ -45,8 +44,7 @@
     
     <bean class="com.amazon.lookout.mitigation.service.activity.GetRequestStatusActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="currentDao" ref="currentDao" />
-        <constructor-arg name="archiveDao" ref="archiveDao" />
+        <constructor-arg name="requestsDao" ref="requestsDao" />
     </bean>
     
     <bean class="com.amazon.lookout.mitigation.service.activity.ListActiveMitigationsForServiceActivity">
@@ -56,26 +54,22 @@
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationInfoActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="currentDao" ref="currentDao" />
-        <constructor-arg name="archiveDao" ref="archiveDao" />
+        <constructor-arg name="requestsDao" ref="requestsDao" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="currentDao" ref="currentDao" />
-        <constructor-arg name="archiveDao" ref="archiveDao" />
+        <constructor-arg name="requestsDao" ref="requestsDao" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationDefinitionActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="currentDao" ref="currentDao" />
-        <constructor-arg name="archiveDao" ref="archiveDao" />
+        <constructor-arg name="requestsDao" ref="requestsDao" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
-        <constructor-arg name="currentDao" ref="currentDao" />
-        <constructor-arg name="archiveDao" ref="archiveDao" />
+        <constructor-arg name="requestsDao" ref="requestsDao" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationHostStatusActivity">
@@ -256,6 +250,12 @@
         <constructor-arg name="tableThroughput" ref="archivedRequestsTableThroughput" />
         <constructor-arg name="region" value="${realm}" />
         <constructor-arg name="domain" value="${domain}" />
+    </bean>
+
+    <bean id="requestsDao" class="com.amazon.lookout.mitigation.datastore.RequestsDAOImpl">
+        <constructor-arg name="currentDao" ref="currentDao" />
+        <constructor-arg name="archiveDao" ref="archiveDao" />
+        <constructor-arg name="cacheCapacity" value="200" />
     </bean>
 
     <bean id="workflowIdsDao" class="com.amazon.lookout.mitigation.datastore.WorkflowIdsDAOImpl">
