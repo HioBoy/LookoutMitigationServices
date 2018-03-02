@@ -282,6 +282,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             }
 
             String previousOwnerARN = mitigationState.getOwnerARN();
+            mitigationState.setState(MitigationState.State.Active.name());
             mitigationState.setChangeTime(System.currentTimeMillis());
             mitigationState.setOwnerARN(userARN);
             if (mitigationSettingsJSON != null) {
@@ -403,11 +404,11 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                         .mitigationId(mitigationId)
                         .resourceId(canonicalResourceId)
                         .resourceType(resourceTypeString)
-                        .state(MitigationState.State.Active.name())
                         .ownerARN(userARN)
                         .build();
             }
             
+            mitigationState.setState(MitigationState.State.Active.name());
             mitigationState.setChangeTime(System.currentTimeMillis());
             mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
             mitigationState.setMitigationSettingsJSONChecksum(
@@ -470,6 +471,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             expectedAttribute.setComparisonOperator(ComparisonOperator.NE);
             expectedAttributes.put(MitigationState.STATE_KEY, expectedAttribute);
         }
+
         saveExpression.setExpected(expectedAttributes);
         try {
             mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(mitigationState, saveExpression);
@@ -496,8 +498,6 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     }
 
     public void deactivateMitigation(final String mitigationId, final MitigationActionMetadata actionMetadata) {
-        final String To_Delete_State = MitigationState.State.To_Delete.name();
-
         final BlackWatchMitigationActionMetadata actionMetadataBlackWatch =
                 BlackWatchHelper.coralMetadataToBWMetadata(actionMetadata);
 
@@ -507,15 +507,26 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
 
             if (state == null) {
                 throw new IllegalArgumentException("Specified mitigation Id " + mitigationId + " does not exist");
-            } else if (state.getState().equals(To_Delete_State)) {
+            } else if (state.getState().equals(MitigationState.State.Expired.name())
+                    || state.getState().equals(MitigationState.State.To_Delete.name())) {
                 return;  // Already in the desired state
             }
 
-            state.setState(To_Delete_State);
+            state.setState(MitigationState.State.Expired.name());
             state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
 
+            // Make update conditional on the mitigation not being in To_Delete state
+            DynamoDBSaveExpression expression = new DynamoDBSaveExpression();
+            ExpectedAttributeValue expectNotToDelete = new ExpectedAttributeValue(
+                    new AttributeValue(MitigationState.State.To_Delete.name()));
+            expectNotToDelete.setComparisonOperator(ComparisonOperator.NE);
+            Map<String, ExpectedAttributeValue> expected = new HashMap<String, ExpectedAttributeValue>();
+            expected.put(MitigationState.STATE_KEY, expectNotToDelete);
+            expression.setExpected(expected);
+
             try {
-                mitigationStateDynamoDBHelper.updateMitigationState(state);
+                mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(
+                        state, expression);
                 return;
             } catch (ConditionalCheckFailedException e) {
                 try {

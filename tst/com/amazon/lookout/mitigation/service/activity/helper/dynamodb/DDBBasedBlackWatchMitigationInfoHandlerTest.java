@@ -278,7 +278,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
         blackWatchMitigationInfoHandler.deactivateMitigation(mitigationState1.getMitigationId(), requestMetadata);
         MitigationState newMitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationState1.getMitigationId());
-        assertEquals(MitigationState.State.To_Delete.name(), newMitigationState.getState());
+        assertEquals(MitigationState.State.Expired.name(), newMitigationState.getState());
         assertEquals(requestMetadata.getUser(), newMitigationState.getLatestMitigationActionMetadata().getUser());
         assertEquals(requestMetadata.getToolName(), newMitigationState.getLatestMitigationActionMetadata().getToolName());
         assertEquals(requestMetadata.getDescription(), newMitigationState.getLatestMitigationActionMetadata().getDescription());
@@ -733,24 +733,24 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 testIPAddressResourceId, "MismatchType", 10, testMetadata, parseJSON(testValidJSON),
                 "ARN-1222", tsdMetrics);
     }
-    
+
     @Test
     public void testApplyBlackWatchMitigationInactiveFailure() {
         ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 testIPAddressResourceId, testIPAddressResourceType, 10, testMetadata, parseJSON(testValidJSON),
                 "ARN-1222", tsdMetrics);
-        
+
         MitigationState ms = mitigationStateDynamoDBHelper.getMitigationState(response.getMitigationId());
         ms.setState(MitigationState.State.To_Delete.name());
         mitigationStateDynamoDBHelper.updateMitigationState(ms);
-        
+
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("Could not save MitigationState due to conditional failure!");
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 testIPAddressResourceId, testIPAddressResourceType, 10, testMetadata, parseJSON(testValidJSON),
                 "ARN-1222", tsdMetrics);
     }
-    
+
     @Test
     public void testApplyBlackWatchMitigationInvalidIPAddress() {
         thrown.expect(IllegalArgumentException.class);
