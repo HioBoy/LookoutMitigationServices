@@ -19,6 +19,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import aws.auth.client.config.Configuration;
+import aws.auth.client.impl.ContextHeuristics;
+import aws.auth.client.error.ARCInvalidActionException;
 
 import com.amazon.coral.security.AccessDeniedException;
 import com.amazon.coral.service.AbstractAwsAuthorizationStrategy;
@@ -150,10 +152,19 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         LOG.debug("Action: " + requestInfo.getAction() + " ; " + "Resource (ARN): " + resourceName);        
 
         BasicAuthorizationInfo authorizationInfo = new BasicAuthorizationInfo();
+
         // Action that need to be authorized
-        authorizationInfo.setAction(requestInfo.getAction());
+        try {
+            authorizationInfo.setActionContext(ContextHeuristics.actionStringToContext(
+                        requestInfo.getAction()));
+        } catch (final ARCInvalidActionException e) {
+            throw new IllegalArgumentException(e);
+        }
+
         // Resource that is guarded
-        authorizationInfo.setResource(resourceName);
+        authorizationInfo.setResourceContext(ContextHeuristics.resourceArnToContext(
+                    resourceName));
+
         // Principal identifier of the resource owner
         // associated with this authorization call
         authorizationInfo.setResourceOwner(ownerAccountId);

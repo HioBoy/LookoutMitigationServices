@@ -39,7 +39,7 @@ public class TrafficFilterConfiguration {
         // ignore missing fields
         mapper.setSerializationInclusion(Include.NON_NULL);
         // convert json name style to java name style
-        mapper.setPropertyNamingStrategy(PropertyNamingStrategy.CAMEL_CASE_TO_LOWER_CASE_WITH_UNDERSCORES);
+        mapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
         // use toString method to enum, which will lower case all enum name.
         mapper.enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING);
     }

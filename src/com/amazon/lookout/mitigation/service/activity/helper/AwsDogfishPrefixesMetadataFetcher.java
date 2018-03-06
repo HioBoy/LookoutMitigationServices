@@ -12,6 +12,7 @@ import com.amazon.aws158.commons.fetcher.RefreshedObjectConsumer;
 import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.models.prefixes.DogfishJSON;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 
 /**
  * Class for fetching metadata for Amazon prefixes from Dogfish.
@@ -29,8 +30,9 @@ public class AwsDogfishPrefixesMetadataFetcher extends FetchFromS3AndSaveAsJsonS
     public AwsDogfishPrefixesMetadataFetcher(String pathToDiskCache, String fileName, int syncAlarmThresholdMinutes,
             int acceptableAgeOfCachedContentMinutes, String domain, @NonNull String materialSet,
             List<RefreshedObjectConsumer<DogfishJSON>> reportees, MetricsFactory metricsFactory) {
-        this(pathToDiskCache, fileName, syncAlarmThresholdMinutes, acceptableAgeOfCachedContentMinutes,
-                domain, new AmazonS3Client(new OdinAWSCredentialsProvider(materialSet)), reportees, metricsFactory);
+        this(pathToDiskCache, fileName, syncAlarmThresholdMinutes, acceptableAgeOfCachedContentMinutes, domain,
+                (AmazonS3Client) AmazonS3ClientBuilder.standard().withCredentials(new OdinAWSCredentialsProvider(materialSet)).build(),
+                reportees, metricsFactory);
     }
 
     public AwsDogfishPrefixesMetadataFetcher(@NonNull String pathToDiskCache, @NonNull String fileName, int syncAlarmThresholdMinutes,
@@ -41,3 +43,4 @@ public class AwsDogfishPrefixesMetadataFetcher extends FetchFromS3AndSaveAsJsonS
                 amazonS3Client, reportees, metricsFactory, METHOD_NAME);
     }
 }
+

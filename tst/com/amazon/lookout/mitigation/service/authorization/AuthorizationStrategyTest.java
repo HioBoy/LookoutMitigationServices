@@ -44,6 +44,9 @@ import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate
 import com.amazon.lookout.test.common.util.AssertUtils;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.sqs.model.ListQueuesRequest;
+import com.amazon.balsa.ContextConstants;
+import aws.auth.client.impl.ContextHeuristics;
+import aws.auth.client.error.ARCInvalidActionException;
 
 @RunWith(JUnitParamsRunner.class)
 public class AuthorizationStrategyTest {
@@ -153,16 +156,22 @@ public class AuthorizationStrategyTest {
     
     private BasicAuthorizationInfo getBasicAuthorizationInfo(String action, String resource) {
         BasicAuthorizationInfo authInfo = new BasicAuthorizationInfo();
-        authInfo.setAction(action);
-        authInfo.setResource(resource);
+        try {
+            authInfo.setActionContext(ContextHeuristics.actionStringToContext(action));
+        } catch (final ARCInvalidActionException e) {
+            throw new RuntimeException(e);
+        }
+        authInfo.setResourceContext(ContextHeuristics.resourceArnToContext(resource));
         authInfo.setResourceOwner(TEST_USER);
         authInfo.setPolicies(new LinkedList<>());
         return authInfo;
     }
     
     private void assertEqualAuthorizationInfos(AuthorizationInfo info1, AuthorizationInfo info2) {
-        assertEquals(info1.getAction(), info2.getAction());
-        assertEquals(info1.getResource(), info2.getResource());
+        assertEquals(info1.getActionContext().get(ContextConstants.AWS_ACTION),
+                info2.getActionContext().get(ContextConstants.AWS_ACTION));
+        assertEquals(info1.getResourceContext().get(ContextConstants.AWS_ARN_CTX_KEY),
+                info2.getResourceContext().get(ContextConstants.AWS_ARN_CTX_KEY));
         assertEquals(info1.getResourceOwner(), info2.getResourceOwner());
         assertEquals(info1.getPolicies(), info2.getPolicies());
     }

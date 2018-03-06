@@ -33,6 +33,7 @@ public class LocationConfigFileHelper {
      * @param locationConfigFilePath
      * @returns Set<String> regions where MitigationService is deployed
      */
+    @SuppressWarnings("unchecked")
     public static Set<String> getMitigationRegions(final String locationConfigFilePath) {
         Set<String> mitigationRegions = new HashSet<String>();
         String regionDomain = null;
@@ -64,6 +65,7 @@ public class LocationConfigFileHelper {
      * @throws RegionIsInTestException 
      * @returns Set<String> locations for which the given region is the mitigation region
      */
+    @SuppressWarnings("unchecked")
     public static Set<String> getLocationsSupported(
             final String region, final String locationConfigFilePath) {
         Set<String> locationsSupported = new HashSet<String>();
@@ -154,3 +156,4 @@ public class LocationConfigFileHelper {
         return jsonObject;
     }
 }
+

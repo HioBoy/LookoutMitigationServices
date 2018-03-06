@@ -37,9 +37,8 @@ import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
 import com.amazon.lookout.test.common.util.TestUtils;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.google.common.collect.ImmutableMap;
 
 public class DDBBasedActivityTestHelper {
@@ -92,13 +91,8 @@ public class DDBBasedActivityTestHelper {
     @BeforeClass
     public static void setupOnce() {
         TestUtils.configureLogging(Level.ERROR);
+        dynamoDBClient = DynamoDBTestUtil.get().getClient();
 
-        // connect to DynamoDB local
-        AWSCredentials credentials = new BasicAWSCredentials("test", "");
-        dynamoDBClient = new AmazonDynamoDBClient(credentials);
-        String endpoint = System.getProperty("dynamodb-local.endpoint");
-        dynamoDBClient.setEndpoint(endpoint);
-        
         // mock Metrics Factory
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
@@ -151,3 +145,4 @@ public class DDBBasedActivityTestHelper {
         return activity;
     }
 }
+

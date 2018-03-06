@@ -10,7 +10,7 @@ import java.util.Optional;
 import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.test.common.util.TestUtils;
@@ -26,6 +26,7 @@ import org.mockito.Mockito;
 
 import static org.mockito.Mockito.*;
 
+@SuppressWarnings("unchecked")
 public class DogFishMetadataProviderTest {
     
     private AwsDogfishPrefixesMetadataFetcher awsDogfishFetcher;

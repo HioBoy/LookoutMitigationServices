@@ -15,7 +15,6 @@ import org.joda.time.DateTime;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.service.activity.helper.AwsDogfishPrefixesMetadataFetcher;
-import com.amazon.aws158.commons.net.IpCidrsTrieWithSummarization;
 import com.amazon.lookout.ip.IPUtils;
 import com.amazon.lookout.ip.trie.AllIpVersionsCidrsTrie;
 import com.amazon.lookout.models.prefixes.DogfishIPPrefix;
@@ -71,6 +70,7 @@ public class DogFishMetadataProvider implements Runnable {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void buildPrefixTrie(DogfishJSON awsDogfishJSON) {
         Validate.notNull(awsDogfishJSON);
         Validate.notEmpty(awsDogfishJSON.getPrefixes());
@@ -95,6 +95,7 @@ public class DogFishMetadataProvider implements Runnable {
         || lastLocalDogfishJSONUpdateTimeStamp.get().isBefore(dogfishJSONTimeStamp.get())));
     }
 
+    @SuppressWarnings({"unchecked", "rawtypes"})  // due to legacy lookout code, not fixing
     private DogfishIPPrefix getMetadata(final String ipOrCidr) {
         if (cidrToPrefixMetadataTrie == null) {
             String msg = "Problem with downloaded dogfish file";
