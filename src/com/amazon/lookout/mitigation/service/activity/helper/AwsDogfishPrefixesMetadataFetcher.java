@@ -25,13 +25,16 @@ public class AwsDogfishPrefixesMetadataFetcher extends FetchFromS3AndSaveAsJsonS
     private static final String AMAZON_PREFIXES_S3_KEY = "amazon-prefixes.json";
     private static final String AMAZON_PREFIXES_S3_BUCKET_PREFIX = "lookout-prefixes-";
 
-    @ConstructorProperties({ "pathToDiskCache", "fileName", "syncAlarmThresholdMinutes", "acceptableAgeOfCachedContentMinutes", "domain",
-            "materialSet", "reportees", "metricsFactory" })
+    @ConstructorProperties({ "pathToDiskCache", "fileName", "syncAlarmThresholdMinutes", "acceptableAgeOfCachedContentMinutes",
+            "region", "domain", "materialSet", "reportees", "metricsFactory" })
     public AwsDogfishPrefixesMetadataFetcher(String pathToDiskCache, String fileName, int syncAlarmThresholdMinutes,
-            int acceptableAgeOfCachedContentMinutes, String domain, @NonNull String materialSet,
+            int acceptableAgeOfCachedContentMinutes, String region, String domain, @NonNull String materialSet,
             List<RefreshedObjectConsumer<DogfishJSON>> reportees, MetricsFactory metricsFactory) {
         this(pathToDiskCache, fileName, syncAlarmThresholdMinutes, acceptableAgeOfCachedContentMinutes, domain,
-                (AmazonS3Client) AmazonS3ClientBuilder.standard().withCredentials(new OdinAWSCredentialsProvider(materialSet)).build(),
+                (AmazonS3Client) AmazonS3ClientBuilder.standard()
+                    .withRegion(region)
+                    .withCredentials(new OdinAWSCredentialsProvider(materialSet))
+                    .build(),
                 reportees, metricsFactory);
     }
 
