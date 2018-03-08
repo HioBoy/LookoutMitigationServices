@@ -75,7 +75,7 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
             @NonNull final CurrentRequest currentRequest) {
         final LocationDeploymentInfo info = new LocationDeploymentInfo();
         info.setMitigationStatus(currentRequest.getStatus());
-        info.setSchedulingStatus(currentRequest.getSchedulingStatus().name());
+        info.setSchedulingStatus(currentRequest.getWorkflowStatus());
         info.setDeploymentHistory(currentRequest.getDeploymentHistory());
         info.setDeployDate(currentRequest.getCreateDate());
         info.setMitigationName(currentRequest.getMitigationName());
