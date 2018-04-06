@@ -419,10 +419,12 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                         .build();
             }
 
+            subMetrics.addCount("RequestCoveredByExistingMitigation", 0);
+
             // Need to prevent auto-mitigations from BAM and EC2 from creating more specific
             // mitigations within the IP space already covered by existing mitigations.
             // Route53 creates and maintains long-lasting mitigations on larger IP prefixes (/22).
-            if (userARN.contains(bamAndEc2OwnerArnPrefix) && ipAddress != null) {
+            if (userARN.startsWith(bamAndEc2OwnerArnPrefix) && ipAddress != null) {
                 final String ipAddressToCheck = ipAddress;
 
                 if (lastUpdateTimestamp + REFRESH_PERIOD_MILLIS < System.currentTimeMillis()) {
@@ -445,6 +447,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                             userARN,
                             mitigationStateWithSupersetPrefix.get().getMitigationId());
                     LOG.warn(errorMsg);
+                    subMetrics.addCount("RequestCoveredByExistingMitigation", 1);
                     throw new MitigationNotOwnedByRequestor400(errorMsg);
                 }
             }
