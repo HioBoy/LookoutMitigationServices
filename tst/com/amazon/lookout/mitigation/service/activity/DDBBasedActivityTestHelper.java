@@ -132,7 +132,7 @@ public class DDBBasedActivityTestHelper {
         dogfishHelper = mock(DogFishValidationHelper.class);
         blackwatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDDBHelper,
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishHelper, resourceTypeValidatorMap,
-                resourceTypeHelpers, parallelScanSegments, realm);
+                resourceTypeHelpers, parallelScanSegments, userArn, realm);
     }
     
     protected <T extends Activity> T setupActivity(T activity) {

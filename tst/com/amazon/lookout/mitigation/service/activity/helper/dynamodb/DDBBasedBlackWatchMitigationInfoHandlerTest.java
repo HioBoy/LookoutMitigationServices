@@ -12,6 +12,7 @@ import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMe
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.state.model.ELBBriefInformation;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
+import com.amazon.blackwatch.mitigation.state.model.MitigationState.State;
 import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
 import com.amazon.blackwatch.mitigation.state.model.ResourceAllocationState;
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
@@ -33,6 +34,7 @@ import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -77,6 +79,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
     private static final String testOwnerARN1 = "testOwnerARN1";
     private static final String testOwnerARN2 = "testOwnerARN2";
+    private static final String testBamAndEc2OwnerArnPrefix = "bamAndEc2OwnerArn";
     private static final long testChangeTime = 151515L;
     private static final int testMinsToLive = 100;
     private static final String testIPAddressResourceId = "1.2.3.4";
@@ -125,7 +128,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         dogfishValidator = new DogFishValidationHelper(testMasterRegion, testMasterRegion, dogfishProvider, endpointMap);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, resourceTypeHelpers,  4, "us-east-1");
+                resourceTypeValidatorMap, resourceTypeHelpers,  4, testBamAndEc2OwnerArnPrefix, "us-east-1");
     }
     
     @BeforeClass
@@ -165,7 +168,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         resourceAllocationHelper = new ResourceAllocationHelper(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, metricsFactory);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
-                resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, resourceTypeValidatorMap, resourceTypeHelpers, 4, "us-east-1");
+                resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, resourceTypeValidatorMap,
+                resourceTypeHelpers, 4, testBamAndEc2OwnerArnPrefix, "us-east-1");
 
         BlackWatchMitigationResourceType testblackWatchIPAddressResourceType = BlackWatchMitigationResourceType.valueOf(testIPAddressResourceType);
 
@@ -924,7 +928,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 dogfishProvider, endpointMap);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, resourceTypeHelpers, 4, "us-east-1");
+                resourceTypeValidatorMap, resourceTypeHelpers, 4, testOwnerARN1, "us-east-1");
         DogfishIPPrefix prefix = new DogfishIPPrefix();
         prefix.setRegion("NotActive");
         thrown.expect(IllegalArgumentException.class);
@@ -942,7 +946,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 dogfishProvider, endpointMap);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, resourceTypeHelpers, 4, "us-east-1");
+                resourceTypeValidatorMap, resourceTypeHelpers, 4, testOwnerARN1, "us-east-1");
         DogfishIPPrefix prefix = new DogfishIPPrefix();
         prefix.setRegion(testMasterRegion);
         thrown.expect(IllegalArgumentException.class);
@@ -1007,6 +1011,141 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 parseJSON(testValidJSON), "ARN-1222", tsdMetrics);
     }
 
+    @Test
+    public void testApplyBlackWatchMitigation_BamAndEc2RequestIpCoveredByExistingMitigation_throwException() {
+        String resourceId = "10.0.0.128";
+
+        Map<String, Set<String>> recordedResources1 = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress.name(),
+                ImmutableSet.of("10.0.0.0/24"));
+
+        Map<String, Set<String>> recordedResources2 = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress.name(),
+                ImmutableSet.of("127.0.0.0/24"));
+
+        mitigationState1.setRecordedResources(recordedResources1);
+        mitigationState2.setRecordedResources(recordedResources2);
+
+        mitigationStateDynamoDBHelper.batchUpdateState(ImmutableList.of(mitigationState1, mitigationState2));
+
+        String errorMsg = String.format("The request is rejected since the user %s is "
+                        + "auto mitigation (BAM or EC2), and mitigation %s already exists on a superset prefix",
+                testBamAndEc2OwnerArnPrefix + "/BAM",
+                mitigationState1.getMitigationId());
+
+        thrown.expect(MitigationNotOwnedByRequestor400.class);
+        thrown.expectMessage(errorMsg);
+
+        mitigationState1.setRecordedResources(recordedResourcesMap);
+        mitigationState2.setRecordedResources(recordedResourcesMap);
+
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                resourceId, testIPAddressResourceType, 10, testMetadata,
+                parseJSON(testValidJSON), testBamAndEc2OwnerArnPrefix + "/BAM", tsdMetrics);
+    }
+
+    @Test
+    public void testApplyBlackWatchMitigation_BamAndEc2RequestIpCoveredByExpiredExistingMitigation_Success() {
+        String resourceId = "10.0.0.128";
+
+        Map<String, Set<String>> recordedResources1 = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress.name(),
+                ImmutableSet.of("10.0.0.0/24"));
+
+        Map<String, Set<String>> recordedResources2 = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress.name(),
+                ImmutableSet.of("127.0.0.0/24"));
+
+        mitigationState1.setRecordedResources(recordedResources1);
+        mitigationState1.setState(State.Expired.name());
+        mitigationState2.setRecordedResources(recordedResources2);
+        mitigationState2.setState(State.Expired.name());
+
+        mitigationStateDynamoDBHelper.batchUpdateState(ImmutableList.of(mitigationState1, mitigationState2));
+
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                resourceId, testIPAddressResourceType, 10, testMetadata,
+                parseJSON(testValidJSON), testBamAndEc2OwnerArnPrefix + "/BAM", tsdMetrics);
+
+        mitigationState1.setRecordedResources(recordedResourcesMap);
+        mitigationState1.setState(State.Active.name());
+        mitigationState2.setRecordedResources(recordedResourcesMap);
+        mitigationState2.setState(State.Active.name());
+    }
+
+    @Test
+    public void testApplyBlackWatchMitigation_BamAndEc2RequestIpNotCoveredByExistingMitigation_Success() {
+        String resourceId = "10.0.1.0";
+
+        Map<String, Set<String>> recordedResources1 = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress.name(),
+                ImmutableSet.of("10.0.0.0/24"));
+
+        Map<String, Set<String>> recordedResources2 = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress.name(),
+                ImmutableSet.of("127.0.0.0/24"));
+
+        mitigationState1.setRecordedResources(recordedResources1);
+        mitigationState2.setRecordedResources(recordedResources2);
+
+        mitigationStateDynamoDBHelper.batchUpdateState(ImmutableList.of(mitigationState1, mitigationState2));
+
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                resourceId, testIPAddressResourceType, 10, testMetadata,
+                parseJSON(testValidJSON), testBamAndEc2OwnerArnPrefix + "/BAM", tsdMetrics);
+
+        mitigationState1.setRecordedResources(recordedResourcesMap);
+        mitigationState2.setRecordedResources(recordedResourcesMap);
+    }
+
+    @Test
+    public void testApplyBlackWatchMitigation_NonBamAndEc2Request_Success() {
+        Map<String, Set<String>> recordedResources1 = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress.name(),
+                ImmutableSet.of("10.0.0.0/32"));
+
+        Map<String, Set<String>> recordedResources2 = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress.name(),
+                ImmutableSet.of("127.0.0.0/32"));
+
+        mitigationState1.setRecordedResources(recordedResources1);
+        mitigationState2.setRecordedResources(recordedResources2);
+
+        mitigationStateDynamoDBHelper.batchUpdateState(ImmutableList.of(mitigationState1, mitigationState2));
+
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                "R53-pdx-b-gamma", testIPAddressListResourceType, 10, testMetadata,
+                parseJSON(String.format(ipListTemplate,"\"10.2.3.4/24\"")), "r53OwnerArn", tsdMetrics);
+
+        mitigationState1.setRecordedResources(recordedResourcesMap);
+        mitigationState2.setRecordedResources(recordedResourcesMap);
+    }
+
+    @Test
+    public void testApplyBlackWatchMitigation_BamAndEc2RequestSameOwnerUpdate_Success() {
+        String resourceId = "10.0.2.0";
+
+        Map<String, Set<String>> recordedResources1 = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress.name(),
+                ImmutableSet.of("10.0.0.0/32"));
+
+        Map<String, Set<String>> recordedResources2 = ImmutableMap.of(
+                BlackWatchMitigationResourceType.IPAddress.name(),
+                ImmutableSet.of("127.0.0.0/32"));
+
+        mitigationState1.setRecordedResources(recordedResources1);
+        mitigationState2.setRecordedResources(recordedResources2);
+
+        mitigationStateDynamoDBHelper.batchUpdateState(ImmutableList.of(mitigationState1, mitigationState2));
+
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                resourceId, testIPAddressResourceType, 10, testMetadata,
+                parseJSON(testValidJSON), testBamAndEc2OwnerArnPrefix + "/BAM", tsdMetrics);
+
+        mitigationState1.setRecordedResources(recordedResourcesMap);
+        mitigationState2.setRecordedResources(recordedResourcesMap);
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void ValidateResource_InvalidARN() {
         Map<BlackWatchMitigationResourceType, Set<String>> resourceMap = new HashMap<>();
@@ -1020,6 +1159,5 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         resourceMap.put(BlackWatchMitigationResourceType.ElasticIP, Collections.singleton("arn:aws:ec2:us-east-1:123456789012:eip-allocation/eipalloc-abc12345"));
         blackWatchMitigationInfoHandler.validateResources(resourceMap);
     }
-    
 }
 

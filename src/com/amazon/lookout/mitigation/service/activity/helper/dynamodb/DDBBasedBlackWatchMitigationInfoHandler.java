@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
+import com.amazon.aws158.commons.ipset.SubnetBasedIpSet;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.arn.ARN;
 import com.amazon.arn.ARNSyntaxException;
@@ -9,6 +10,7 @@ import com.amazon.blackwatch.mitigation.resource.validator.IPAddressResourceType
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
+import com.amazon.blackwatch.mitigation.state.model.MitigationState.State;
 import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
 import com.amazon.blackwatch.mitigation.state.model.ResourceAllocationState;
 import com.amazon.blackwatch.mitigation.state.storage.MitigationStateDynamoDBHelper;
@@ -32,6 +34,7 @@ import com.amazonaws.services.dynamodbv2.model.ComparisonOperator;
 import com.amazonaws.services.dynamodbv2.model.Condition;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import com.amazonaws.services.dynamodbv2.model.ExpectedAttributeValue;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import lombok.RequiredArgsConstructor;
@@ -49,6 +52,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -64,6 +68,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     private final Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeValidator> resourceTypeValidatorMap;
     private final Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeHelper> resourceTypeHelpers;
     private final int parallelScanSegments;
+    private final String bamAndEc2OwnerArnPrefix;
     private final String realm;
 
     private static final String DEFAULT_SHAPER_NAME = "default";
@@ -74,6 +79,10 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
 
     private static final int MAX_UPDATE_RETRIES = 3;
     private static final int UPDATE_RETRY_SLEEP_MILLIS = 100;
+    private static final long REFRESH_PERIOD_MILLIS = TimeUnit.MINUTES.toMillis(1);
+
+    private List<MitigationState> mitigationStateList;
+    private long lastUpdateTimestamp = 0;
     
     private LocationMitigationStateSettings convertMitSSToLocMSS(MitigationStateSetting mitigationSettings) {
         return LocationMitigationStateSettings.builder()
@@ -359,13 +368,15 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
 
             // Supporting 'ARN, IP Address' format for resources
             String ipAddress = null;
-            if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
+            if (resourceType.equals(BlackWatchMitigationResourceType.ElasticIP)) {
                 String[] resourceData = resourceId.split(",");
                 if (resourceData.length != 2) {
                     throw new IllegalArgumentException("Resource ID must be 'ARN,EIP' format for now!");
                 }
                 resourceId = resourceData[0];
                 ipAddress = resourceData[1];
+            } else if (resourceType.equals(BlackWatchMitigationResourceType.IPAddress)) {
+                ipAddress = resourceId;
             }
 
             String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
@@ -407,7 +418,37 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                         .ownerARN(userARN)
                         .build();
             }
-            
+
+            // Need to prevent auto-mitigations from BAM and EC2 from creating more specific
+            // mitigations within the IP space already covered by existing mitigations.
+            // Route53 creates and maintains long-lasting mitigations on larger IP prefixes (/22).
+            if (userARN.contains(bamAndEc2OwnerArnPrefix) && ipAddress != null) {
+                final String ipAddressToCheck = ipAddress;
+
+                if (lastUpdateTimestamp + REFRESH_PERIOD_MILLIS < System.currentTimeMillis()) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Updating the mitigation state list...");
+                    }
+                    mitigationStateList = mitigationStateDynamoDBHelper.getAllMitigationStates(2);
+                    lastUpdateTimestamp = System.currentTimeMillis();
+                }
+
+                Optional<MitigationState> mitigationStateWithSupersetPrefix = mitigationStateList.stream()
+                        .filter(ms -> ms.getState().equals(State.Active.name()))
+                        .filter(ms -> !ms.getOwnerARN().equals(userARN))
+                        .filter(ms -> isRequestIpCoveredByExistingMitigation(ipAddressToCheck, ms))
+                        .findAny();
+
+                if (mitigationStateWithSupersetPrefix.isPresent()) {
+                    String errorMsg = String.format("The request is rejected since the user %s is "
+                            + "auto mitigation (BAM or EC2), and mitigation %s already exists on a superset prefix",
+                            userARN,
+                            mitigationStateWithSupersetPrefix.get().getMitigationId());
+                    LOG.warn(errorMsg);
+                    throw new MitigationNotOwnedByRequestor400(errorMsg);
+                }
+            }
+
             mitigationState.setState(MitigationState.State.Active.name());
             mitigationState.setChangeTime(System.currentTimeMillis());
             mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
@@ -450,7 +491,17 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             return response;
         }
     }
-    
+
+    private boolean isRequestIpCoveredByExistingMitigation(
+            final String ipAddress,
+            final MitigationState mitigationState) {
+        return mitigationState.getRecordedResources().get(BlackWatchMitigationResourceType.IPAddress.name())
+                .stream()
+                .anyMatch(ip -> {
+                    SubnetBasedIpSet subnetBasedIpSet = new SubnetBasedIpSet(ImmutableList.of(ip));
+                    return subnetBasedIpSet.isMember(ipAddress);
+                });
+    }
 
     private void saveMitigationState(MitigationState mitigationState, boolean newMitigationCreated, 
             TSDMetrics subMetrics) {

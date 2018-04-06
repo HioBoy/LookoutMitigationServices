@@ -218,6 +218,7 @@
         <constructor-arg name="resourceTypeValidatorMap" ref="resourceTypeValidatorMap.${realm}.${domain}"/>
         <constructor-arg name="resourceTypeHelpers" ref="resourceTypeHelpers.${realm}.${domain}"/>
         <constructor-arg name="parallelScanSegments" ref="mitigationStateParallelScanSegments"/>
+        <constructor-arg name="bamAndEc2OwnerArnPrefix" ref="bamAndEc2OwnerArnPrefix.${realm}.${domain}" />
         <constructor-arg name="realm" value="${realm}" />
     </bean>
     
