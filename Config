@@ -55,9 +55,6 @@ package.LookoutMitigationService = {
 
             LookoutMitigationServiceExplorer = 1.0;
             LookoutNetworkInformationManager = 1.0;
-
-            LookoutMWSClientJava = 1.0;
-            
             LookoutMitigationServiceJlbRelayConfig = 1.0;
             CoralSslProxySupport = 1.0;
             RIPJavaHelper = 1.2;
