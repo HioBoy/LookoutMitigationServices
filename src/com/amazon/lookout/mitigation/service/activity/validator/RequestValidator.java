@@ -54,6 +54,7 @@ import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateReques
 import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity;
+import com.amazon.lookout.mitigation.service.activity.helper.blackwatch.NetworkCidr;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
@@ -193,13 +194,15 @@ public class RequestValidator {
             validateMitigationId(mitigationId);
         }
         
+        BlackWatchMitigationResourceType blackWatchMitigationResourceType = null;
+        if (resourceType != null) {
+            blackWatchMitigationResourceType = validateResourceType(resourceType);
+        }
+
         if (resourceId != null) {
-            validateResourceId(resourceId);
+            validateResourceId(resourceId, blackWatchMitigationResourceType);
         }
         
-        if (resourceType != null) {
-            validateResourceType(resourceType);
-        }
         
         if (ownerARN != null) {
             validateUserARN(ownerARN);
@@ -494,13 +497,40 @@ public class RequestValidator {
         }
     }
     
-    private static void validateResourceId(String resourceId) {
+    private static void validateResourceId(String resourceId, BlackWatchMitigationResourceType blackWatchMitigationResourceType) {
         if (isInvalidFreeFormText(resourceId, false, DEFAULT_MAX_LENGTH_RESOURCE_ID)) {
             String msg = "Invalid resource ID! A valid resource ID must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_RESOURCE_ID + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
+        
+        validateIpAddressListResourceId(resourceId, blackWatchMitigationResourceType);
     }
+
+    private static void validateIpAddressListResourceId(String resourceId, BlackWatchMitigationResourceType blackWatchMitigationResourceType) {
+        if (resourceId == null) {
+            return;
+        }
+        
+        if ((blackWatchMitigationResourceType == null) ||
+                (blackWatchMitigationResourceType != BlackWatchMitigationResourceType.IPAddressList)) {
+            return;
+        }
+
+        try {
+            NetworkCidr possibleNetworkCidr = NetworkCidr.fromString(resourceId);            
+        }  catch (IllegalArgumentException illegalException) {
+            return;
+        }
+
+        String exceptionMessage = 
+                String.format("%s - Resource ID: %s",
+                        "Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR", 
+                        resourceId);
+        LOG.info(exceptionMessage);
+        throw new IllegalArgumentException(exceptionMessage);
+    }
+ 
     
     private static void validateUserARN(String userARN) {
         if (userARN == null || 
@@ -512,14 +542,15 @@ public class RequestValidator {
         }
     }
 
-    private static void validateResourceType(String resourceType) {
+    private static BlackWatchMitigationResourceType validateResourceType(String resourceType) {
         if (isInvalidFreeFormText(resourceType, false, DEFAULT_MAX_LENGTH_RESOURCE_TYPE)) {
             String msg = "Invalid resource type found! A valid resource type must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_RESOURCE_TYPE + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
+        
         try {
-            BlackWatchMitigationResourceType.valueOf(resourceType);
+            return BlackWatchMitigationResourceType.valueOf(resourceType);
         }  catch (IllegalArgumentException illestEx) {
             //Catch the exception and throw a new one with a better message.
             String message = String.format("Unsupported resource type specified:%s  Acceptable values:%s", 
@@ -785,8 +816,7 @@ public class RequestValidator {
     public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(
             @NonNull ApplyBlackWatchMitigationRequest request, String userARN) {
         validateMetadata(request.getMitigationActionMetadata());
-        validateResourceId(request.getResourceId());
-        validateResourceType(request.getResourceType());
+        validateResourceId(request.getResourceId(), validateResourceType(request.getResourceType()));
         validateMinutesToLive(request.getMinutesToLive());
 
         // Parse the mitigation settings JSON

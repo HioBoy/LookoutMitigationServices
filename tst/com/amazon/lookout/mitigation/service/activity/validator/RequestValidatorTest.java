@@ -739,7 +739,7 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtExcepion);
         assertTrue(caughtExcepion instanceof IllegalArgumentException);
-        assertTrue(caughtExcepion.getMessage().startsWith("Invalid resource ID"));
+        assertTrue(caughtExcepion.getMessage().startsWith("Invalid resource type"));
         caughtExcepion = null;
         
         String resourceId = "IPList1234";
@@ -1197,4 +1197,28 @@ public class RequestValidatorTest {
         validator.validateApplyBlackWatchMitigationRequest(request, userARN);
     }
 
+    @Test
+    public void testInvalidResourceIdIpAddressListMitigation() {
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .withRelatedTickets(Arrays.asList("1234", "5655"))
+                .build());
+        request.setResourceId("10.0.12.0/24");
+        request.setResourceType("IPAddressList");
+ 
+        Throwable caughtExcepion = null;
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch_host_status_updator_blackwatch_pop_pro";
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage().startsWith("Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR"));
+    }
+    
 }
