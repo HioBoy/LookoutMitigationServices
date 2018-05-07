@@ -195,12 +195,13 @@ public class RequestValidator {
         }
         
         
+        BlackWatchMitigationResourceType blackWatchMitigationResourceType = null;
         if (resourceType != null) {
-        	validateResourceType(resourceType);
+        	blackWatchMitigationResourceType = validateResourceType(resourceType);
         }
         
         if (resourceId != null) {
-        	validateResourceId(resourceId, resourceType);
+        	validateResourceId(resourceId, blackWatchMitigationResourceType);
         }
         
         if (ownerARN != null) {
@@ -496,14 +497,19 @@ public class RequestValidator {
         }
     }
     
-    private static void validateResourceId(String resourceId, @NonNull String resourceType) {
+    private static void validateResourceId(String resourceId) {
         if (isInvalidFreeFormText(resourceId, false, DEFAULT_MAX_LENGTH_RESOURCE_ID)) {
             String msg = "Invalid resource ID! A valid resource ID must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_RESOURCE_ID + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
-        
-        if (BlackWatchMitigationResourceType.IPAddressList == BlackWatchMitigationResourceType.valueOf(resourceType)) {
+    }
+
+    
+    private static void validateResourceId(String resourceId, BlackWatchMitigationResourceType blackWatchMitigationResourceType) {
+    	validateResourceId(resourceId);
+
+        if ((blackWatchMitigationResourceType != null) && (BlackWatchMitigationResourceType.IPAddressList == blackWatchMitigationResourceType)) {
         	validateIpAddressListResourceId(resourceId);
         }
         
@@ -811,8 +817,8 @@ public class RequestValidator {
         
     	validateMetadata(request.getMitigationActionMetadata());
     	
-    	validateResourceType(request.getResourceType()); 
-        validateResourceId(request.getResourceId(), request.getResourceType());
+    	BlackWatchMitigationResourceType blackWatchMitigationResourceType = validateResourceType(request.getResourceType()); 
+        validateResourceId(request.getResourceId(), blackWatchMitigationResourceType);
         validateMinutesToLive(request.getMinutesToLive());
 
         // Parse the mitigation settings JSON
