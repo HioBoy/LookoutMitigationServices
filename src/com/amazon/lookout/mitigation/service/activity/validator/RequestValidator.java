@@ -193,21 +193,20 @@ public class RequestValidator {
         if (mitigationId != null) {
             validateMitigationId(mitigationId);
         }
-        
-        
+
         BlackWatchMitigationResourceType blackWatchMitigationResourceType = null;
         if (resourceType != null) {
-        	blackWatchMitigationResourceType = validateResourceType(resourceType);
+            blackWatchMitigationResourceType = validateResourceType(resourceType);
         }
-        
+
         if (resourceId != null) {
-        	validateResourceId(resourceId, blackWatchMitigationResourceType);
+            validateResourceId(resourceId, blackWatchMitigationResourceType);
         }
-        
+
         if (ownerARN != null) {
             validateUserARN(ownerARN);
         }
-        
+
         Long maxNumberOfEntriesToFetch = request.getMaxResults();
         Long maxEntryCount = ListBlackWatchMitigationsActivity.MAX_NUMBER_OF_ENTRIES_TO_FETCH;
         if (maxNumberOfEntriesToFetch != null) {
@@ -499,33 +498,33 @@ public class RequestValidator {
     
     private static void validateResourceId(String resourceId) {
         if (isInvalidFreeFormText(resourceId, false, DEFAULT_MAX_LENGTH_RESOURCE_ID)) {
-            String msg = "Invalid resource ID! A valid resource ID must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_RESOURCE_ID + " ascii-printable characters.";
+            String msg = "Invalid resource ID! A valid resource ID must contain more than 0 and less than: "
+                    + DEFAULT_MAX_LENGTH_RESOURCE_ID + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
     }
 
-    
-    private static void validateResourceId(String resourceId, BlackWatchMitigationResourceType blackWatchMitigationResourceType) {
-    	validateResourceId(resourceId);
+    private static void validateResourceId(String resourceId,
+            BlackWatchMitigationResourceType blackWatchMitigationResourceType) {
+        validateResourceId(resourceId);
 
-        if ((blackWatchMitigationResourceType != null) && (BlackWatchMitigationResourceType.IPAddressList == blackWatchMitigationResourceType)) {
-        	validateIpAddressListResourceId(resourceId);
+        if ((blackWatchMitigationResourceType != null)
+                && (BlackWatchMitigationResourceType.IPAddressList == blackWatchMitigationResourceType)) {
+            validateIpAddressListResourceId(resourceId);
         }
-        
+
     }
 
     private static void validateIpAddressListResourceId(@NonNull String resourceId) {
         try {
-            NetworkCidr.fromString(resourceId);            
-        }  catch (IllegalArgumentException illegalException) {
+            NetworkCidr.fromString(resourceId);
+        } catch (IllegalArgumentException illegalException) {
             return;
         }
 
-        String exceptionMessage = 
-                String.format("%s - Resource ID: %s",
-                        "Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR", 
-                        resourceId);
+        String exceptionMessage = String.format("%s - Resource ID: %s",
+                "Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR", resourceId);
         LOG.info(exceptionMessage);
         throw new IllegalArgumentException(exceptionMessage);
     }
@@ -543,17 +542,18 @@ public class RequestValidator {
 
     private static BlackWatchMitigationResourceType validateResourceType(String resourceType) {
         if (isInvalidFreeFormText(resourceType, false, DEFAULT_MAX_LENGTH_RESOURCE_TYPE)) {
-            String msg = "Invalid resource type found! A valid resource type must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_RESOURCE_TYPE + " ascii-printable characters.";
+            String msg = "Invalid resource type found! A valid resource type must contain more than 0 and less than: "
+                    + DEFAULT_MAX_LENGTH_RESOURCE_TYPE + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
-        
+
         try {
             return BlackWatchMitigationResourceType.valueOf(resourceType);
-        }  catch (IllegalArgumentException illestEx) {
-            //Catch the exception and throw a new one with a better message.
-            String message = String.format("Unsupported resource type specified:%s  Acceptable values:%s", 
-                    resourceType, Arrays.toString(BlackWatchMitigationResourceType.values()));
+        } catch (IllegalArgumentException illestEx) {
+            // Catch the exception and throw a new one with a better message.
+            String message = String.format("Unsupported resource type specified:%s  Acceptable values:%s", resourceType,
+                    Arrays.toString(BlackWatchMitigationResourceType.values()));
             throw new IllegalArgumentException(message);
         }
     }
@@ -812,27 +812,29 @@ public class RequestValidator {
         return targetConfig;
     }  
 
-    public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(
-            @NonNull ApplyBlackWatchMitigationRequest request, String userARN) {
-        
-    	validateMetadata(request.getMitigationActionMetadata());
-    	
-    	BlackWatchMitigationResourceType blackWatchMitigationResourceType = validateResourceType(request.getResourceType()); 
-        validateResourceId(request.getResourceId(), blackWatchMitigationResourceType);
-        validateMinutesToLive(request.getMinutesToLive());
+	public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(
+	        @NonNull ApplyBlackWatchMitigationRequest request, String userARN) {
 
-        // Parse the mitigation settings JSON
-        BlackWatchTargetConfig targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
+		validateMetadata(request.getMitigationActionMetadata());
 
-        // Merge global PPS/BPS into the target config
-        BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
+		BlackWatchMitigationResourceType blackWatchMitigationResourceType =
+				validateResourceType(
+		        request.getResourceType());
+		validateResourceId(request.getResourceId(), blackWatchMitigationResourceType);
+		validateMinutesToLive(request.getMinutesToLive());
 
-        // Validate the new target configuration
-        targetConfig.validate();
+		// Parse the mitigation settings JSON
+		BlackWatchTargetConfig targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
 
-        validateUserARN(userARN);
-        return targetConfig;
-    }
+		// Merge global PPS/BPS into the target config
+		BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
+
+		// Validate the new target configuration
+		targetConfig.validate();
+
+		validateUserARN(userARN);
+		return targetConfig;
+	}
 
     private void validateMinutesToLive(Integer minutesToLive) {
         //Allow null and zero to be overridden.
