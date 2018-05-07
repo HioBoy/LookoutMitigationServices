@@ -497,28 +497,17 @@ public class RequestValidator {
         }
     }
     
-    private static void validateResourceId(String resourceId, BlackWatchMitigationResourceType blackWatchMitigationResourceType) {
+    private static void validateResourceId(String resourceId) {
         if (isInvalidFreeFormText(resourceId, false, DEFAULT_MAX_LENGTH_RESOURCE_ID)) {
             String msg = "Invalid resource ID! A valid resource ID must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_RESOURCE_ID + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
-        
-        validateIpAddressListResourceId(resourceId, blackWatchMitigationResourceType);
     }
 
-    private static void validateIpAddressListResourceId(String resourceId, BlackWatchMitigationResourceType blackWatchMitigationResourceType) {
-        if (resourceId == null) {
-            return;
-        }
-        
-        if ((blackWatchMitigationResourceType == null) ||
-                (blackWatchMitigationResourceType != BlackWatchMitigationResourceType.IPAddressList)) {
-            return;
-        }
-
+    private static void validateIpAddressListResourceId(@NonNull String resourceId) {
         try {
-            NetworkCidr possibleNetworkCidr = NetworkCidr.fromString(resourceId);            
+            NetworkCidr.fromString(resourceId);            
         }  catch (IllegalArgumentException illegalException) {
             return;
         }
@@ -815,8 +804,15 @@ public class RequestValidator {
 
     public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(
             @NonNull ApplyBlackWatchMitigationRequest request, String userARN) {
-        validateMetadata(request.getMitigationActionMetadata());
-        validateResourceId(request.getResourceId(), validateResourceType(request.getResourceType()));
+        
+    	validateMetadata(request.getMitigationActionMetadata());
+    	
+    	BlackWatchMitigationResourceType blackWatchMitigationResourceType = validateResourceType(request.getResourceType()); 
+        validateResourceId(request.getResourceId());
+        if (blackWatchMitigationResourceType ==  BlackWatchMitigationResourceType.IPAddressList) {
+        	validateIpAddressListResourceId(request.getResourceId());
+        }
+        
         validateMinutesToLive(request.getMinutesToLive());
 
         // Parse the mitigation settings JSON
