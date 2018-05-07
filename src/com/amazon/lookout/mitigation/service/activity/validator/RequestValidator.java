@@ -194,13 +194,12 @@ public class RequestValidator {
             validateMitigationId(mitigationId);
         }
         
-        BlackWatchMitigationResourceType blackWatchMitigationResourceType = null;
-        if (resourceType != null) {
-            blackWatchMitigationResourceType = validateResourceType(resourceType);
-        }
-
         if (resourceId != null) {
-            validateResourceId(resourceId, blackWatchMitigationResourceType);
+            validateResourceId(resourceId);
+        }
+        
+        if (resourceType != null) {
+        	validateResourceType(resourceType);
         }
         
         
