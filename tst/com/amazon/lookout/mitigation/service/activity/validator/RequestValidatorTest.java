@@ -1200,15 +1200,15 @@ public class RequestValidatorTest {
     @Test
     public void testInvalidResourceIdIpAddressListMitigation() {
         ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
-        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
-                .withUser("Username")
-                .withToolName("Toolname")
-                .withDescription("Description")
-                .withRelatedTickets(Arrays.asList("1234", "5655"))
-                .build());
+        request.setMitigationActionMetadata(
+                                            MitigationActionMetadata.builder().withUser("Username")
+                                                                    .withToolName("Toolname")
+                                                                    .withDescription("Description")
+                                                                    .withRelatedTickets(Arrays.asList("1234", "5655"))
+                                                                    .build());
         request.setResourceId("10.0.12.0/24");
         request.setResourceType("IPAddressList");
- 
+
         Throwable caughtExcepion = null;
         String userARN = "arn:aws:iam::005436146250:user/blackwatch_host_status_updator_blackwatch_pop_pro";
         try {
@@ -1218,7 +1218,8 @@ public class RequestValidatorTest {
         }
         assertNotNull(caughtExcepion);
         assertTrue(caughtExcepion instanceof IllegalArgumentException);
-        assertTrue(caughtExcepion.getMessage().startsWith("Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR"));
+        assertTrue(caughtExcepion.getMessage()
+                                 .startsWith("Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR"));
     }
-    
+
 }
