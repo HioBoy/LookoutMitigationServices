@@ -70,16 +70,17 @@ public class RequestValidatorTest {
 
     @Test
     public void testValidateAbortDeploymentRequest() {
-
-    	String[] validBWTemplates = {MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer, MitigationTemplate.BlackWatchPOP_EdgeCustomer, MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer};
-    	AbortDeploymentRequest abortRequest = new AbortDeploymentRequest();
-    	abortRequest.setJobId(1);
-    	abortRequest.setDeviceName(DeviceName.BLACKWATCH_POP.name());
-    	//valid template
-    	for (String template : validBWTemplates) {
-    		abortRequest.setMitigationTemplate(template);
-    		validator.validateAbortDeploymentRequest(abortRequest);
-    	}
+        String[] validBWTemplates = { MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer,
+                MitigationTemplate.BlackWatchPOP_EdgeCustomer,
+                MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer };
+        AbortDeploymentRequest abortRequest = new AbortDeploymentRequest();
+        abortRequest.setJobId(1);
+        abortRequest.setDeviceName(DeviceName.BLACKWATCH_POP.name());
+        // valid template
+        for (String template : validBWTemplates) {
+            abortRequest.setMitigationTemplate(template);
+            validator.validateAbortDeploymentRequest(abortRequest);
+        }
     }
     
     /**

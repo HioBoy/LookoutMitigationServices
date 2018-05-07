@@ -31,7 +31,7 @@ public class AbortDeploymentActivityTest extends ActivityTestHelper {
      */
     @Test(expected = NullPointerException.class)
     public void testNullRequest() {
-    	abortDeploymentActivity.enact(null);
+        abortDeploymentActivity.enact(null);
     }
     
     /**

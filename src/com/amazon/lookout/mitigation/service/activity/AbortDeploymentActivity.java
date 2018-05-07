@@ -45,7 +45,7 @@ public class AbortDeploymentActivity extends Activity {
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
     // different activities. Hence not using an EnumSet in this case.
     private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(Sets.newHashSet(AbortDeploymentExceptions.BadRequest.name(),
-    		AbortDeploymentExceptions.InternalError.name()));
+                                                                                                      AbortDeploymentExceptions.InternalError.name()));
     
     @NonNull private final RequestValidator requestValidator;
     @NonNull private final CurrentRequestsDAO currentDao;
@@ -114,7 +114,8 @@ public class AbortDeploymentActivity extends Activity {
                             " for request: " + ReflectionToStringBuilder.toString(abortRequest),
                     internalError);
             requestSuccessfullyProcessed = false;
-            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + AbortDeploymentExceptions.InternalError.name(), 1);
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX
+                    + AbortDeploymentExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
         } finally {
             tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_SUCCESS, requestSuccessfullyProcessed ? 1 : 0);

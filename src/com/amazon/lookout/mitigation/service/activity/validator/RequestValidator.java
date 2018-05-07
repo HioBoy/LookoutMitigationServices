@@ -787,10 +787,9 @@ public class RequestValidator {
         }
     }
      
-    public BlackWatchTargetConfig validateUpdateBlackWatchMitigationRequest(
-            @NonNull UpdateBlackWatchMitigationRequest request,
-            @NonNull BlackWatchTargetConfig existingTargetConfig,
-            @NonNull String userARN) {
+    public BlackWatchTargetConfig validateUpdateBlackWatchMitigationRequest(@NonNull UpdateBlackWatchMitigationRequest request,
+                                                                            @NonNull BlackWatchTargetConfig existingTargetConfig,
+                                                                            @NonNull String userARN) {
         validateMetadata(request.getMitigationActionMetadata());
         validateMitigationId(request.getMitigationId());
         validateMinutesToLive(request.getMinutesToLive());
@@ -798,43 +797,42 @@ public class RequestValidator {
         BlackWatchTargetConfig targetConfig = existingTargetConfig;
         boolean errorOnDuplicateRates = false;
 
-        // If the request provided new JSON, use it instead of the existing target config
+        // If the request provided new JSON, use it instead of the existing target
+        // config
         if (request.getMitigationSettingsJSON() != null) {
             targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
             errorOnDuplicateRates = true;
         }
 
         BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS(),
-                errorOnDuplicateRates);
+                                                 errorOnDuplicateRates);
         targetConfig.validate();
         validateUserARN(userARN);
 
         return targetConfig;
-    }  
+    }
 
-	public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(
-	        @NonNull ApplyBlackWatchMitigationRequest request, String userARN) {
+    public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(@NonNull ApplyBlackWatchMitigationRequest request,
+                                                                           String userARN) {
 
-		validateMetadata(request.getMitigationActionMetadata());
+        validateMetadata(request.getMitigationActionMetadata());
 
-		BlackWatchMitigationResourceType blackWatchMitigationResourceType =
-				validateResourceType(
-		        request.getResourceType());
-		validateResourceId(request.getResourceId(), blackWatchMitigationResourceType);
-		validateMinutesToLive(request.getMinutesToLive());
+        BlackWatchMitigationResourceType blackWatchMitigationResourceType = validateResourceType(request.getResourceType());
+        validateResourceId(request.getResourceId(), blackWatchMitigationResourceType);
+        validateMinutesToLive(request.getMinutesToLive());
 
-		// Parse the mitigation settings JSON
-		BlackWatchTargetConfig targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
+        // Parse the mitigation settings JSON
+        BlackWatchTargetConfig targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
 
-		// Merge global PPS/BPS into the target config
-		BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
+        // Merge global PPS/BPS into the target config
+        BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
 
-		// Validate the new target configuration
-		targetConfig.validate();
+        // Validate the new target configuration
+        targetConfig.validate();
 
-		validateUserARN(userARN);
-		return targetConfig;
-	}
+        validateUserARN(userARN);
+        return targetConfig;
+    }
 
     private void validateMinutesToLive(Integer minutesToLive) {
         //Allow null and zero to be overridden.
