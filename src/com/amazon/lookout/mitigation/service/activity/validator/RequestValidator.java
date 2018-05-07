@@ -194,14 +194,14 @@ public class RequestValidator {
             validateMitigationId(mitigationId);
         }
         
-        if (resourceId != null) {
-            validateResourceId(resourceId);
-        }
         
         if (resourceType != null) {
         	validateResourceType(resourceType);
         }
         
+        if (resourceId != null) {
+        	validateResourceId(resourceId, resourceType);
+        }
         
         if (ownerARN != null) {
             validateUserARN(ownerARN);
@@ -496,12 +496,17 @@ public class RequestValidator {
         }
     }
     
-    private static void validateResourceId(String resourceId) {
+    private static void validateResourceId(String resourceId, @NonNull String resourceType) {
         if (isInvalidFreeFormText(resourceId, false, DEFAULT_MAX_LENGTH_RESOURCE_ID)) {
             String msg = "Invalid resource ID! A valid resource ID must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_RESOURCE_ID + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
+        
+        if (BlackWatchMitigationResourceType.IPAddressList == BlackWatchMitigationResourceType.valueOf(resourceType)) {
+        	validateIpAddressListResourceId(resourceId);
+        }
+        
     }
 
     private static void validateIpAddressListResourceId(@NonNull String resourceId) {
@@ -806,12 +811,8 @@ public class RequestValidator {
         
     	validateMetadata(request.getMitigationActionMetadata());
     	
-    	BlackWatchMitigationResourceType blackWatchMitigationResourceType = validateResourceType(request.getResourceType()); 
-        validateResourceId(request.getResourceId());
-        if (blackWatchMitigationResourceType ==  BlackWatchMitigationResourceType.IPAddressList) {
-        	validateIpAddressListResourceId(request.getResourceId());
-        }
-        
+    	validateResourceType(request.getResourceType()); 
+        validateResourceId(request.getResourceId(), request.getResourceType());
         validateMinutesToLive(request.getMinutesToLive());
 
         // Parse the mitigation settings JSON
