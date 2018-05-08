@@ -498,8 +498,7 @@ public class RequestValidator {
     
     private static void validateResourceId(String resourceId) {
         if (isInvalidFreeFormText(resourceId, false, DEFAULT_MAX_LENGTH_RESOURCE_ID)) {
-            String msg = "Invalid resource ID! A valid resource ID must contain more than 0 and less than: "
-                    + DEFAULT_MAX_LENGTH_RESOURCE_ID + " ascii-printable characters.";
+            String msg = "Invalid resource ID! A valid resource ID must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_RESOURCE_ID + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
@@ -787,9 +786,10 @@ public class RequestValidator {
         }
     }
      
-    public BlackWatchTargetConfig validateUpdateBlackWatchMitigationRequest(@NonNull UpdateBlackWatchMitigationRequest request,
-                                                                            @NonNull BlackWatchTargetConfig existingTargetConfig,
-                                                                            @NonNull String userARN) {
+    public BlackWatchTargetConfig validateUpdateBlackWatchMitigationRequest(
+            @NonNull UpdateBlackWatchMitigationRequest request,
+            @NonNull BlackWatchTargetConfig existingTargetConfig,
+            @NonNull String userARN) {
         validateMetadata(request.getMitigationActionMetadata());
         validateMitigationId(request.getMitigationId());
         validateMinutesToLive(request.getMinutesToLive());
@@ -797,8 +797,7 @@ public class RequestValidator {
         BlackWatchTargetConfig targetConfig = existingTargetConfig;
         boolean errorOnDuplicateRates = false;
 
-        // If the request provided new JSON, use it instead of the existing target
-        // config
+        // If the request provided new JSON, use it instead of the existing target config
         if (request.getMitigationSettingsJSON() != null) {
             targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
             errorOnDuplicateRates = true;
@@ -812,9 +811,9 @@ public class RequestValidator {
         return targetConfig;
     }
 
-    public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(@NonNull ApplyBlackWatchMitigationRequest request,
-                                                                           String userARN) {
-
+    public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(
+           @NonNull ApplyBlackWatchMitigationRequest request,
+           String userARN) {
         validateMetadata(request.getMitigationActionMetadata());
 
         BlackWatchMitigationResourceType blackWatchMitigationResourceType = validateResourceType(request.getResourceType());

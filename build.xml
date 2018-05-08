@@ -30,8 +30,8 @@
   -->
   <target name="start-mitigation-service-script">
       <coral:apollo target="${output.dir}/bin/startMitigationService.sh">
-      	  <location dir="${basedir}" pattern="spring-configuration/bootstrap.xml"/>  
-      	
+          <location dir="${basedir}" pattern="spring-configuration/bootstrap.xml"/>  
+
           <sysproperty key="user.timezone" value="UTC"/>
           <sysproperty key="java.net.preferIPv4Stack" value="true"/>
           <sysproperty key="spring.config.root" value="$${APOLLO_ACTUAL_ENVIRONMENT_ROOT}/spring-configuration" />
@@ -50,7 +50,7 @@
           <!-- OOM Conditions -->
           <jvmarg value="-XX:+HeapDumpOnOutOfMemoryError"/>
           <jvmarg value="-XX:HeapDumpPath=var/tmp"/>
-          <jvmarg value="-XX:OnOutOfMemoryError=&quot;/bin/kill -9 %p&quot;"/>      	
+          <jvmarg value="-XX:OnOutOfMemoryError=&quot;/bin/kill -9 %p&quot;"/>
       </coral:apollo>
   </target>
 
@@ -68,7 +68,7 @@
   <target name="copy-configs">
       <copy todir="${output.dir}">
           <fileset dir="${basedir}">
-          	  <include name="brazil-config/**/*"/>
+              <include name="brazil-config/**/*"/>
               <include name="spring-configuration/**/*"/>
           </fileset>
       </copy>
@@ -97,20 +97,20 @@
       
   <target name="server" depends="build">
     <coral:launch>
-      <location dir="${basedir}" pattern="spring-configuration/bootstrap.xml"/>    	
+      <location dir="${basedir}" pattern="spring-configuration/bootstrap.xml"/>
 
       <sysproperty key="root" value="${output.dir}"/>
       <sysproperty key="spring.config.root" value="${output.dir}/spring-configuration" />
       <sysproperty key="domain" value="beta"/>
       <sysproperty key="realm" value="us-east-1"/>
       <sysproperty key="user.timezone" value="UTC"/>
-        	
+
       <sysproperty key="apollo.OCF.Log4j.logSeverityLevel" value="debug"/>
       <sysproperty key="apollo.OCF.HttpServer.httpRegularPort" value="8000"/>
       <sysproperty key="apollo.OCF.HttpServer.httpSecurePort" value="8443"/>
  
       <classpath path="${bp:run.classpath}"/>
-    	
+
       <env key="LANG" value="en_US.UTF-8"/>
       <env key="NLS_LANG" value="American_America.UTF8"/>
 

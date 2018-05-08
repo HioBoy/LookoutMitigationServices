@@ -70,9 +70,11 @@ public class RequestValidatorTest {
 
     @Test
     public void testValidateAbortDeploymentRequest() {
-        String[] validBWTemplates = { MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer,
+        String[] validBWTemplates = {
+                MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer,
                 MitigationTemplate.BlackWatchPOP_EdgeCustomer,
-                MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer };
+                MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer
+        };
         AbortDeploymentRequest abortRequest = new AbortDeploymentRequest();
         abortRequest.setJobId(1);
         abortRequest.setDeviceName(DeviceName.BLACKWATCH_POP.name());
