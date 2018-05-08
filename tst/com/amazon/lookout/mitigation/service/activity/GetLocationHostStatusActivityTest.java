@@ -26,10 +26,10 @@ public class GetLocationHostStatusActivityTest extends ActivityTestHelper {
     
     @Before
     public void setup() {
-    	getLocationHostStatusActivity = 
+        getLocationHostStatusActivity =
                 spy(new GetLocationHostStatusActivity(requestValidator, hostStatusInfoHandler,
-                        locationStateInfoHandler));
-        
+                                                                              locationStateInfoHandler));
+
         request = new GetLocationHostStatusRequest();
         request.setLocation(location);
     }

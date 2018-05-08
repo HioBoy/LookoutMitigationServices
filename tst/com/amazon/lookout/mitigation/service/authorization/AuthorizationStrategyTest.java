@@ -187,16 +187,15 @@ public class AuthorizationStrategyTest {
     
     @Test
     public void testArnPartition() {
-    	String test_region = "us-east-1";
-    	AuthorizationStrategy strategy = new AuthorizationStrategy(mock(Configuration.class), test_region, TEST_USER);
-    	String expectedArnPrefix = "arn:aws:lookout:" + test_region + ":" + TEST_USER + ":";
-    	assertEquals(strategy.getArnPrefix(), expectedArnPrefix);
-    	
-    	test_region = "cn-north-1";
-    	strategy = new AuthorizationStrategy(mock(Configuration.class), test_region, TEST_USER);
-    	expectedArnPrefix = "arn:aws-cn:lookout:" + test_region + ":" + TEST_USER + ":";
-    	assertEquals(strategy.getArnPrefix(), expectedArnPrefix);
+        String test_region = "us-east-1";
+        AuthorizationStrategy strategy = new AuthorizationStrategy(mock(Configuration.class), test_region, TEST_USER);
+        String expectedArnPrefix = "arn:aws:lookout:" + test_region + ":" + TEST_USER + ":";
+        assertEquals(strategy.getArnPrefix(), expectedArnPrefix);
 
+        test_region = "cn-north-1";
+        strategy = new AuthorizationStrategy(mock(Configuration.class), test_region, TEST_USER);
+        expectedArnPrefix = "arn:aws-cn:lookout:" + test_region + ":" + TEST_USER + ":";
+        assertEquals(strategy.getArnPrefix(), expectedArnPrefix);
     }
     
     /**

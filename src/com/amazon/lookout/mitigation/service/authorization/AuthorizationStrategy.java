@@ -272,7 +272,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
         // abort deployment authorization policy
         addRequestInfoParser(
-        		AbortDeploymentRequest.class,
+                     AbortDeploymentRequest.class,
                 (action, request) -> {
                     String mitigationTemplate = request.getMitigationTemplate();
                     if (StringUtils.isEmpty(mitigationTemplate)) {

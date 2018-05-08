@@ -96,15 +96,15 @@ public class TemplateBasedRequestValidator {
     }
     
     private ServiceTemplateValidator getBlackWatchEdgeCustomerValidator() {
-    	return new EdgeBlackWatchMitigationTemplateValidator(blackWatchS3Client);
+        return new EdgeBlackWatchMitigationTemplateValidator(blackWatchS3Client);
     }
-    
+
     private ServiceTemplateValidator getBlackWatchBorderValidator() {
         return new BlackWatchPerTargetBorderLocationTemplateValidator(blackWatchS3Client);
     }
 
     private ServiceTemplateValidator getBlackWatchEdgeValidator() {
-    	return new BlackWatchPerTargetEdgeLocationTemplateValidator(blackWatchS3Client);
+        return new BlackWatchPerTargetEdgeLocationTemplateValidator(blackWatchS3Client);
     }
     
     /**
