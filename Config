@@ -38,7 +38,7 @@ package.LookoutMitigationService = {
             CoralSpring = 4.2;
             JakartaCommons-logging-api = 1.1;
             JakartaCommons-lang3 = 3.x;
-            FindBugsAnnotations = 2.0.3;
+            FindBugsAnnotations = 3.1.0;
             
             CoralAwsAuthentication = 1.2; # To support authenticating/authorizing calls to LookoutMitigationService.
             OdinAWSCredentials = 1.4;
@@ -136,9 +136,10 @@ package.LookoutMitigationService = {
             Jackson-annotations = 2.8.x;
             Jackson-dataformat-cbor = 2.8.x;
             Jackson-core = 2.8.x;
+            Javassist = 3.20.x;
         };
     };
-    
+
     # Removing j2ee dependency based on the known issue documented here: https://w.amazon.com/index.php/Coral/Manual/Bobcat2Migration#Known_Behavior_Changes
     remove-dependencies = {
           1.0 = {
