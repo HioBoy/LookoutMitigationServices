@@ -29,6 +29,7 @@ import org.springframework.util.CollectionUtils;
 import com.amazon.blackwatch.location.state.model.LocationType;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType;
+import com.amazon.lookout.ip.IPUtils;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;
@@ -54,9 +55,7 @@ import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateReques
 import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity;
-import com.amazon.lookout.mitigation.service.activity.helper.blackwatch.NetworkCidr;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDeviceMapper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.model.RequestType;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -516,16 +515,12 @@ public class RequestValidator {
     }
 
     private static void validateIpAddressListResourceId(@NonNull String resourceId) {
-        try {
-            NetworkCidr.fromString(resourceId);
-        } catch (IllegalArgumentException illegalException) {
-            return;
-        }
-
-        String exceptionMessage = String.format("%s - Resource ID: %s",
-                "Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR", resourceId);
-        LOG.info(exceptionMessage);
+        if (IPUtils.isValidCIDR(resourceId)) {
+            String exceptionMessage = String.format("%s - Resource ID: %s",
+                                                    "Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR", resourceId);
+            LOG.info(exceptionMessage);
         throw new IllegalArgumentException(exceptionMessage);
+        }
     }
  
     

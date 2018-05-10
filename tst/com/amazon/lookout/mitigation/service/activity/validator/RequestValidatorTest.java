@@ -1201,7 +1201,7 @@ public class RequestValidatorTest {
     }
 
     @Test
-    public void testInvalidResourceIdIpAddressListMitigation() {
+    public void testInvalidIPv4ResourceIdIpAddressListMitigation() {
         ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
         request.setMitigationActionMetadata(
                                             MitigationActionMetadata.builder().withUser("Username")
@@ -1210,6 +1210,31 @@ public class RequestValidatorTest {
                                                                     .withRelatedTickets(Arrays.asList("1234", "5655"))
                                                                     .build());
         request.setResourceId("10.0.12.0/24");
+        request.setResourceType("IPAddressList");
+
+        Throwable caughtExcepion = null;
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch_host_status_updator_blackwatch_pop_pro";
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage()
+                                 .startsWith("Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR"));
+    }
+    
+    @Test
+    public void testInvalidIPv6ResourceIdIpAddressListMitigation() {
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(
+                                            MitigationActionMetadata.builder().withUser("Username")
+                                                                    .withToolName("Toolname")
+                                                                    .withDescription("Description")
+                                                                    .withRelatedTickets(Arrays.asList("1234", "5655"))
+                                                                    .build());
+        request.setResourceId("2001:1111:2222:3333::/64");
         request.setResourceType("IPAddressList");
 
         Throwable caughtExcepion = null;
