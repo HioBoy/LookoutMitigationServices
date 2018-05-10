@@ -517,13 +517,13 @@ public class RequestValidator {
     private static void validateIpAddressListResourceId(@NonNull String resourceId) {
         if (IPUtils.isValidCIDR(resourceId)) {
             String exceptionMessage = String.format("%s - Resource ID: %s",
-                                                    "Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR", resourceId);
+                                                    "Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR",
+                                                    resourceId);
             LOG.info(exceptionMessage);
-        throw new IllegalArgumentException(exceptionMessage);
+            throw new IllegalArgumentException(exceptionMessage);
         }
     }
- 
-    
+
     private static void validateUserARN(String userARN) {
         if (userARN == null || 
                 isInvalidFreeFormText(userARN, false, DEFAULT_MAX_LENGTH_OWNER_ARN)) {
