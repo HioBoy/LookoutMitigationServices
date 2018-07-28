@@ -17,6 +17,7 @@ import com.amazon.blackwatch.location.state.model.LocationType;
 import com.amazon.blackwatch.location.state.storage.LocationStateDynamoDBHelper;
 import com.amazon.lookout.mitigation.service.BlackWatchLocation;
 import com.amazon.lookout.mitigation.service.activity.helper.LocationStateInfoHandler;
+import com.amazon.lookout.mitigation.service.mitigation.model.LocationBuildStatus;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 
 public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandler {
@@ -60,6 +61,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         out.setActiveBGPSpeakerHosts(in.getActiveBGPSpeakerHosts());
         out.setActiveBlackWatchHosts(in.getActiveBlackWatchHosts());
         out.setLocationType(in.getLocationType());
+        out.setBuildStatus(in.getBuildStatus().name());
         return out;
     }
 
