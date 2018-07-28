@@ -60,6 +60,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         out.setActiveBGPSpeakerHosts(in.getActiveBGPSpeakerHosts());
         out.setActiveBlackWatchHosts(in.getActiveBlackWatchHosts());
         out.setLocationType(in.getLocationType());
+        out.setBuildStatus(in.getBuildStatus().name());
         return out;
     }
 
