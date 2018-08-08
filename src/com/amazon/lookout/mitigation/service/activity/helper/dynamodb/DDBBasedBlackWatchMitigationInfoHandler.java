@@ -81,6 +81,12 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     private static final int UPDATE_RETRY_SLEEP_MILLIS = 100;
     private static final long REFRESH_PERIOD_MILLIS = TimeUnit.MINUTES.toMillis(1);
 
+    // External clients (BAM) depend on the precise wording of this message,
+    // avoid changing it if possible
+    static final String TO_DELETE_CONDITIONAL_FAILURE_MESSAGE = String.format(
+            "Could not save MitigationState, MitigationState must not be: %s",
+            MitigationState.State.To_Delete.name());
+
     private List<MitigationState> mitigationStateList;
     private long lastUpdateTimestamp = 0;
     
@@ -254,66 +260,89 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         Validate.notNull(tsdMetrics);
         try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler"
                 + ".updateBlackWatchMitigation")) {
-            
-            MitigationState mitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
-            if (mitigationState == null) {
-                String message = String.format("MitigationId:%s could not be found in MitigationState table.", 
-                        mitigationId);
-                subMetrics.addOne("BadMitigationId");
-                throw new IllegalArgumentException(message);
-            }
-            subMetrics.addZero("BadMitigationId");
-            String resourceId = mitigationState.getResourceId();
-            String resourceTypeString = mitigationState.getResourceType();
-            BlackWatchMitigationResourceType resourceType = BlackWatchMitigationResourceType.valueOf(resourceTypeString);
-            BlackWatchResourceTypeValidator typeValidator = resourceTypeValidatorMap.get(resourceType);
-            if (typeValidator == null) {
-                String msg = String.format("Resource type specific validator could not be found! Type:%s", 
-                        resourceTypeString);
-                throw new IllegalArgumentException(msg);
-            }
-            
-            
-            String mitigationSettingsJSON;
-            if (targetConfig != null) {
-                // need to validate updated mitigation settings
-                mitigationSettingsJSON = targetConfig.getJsonString();
-    
-                String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
-                Map<BlackWatchMitigationResourceType, Set<String>> resourceMap =
-                        typeValidator.getCanonicalMapOfResources(resourceId, targetConfig);
-                LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
-                        canonicalResourceId, ReflectionToStringBuilder.toString(resourceMap)));
-                validateResources(resourceMap);
-            } else {
-                // mitigation settings are not being updated
-                mitigationSettingsJSON = null;
-            }
 
-            String previousOwnerARN = mitigationState.getOwnerARN();
-            mitigationState.setState(MitigationState.State.Active.name());
-            mitigationState.setChangeTime(System.currentTimeMillis());
-            mitigationState.setOwnerARN(userARN);
-            if (mitigationSettingsJSON != null) {
-                // update mitigation settings JSON
-                mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
-                mitigationState.setMitigationSettingsJSONChecksum(
-                        BlackWatchHelper.getHexStringChecksum(mitigationSettingsJSON));
-            } else {
-                // do not update mitigation settings JSON
-                mitigationState.setMitigationSettingsJSON(null);
-                mitigationState.setMitigationSettingsJSONChecksum(null);
-            }
-            mitigationState.setMinutesToLive(minsToLive);
-            BlackWatchMitigationActionMetadata bwMetadata = BlackWatchHelper.coralMetadataToBWMetadata(metadata);
-            mitigationState.setLatestMitigationActionMetadata(bwMetadata);
+            // since Optimistic locking is enabled for MitigationState table, let's retry couple of
+            // times to update the mitigation state since workers can update this in parallel
+            for (int attempt = 0; attempt < MAX_UPDATE_RETRIES; attempt++) {
+                MitigationState mitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
 
-            saveMitigationState(mitigationState, false, subMetrics);
-            
-            UpdateBlackWatchMitigationResponse response = new UpdateBlackWatchMitigationResponse();
-            response.setMitigationId(mitigationId);
-            response.setPreviousOwnerARN(previousOwnerARN);
-            return response;
+                if (mitigationState == null) {
+                    String message = String.format("MitigationId:%s could not be found in MitigationState table.", 
+                            mitigationId);
+                    subMetrics.addOne("BadMitigationId");
+                    throw new IllegalArgumentException(message);
+                } else if (mitigationState.getState().equals(MitigationState.State.To_Delete.name())) {
+                    throw new IllegalArgumentException(TO_DELETE_CONDITIONAL_FAILURE_MESSAGE);
+                }
+
+                subMetrics.addZero("BadMitigationId");
+                String resourceId = mitigationState.getResourceId();
+                String resourceTypeString = mitigationState.getResourceType();
+                BlackWatchMitigationResourceType resourceType = BlackWatchMitigationResourceType.valueOf(resourceTypeString);
+                BlackWatchResourceTypeValidator typeValidator = resourceTypeValidatorMap.get(resourceType);
+                if (typeValidator == null) {
+                    String msg = String.format("Resource type specific validator could not be found! Type:%s", 
+                            resourceTypeString);
+                    throw new IllegalArgumentException(msg);
+                }
+
+                String mitigationSettingsJSON;
+                if (targetConfig != null) {
+                    // need to validate updated mitigation settings
+                    mitigationSettingsJSON = targetConfig.getJsonString();
+
+                    String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
+                    Map<BlackWatchMitigationResourceType, Set<String>> resourceMap =
+                            typeValidator.getCanonicalMapOfResources(resourceId, targetConfig);
+                    LOG.info(String.format("Extracted canonical resource:%s and resource sets:%s",
+                            canonicalResourceId, ReflectionToStringBuilder.toString(resourceMap)));
+                    validateResources(resourceMap);
+                } else {
+                    // mitigation settings are not being updated
+                    mitigationSettingsJSON = null;
+                }
+
+                String previousOwnerARN = mitigationState.getOwnerARN();
+                mitigationState.setState(MitigationState.State.Active.name());
+                mitigationState.setChangeTime(System.currentTimeMillis());
+                mitigationState.setOwnerARN(userARN);
+                if (mitigationSettingsJSON != null) {
+                    // update mitigation settings JSON
+                    mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
+                    mitigationState.setMitigationSettingsJSONChecksum(
+                            BlackWatchHelper.getHexStringChecksum(mitigationSettingsJSON));
+                } else {
+                    // do not update mitigation settings JSON
+                    mitigationState.setMitigationSettingsJSON(null);
+                    mitigationState.setMitigationSettingsJSONChecksum(null);
+                }
+                mitigationState.setMinutesToLive(minsToLive);
+                BlackWatchMitigationActionMetadata bwMetadata = BlackWatchHelper.coralMetadataToBWMetadata(metadata);
+                mitigationState.setLatestMitigationActionMetadata(bwMetadata);
+
+                try {
+                    saveMitigationState(mitigationState, false, subMetrics);
+
+                    subMetrics.addCount("ExistingMitgationModified", 1);
+                    UpdateBlackWatchMitigationResponse response = new UpdateBlackWatchMitigationResponse();
+                    response.setMitigationId(mitigationId);
+                    response.setPreviousOwnerARN(previousOwnerARN);
+                    return response;
+                } catch (ConditionalCheckFailedException e) {
+                    try {
+                        LOG.warn(String.format("ConditionalCheckFailedException while doing update "
+                                + "mitigation on mitigation ID: %s, retry attempt: %d", mitigationId, attempt + 1));
+                        Thread.sleep((long) ((attempt + 1)*UPDATE_RETRY_SLEEP_MILLIS*Math.random()));
+                    } catch (InterruptedException intEx) {
+                        // If we were interrupted then stop trying and fail immediately.
+                        LOG.info("Interrupted while sleeping to retry");
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            }
+            String message = String.format("Failed to update MitigationState due to ConditionalCheckFailedException " +
+                    "even after retrying for %d times, please try calling this API again", MAX_UPDATE_RETRIES);
+            throw new IllegalArgumentException(message);
         }
     }
     
@@ -389,109 +418,144 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                         
             ResourceAllocationState resourceState = resourceAllocationStateDynamoDBHelper
                     .getResourceAllocationState(canonicalResourceId);
-            
-            MitigationState mitigationState;
-            if (resourceState != null) {
-                Validate.isTrue(resourceState.getResourceType().equals(resourceTypeString),
-                        String.format("Recorded resourceId:%s with type:%s does not match the specified type:%s",
-                                canonicalResourceId, resourceState.getResourceType(), resourceTypeString));
-                newMitigationCreated = false;
-                mitigationId = resourceState.getMitigationId();
-                mitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
-                if (mitigationState == null) {
-                    String message = String.format("MitigationId:%s returned from the resource does not exist!", 
-                            mitigationId);
+
+            // since Optimistic locking is enabled for MitigationState table, let's retry couple of
+            // times to update the mitigation state since workers can update this in parallel
+            for (int attempt = 0; attempt < MAX_UPDATE_RETRIES; attempt++) {
+                MitigationState mitigationState;
+
+                if (resourceState != null) {
+                    Validate.isTrue(resourceState.getResourceType().equals(resourceTypeString),
+                            String.format("Recorded resourceId:%s with type:%s does not match the specified type:%s",
+                                    canonicalResourceId, resourceState.getResourceType(), resourceTypeString));
+                    newMitigationCreated = false;
+                    mitigationId = resourceState.getMitigationId();
+                    mitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+                    if (mitigationState == null) {
+                        String message = String.format("MitigationId:%s returned from the resource does not exist!", 
+                                mitigationId);
+                        throw new IllegalArgumentException(message);
+                    } else if (mitigationState.getState().equals(MitigationState.State.To_Delete.name())) {
+                        throw new IllegalArgumentException(TO_DELETE_CONDITIONAL_FAILURE_MESSAGE);
+                    }
+                    if (!mitigationState.getOwnerARN().equals(userARN)) {
+                        String message = String.format("Cannot apply update to mitigationId:%s as the calling owner:%s "
+                                + "does not match the recorded owner:%s", mitigationId, userARN, mitigationState.getOwnerARN());
+                        throw new MitigationNotOwnedByRequestor400(message);
+                    }
+
+                } else {
+                    newMitigationCreated = true;
+                    mitigationId = generateMitigationId(realm);
+                    mitigationState = MitigationState.builder()
+                            .mitigationId(mitigationId)
+                            .resourceId(canonicalResourceId)
+                            .resourceType(resourceTypeString)
+                            .ownerARN(userARN)
+                            .build();
+                }
+
+                subMetrics.addCount("RequestCoveredByExistingMitigation", 0);
+
+                // Need to prevent auto-mitigations from BAM and EC2 from creating more specific
+                // mitigations within the IP space already covered by existing mitigations.
+                // Route53 creates and maintains long-lasting mitigations on larger IP prefixes (/22).
+                if (userARN.startsWith(bamAndEc2OwnerArnPrefix) && ipAddress != null) {
+                    final String ipAddressToCheck = ipAddress;
+
+                    if (lastUpdateTimestamp + REFRESH_PERIOD_MILLIS < System.currentTimeMillis()) {
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("Updating the mitigation state list...");
+                        }
+                        mitigationStateList = mitigationStateDynamoDBHelper.getAllMitigationStates(2);
+                        lastUpdateTimestamp = System.currentTimeMillis();
+                    }
+
+                    Optional<MitigationState> mitigationStateWithSupersetPrefix = mitigationStateList.stream()
+                            .filter(ms -> ms.getState().equals(State.Active.name()))
+                            .filter(ms -> !ms.getOwnerARN().equals(userARN))
+                            .filter(ms -> isRequestIpCoveredByExistingMitigation(ipAddressToCheck, ms))
+                            .findAny();
+
+                    if (mitigationStateWithSupersetPrefix.isPresent()) {
+                        String errorMsg = String.format("The request is rejected since the user %s is "
+                                + "auto mitigation (BAM or EC2), and mitigation %s already exists on a superset prefix",
+                                userARN,
+                                mitigationStateWithSupersetPrefix.get().getMitigationId());
+                        LOG.warn(errorMsg);
+                        subMetrics.addCount("RequestCoveredByExistingMitigation", 1);
+                        throw new MitigationNotOwnedByRequestor400(errorMsg);
+                    }
+                }
+
+                mitigationState.setState(MitigationState.State.Active.name());
+                mitigationState.setChangeTime(System.currentTimeMillis());
+                mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
+                mitigationState.setMitigationSettingsJSONChecksum(
+                        BlackWatchHelper.getHexStringChecksum(mitigationSettingsJSON));
+                mitigationState.setMinutesToLive(minsToLive);
+                BlackWatchMitigationActionMetadata bwMetadata = BlackWatchHelper.coralMetadataToBWMetadata(metadata);
+                mitigationState.setLatestMitigationActionMetadata(bwMetadata);
+
+                BlackWatchResourceTypeHelper resourceTypeHelper = resourceTypeHelpers.get(resourceType);
+                if (resourceTypeHelper == null) {
+                    String message = String.format("Resource type specific helper could not be found! Type:%s",  resourceType);
+                    LOG.error(message);
                     throw new IllegalArgumentException(message);
                 }
-                if (!mitigationState.getOwnerARN().equals(userARN)) {
-                    String message = String.format("Cannot apply update to mitigationId:%s as the calling owner:%s "
-                            + "does not match the recorded owner:%s", mitigationId, userARN, mitigationState.getOwnerARN());
-                    throw new MitigationNotOwnedByRequestor400(message);
-                }
-            } else {
-                newMitigationCreated = true;
-                mitigationId = generateMitigationId(realm);
-                mitigationState = MitigationState.builder()
-                        .mitigationId(mitigationId)
-                        .resourceId(canonicalResourceId)
-                        .resourceType(resourceTypeString)
-                        .ownerARN(userARN)
-                        .build();
-            }
+                resourceTypeHelper.updateResourceBriefInformation(mitigationState);
+                LOG.debug("mitigation state after update: " + mitigationState.toString());
 
-            subMetrics.addCount("RequestCoveredByExistingMitigation", 0);
+                try {
+                    saveMitigationState(mitigationState, newMitigationCreated, subMetrics);
 
-            // Need to prevent auto-mitigations from BAM and EC2 from creating more specific
-            // mitigations within the IP space already covered by existing mitigations.
-            // Route53 creates and maintains long-lasting mitigations on larger IP prefixes (/22).
-            if (userARN.startsWith(bamAndEc2OwnerArnPrefix) && ipAddress != null) {
-                final String ipAddressToCheck = ipAddress;
-
-                if (lastUpdateTimestamp + REFRESH_PERIOD_MILLIS < System.currentTimeMillis()) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Updating the mitigation state list...");
+                    if (newMitigationCreated) {
+                        boolean allocationProposalSuccess = resourceAllocationHelper.proposeNewMitigationResourceAllocation(
+                                mitigationId, canonicalResourceId, resourceTypeString);
+                        if (!allocationProposalSuccess) {
+                            String msg = String.format("Could not complete resource allocation for mitigationId:%s "
+                                    + "resourceId:%s resourceType:%s", mitigationId, canonicalResourceId, resourceType);
+                            mitigationStateDynamoDBHelper.deleteMitigationState(mitigationState);
+                            throw new IllegalArgumentException(msg);
+                        }
+                        if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
+                            Validate.notNull(ipAddress);
+                            Map<String, Set<String>> addMap = ImmutableMap.of(BlackWatchMitigationResourceType.IPAddress.name(),
+                                    Collections.singleton(IPAddressResourceTypeValidator.convertIPToCanonicalStringRepresentation
+                                            (ipAddress)));
+                            LOG.info("Allocating Resource:" + addMap.toString() + " to mitigationId:" + mitigationId);
+                            resourceAllocationHelper.proposeAdditionalResourcesForMitigation(mitigationId, addMap);
+                        }
                     }
-                    mitigationStateList = mitigationStateDynamoDBHelper.getAllMitigationStates(2);
-                    lastUpdateTimestamp = System.currentTimeMillis();
-                }
 
-                Optional<MitigationState> mitigationStateWithSupersetPrefix = mitigationStateList.stream()
-                        .filter(ms -> ms.getState().equals(State.Active.name()))
-                        .filter(ms -> !ms.getOwnerARN().equals(userARN))
-                        .filter(ms -> isRequestIpCoveredByExistingMitigation(ipAddressToCheck, ms))
-                        .findAny();
+                    subMetrics.addCount("NewMitgationCreated", newMitigationCreated ? 1 : 0);
+                    subMetrics.addCount("ExistingMitgationModified", newMitigationCreated ? 0 : 1);
 
-                if (mitigationStateWithSupersetPrefix.isPresent()) {
-                    String errorMsg = String.format("The request is rejected since the user %s is "
-                            + "auto mitigation (BAM or EC2), and mitigation %s already exists on a superset prefix",
-                            userARN,
-                            mitigationStateWithSupersetPrefix.get().getMitigationId());
-                    LOG.warn(errorMsg);
-                    subMetrics.addCount("RequestCoveredByExistingMitigation", 1);
-                    throw new MitigationNotOwnedByRequestor400(errorMsg);
+                    ApplyBlackWatchMitigationResponse response = new ApplyBlackWatchMitigationResponse();
+                    response.setNewMitigationCreated(newMitigationCreated);
+                    response.setMitigationId(mitigationId);
+                    return response;
+                } catch (ConditionalCheckFailedException e) {
+                    // do not retry if its a new mitigation
+                    if (newMitigationCreated) {
+                        String message = "Could not save MitigationState due to conditional failure! "
+                                + "Conflicting MitigationId on a new mitigation.";
+                        throw new IllegalArgumentException(message);
+                    }
+                    try {
+                        LOG.warn(String.format("ConditionalCheckFailedException while doing update "
+                                + "mitigation on mitigation ID: %s, retry attempt: %d", mitigationId, attempt + 1));
+                        Thread.sleep((long) ((attempt + 1)*UPDATE_RETRY_SLEEP_MILLIS*Math.random()));
+                    } catch (InterruptedException intEx) {
+                        // If we were interrupted then stop trying and fail immediately.
+                        LOG.info("Interrupted while sleeping to retry");
+                        Thread.currentThread().interrupt();
+                    }
                 }
             }
-
-            mitigationState.setState(MitigationState.State.Active.name());
-            mitigationState.setChangeTime(System.currentTimeMillis());
-            mitigationState.setMitigationSettingsJSON(mitigationSettingsJSON);
-            mitigationState.setMitigationSettingsJSONChecksum(
-                    BlackWatchHelper.getHexStringChecksum(mitigationSettingsJSON));
-            mitigationState.setMinutesToLive(minsToLive);
-            BlackWatchMitigationActionMetadata bwMetadata = BlackWatchHelper.coralMetadataToBWMetadata(metadata);
-            mitigationState.setLatestMitigationActionMetadata(bwMetadata);
-            
-            BlackWatchResourceTypeHelper resourceTypeHelper = resourceTypeHelpers.get(resourceType);
-            if (resourceTypeHelper == null) {
-                String message = String.format("Resource type specific helper could not be found! Type:%s",  resourceType);
-                LOG.error(message);
-                throw new IllegalArgumentException(message);                        
-            }
-            resourceTypeHelper.updateResourceBriefInformation(mitigationState);
-            LOG.debug("mitigation state after update: " + mitigationState.toString());
-            saveMitigationState(mitigationState, newMitigationCreated, subMetrics);
-            if (newMitigationCreated) {
-                boolean allocationProposalSuccess = resourceAllocationHelper.proposeNewMitigationResourceAllocation(
-                        mitigationId, canonicalResourceId, resourceTypeString);
-                if (!allocationProposalSuccess) {
-                    String msg = String.format("Could not complete resource allocation for mitigationId:%s "
-                            + "resourceId:%s resourceType:%s", mitigationId, canonicalResourceId, resourceType);
-                    mitigationStateDynamoDBHelper.deleteMitigationState(mitigationState);
-                    throw new IllegalArgumentException(msg);
-                }
-                if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
-                    Validate.notNull(ipAddress);
-                    Map<String, Set<String>> addMap = ImmutableMap.of(BlackWatchMitigationResourceType.IPAddress.name(),
-                            Collections.singleton(IPAddressResourceTypeValidator.convertIPToCanonicalStringRepresentation
-                                    (ipAddress)));
-                    LOG.info("Allocating Resource:" + addMap.toString() + " to mitigationId:" + mitigationId);
-                    resourceAllocationHelper.proposeAdditionalResourcesForMitigation(mitigationId, addMap);
-                }
-            }
-            ApplyBlackWatchMitigationResponse response = new ApplyBlackWatchMitigationResponse();
-            response.setNewMitigationCreated(newMitigationCreated);
-            response.setMitigationId(mitigationId);
-            return response;
+            String message = String.format("Failed to update MitigationState due to ConditionalCheckFailedException " +
+                    "even after retrying for %d times, please try calling this API again", MAX_UPDATE_RETRIES);
+            throw new IllegalArgumentException(message);
         }
     }
 
@@ -525,24 +589,9 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             expectedAttribute.setComparisonOperator(ComparisonOperator.NE);
             expectedAttributes.put(MitigationState.STATE_KEY, expectedAttribute);
         }
-
         saveExpression.setExpected(expectedAttributes);
-        try {
-            mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(mitigationState, saveExpression);
-        } catch (ConditionalCheckFailedException conEx) {
-            String msg;
-            if (newMitigationCreated) {
-                msg = "Could not save MitigationState due to conditional failure! "
-                        + "Conflicting MitigationId on a new mitigation.";
-            } else {
-                msg = String.format("Could not save MitigationState due to conditional failure! "
-                        + "MitigationState must not be: %s", MitigationState.State.To_Delete.name());
-            }
-            throw new IllegalArgumentException(msg);
-        } finally {
-            subMetrics.addCount("NewMitgationCreated", newMitigationCreated ? 1 : 0);
-            subMetrics.addCount("ExistingMitgationModified", newMitigationCreated ? 0 : 1);
-        }
+
+        mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(mitigationState, saveExpression);
     }
 
     private void failDeactivateMitigation(final String mitigationId, final int attempts) {

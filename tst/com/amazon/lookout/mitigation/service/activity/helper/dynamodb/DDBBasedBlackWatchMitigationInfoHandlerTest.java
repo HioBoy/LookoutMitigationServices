@@ -753,7 +753,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         mitigationStateDynamoDBHelper.updateMitigationState(ms);
 
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("Could not save MitigationState due to conditional failure!");
+        thrown.expectMessage(DDBBasedBlackWatchMitigationInfoHandler.TO_DELETE_CONDITIONAL_FAILURE_MESSAGE);
         blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 testIPAddressResourceId, testIPAddressResourceType, 10, testMetadata, parseJSON(testValidJSON),
                 "ARN-1222", tsdMetrics);
