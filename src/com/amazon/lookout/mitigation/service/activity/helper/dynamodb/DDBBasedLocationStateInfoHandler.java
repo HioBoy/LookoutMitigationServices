@@ -50,6 +50,16 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
     }
 
     public BlackWatchLocation convertLocationState(LocationState in) {
+        String locationBuildStatus = null;
+
+        if (in.getBuildStatus() == null) {
+            String msg = String.format("Location build status not found for location. " + in.getLocationName()
+                + " You probably have to delete the location from location_state table in mitigation service account.");
+            LOG.error(msg);
+        } else {
+            locationBuildStatus = in.getBuildStatus().name();
+        }
+
         BlackWatchLocation out = new BlackWatchLocation();
         out.setLocation(in.getLocationName());
         out.setAdminIn(in.getAdminIn());
@@ -60,7 +70,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         out.setActiveBGPSpeakerHosts(in.getActiveBGPSpeakerHosts());
         out.setActiveBlackWatchHosts(in.getActiveBlackWatchHosts());
         out.setLocationType(in.getLocationType());
-        out.setBuildStatus(in.getBuildStatus().name());
+        out.setBuildStatus(locationBuildStatus);
         return out;
     }
 
