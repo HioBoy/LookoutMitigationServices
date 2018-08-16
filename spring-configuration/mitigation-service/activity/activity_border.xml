@@ -80,6 +80,7 @@
 
     <bean class="com.amazon.lookout.mitigation.service.activity.RequestHostStatusChangeActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="hostNameValidator" ref="hostNameValidator"/>
         <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
     </bean>
 
@@ -126,7 +127,9 @@
     <bean id="requestValidator" class="com.amazon.lookout.mitigation.service.activity.validator.RequestValidator">
         <constructor-arg name="currentRegion" value="${realm}"/>
     </bean>
-    
+
+    <bean id="hostnameValidator" class="com.amazon.lookout.mitigation.service.activity.validator.HostnameValidator"/>
+
     <bean id="s3OdinCredential" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
         <constructor-arg value="com.amazon.lookout.mitigationservice.s3.fullaccess.${realm}.${domain}"/>
     </bean>
