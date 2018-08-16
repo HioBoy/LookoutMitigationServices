@@ -53,6 +53,8 @@ package.LookoutMitigationService = {
             
             CoralSpringLauncher = 4.2;
 
+            LookoutBlackWatchHostConfig = 1.0;
+
             LookoutMitigationServiceExplorer = 1.0;
             LookoutNetworkInformationManager = 1.0;
             LookoutMitigationServiceJlbRelayConfig = 1.0;

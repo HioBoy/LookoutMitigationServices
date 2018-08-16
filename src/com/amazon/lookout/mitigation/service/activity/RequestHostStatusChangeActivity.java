@@ -13,6 +13,7 @@ import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import com.amazon.lookout.mitigation.service.RequestHostStatusChangeResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.LocationStateInfoHandler;
+import com.amazon.lookout.mitigation.service.activity.validator.HostnameValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 import lombok.NonNull;
@@ -46,14 +47,19 @@ public class RequestHostStatusChangeActivity extends Activity {
             .collect(Collectors.toSet()));
 
     private final RequestValidator requestValidator;
+    private final HostnameValidator hostNameValidator;
     private final LocationStateInfoHandler locationStateInfoHandler;
     private final String localHostName;
 
-    @ConstructorProperties({"requestValidator", "locationStateInfoHandler"})
+    @ConstructorProperties({"requestValidator", "hostNameValidator", "locationStateInfoHandler"})
     public RequestHostStatusChangeActivity(@NonNull RequestValidator requestValidator,
-            @NonNull LocationStateInfoHandler locationStateInfoHandler) {
+                                           @NonNull HostnameValidator hostNameValidator,
+                                           @NonNull LocationStateInfoHandler locationStateInfoHandler) {
         Validate.notNull(requestValidator);
         this.requestValidator = requestValidator;
+
+        Validate.notNull(hostNameValidator);
+        this.hostNameValidator = hostNameValidator;
 
         Validate.notNull(locationStateInfoHandler);
         this.locationStateInfoHandler = locationStateInfoHandler;
@@ -83,6 +89,7 @@ public class RequestHostStatusChangeActivity extends Activity {
 
             // Step 1. Validate this request
             HostStatusEnum requestedStatus = requestValidator.validateRequestHostStatusChangeRequest(request);
+            hostNameValidator.validateHostname(request);
 
             // Step 2. Request status change
             locationStateInfoHandler.requestHostStatusChange(

@@ -3,6 +3,7 @@ package com.amazon.lookout.mitigation.service.activity;
 import java.util.Arrays;
 import java.util.List;
 
+import com.amazon.lookout.mitigation.service.activity.validator.HostnameValidator;
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -33,13 +34,14 @@ public class ActivityTestHelper {
     protected static final List<String> locations = Arrays.asList("G-IAD55");
     protected static final MitigationActionMetadata mitigationActionMetadata = new MitigationActionMetadata();
     protected static final String userArn = "arn:12324554";
-    
+
     static {
         mitigationActionMetadata.setDescription("desc");
         mitigationActionMetadata.setUser("nobody");
         mitigationActionMetadata.setToolName("CLI");
     }
 
+    protected static HostnameValidator hostnameValidator;
     protected static RequestValidator requestValidator;
     protected static HostStatusInfoHandler hostStatusInfoHandler;
     protected static LocationStateInfoHandler locationStateInfoHandler;
@@ -53,6 +55,7 @@ public class ActivityTestHelper {
 
     @Before
     public void resetMock() {
+        hostnameValidator = mock(HostnameValidator.class);
         requestValidator = mock(RequestValidator.class);
         hostStatusInfoHandler = mock(HostStatusInfoHandler.class);
         locationStateInfoHandler = mock(LocationStateInfoHandler.class);
