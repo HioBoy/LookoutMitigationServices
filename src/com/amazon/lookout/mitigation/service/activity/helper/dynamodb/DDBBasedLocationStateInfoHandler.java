@@ -55,7 +55,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         if (in.getBuildStatus() == null) {
             String msg = String.format("Location build status not found for location. " + in.getLocationName()
                 + " You probably have to delete the location from location_state table in mitigation service account.");
-            LOG.error(msg);
+            LOG.warn(msg);
         } else {
             locationBuildStatus = in.getBuildStatus().name();
         }
