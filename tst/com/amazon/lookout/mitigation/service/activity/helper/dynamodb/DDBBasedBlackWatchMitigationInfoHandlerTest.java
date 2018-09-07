@@ -50,6 +50,8 @@ import java.util.*;
 
 import static org.junit.Assert.*;
 
+import com.amazon.lookout.utils.DynamoDBLocalMocks;
+
 public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     
     //@Rule for exception handling is more flexible than the entire test expecting the exception
@@ -161,6 +163,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 );
         
         dynamoDBClient = DynamoDBTestUtil.get().getClient();
+        dynamoDBClient = DynamoDBLocalMocks.setupSpyDdbClient(dynamoDBClient);
+
         mitigationStateDynamoDBHelper = new MitigationStateDynamoDBHelper(dynamoDBClient, realm, domain, 
                 5L, 5L, metricsFactory);
         resourceAllocationStateDDBHelper = new ResourceAllocationStateDynamoDBHelper(dynamoDBClient, realm, domain, 

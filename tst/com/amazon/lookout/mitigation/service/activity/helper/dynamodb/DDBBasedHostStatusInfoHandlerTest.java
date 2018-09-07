@@ -30,6 +30,8 @@ import com.amazon.coral.metrics.MetricsFactory;
 
 import static com.amazon.blackwatch.host.status.model.HostConfigApplyStatus.*;
 
+import com.amazon.lookout.utils.DynamoDBLocalMocks;
+
 public class DDBBasedHostStatusInfoHandlerTest {
     private static final String domain = "unit-test";
     private static final String realm = "unit-test";
@@ -62,6 +64,8 @@ public class DDBBasedHostStatusInfoHandlerTest {
     public static void setUpOnce() {
         TestUtils.configureLogging();
         dynamoDBClient = DynamoDBTestUtil.get().getClient();
+        dynamoDBClient = DynamoDBLocalMocks.setupSpyDdbClient(dynamoDBClient);
+        
         hostStatusInfoHandler = new DDBBasedHostStatusInfoHandler(dynamoDBClient, domain, realm);
         hostStatusDynamoDBHelper = new HostStatusDynamoDBHelper(dynamoDBClient, realm, domain, 51, 51, metricsFactory);
 

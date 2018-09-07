@@ -41,6 +41,8 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.google.common.collect.ImmutableMap;
 
+import com.amazon.lookout.utils.DynamoDBLocalMocks;
+
 public class DDBBasedActivityTestHelper {
     protected static final String deviceName = DeviceName.BLACKWATCH_BORDER.name();
     protected static final String mitigationName = "mitigation1";
@@ -92,6 +94,7 @@ public class DDBBasedActivityTestHelper {
     public static void setupOnce() {
         TestUtils.configureLogging(Level.ERROR);
         dynamoDBClient = DynamoDBTestUtil.get().getClient();
+        dynamoDBClient = DynamoDBLocalMocks.setupSpyDdbClient(dynamoDBClient);
 
         // mock Metrics Factory
         doReturn(metrics).when(metricsFactory).newMetrics();
