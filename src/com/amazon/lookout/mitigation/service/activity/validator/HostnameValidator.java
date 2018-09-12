@@ -6,6 +6,9 @@ import lombok.NonNull;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class HostnameValidator {
     private static final Log LOG = LogFactory.getLog(RequestValidator.class);
 
@@ -42,7 +45,8 @@ public class HostnameValidator {
      */
     private void verifyLocation(@NonNull final RequestHostStatusChangeRequest request,
                                 @NonNull final String hostLocation) {
-        if (!request.getLocation().equalsIgnoreCase(hostLocation)) {
+        Pattern edgeLocationPattern = Pattern.compile(String.format("(e-)?%s", hostLocation), Pattern.CASE_INSENSITIVE);
+        if (!edgeLocationPattern.matcher(request.getLocation()).matches()) {
             String msg = String.format("Unmatched hostname \"%s\" at requested location \"%s\", should be \"%s\"",
                     request.getHostName(), request.getLocation(), hostLocation);
             LOG.info(msg);

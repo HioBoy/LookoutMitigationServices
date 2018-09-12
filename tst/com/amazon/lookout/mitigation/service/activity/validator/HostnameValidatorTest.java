@@ -47,6 +47,15 @@ public class HostnameValidatorTest {
         hostnameValidator.validateHostname(requestHostStatusChangeRequest);
     }
 
+    @Test
+    public void validateHostnameTest4() {
+        String hostname = "edge-bw-101.e-ams1.amazon.com";
+        String location = "e-ams1";
+        requestHostStatusChangeRequest.setHostName(hostname);
+        requestHostStatusChangeRequest.setLocation(location);
+        hostnameValidator.validateHostname(requestHostStatusChangeRequest);
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void incompleteHostnameTest1() {
         String hostname = "border-bw-2-01.lax1.blackwatch.iad.amazon";
