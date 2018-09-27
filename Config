@@ -139,6 +139,8 @@ package.LookoutMitigationService = {
             Jackson-dataformat-cbor = 2.8.x;
             Jackson-core = 2.8.x;
             Javassist = 3.20.x;
+
+            Zlib = 1;
         };
     };
 
