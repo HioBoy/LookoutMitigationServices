@@ -25,7 +25,7 @@ import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.coral.service.Activity;
 import com.amazon.coral.service.Context;
 import com.amazon.coral.service.Identity;
-import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType;
 import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchResourceTypeValidator;
 import com.amazon.blackwatch.mitigation.resource.validator.IPAddressListResourceTypeValidator;
 import com.amazon.blackwatch.mitigation.resource.validator.IPAddressResourceTypeValidator;

@@ -55,7 +55,7 @@
         {% endif %}
 
         <util:map id="resourceTypeHelpers.{{ realm_domain }}"
-            key-type="com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType" 
+            key-type="com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType"
             value-type="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceTypeHelper">
             <entry key="IPAddress" value-ref="ipaddressResourceTypeHelper"/>
             <entry key="IPAddressList" value-ref="ipaddressListResourceTypeHelper"/>
@@ -68,7 +68,7 @@
         </util:map>
 
         <util:map id="resourceTypeValidatorMap.{{ realm_domain }}"
-            key-type="com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType" 
+            key-type="com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType"
             value-type="com.amazon.lookout.mitigation.blackwatch.model.BlackWatchResourceTypeValidator">
             <entry key="IPAddress" value-ref="IPAddressTypeValidator"/>
             <entry key="IPAddressList" value-ref="IPAddressListTypeValidator"/>

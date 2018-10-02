@@ -9,6 +9,7 @@ import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchIPAddressResou
 import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceTypeHelper;
 import com.amazon.blackwatch.mitigation.resource.helper.ELBResourceHelper;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.state.model.ELBBriefInformation;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
@@ -21,7 +22,6 @@ import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDyn
 import com.amazon.coral.metrics.Metrics;
 import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.elb.internal.AccessPointNotFoundException;
-import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType;
 import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchResourceTypeValidator;
 import com.amazon.blackwatch.mitigation.resource.validator.ELBResourceTypeValidator;
 import com.amazon.blackwatch.mitigation.resource.validator.IPAddressListResourceTypeValidator;

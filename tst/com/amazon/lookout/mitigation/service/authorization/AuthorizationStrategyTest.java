@@ -27,7 +27,7 @@ import org.junit.runner.RunWith;
 
 import aws.auth.client.config.Configuration;
 
-import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType;
 import com.amazon.coral.security.AccessDeniedException;
 import com.amazon.coral.service.AuthorizationInfo;
 import com.amazon.coral.service.BasicAuthorizationInfo;

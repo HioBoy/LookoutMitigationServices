@@ -30,7 +30,7 @@ import aws.auth.client.impl.ContextHeuristics;
 import aws.auth.client.error.ARCInvalidActionException;
 
 import com.amazon.blackwatch.helper.CIDRUtils;
-import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchMitigationResourceType;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.coral.security.AccessDeniedException;
 import com.amazon.coral.service.AbstractAwsAuthorizationStrategy;
