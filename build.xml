@@ -38,6 +38,10 @@
           
           <env key="LANG" value="en_US.UTF-8"/>
           <env key="NLS_LANG" value="American_America.UTF8"/>
+          <sysproperty key="file.encoding" value="UTF-8"/>
+
+          <sysproperty key="javax.net.ssl.trustStore" value="${APOLLO_ACTUAL_ENVIRONMENT_ROOT}/certs/InternalAndExternalTrustStore.jks"/>
+          <sysproperty key="javax.net.ssl.trustStorePassword" value="amazon"/>
 
           <!-- Heap Sizing -->
           <!-- Set via brazil-config to vary between prod and other stages -->

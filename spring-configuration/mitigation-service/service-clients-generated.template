@@ -8,6 +8,8 @@
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
     http://schema.amazon.com/spring-extensions/coral/v1.0 http://schema.amazon.com/spring-extensions/coral/v1.0/coral.xsd">
 
+    <import resource="file:${spring.config.root}/mitigation-service/resource-capacity.xml"/>
+
 {% for stack in locations.values() %}
     {% for realm_domain, location in stack.items() %}
         {% if location['elb_internal_api_client_qualifier'] %}
@@ -52,6 +54,39 @@
                 <constructor-arg name="eipResourceHelper" ref="eipResourceHelper.{{ realm_domain }}" />
             </bean>
 
+            <bean id="askEC2ClientWithCredentials.{{ realm_domain }}"
+                    class="com.amazonaws.askec2.commons.client.AskEC2ClientProvider"
+                    factory-method="get"
+                    factory-bean="askEC2ClientProvider.{{ realm_domain }}">
+            </bean>
+
+            <bean id="askEC2ClientProvider.{{ realm_domain }}"
+                    class="com.amazonaws.askec2.commons.client.AskEC2ClientProvider" factory-method="defaultClientProviderForQualifier">
+                <constructor-arg name="qualifier" value="{{ location['ec2_internal_api_client_qualifier'] }}" />
+                <constructor-arg name="identityProvider" ref="askEc2StsAssumeRoleSessionIdentityProvider" />
+            </bean>
+
+        {% endif %}
+
+        {% if location['glb_internal_api_client_qualifier'] %}
+            <coral:client id="glbServiceTeamApiClientBean.{{ realm_domain }}"
+                service-client-class="com.amazonaws.ubiquity.serviceteamapi.v20181004.UbiquityServiceTeamAPIClient"
+                qualifier="{{ location['glb_internal_api_client_qualifier'] }}"/>
+
+            <bean id="glbResourceHelper.{{ realm_domain }}"
+                    class="com.amazon.blackwatch.mitigation.resource.helper.GLBResourceHelper">
+                <constructor-arg name="awsCredentialsProvider" ref="glbInternalServiceCredentialsProvider.us-west-2.${domain}"/>
+                <constructor-arg name="ubiquityClient" ref="glbServiceTeamApiClientBean.{{ realm_domain }}"/>
+                <constructor-arg name="metricsFactory" ref="metricsFactory" />
+            </bean>
+
+            <bean id="glbResourceTypeHelper.{{ realm_domain }}"
+                    class="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchGLBResourceTypeHelper">
+                <constructor-arg name="glbResourceHelper" ref="glbResourceHelper.{{ realm_domain }}" />
+                <!-- <constructor-arg name="albCapacityHelper" ref="albCapacityHelper.{{ realm_domain }}" /> -->
+                <constructor-arg name="eipCapacityHelper" ref="eipCapacityHelper" />
+                <!-- <constructor-arg name="nlbCapacityHelper" ref="nlbCapacityHelper.{{ realm_domain }}" /> -->
+            </bean>
         {% endif %}
 
         <util:map id="resourceTypeHelpers.{{ realm_domain }}"
@@ -65,6 +100,9 @@
             {% if location['ec2_internal_api_client_qualifier'] %}
                 <entry key="ElasticIP" value-ref="eipResourceTypeHelper.{{ realm_domain }}"/>
             {% endif %}
+            {% if location['glb_internal_api_client_qualifier'] %}
+                <entry key="GLB" value-ref="glbResourceTypeHelper.{{ realm_domain }}"/>
+            {% endif %}
         </util:map>
 
         <util:map id="resourceTypeValidatorMap.{{ realm_domain }}"
@@ -77,6 +115,9 @@
             {% endif %}
             {% if location['ec2_internal_api_client_qualifier'] %}
                 <entry key="ElasticIP" value-ref="EIPTypeValidator"/>
+            {% endif %}
+            {% if location['glb_internal_api_client_qualifier'] %}
+                <entry key="GLB" value-ref="GLBTypeValidator"/>
             {% endif %}
 
         </util:map>

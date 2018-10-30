@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <!-- EIP CAPACITY HELPER -->
+
+    <bean id="eipCapacityHelper" class="com.amazon.blackwatch.mitigation.resource.helper.capacityhelper.EipCapacityHelper">
+        <constructor-arg name="resourcePropertiesProvider" ref="bardockEc2PropertiesProvider" />
+        <constructor-arg name="resourceBandwidthProvider" ref="ec2InstanceBandwidthProvider" />
+        <constructor-arg name="timeoutDuration" ref="timeoutDuration" />
+        <constructor-arg name="timerExecutor" ref="timerExecutor" />
+        <constructor-arg name="capacityHelperExecutor" ref="capacityHelperExecutor" />
+    </bean>
+
+    <bean id="bardockEc2PropertiesProvider"
+          class="com.amazon.blackwatch.mitigation.resource.helper.eip.BardockEc2ResourcePropertiesProvider">
+        <constructor-arg name="askEc2ResourceInfoHelper" ref="askEc2ResourceInfoHelper" />
+        <constructor-arg name="publicIpFetcher" ref="publicIpFetcher" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
+
+    <bean id="publicIpFetcher" class="com.amazon.bardock.resources.ec2.PublicIpFetcher">
+        <constructor-arg name="askEC2Client" ref="askEC2ClientWithCredentials.${realm}.${domain}" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
+
+    <bean id="askEc2ResourceInfoHelper" class="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
+        <constructor-arg name="askEC2Client" ref="askEC2ClientWithCredentials.${realm}.${domain}" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
+
+    <bean id="ec2InstanceBandwidthProvider"
+          class="com.amazon.blackwatch.mitigation.resource.helper.bandwidthprovider.Ec2ResourceBandwidthProvider">
+        <constructor-arg name="thresholdMaster" ref="thresholdMaster" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
+
+    <!-- NLB CAPACITY HELPER -->
+
+    <bean id="nlbCapacityHelper" class="com.amazon.blackwatch.mitigation.resource.helper.capacityhelper.NlbCapacityHelper">
+        <constructor-arg name="resourcePropertiesProvider" ref="elbInternalNlbResourcePropertiesProvider" />
+        <constructor-arg name="resourceBandwidthProvider" ref="nlbResourceBandwidthProvider" />
+        <constructor-arg name="timeoutDuration" ref="timeoutDuration" />
+        <constructor-arg name="timerExecutor" ref="timerExecutor" />
+        <constructor-arg name="capacityHelperExecutor" ref="capacityHelperExecutor" />
+    </bean>
+
+    <bean id="elbInternalNlbResourcePropertiesProvider" class="com.amazon.blackwatch.mitigation.resource.helper.nlb.ElbInternalNlbResourcePropertiesProvider">
+        <constructor-arg name="elbInternalClient" ref="elbInternalClient" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
+
+    <bean id="nlbResourceBandwidthProvider" class="com.amazon.blackwatch.mitigation.resource.helper.bandwidthprovider.NlbResourceBandwidthProvider">
+        <constructor-arg name="bigMacMitigationServiceClients" ref="bigMacMitigationServiceClients" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
+
+    <bean id="beta.bigMacMitigationServiceRoleArnTemplate" class="java.lang.String">
+        <constructor-arg value="arn:aws:iam::670529207309:role/ApiGatewayInvokerRole-PreProd-%s" />
+    </bean>
+
+    <bean id="gamma.bigMacMitigationServiceRoleArnTemplate" class="java.lang.String">
+        <constructor-arg value="arn:aws:iam::670529207309:role/ApiGatewayInvokerRole-PreProd-%s" />
+    </bean>
+
+    <bean id="prod.bigMacMitigationServiceRoleArnTemplate" class="java.lang.String">
+        <constructor-arg value="arn:aws:iam::795087522882:role/ApiGatewayInvokerRole-Prod-%s" />
+    </bean>
+
+    <bean id="bigMacMitigationServiceClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.BigMacMitigationServiceClientProvider">
+        <constructor-arg name="bigMacMitigationServiceRoleArnTemplate" ref="${domain}.bigMacMitigationServiceRoleArnTemplate" />
+        <constructor-arg name="domain" value="${domain}" />
+        <constructor-arg name="awsCredentialsProvider" ref="bigMacMitigationServiceCredentialsProvider" />
+    </bean>
+
+    <bean id="bigMacMitigationServiceCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg name="materialSetName" value="com.amazon.blackwatch.nlb.private_api_user.${realm}.${domain}" />
+    </bean>
+
+    <bean id="bigMacMitigationServiceClients" factory-bean="bigMacMitigationServiceClientProvider" factory-method="getGlobalAzClientMap" />
+
+    <!-- ALB CAPACITY HELPER -->
+
+    <bean id="albCapacityHelper" class="com.amazon.blackwatch.mitigation.resource.helper.capacityhelper.AlbCapacityHelper">
+        <constructor-arg name="resourcePropertiesProvider" ref="albResourcesPropertiesProvider" />
+        <constructor-arg name="resourceBandwidthProvider" ref="albResourceBandwidthProvider" />
+        <constructor-arg name="timeoutDuration" ref="timeoutDuration" />
+        <constructor-arg name="timerExecutor" ref="timerExecutor" />
+        <constructor-arg name="capacityHelperExecutor" ref="capacityHelperExecutor" />
+    </bean>
+
+    <bean id="albResourcesPropertiesProvider"
+          class="com.amazon.blackwatch.mitigation.resource.helper.alb.AlbResourcePropertiesProvider">
+        <constructor-arg name="elbInternalClient" ref="elbInternalClient" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
+
+    <bean id="albResourceBandwidthProvider" class="com.amazon.blackwatch.mitigation.resource.helper.bandwidthprovider.AlbResourceBandwidthProvider">
+        <constructor-arg name="resourceBandwidthProvider" ref="ec2InstanceBandwidthProvider" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
+
+    <!-- SHARED CAPACITY HELPER DEPENDENCIES -->
+
+    <bean id="timeoutDuration" class="java.time.Duration" factory-method="ofSeconds">
+        <constructor-arg name="seconds" value="30"/>
+    </bean>
+
+    <!-- mitigation service worker threads * 2 -->
+    <bean id="numberOfCapacityHelperThreads" class="java.lang.Integer">
+        <constructor-arg value="100" />
+    </bean>
+
+    <bean name="timerExecutor" class="java.util.concurrent.ScheduledThreadPoolExecutor" destroy-method="shutdown">
+        <constructor-arg name="corePoolSize" ref="numberOfCapacityHelperThreads" />
+        <constructor-arg name="threadFactory">
+            <bean factory-bean="schedulerThreadFactoryBuilder" factory-method="build" />
+        </constructor-arg>
+    </bean>
+
+    <bean id="threadFactoryBuilder" class="com.google.common.util.concurrent.ThreadFactoryBuilder" scope="prototype" />
+    <bean id="schedulerThreadFactoryBuilder" factory-bean="threadFactoryBuilder" factory-method="setNameFormat">
+        <constructor-arg value="capacity-helper-timeout-%d" />
+    </bean>
+
+    <bean id="workQueue" class="java.util.concurrent.LinkedBlockingQueue" />
+
+    <bean name="capacityHelperExecutor" class="java.util.concurrent.ThreadPoolExecutor" destroy-method="shutdown">
+        <constructor-arg name="corePoolSize" ref="numberOfCapacityHelperThreads" />
+        <constructor-arg name="maximumPoolSize" ref="numberOfCapacityHelperThreads" />
+        <constructor-arg name="keepAliveTime" value="0" />
+        <constructor-arg name="unit" value="#{T(java.util.concurrent.TimeUnit).MILLISECONDS}" />
+        <constructor-arg name="workQueue" ref="workQueue" />
+        <constructor-arg name="threadFactory">
+            <bean factory-bean="capacityHelperExecutorThreadFactoryBuilder" factory-method="build" />
+        </constructor-arg>
+    </bean>
+
+    <bean id="capacityHelperExecutorThreadFactoryBuilder"
+          factory-bean="threadFactoryBuilder"
+          factory-method="setNameFormat">
+        <constructor-arg value="capacity-helper-worker-%d" />
+    </bean>
+
+    <bean id="thresholdMaster" class="com.amazon.bardock.resources.threshold.ThresholdMaster">
+        <constructor-arg name="thresholdModifiers" ref="thresholdModifiers" />
+    </bean>
+
+    <util:list id="thresholdModifiers">
+        <ref bean="defaultThresholdModifier" />
+        <ref bean="ec2baInstanceTypeThresholdModifier" />
+        <ref bean="gunpowderInstanceTypeThresholdModifier"/>
+    </util:list>
+
+    <bean id="defaultThresholdModifier" class="com.amazon.bardock.resources.threshold.DefaultThresholds" />
+
+    <bean id="ec2baInstanceTypeThresholdModifier" class="com.amazon.bardock.resources.threshold.Ec2XenInstanceTypeThresholdModifier">
+        <constructor-arg name="CONFIG" ref="ec2baApplicationConfig" />
+    </bean>
+
+    <bean id="gunpowderInstanceTypeThresholdModifier" class="com.amazon.bardock.resources.threshold.Ec2XenInstanceTypeThresholdModifier">
+        <constructor-arg name="CONFIG" ref="gunpowderApplicationConfig" />
+    </bean>
+
+    <bean id="ec2baApplicationConfig"
+          class="com.amazon.bardock.resources.ec2bandwidtharbiter.Ec2baApplicationConfig"
+          factory-method="fromFile">
+        <constructor-arg name="name" value="etc/ec2/ec2-bandwidth-arbiter/ec2ba-application-config-backup.yaml" />
+    </bean>
+
+    <bean id="gunpowderApplicationConfig"
+          class="com.amazon.bardock.resources.ec2bandwidtharbiter.Ec2baApplicationConfig"
+          factory-method="fromFile">
+        <constructor-arg name="name" value="etc/ec2/ec2-bandwidth-arbiter/gunpowder-resource-config-conversion.yaml" />
+    </bean>
+
+    <bean id="elbInternalClient" factory-bean="elbInternalClientProvider" factory-method="getClient" />
+
+    <bean id="elbInternalClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.ElbInternalClientProvider">
+        <constructor-arg name="qualifier" ref="${domain}.elbInternalClientQualifier" />
+        <constructor-arg name="odinAWSCredentialsProvider" ref="${domain}.elbInternalClientCredentialsProvider" />
+    </bean>
+
+    <bean id="beta.elbInternalClientQualifier" class="java.lang.String">
+        <constructor-arg value="Gamma.us-east-1" />
+    </bean>
+
+    <bean id="gamma.elbInternalClientQualifier" class="java.lang.String">
+        <constructor-arg value="Gamma.us-east-1" />
+    </bean>
+
+    <bean id="prod.elbInternalClientQualifier" class="java.lang.String">
+        <constructor-arg value="Prod.${realm}" />
+    </bean>
+
+    <bean id="beta.elbInternalClientCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg name="materialSetName" value="com.amazon.credentials.isengard.557458189618.user/NlbCapacityHelper" />
+    </bean>
+
+    <bean id="gamma.elbInternalClientCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg name="materialSetName" value="com.amazon.credentials.isengard.557458189618.user/NlbCapacityHelper" />
+    </bean>
+
+    <bean id="prod.elbInternalClientCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg name="materialSetName" value="com.amazon.credentials.isengard.498998024121.user/NlbCapacityHelper" />
+    </bean>
+</beans>

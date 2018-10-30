@@ -41,7 +41,7 @@ public class DogFishValidationHelper {
         // assuming region (the region mitigation service is running in) will never be equal to "global"
         if (region.equals(fetchedRegion)) {
             return;
-        } else if (fetchedRegion.toLowerCase().equals("global") && (region == "PDX" || region == "IAD")) {
+        } else if (fetchedRegion.toLowerCase().equals("global") && (region == "PDX" || region == "IAD" || region == "SFO")) {
             return;
         } else if (fetchedRegion.toLowerCase().equals("global") && region != "PDX" && region != "IAD") {
             String message = String.format("The resource:%s was found to be a global resource, "

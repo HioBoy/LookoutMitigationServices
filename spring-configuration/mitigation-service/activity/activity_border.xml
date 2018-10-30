@@ -60,6 +60,7 @@
     <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="requestsDao" ref="requestsDao" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.GetMitigationDefinitionActivity">
@@ -121,6 +122,7 @@
     <bean class="com.amazon.lookout.mitigation.service.activity.ApplyBlackWatchMitigationActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="blackwatchMitigationInfoHandler" ref="ddbBasedBlackWatchMitigationInfoHandler"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
     </bean>
     
     <!-- All the beans required by the activities go here -->
@@ -193,6 +195,7 @@
     <bean id="IPAddressListTypeValidator" class="com.amazon.blackwatch.mitigation.resource.validator.IPAddressListResourceTypeValidator" />
     <bean id="ELBTypeValidator" class="com.amazon.blackwatch.mitigation.resource.validator.ELBResourceTypeValidator" />
     <bean id="EIPTypeValidator" class="com.amazon.blackwatch.mitigation.resource.validator.EIPResourceTypeValidator" />
+    <bean id="GLBTypeValidator" class="com.amazon.blackwatch.mitigation.resource.validator.GLBResourceTypeValidator" />
     
     <!-- Convert public region name to the short name via RIPHelper.getRegion("${realm}"); -->
     <bean id="ripRegion" class="com.aws.rip.RIPHelper" factory-method="getRegion">

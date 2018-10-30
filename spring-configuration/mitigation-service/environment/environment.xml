@@ -71,6 +71,7 @@
                 <prop key="log4j.logger.org.apache">ERROR</prop>
                 <prop key="log4j.logger.com.amazon.lookout">${apollo.OCF.Log4j.logSeverityLevel}</prop>
                 <prop key="log4j.logger.com.amazon.aws158">${apollo.OCF.Log4j.logSeverityLevel}</prop>
+                <prop key="log4j.logger.com.amazon.bardock">${apollo.OCF.Log4j.logSeverityLevel}</prop>
                 
                 <!-- Configure the request logger to use our custom appender. The request 
                 logger only outputs at the TRACE level. -->

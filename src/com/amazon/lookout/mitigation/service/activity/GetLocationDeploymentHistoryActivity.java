@@ -6,8 +6,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
+import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceCapacityHelper;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchResourceCapacity;
+import com.amazon.coral.metrics.MetricsFactory;
 import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
@@ -62,12 +66,25 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
     
     @NonNull private final RequestValidator requestValidator;
     @NonNull private final RequestsDAO requestsDao;
-    
+
+
+    @NonNull
+    private final MetricsFactory metricsFactory;
+
     @ConstructorProperties({"requestValidator", "requestsDao"})
     public GetLocationDeploymentHistoryActivity(@NonNull RequestValidator requestValidator,
             @NonNull final RequestsDAO requestsDao) {
         this.requestValidator = requestValidator;
         this.requestsDao = requestsDao;
+        this.metricsFactory = null;
+    }
+
+    public GetLocationDeploymentHistoryActivity(@NonNull RequestValidator requestValidator,
+                                                @NonNull final RequestsDAO requestsDao,
+                                                @NonNull MetricsFactory metricsFactory) {
+        this.requestValidator = requestValidator;
+        this.requestsDao = requestsDao;
+        this.metricsFactory = metricsFactory;
     }
 
     // Turn a CurrentRequest into a LocationDeploymentInfo
@@ -88,6 +105,8 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
     @Operation("GetLocationDeploymentHistory")
     @Documentation("GetLocationDeploymentHistory")
     public @NonNull GetLocationDeploymentHistoryResponse enact(@NonNull GetLocationDeploymentHistoryRequest request) {
+
+
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;
         

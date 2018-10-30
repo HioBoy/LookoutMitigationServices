@@ -140,12 +140,14 @@ package.LookoutMitigationService = {
             Jackson-core = 2.8.x;
             Javassist = 3.20.x;
             
+            Mockito = 1.10.x;
+
             # Coral 1.1
             CoralBuffer = 1.1;
             CoralCommons = 1.1;
             CoralConfig = 1.1;
             CoralGrammar = 1.1;
-            
+
             Zlib = 1;
 
             CoralAwsClientSigners = 1.0; #gk

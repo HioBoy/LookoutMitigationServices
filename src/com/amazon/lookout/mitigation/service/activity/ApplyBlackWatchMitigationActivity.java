@@ -2,7 +2,11 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.Future;
 
+import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceCapacityHelper;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchResourceCapacity;
+import com.amazon.coral.metrics.MetricsFactory;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
@@ -54,6 +58,17 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
     @NonNull
     private final BlackWatchMitigationInfoHandler blackwatchMitigationInfoHandler;
 
+
+    @NonNull
+    private final MetricsFactory metricsFactory;
+
+    public ApplyBlackWatchMitigationActivity(RequestValidator requestValidator, BlackWatchMitigationInfoHandler
+        blackwatchMitigationInfoHandler) {
+        this.requestValidator = requestValidator;
+        this.blackwatchMitigationInfoHandler = blackwatchMitigationInfoHandler;
+        this.metricsFactory = null;
+    }
+
     @Validated
     @Operation("ApplyBlackWatchMitigation")
     @Documentation("ApplyBlackWatchMitigation")
@@ -83,6 +98,7 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
                     .applyBlackWatchMitigation(resourceId, resourceType, minsToLive,
                             metadata, targetConfig, userARN, tsdMetrics);
             response.setRequestId(requestId);
+
             return response;
 
         } catch (MitigationNotOwnedByRequestor400 ex) {
@@ -116,5 +132,6 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
             tsdMetrics.end();
         }
     }
+
 }
 
