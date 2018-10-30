@@ -58,7 +58,6 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
     @NonNull
     private final BlackWatchMitigationInfoHandler blackwatchMitigationInfoHandler;
 
-
     @NonNull
     private final MetricsFactory metricsFactory;
 

@@ -83,9 +83,9 @@
             <bean id="glbResourceTypeHelper.{{ realm_domain }}"
                     class="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchGLBResourceTypeHelper">
                 <constructor-arg name="glbResourceHelper" ref="glbResourceHelper.{{ realm_domain }}" />
-                <!-- <constructor-arg name="albCapacityHelper" ref="albCapacityHelper.{{ realm_domain }}" /> -->
+                <constructor-arg name="albCapacityHelper" ref="albCapacityHelper" />
                 <constructor-arg name="eipCapacityHelper" ref="eipCapacityHelper" />
-                <!-- <constructor-arg name="nlbCapacityHelper" ref="nlbCapacityHelper.{{ realm_domain }}" /> -->
+                <constructor-arg name="nlbCapacityHelper" ref="nlbCapacityHelper" />
             </bean>
         {% endif %}
 

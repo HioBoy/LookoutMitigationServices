@@ -179,7 +179,7 @@
 
     <bean id="elbInternalClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.ElbInternalClientProvider">
         <constructor-arg name="qualifier" ref="${domain}.elbInternalClientQualifier" />
-        <constructor-arg name="odinAWSCredentialsProvider" ref="${domain}.elbInternalClientCredentialsProvider" />
+        <constructor-arg name="odinAWSCredentialsProvider" ref="bigMacMitigationServiceCredentialsProvider" />
     </bean>
 
     <bean id="beta.elbInternalClientQualifier" class="java.lang.String">
@@ -194,15 +194,4 @@
         <constructor-arg value="Prod.${realm}" />
     </bean>
 
-    <bean id="beta.elbInternalClientCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg name="materialSetName" value="com.amazon.credentials.isengard.557458189618.user/NlbCapacityHelper" />
-    </bean>
-
-    <bean id="gamma.elbInternalClientCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg name="materialSetName" value="com.amazon.credentials.isengard.557458189618.user/NlbCapacityHelper" />
-    </bean>
-
-    <bean id="prod.elbInternalClientCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg name="materialSetName" value="com.amazon.credentials.isengard.498998024121.user/NlbCapacityHelper" />
-    </bean>
 </beans>

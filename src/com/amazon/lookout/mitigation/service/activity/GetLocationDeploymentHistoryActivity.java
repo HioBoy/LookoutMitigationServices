@@ -66,10 +66,7 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
     
     @NonNull private final RequestValidator requestValidator;
     @NonNull private final RequestsDAO requestsDao;
-
-
-    @NonNull
-    private final MetricsFactory metricsFactory;
+    @NonNull private final MetricsFactory metricsFactory;
 
     @ConstructorProperties({"requestValidator", "requestsDao"})
     public GetLocationDeploymentHistoryActivity(@NonNull RequestValidator requestValidator,
@@ -105,7 +102,6 @@ public class GetLocationDeploymentHistoryActivity extends Activity {
     @Operation("GetLocationDeploymentHistory")
     @Documentation("GetLocationDeploymentHistory")
     public @NonNull GetLocationDeploymentHistoryResponse enact(@NonNull GetLocationDeploymentHistoryRequest request) {
-
 
         String requestId = getRequestId().toString();
         boolean requestSuccessfullyProcessed = true;
