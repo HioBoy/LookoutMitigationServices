@@ -38,8 +38,17 @@ public class DogFishValidationHelper {
         if (fetchedRegion == null) {
             throw new RuntimeException(String.format("CIDR:%s region was null in DogFish lookup!", cidr));
         }
+        // assuming region (the region mitigation service is running in) will never be equal to "global"
         if (region.equals(fetchedRegion)) {
             return;
+        } else if (fetchedRegion.toLowerCase().equals("global") && (region == "PDX" || region == "IAD")) {
+            return;
+        } else if (fetchedRegion.toLowerCase().equals("global") && region != "PDX" && region != "IAD") {
+            String message = String.format("The resource:%s was found to be a global resource, "
+                    + "please use the global mitigation service in PDX to create a mitigation for the resource."
+                    + " Regional endpoint:%s", 
+                    cidr, regionEndpoints.get(fetchedRegion));
+            throw new IllegalArgumentException(message);
         } else if (regionEndpoints.containsKey(fetchedRegion)) {
             String message = String.format("The resource:%s was found in a region with an active mitigation service, "
                     + "please use that regional endpoint to create a mitigation for the resource. Regional endpoint:%s", 

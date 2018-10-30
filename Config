@@ -147,6 +147,8 @@ package.LookoutMitigationService = {
             CoralGrammar = 1.1;
             
             Zlib = 1;
+
+            CoralAwsClientSigners = 1.0; #gk
         };
     };
 

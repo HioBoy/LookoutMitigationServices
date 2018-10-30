@@ -404,6 +404,10 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 }
                 resourceId = resourceData[0];
                 ipAddress = resourceData[1];
+            } else if (resourceType.equals(BlackWatchMitigationResourceType.GLB)) {
+                if (realm.toLowerCase() != "us-west-2" && realm.toLowerCase() != "us-east-1") {
+                    throw new IllegalArgumentException("GLB Mitigations can only be placed in PDX (us-west-2) or IAD (us-east-1).");   
+                }
             } else if (resourceType.equals(BlackWatchMitigationResourceType.IPAddress)) {
                 ipAddress = resourceId;
             }
