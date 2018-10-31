@@ -139,7 +139,13 @@ package.LookoutMitigationService = {
             Jackson-dataformat-cbor = 2.8.x;
             Jackson-core = 2.8.x;
             Javassist = 3.20.x;
-
+            
+            # Coral 1.1
+            CoralBuffer = 1.1;
+            CoralCommons = 1.1;
+            CoralConfig = 1.1;
+            CoralGrammar = 1.1;
+            
             Zlib = 1;
         };
     };
