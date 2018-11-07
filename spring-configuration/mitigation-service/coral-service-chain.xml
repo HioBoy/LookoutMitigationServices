@@ -179,6 +179,7 @@
         <entry key="prod" value="prod.${realm}"/>
         <entry key="prod-border" value="prod.${realm}"/>
         <entry key="prod-cn" value="prod.${realm}"/>
+        <entry key="edge-prod-cn" value="prod.${realm}"/>
     </util:map>
 
     <bean id="OdinAWSCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
