@@ -63,7 +63,17 @@
             <bean id="askEC2ClientProvider.{{ realm_domain }}"
                     class="com.amazonaws.askec2.commons.client.AskEC2ClientProvider" factory-method="defaultClientProviderForQualifier">
                 <constructor-arg name="qualifier" value="{{ location['ec2_internal_api_client_qualifier'] }}" />
-                <constructor-arg name="identityProvider" ref="askEc2StsAssumeRoleSessionIdentityProvider" />
+                <constructor-arg name="identityProvider" ref="askEc2StsAssumeRoleSessionIdentityProvider.{{ realm_domain }}" />
+            </bean>
+
+            <bean id="askEc2ResourceInfoHelper.{{ realm_domain }}" class="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
+                <constructor-arg name="askEC2Client" ref="askEC2ClientWithCredentials.{{ realm_domain }}" />
+                <constructor-arg name="metricsFactory" ref="metricsFactory" />
+            </bean>
+
+            <bean id="publicIpFetcher.{{ realm_domain }}" class="com.amazon.bardock.resources.ec2.PublicIpFetcher">
+                <constructor-arg name="askEC2Client" ref="askEC2ClientWithCredentials.{{ realm_domain }}" />
+                <constructor-arg name="metricsFactory" ref="metricsFactory" />
             </bean>
 
         {% endif %}
@@ -123,6 +133,164 @@
         </util:map>
     {% endfor %}
 {% endfor %}
+
+<!-- TODO Generate these mappings in a more efficient manner https://sim.amazon.com/issues/BLACKWATCH-4094 -->
+<util:map id="bwbeta.askEc2ResourceInfoHelpers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "bwbeta" %}
+                <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="bwbeta.publicIpFetchers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.PublicIpFetcher">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "bwbeta" %}
+                <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="beta.askEc2ResourceInfoHelpers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "beta" %}
+                <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="beta.publicIpFetchers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.PublicIpFetcher">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "beta" %}
+                <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
+
+
+<util:map id="gamma.askEc2ResourceInfoHelpers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "gamma" %}
+                <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="gamma.publicIpFetchers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.PublicIpFetcher">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "gamma" %}
+                <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="prod.askEc2ResourceInfoHelpers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "prod" %}
+                <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="prod.publicIpFetchers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.PublicIpFetcher">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "prod" %}
+                <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="prod-border.askEc2ResourceInfoHelpers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "prod-border" %}
+                <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="prod-border.publicIpFetchers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.PublicIpFetcher">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "prod-border" %}
+                <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="prod-cn.askEc2ResourceInfoHelpers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "prod-cn" %}
+                <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="prod-cn.publicIpFetchers"
+                 key-type="java.lang.String"
+                 value-type="com.amazon.bardock.resources.ec2.PublicIpFetcher">
+    {% for stack in locations.values() %}
+        {% for realm_domain, location in stack.items() %}
+            {% set region, stage = realm_domain.split('.') %}
+            {% if location['ec2_internal_api_client_qualifier'] and stage == "prod-cn" %}
+                <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</util:map>
 
     <!-- S3 Clients for all the regions -->
 {% for stack in locations.values() %}

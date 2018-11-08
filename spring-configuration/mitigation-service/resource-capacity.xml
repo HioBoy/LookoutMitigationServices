@@ -15,13 +15,8 @@
 
     <bean id="bardockEc2PropertiesProvider"
           class="com.amazon.blackwatch.mitigation.resource.helper.eip.BardockEc2ResourcePropertiesProvider">
-        <constructor-arg name="askEc2ResourceInfoHelper" ref="askEc2ResourceInfoHelper" />
-        <constructor-arg name="publicIpFetcher" ref="publicIpFetcher" />
-        <constructor-arg name="metricsFactory" ref="metricsFactory" />
-    </bean>
-
-    <bean id="publicIpFetcher" class="com.amazon.bardock.resources.ec2.PublicIpFetcher">
-        <constructor-arg name="askEC2Client" ref="askEC2ClientWithCredentials.${realm}.${domain}" />
+        <constructor-arg name="askEc2ResourceInfoHelpers" ref="${domain}.askEc2ResourceInfoHelpers" />
+        <constructor-arg name="publicIpFetchers" ref="${domain}.publicIpFetchers" />
         <constructor-arg name="metricsFactory" ref="metricsFactory" />
     </bean>
 
