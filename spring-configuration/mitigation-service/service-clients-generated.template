@@ -187,14 +187,14 @@
     {% endfor %}
 </util:map>
 
-
+<!-- Gamma stack of Blackwatch uses prod stack of askEc2 -->
 <util:map id="gamma.askEc2ResourceInfoHelpers"
                  key-type="java.lang.String"
                  value-type="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and stage == "gamma" %}
+            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
@@ -207,7 +207,7 @@
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and stage == "gamma" %}
+            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
@@ -220,7 +220,7 @@
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and stage == "prod" %}
+            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
@@ -233,7 +233,7 @@
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and stage == "prod" %}
+            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
@@ -246,7 +246,7 @@
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and stage == "prod-border" %}
+            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
@@ -259,7 +259,7 @@
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and stage == "prod-border" %}
+            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
