@@ -194,7 +194,7 @@
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
+            {% if location['ec2_internal_api_client_qualifier'] and ((stage == "prod" and region != "us-east-1") or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
@@ -207,7 +207,7 @@
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
+            {% if location['ec2_internal_api_client_qualifier'] and ((stage == "prod" and region != "us-east-1") or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
@@ -220,7 +220,7 @@
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
+            {% if location['ec2_internal_api_client_qualifier'] and ((stage == "prod" and region != "us-east-1") or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
@@ -233,7 +233,7 @@
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
+            {% if location['ec2_internal_api_client_qualifier'] and ((stage == "prod" and region != "us-east-1") or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
@@ -246,7 +246,7 @@
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
+            {% if location['ec2_internal_api_client_qualifier'] and ((stage == "prod" and region != "us-east-1") or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="askEc2ResourceInfoHelper.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
@@ -259,7 +259,7 @@
     {% for stack in locations.values() %}
         {% for realm_domain, location in stack.items() %}
             {% set region, stage = realm_domain.split('.') %}
-            {% if location['ec2_internal_api_client_qualifier'] and (stage == "prod" or stage == "prod-border") %}
+            {% if location['ec2_internal_api_client_qualifier'] and ((stage == "prod" and region != "us-east-1") or stage == "prod-border") %}
                 <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
