@@ -37,7 +37,7 @@
     </bean>
 
     <bean id="elbInternalNlbResourcePropertiesProvider" class="com.amazon.blackwatch.mitigation.resource.helper.nlb.ElbInternalNlbResourcePropertiesProvider">
-        <constructor-arg name="elbInternalClient" ref="elbInternalClient" />
+        <constructor-arg name="elbInternalClientProvider" ref="${domain}.elbInternalClientProvider" />
         <constructor-arg name="metricsFactory" ref="metricsFactory" />
     </bean>
 
@@ -138,7 +138,7 @@
 
     <bean id="albResourcesPropertiesProvider"
           class="com.amazon.blackwatch.mitigation.resource.helper.alb.AlbResourcePropertiesProvider">
-        <constructor-arg name="elbInternalClient" ref="elbInternalClient" />
+        <constructor-arg name="elbInternalClientProvider" ref="${domain}.elbInternalClientProvider" />
         <constructor-arg name="metricsFactory" ref="metricsFactory" />
     </bean>
 
@@ -221,36 +221,35 @@
         <constructor-arg name="name" value="etc/ec2/ec2-bandwidth-arbiter/gunpowder-resource-config-conversion.yaml" />
     </bean>
 
-    <bean id="elbInternalClient" factory-bean="elbInternalClientProvider" factory-method="getClient" />
-
-    <bean id="elbInternalClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.ElbInternalClientProvider">
-        <constructor-arg name="qualifier" ref="${domain}.elbInternalClientQualifier" />
+    <bean id="beta.elbInternalClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.ElbInternalClientProvider">
         <constructor-arg name="odinAWSCredentialsProvider" ref="${domain}.bigMacMitigationServiceCredentialsProvider" />
+        <constructor-arg name="domain" value="${domain}" />
     </bean>
 
-    <bean id="beta.elbInternalClientQualifier" class="java.lang.String">
-        <constructor-arg value="Gamma.us-east-1" />
+    <bean id="bwbeta.elbInternalClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.ElbInternalClientProvider">
+        <constructor-arg name="odinAWSCredentialsProvider" ref="${domain}.bigMacMitigationServiceCredentialsProvider" />
+        <constructor-arg name="domain" value="${domain}" />
     </bean>
 
-    <bean id="bwbeta.elbInternalClientQualifier" class="java.lang.String">
-        <constructor-arg value="Gamma.us-east-1" />
+    <!-- BlackWatch gamma will call ELB Prod -->
+    <bean id="gamma.elbInternalClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.ElbInternalClientProvider">
+        <constructor-arg name="odinAWSCredentialsProvider" ref="gamma.bigMacMitigationServiceCredentialsProvider" />
+        <constructor-arg name="domain" value="prod" />
     </bean>
 
-    <!-- BlackWatch gamma will call elb Prod -->
-    <bean id="gamma.elbInternalClientQualifier" class="java.lang.String">
-        <constructor-arg value="Prod.${realm}" />
+    <bean id="prod.elbInternalClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.ElbInternalClientProvider">
+        <constructor-arg name="odinAWSCredentialsProvider" ref="prod.bigMacMitigationServiceCredentialsProvider" />
+        <constructor-arg name="domain" value="${domain}" />
     </bean>
 
-    <bean id="prod.elbInternalClientQualifier" class="java.lang.String">
-        <constructor-arg value="Prod.${realm}" />
+    <bean id="prod-border.elbInternalClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.ElbInternalClientProvider">
+        <constructor-arg name="odinAWSCredentialsProvider" ref="${domain}.bigMacMitigationServiceCredentialsProvider" />
+        <constructor-arg name="domain" value="prod" />
     </bean>
 
-    <bean id="prod-cn.elbInternalClientQualifier" class="java.lang.String">
-        <constructor-arg value="Prod.${realm}" />
-    </bean>
-
-    <bean id="prod-border.elbInternalClientQualifier" class="java.lang.String">
-        <constructor-arg value="Prod.${realm}" />
+    <bean id="prod-cn.elbInternalClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.ElbInternalClientProvider">
+        <constructor-arg name="odinAWSCredentialsProvider" ref="prod.bigMacMitigationServiceCredentialsProvider" />
+        <constructor-arg name="domain" value="prod" />
     </bean>
 
 </beans>
