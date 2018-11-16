@@ -93,11 +93,11 @@
     </bean>
 
     <bean id="prod-border.bigMacMitigationServiceClientProviderDomain" class="java.lang.String">
-        <constructor-arg value="${domain}" />
+        <constructor-arg value="prod" />
     </bean>
 
     <bean id="prod-cn.bigMacMitigationServiceClientProviderDomain" class="java.lang.String">
-        <constructor-arg value="${domain}" />
+        <constructor-arg value="prod" />
     </bean>
 
     <bean id="beta.bigMacMitigationServiceCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
