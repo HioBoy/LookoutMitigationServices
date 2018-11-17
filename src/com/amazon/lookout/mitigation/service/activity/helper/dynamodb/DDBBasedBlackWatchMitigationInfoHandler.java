@@ -564,10 +564,11 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         }
     }
 
-    private boolean isRequestIpCoveredByExistingMitigation(
+    boolean isRequestIpCoveredByExistingMitigation(
             final String ipAddress,
             final MitigationState mitigationState) {
-        return mitigationState.getRecordedResources().get(BlackWatchMitigationResourceType.IPAddress.name())
+        return ObjectUtils.defaultIfNull(mitigationState.getRecordedResources().get(BlackWatchMitigationResourceType.IPAddress.name()),
+                new HashSet<String>())
                 .stream()
                 .anyMatch(ip -> {
                     SubnetBasedIpSet subnetBasedIpSet = new SubnetBasedIpSet(ImmutableList.of(ip));

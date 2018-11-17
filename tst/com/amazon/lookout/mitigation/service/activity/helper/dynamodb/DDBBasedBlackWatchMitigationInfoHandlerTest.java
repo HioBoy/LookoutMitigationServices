@@ -1163,5 +1163,33 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         resourceMap.put(BlackWatchMitigationResourceType.ElasticIP, Collections.singleton("arn:aws:ec2:us-east-1:123456789012:eip-allocation/eipalloc-abc12345"));
         blackWatchMitigationInfoHandler.validateResources(resourceMap);
     }
+
+    @Test
+    public void testIsRequestIpCoveredByExistingMitigation() {
+        Map<String, Set<String>> recordedResourcesMap = new HashMap<String, Set<String>>();
+
+        // there is no IPAddress key here
+        recordedResourcesMap.put("GLB", ImmutableSet.of("SOME_GLB_ARN_AND_NOTHING_ELSE"));
+        // there is no IPAddress key here either
+
+        MitigationState mitigationState1 = MitigationState.builder()
+                .mitigationId(testMitigation1)
+                .resourceId(testIPAddressResourceIdCanonical)
+                .resourceType(testIPAddressResourceType)
+                .changeTime(testChangeTime)
+                .ownerARN(testOwnerARN1)
+                .recordedResources(recordedResourcesMap)
+                .locationMitigationState(locationMitigationState)
+                .state(MitigationState.State.Active.name())
+                .ppsRate(1121L)
+                .bpsRate(2323L)
+                .mitigationSettingsJSON("{\"mitigation_config\": {\"ip_validation\": {\"action\": \"DROP\"}}}")
+                .mitigationSettingsJSONChecksum("ABABABABA")
+                .minutesToLive(testMinsToLive)
+                .latestMitigationActionMetadata(testBWMetadata)
+                .build();
+
+        assertFalse(blackWatchMitigationInfoHandler.isRequestIpCoveredByExistingMitigation("1.2.3.4/30", mitigationState1));
+    }
 }
 
