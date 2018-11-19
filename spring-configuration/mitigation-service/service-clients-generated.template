@@ -12,6 +12,7 @@
 
 {% for stack in locations.values() %}
     {% for realm_domain, location in stack.items() %}
+        {% set region, stage = realm_domain.split('.') %}
         {% if location['elb_internal_api_client_qualifier'] %}
 
             <coral:client id="elbInternalAPIClientBean.{{ realm_domain }}"
@@ -85,7 +86,7 @@
 
             <bean id="glbResourceHelper.{{ realm_domain }}"
                     class="com.amazon.blackwatch.mitigation.resource.helper.GLBResourceHelper">
-                <constructor-arg name="awsCredentialsProvider" ref="glbInternalServiceCredentialsProvider.us-west-2.${domain}"/>
+                <constructor-arg name="awsCredentialsProvider" ref="glbInternalServiceCredentialsProvider.us-west-2.{{ stage }}"/>
                 <constructor-arg name="ubiquityClient" ref="glbServiceTeamApiClientBean.{{ realm_domain }}"/>
                 <constructor-arg name="metricsFactory" ref="metricsFactory" />
             </bean>
