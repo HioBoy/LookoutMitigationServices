@@ -35,7 +35,14 @@
           <sysproperty key="user.timezone" value="UTC"/>
           <sysproperty key="java.net.preferIPv4Stack" value="true"/>
           <sysproperty key="spring.config.root" value="$${APOLLO_ACTUAL_ENVIRONMENT_ROOT}/spring-configuration" />
-          
+
+          <!-- Set java-util.log to use log4j 2.x as the implementation -->
+          <sysproperty key="java.util.logging.manager" value="org.apache.logging.log4j.jul.LogManager" />
+          <!-- Set log4j 2.x to use asynchronous logging. -->
+          <sysproperty key="Log4jContextSelector" value="org.apache.logging.log4j.core.async.AsyncLoggerContextSelector" />
+          <!-- Set log4j 2.x to use the specified configuration. -->
+          <sysproperty key="log4j.configurationFile" value="$${ENVROOT}/log-configuration/log4j2.xml" />
+
           <env key="LANG" value="en_US.UTF-8"/>
           <env key="NLS_LANG" value="American_America.UTF8"/>
           <sysproperty key="file.encoding" value="UTF-8"/>
@@ -74,6 +81,7 @@
           <fileset dir="${basedir}">
               <include name="brazil-config/**/*"/>
               <include name="spring-configuration/**/*"/>
+              <include name="log-configuration/**/*" />
           </fileset>
       </copy>
   </target>

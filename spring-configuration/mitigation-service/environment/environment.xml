@@ -16,70 +16,7 @@
     <bean class="com.amazon.lookout.mitigation.service.spring.StageStringFactoryBean" id="stageFactory" depends-on="Environment">
         <property name="stageName" value="${stage}" />                          
     </bean>                                                                     
-    
-    <!--   
-    The LoggingHelper is an assistant for configuring your Logging API. It
-    will report to you which Logging implementation is effective and
-    simplify your configuration for the LOG4J backend.
-    -->
-    <bean id="logger" class="com.amazon.coral.spring.LoggingHelper">
-        <property name="properties">
-            <props>
-                <!-- Configure an appender -->
-                <prop key="log4j.appender.APPLICATION">com.amazon.coral.logging.DailyRollingFileAppender</prop>
-                <prop key="log4j.appender.APPLICATION.layout">org.apache.log4j.PatternLayout</prop>
-                <prop key="log4j.appender.APPLICATION.layout.ConversionPattern">%d{DATE} [%p] %X{RequestId} (%t) %c: %m%n</prop>
-                <prop key="log4j.appender.APPLICATION.Append">true</prop>
-                <prop key="log4j.appender.APPLICATION.DatePattern">&apos;.&apos;yyyy-MM-dd-HH</prop>
-                <prop key="log4j.appender.APPLICATION.Encoding">UTF8</prop>
-                <prop key="log4j.appender.APPLICATION.File">${root}/var/output/logs/LookoutMitigationService.log</prop>
-                <prop key="log4j.appender.APPLICATION.Threshold">ALL</prop>                
 
-                <!-- Configure an appender for the wire log-->
-                <prop key="log4j.appender.WIRE">com.amazon.coral.logging.DailyRollingFileAppender</prop>
-                <prop key="log4j.appender.WIRE.layout">org.apache.log4j.PatternLayout</prop>
-                <prop key="log4j.appender.WIRE.layout.ConversionPattern">%d{DATE} [%p] %X{RequestId} (%t) %c: %m%n</prop>
-                <prop key="log4j.appender.WIRE.Append">true</prop>
-                <prop key="log4j.appender.WIRE.DatePattern">&apos;.&apos;yyyy-MM-dd-HH</prop>
-                <prop key="log4j.appender.WIRE.Encoding">UTF8</prop>
-                <prop key="log4j.appender.WIRE.File">${root}/var/output/logs/wire_service.log</prop>
-                <prop key="log4j.appender.WIRE.Threshold">ALL</prop>
-                
-                 <!-- 
-                 This appender is specifically for the request logs, and uses a 
-                 different layout format; since request log messages are JSON objects 
-                 with plenty of useful information, we'll just log the message only. 
-                 -->
-                 <prop key="log4j.appender.REQUESTLOG">com.amazon.coral.logging.DailyRollingFileAppender</prop>
-                 <prop key="log4j.appender.REQUESTLOG.layout">org.apache.log4j.PatternLayout</prop>
-                 <prop key="log4j.appender.REQUESTLOG.layout.ConversionPattern">%m%n</prop>
-                 <prop key="log4j.appender.REQUESTLOG.Append">true</prop>
-                 <prop key="log4j.appender.REQUESTLOG.DatePattern">&apos;.&apos;yyyy-MM-dd-HH</prop>
-                 <prop key="log4j.appender.REQUESTLOG.Encoding">UTF8</prop>
-                 <prop key="log4j.appender.REQUESTLOG.File">${root}/var/output/logs/requests.log</prop>
-                 <prop key="log4j.appender.REQUESTLOG.Threshold">TRACE</prop>
-                 
-                <!-- Swap the rootLogger in -->
-                <prop key="log4j.rootLogger">INFO, APPLICATION</prop>
-
-                <!-- Adjust log levels -->
-                <prop key="log4j.logger.WIRE">INFO, WIRE</prop>
-                <prop key="log4j.logger.CLASSPATH">OFF</prop>
-                <prop key="log4j.logger.com.amazon.coral">ERROR</prop>
-                <prop key="log4j.logger.com.amazon.coral.reflect">ERROR</prop>
-                <prop key="log4j.logger.com.amazonaws">ERROR</prop>
-                <prop key="log4j.logger.org.apache">ERROR</prop>
-                <prop key="log4j.logger.com.amazon.lookout">${apollo.OCF.Log4j.logSeverityLevel}</prop>
-                <prop key="log4j.logger.com.amazon.aws158">${apollo.OCF.Log4j.logSeverityLevel}</prop>
-                <prop key="log4j.logger.com.amazon.bardock">${apollo.OCF.Log4j.logSeverityLevel}</prop>
-                
-                <!-- Configure the request logger to use our custom appender. The request 
-                logger only outputs at the TRACE level. -->
-                <prop key="log4j.logger.com.amazon.coral.service.RequestLoggingInterceptor">TRACE, REQUESTLOG</prop>                
-            </props>
-        </property>
-    </bean>
-       
     <!--
     The MetricsFactory is an aide that will help you configure Querylog
     support for your application.

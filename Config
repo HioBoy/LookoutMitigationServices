@@ -102,6 +102,15 @@ package.LookoutMitigationService = {
             AmazonCACerts = 1.0;
 
             CacheOut = 1.0;
+            
+            # Log4j2
+            AmazonFileAppenderJava = 2.8;
+            Jcl-over-log4j2 = 2.x;
+            Jul-over-log4j2 = 2.x;
+            Log4j-1_2-api = 2.8;
+            Log4j-slf4j = 2.x;
+            log4j = 2.8;
+            Disruptor = 3.3.x;    
         };
     };
 
@@ -123,8 +132,9 @@ package.LookoutMitigationService = {
             CoralSpringLauncher = 4.2;
             GoogleGuava = 21.x;
             JakartaCommons-codec = 1;
-            log4j = 1.2;
+            log4j = 2.8;
             Log4j-api = 2.x;
+            Log4j-core = 2.8;
             SpringBeans = 4.3.x;
             SpringCore = 4.3.x;
             SpringContext = 4.3.x;
@@ -139,7 +149,7 @@ package.LookoutMitigationService = {
             Jackson-dataformat-cbor = 2.8.x;
             Jackson-core = 2.8.x;
             Javassist = 3.20.x;
-            
+
             Mockito = 1.10.x;
 
             # Coral 1.1
@@ -151,6 +161,8 @@ package.LookoutMitigationService = {
             Zlib = 1;
 
             CoralAwsClientSigners = 1.0; #gk
+
+            AmazonFileAppenderJava = 2.8;
         };
     };
 

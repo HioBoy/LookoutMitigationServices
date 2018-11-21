@@ -25,7 +25,7 @@
     </bean>
 
     <!-- Configure the Chain which contains the list of Handlers to apply -->
-    <bean id="chain" class="com.amazon.coral.service.helper.ChainHelper" depends-on="logger">
+    <bean id="chain" class="com.amazon.coral.service.helper.ChainHelper">
         <property name="handlers">
             <list>
                 <bean class="com.amazon.coral.service.Log4jAwareRequestIdHandler"/>

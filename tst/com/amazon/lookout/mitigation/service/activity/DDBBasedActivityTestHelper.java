@@ -7,7 +7,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.mockito.Mockito;
@@ -92,7 +91,7 @@ public class DDBBasedActivityTestHelper {
     
     @BeforeClass
     public static void setupOnce() {
-        TestUtils.configureLogging(Level.ERROR);
+        TestUtils.configureLogging();
         dynamoDBClient = DynamoDBTestUtil.get().getClient();
         dynamoDBClient = DynamoDBLocalMocks.setupSpyDdbClient(dynamoDBClient);
 

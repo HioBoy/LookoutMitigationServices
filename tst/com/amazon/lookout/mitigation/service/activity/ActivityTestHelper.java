@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.amazon.lookout.mitigation.service.activity.validator.HostnameValidator;
-import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
@@ -50,7 +49,7 @@ public class ActivityTestHelper {
     
     @BeforeClass
     public static void setupOnce() {
-        TestUtils.configureLogging(Level.ERROR);
+        TestUtils.configureLogging();
     }
 
     @Before
