@@ -23,6 +23,7 @@ package.LookoutMitigationService = {
             DynamoDBLocalBuildLogic = 1.2;
             LookoutMitigationServiceLocationConfiguration = 1.0;
             TemplateConfigGenerator = 1.0;
+            LogScanUtils = 1.0;
         };
     };
     

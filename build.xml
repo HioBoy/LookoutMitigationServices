@@ -15,6 +15,10 @@
     
     
   <ht:import file="happier-trails.xml"/>
+
+  <!-- LogScanUtils for validating logscan regex -->
+  <property name="ht.logscan.path" value="monitoring/LogScanConfigs" />
+  <ht:import file="validate-logscan-regex-3.2.xml" optional="false"/>
   
   <!-- Set any property overrides -->
   <property name="coral-src.dir" location="${output.dir}/private/src"/>
