@@ -70,6 +70,16 @@
         <constructor-arg value="arn:aws:iam::690205625825:role/ApiGatewayInvokerRole-Prod-%s" />
     </bean>
 
+    <!--
+    mitsvc in china edge do not need talk to bigmac. We should make this optional in our code.
+    for now, just assume edge china use the same role as bwit border in China
+    Also, I don't know why we put all the domain specific bean here.
+    We do have a domain xml file, should move all the domain specific beans there. Track in: https://issues.amazon.com/issues/BLACKWATCH-4264
+    -->
+    <bean id="edge-prod-cn.bigMacMitigationServiceRoleArnTemplate" class="java.lang.String">
+        <constructor-arg value="arn:aws:iam::690205625825:role/ApiGatewayInvokerRole-Prod-%s" />
+    </bean>
+
     <bean id="bigMacMitigationServiceClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.BigMacMitigationServiceClientProvider">
         <constructor-arg name="bigMacMitigationServiceRoleArnTemplate" ref="${domain}.bigMacMitigationServiceRoleArnTemplate" />
         <constructor-arg name="domain" ref="${domain}.bigMacMitigationServiceClientProviderDomain" />
@@ -100,6 +110,10 @@
         <constructor-arg value="prod" />
     </bean>
 
+    <bean id="edge-prod-cn.bigMacMitigationServiceClientProviderDomain" class="java.lang.String">
+        <constructor-arg value="prod" />
+    </bean>
+
     <bean id="beta.bigMacMitigationServiceCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
         <constructor-arg name="materialSetName" value="com.amazon.blackwatch.nlb.private_api_user.${realm}.${domain}" />
     </bean>
@@ -121,6 +135,10 @@
     </bean>
 
     <bean id="prod-cn.bigMacMitigationServiceCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg name="materialSetName" value="com.amazon.blackwatch.nlb.private_api_user.${realm}.${domain}" />
+    </bean>
+
+    <bean id="edge-prod-cn.bigMacMitigationServiceCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
         <constructor-arg name="materialSetName" value="com.amazon.blackwatch.nlb.private_api_user.${realm}.${domain}" />
     </bean>
 
@@ -250,6 +268,11 @@
     <bean id="prod-cn.elbInternalClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.ElbInternalClientProvider">
         <constructor-arg name="odinAWSCredentialsProvider" ref="prod.bigMacMitigationServiceCredentialsProvider" />
         <constructor-arg name="domain" value="prod" />
+    </bean>
+
+    <bean id="edge-prod-cn.elbInternalClientProvider" class="com.amazon.blackwatch.mitigation.resource.helper.util.ElbInternalClientProvider">
+        <constructor-arg name="odinAWSCredentialsProvider" ref="${domain}.bigMacMitigationServiceCredentialsProvider" />
+        <constructor-arg name="domain" value="${domain}" />
     </bean>
 
 </beans>
