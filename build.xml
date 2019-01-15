@@ -66,6 +66,9 @@
           <jvmarg value="-XX:+HeapDumpOnOutOfMemoryError"/>
           <jvmarg value="-XX:HeapDumpPath=var/tmp"/>
           <jvmarg value="-XX:OnOutOfMemoryError=&quot;/bin/kill -9 %p&quot;"/>
+
+          <!-- reduce size for log buffer -->
+          <sysproperty key="AsyncLogger.RingBufferSize" value="8192" />
       </coral:apollo>
   </target>
 
