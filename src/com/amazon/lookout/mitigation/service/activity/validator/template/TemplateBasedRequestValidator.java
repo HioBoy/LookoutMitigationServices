@@ -14,7 +14,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.coral.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
@@ -116,16 +116,16 @@ public class TemplateBasedRequestValidator {
         for (String mitigationTemplate : MitigationTemplate.values()) {
             switch (mitigationTemplate) {
             case MitigationTemplate.IPTables_Mitigation_EdgeCustomer:
-                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getIPTablesEdgeCustomerValidator());
+                serviceTemplateValidatorMapBuilder = serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getIPTablesEdgeCustomerValidator());
                 break;
             case MitigationTemplate.BlackWatchPOP_EdgeCustomer:
-                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchEdgeCustomerValidator());
+                serviceTemplateValidatorMapBuilder = serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchEdgeCustomerValidator());
                 break;
             case MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer:
-                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchBorderValidator());
+                serviceTemplateValidatorMapBuilder = serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchBorderValidator());
                 break;
             case MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer:
-                serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchEdgeValidator());
+                serviceTemplateValidatorMapBuilder = serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchEdgeValidator());
                 break;
             default:
                 String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". Each template must be associated with some validation checks.";

@@ -107,8 +107,9 @@ public class TrafficFilter {
         this.relatedOriginFilterIndices = ImmutableSet.copyOf(relatedOriginFilterIndices);
         
         // Validate attribute name matches attribute
-        for (AttributeName attributeName : this.filterAttributes.keySet()) {
-            PacketAttribute attribute = this.filterAttributes.get(attributeName);
+        for (Map.Entry<AttributeName, PacketAttribute> attributeEntry : this.filterAttributes.entrySet()) {
+            PacketAttribute attribute = attributeEntry.getValue();
+            AttributeName attributeName = attributeEntry.getKey();
             Validate.isTrue(attributeName.getType().getType().isInstance(attribute),
                     String.format("AttributeName %s and Attribute %s does not match.", attributeName, attribute));
         }

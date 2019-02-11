@@ -230,7 +230,7 @@
     <bean id="ec2baApplicationConfig"
           class="com.amazon.bardock.resources.ec2bandwidtharbiter.Ec2baApplicationConfig"
           factory-method="fromFile">
-        <constructor-arg name="name" value="etc/ec2/ec2-bandwidth-arbiter/ec2ba-application-config-backup.yaml" />
+        <constructor-arg name="name" value="etc/ec2/ec2-bandwidth-arbiter/ec2ba-application-config.yaml" />
     </bean>
 
     <bean id="gunpowderApplicationConfig"

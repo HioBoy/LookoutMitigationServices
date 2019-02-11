@@ -1,6 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer;
 
-import com.amazon.coral.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList;
 import com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer.json.schema.JsCustomer;
 import com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer.json.schema.JsIPTablesRules;
 import com.amazon.lookout.mitigation.service.activity.validator.template.iptables.edgecustomer.json.schema.JsMitigationGroup;

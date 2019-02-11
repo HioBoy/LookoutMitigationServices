@@ -13,12 +13,12 @@ package.LookoutMitigationService = {
     build-tools = {
         1.0 = {
             JDK8 = 1.0;
-            HappierTrails = 3.3;
+            HappierTrails = 3.4;
             Lombok = 1.16.x;
             LombokUtils = 1.1;
             # Build logic for spring integration
-            CoralSpringLauncher = 4.2;
-            CoralGenerator = 1.1;
+            CoralSpringLauncher = 4.3;
+            CoralGenerator = 1.2;
             DynamoDBLocal = 1.11.x;
             DynamoDBLocalBuildLogic = 1.2;
             LookoutMitigationServiceLocationConfiguration = 1.0;
@@ -35,13 +35,13 @@ package.LookoutMitigationService = {
         1.0 = {
             StreamEx = 1.0;
             AmazonResourceNameJava = 1.0;
-            CoralActivity = 1.0;
-            CoralSpring = 4.2;
+            CoralActivity = 1.1;
+            CoralSpring = 4.3;
             JakartaCommons-logging-api = 1.1;
             JakartaCommons-lang3 = 3.x;
             FindBugsAnnotations = 3.1.0;
             
-            CoralAwsAuthentication = 1.2; # To support authenticating/authorizing calls to LookoutMitigationService.
+            CoralAwsAuthentication = 1.3; # To support authenticating/authorizing calls to LookoutMitigationService.
             OdinAWSCredentials = 1.4;
             Cachemere = 1.2;
             CachemereJakalPlugin = 1.4;
@@ -52,16 +52,30 @@ package.LookoutMitigationService = {
             BlackWatchLocationStateCommons = 1.0;
             BlackWatchMitigationCommons = 1.0;
             
-            CoralSpringLauncher = 4.2;
+            CoralSpringLauncher = 4.3;
 
             LookoutBlackWatchHostConfig = 1.0;
 
             LookoutMitigationServiceExplorer = 1.0;
-            LookoutNetworkInformationManager = 1.0;
+            LookoutNetworkInformationManager = 1.1;
             LookoutMitigationServiceJlbRelayConfig = 1.0;
             CoralSslProxySupport = 1.0;
             RIPJavaHelper = 1.2;
             BlackWatchBorderLocationConfig = 1.0;
+            AmazonApolloEnvironmentInfoJava = 1.2; # For resolves-conflict-dependencies
+            CoralClientOdinSupport = 1.2; # For resolves-conflict-dependencies
+            CoralCore = 1.1; # For resolves-conflict-dependencies
+            CoralHttpSupport = 1.1; # For resolves-conflict-dependencies
+            CoralMetricsQuerylogReporter = 1.1; # For resolves-conflict-dependencies
+            CoralModeledExceptions = 1.1; # For resolves-conflict-dependencies
+            CoralRetry = 2.0; # For resolves-conflict-dependencies
+            GoogleGuava = 21.x; # For resolves-conflict-dependencies
+            Jackson-databind = 2.8.x; # For resolves-conflict-dependencies
+            JakartaCommons-codec = 1; # For resolves-conflict-dependencies
+            JakartaCommons-httpclient = 3.1; # For resolves-conflict-dependencies
+            Javassist = 3.20.x; # For resolves-conflict-dependencies
+            Zlib = 1; # For resolves-conflict-dependencies
+            log4j = 2.8; # For resolves-conflict-dependencies
         };
     };
     
@@ -71,17 +85,16 @@ package.LookoutMitigationService = {
             JDK8 = 1.0;
             # Runtime dependencies for coral
             JakartaCommons-logging-adapters = 1.1;
-            Bobcat = 2.1;
+            Bobcat = 2.2;
 
-            CoralSpringDirector = 4.2;
-            CoralService = 1.0;
-            CoralMetricsQuerylogReporter = 1.0;            
+            CoralSpringDirector = 4.3;
+            CoralService = 1.1;
             # Coral protocol handlers
-            CoralRpcSupport = 1.0;                          
-            CoralClientSpringSupport = 4.2;
+            CoralRpcSupport = 1.1;                          
+            CoralClientSpringSupport = 4.3;
 
             CoralThrottle = 1.1;
-            CoralAvailabilityEmbedded = 1.0;
+            CoralAvailabilityEmbedded = 1.1;
 
             # ProcessManager.
             ProcessManager = 2.2;
@@ -110,8 +123,16 @@ package.LookoutMitigationService = {
             Jul-over-log4j2 = 2.x;
             Log4j-1_2-api = 2.8;
             Log4j-slf4j = 2.x;
-            log4j = 2.8;
             Disruptor = 3.3.x;    
+            AmazonAppConfigJava = 2.0; # For resolves-conflict-dependencies
+            CoralBuffer = 1.1; # For resolves-conflict-dependencies
+            CoralDiscovery = 1.1; # For resolves-conflict-dependencies
+            CoralIO = 1.1; # For resolves-conflict-dependencies
+            CoralMetricsReporter = 1.1; # For resolves-conflict-dependencies
+            CoralThrottleCommon = 1.1; # For resolves-conflict-dependencies
+            CoralThrottleEngine = 1.1; # For resolves-conflict-dependencies
+            CoralUtil = 1.1; # For resolves-conflict-dependencies
+            JakartaCommons-logging = 1.2; # For resolves-conflict-dependencies
         };
     };
 
@@ -122,55 +143,52 @@ package.LookoutMitigationService = {
             JUnitParams = 1.x;
             LookoutTestCommons = 1.0;
             DynamoDBLocal = 1.11.x;
+            Log4j-core = 2.8; # For resolves-conflict-dependencies
         };
     };
 
     resolves-conflict-dependencies = {
         1.0 = {
             JakartaCommons-logging = 1.2;
-            CoralAwsAuthentication = 1.2;
-            CoralSpring = 4.2;
-            CoralSpringLauncher = 4.2;
+            CoralSpring = 4.3;
             GoogleGuava = 21.x;
             JakartaCommons-codec = 1;
             log4j = 2.8;
-            Log4j-api = 2.x;
             Log4j-core = 2.8;
-            SpringBeans = 4.3.x;
-            SpringCore = 4.3.x;
-            SpringContext = 4.3.x;
-            SpringAOP = 4.3.x;
-            junit = 4.12;
-            Apache-HttpComponents-HttpCore = 4.4.x;
             JakartaCommons-httpclient = 3.1;
-            JakartaCommons-lang = 2.6;
 
             Jackson-databind = 2.8.x;
-            Jackson-annotations = 2.8.x;
-            Jackson-dataformat-cbor = 2.8.x;
-            Jackson-core = 2.8.x;
             Javassist = 3.20.x;
 
-            Mockito = 1.10.x;
 
             # Coral 1.1
             CoralBuffer = 1.1;
-            CoralCommons = 1.1;
-            CoralConfig = 1.1;
-            CoralGrammar = 1.1;
 
             Zlib = 1;
 
-            CoralAwsClientSigners = 1.0; #gk
 
             AmazonFileAppenderJava = 2.8;
+            AmazonApolloEnvironmentInfoJava = 1.2;
+            AmazonAppConfigJava = 2.0;
+            CoralCore = 1.1;
+            CoralDiscovery = 1.1;
+            CoralHttpSupport = 1.1;
+            CoralIO = 1.1;
+            CoralMetricsQuerylogReporter = 1.1;
+            CoralMetricsReporter = 1.1;
+            CoralModeledExceptions = 1.1;
+            CoralService = 1.1;
+            CoralThrottleCommon = 1.1;
+            CoralThrottleEngine = 1.1;
+            CoralUtil = 1.1;
+            CoralRetry = 2.0;
+            CoralClientOdinSupport = 1.2;
         };
     };
 
     # Removing j2ee dependency based on the known issue documented here: https://w.amazon.com/index.php/Coral/Manual/Bobcat2Migration#Known_Behavior_Changes
     remove-dependencies = {
           1.0 = {
-            j2ee = 1.0; 
           };
     };
 

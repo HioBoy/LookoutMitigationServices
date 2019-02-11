@@ -3,7 +3,7 @@ package com.amazon.lookout.mitigation.service.activity.validator.template;
 import com.amazon.lookout.mitigation.service.mitigation.model.StandardLocations;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazon.aws158.commons.metric.TSDMetrics;
-import com.amazon.coral.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList;
 import com.amazon.lookout.mitigation.service.Constraint;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DuplicateDefinitionException400;
