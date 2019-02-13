@@ -1,0 +1,19 @@
+{
+    "*" : {
+        "owner" : "POSIX:blackwatch-dev",
+        "user" : "aws158"
+    },
+{% for stack in locations.values() %}
+    {% for realm_domain, location in stack.items() %}
+    {% set region, stage = realm_domain.split('.') %}
+    {% set partition = 'aws-cn' if stage.endswith('cn') else 'aws'%}
+    "{{stage}}.{{region}}" : [
+        {
+            "arn" : "arn:{{ partition }}:iam::{{ location['account'] }}:role/BlackWatchTimberLogPusherTurtle.{{region}}.{{stage}}",
+            "location" : "/apollo/var/env/LookoutMitigationService/turtle/timber",
+            "user": "qlpuller"
+        }
+    ],
+    {% endfor %}
+{% endfor %}
+}

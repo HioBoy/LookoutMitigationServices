@@ -82,7 +82,7 @@
     </coral:generate>
   </target>
 
-  <!-- Copy process manager config and spring configuration -->
+  <!-- Copy process manager config and spring configuration-->
   <target name="copy-configs">
       <copy todir="${output.dir}">
           <fileset dir="${basedir}">
