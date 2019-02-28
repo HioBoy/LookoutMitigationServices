@@ -107,7 +107,10 @@ package.LookoutMitigationService = {
             ServiceMonitoring = 2.0;
             AwsDynamoDBMetricsHelpersLib = 1.11.x;
             
-            WebsiteLogPusher = 3.2;        
+            WebsiteLogPusher = 3.4;
+
+            # Register with Turtle during Preactivate
+            TurtleRegistrationApolloCmd = 1.0;
             
             EdgeSetupVLANIptables = 1.0;      
             
