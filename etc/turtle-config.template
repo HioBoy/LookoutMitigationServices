@@ -4,6 +4,7 @@
         "user" : "aws158"
     },
 {% for stack in locations.values() %}
+    {% set outer_last = loop.last %}
     {% for realm_domain, location in stack.items() %}
     {% set region, stage = realm_domain.split('.') %}
     {% set partition = 'aws-cn' if stage.endswith('cn') else 'aws'%}
@@ -13,7 +14,11 @@
             "location" : "/apollo/var/env/LookoutMitigationService/turtle/timber",
             "user": "qlpuller"
         }
+    {% if loop.last and outer_last %}
+    ]
+    {% else %}
     ],
+    {% endif %}
     {% endfor %}
 {% endfor %}
 }
