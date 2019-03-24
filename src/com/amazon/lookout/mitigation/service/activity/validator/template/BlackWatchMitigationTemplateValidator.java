@@ -75,7 +75,8 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
         List<MitigationDeploymentCheck> postDeploymentChecks = request.getPostDeploymentChecks();
         if (postDeploymentChecks == null || postDeploymentChecks.isEmpty()){
             //we allow post deployment check to be empty for the blackwatch border template
-            if (request.getMitigationTemplate().equals(MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer)) {
+            if (request.getMitigationTemplate().equals(MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer) ||
+                    request.getMitigationTemplate().equals(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer)) {
                 return;
             }
             throw new IllegalArgumentException("Missing post deployment for blackwatch mitigation deployment");
