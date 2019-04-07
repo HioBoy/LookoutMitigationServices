@@ -4,7 +4,12 @@
     xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
     http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
+    <bean id="dynamoDbClientConfiguration" class="com.amazonaws.PredefinedClientConfigurations" factory-method="dynamoDefault">
+        <property name="cacheResponseMetadata" value="false" /> <!-- remove default debug metadata to improve efficiency -->
+    </bean>
+
     <bean id="dynamoDBClientBuilder" class="com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder">
+        <property name="clientConfiguration" ref="dynamoDbClientConfiguration" />
         <property name="credentials" ref="dynamodbCredentials"/>
         <property name="requestHandlers">
             <list>
