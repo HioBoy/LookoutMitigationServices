@@ -106,6 +106,10 @@ public class TemplateBasedRequestValidator {
     private ServiceTemplateValidator getBlackWatchEdgeValidator() {
         return new BlackWatchPerTargetEdgeLocationTemplateValidator(blackWatchS3Client);
     }
+
+    private ServiceTemplateValidator getVantaValidator() {
+        return new VantaLocationTemplateValidator(blackWatchS3Client);
+    }
     
     /**
      * Returns map of templateName to ServiceTemplateValidator corresponding to the template.
@@ -126,6 +130,9 @@ public class TemplateBasedRequestValidator {
                 break;
             case MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer:
                 serviceTemplateValidatorMapBuilder = serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getBlackWatchEdgeValidator());
+                break;
+            case MitigationTemplate.Vanta:
+                serviceTemplateValidatorMapBuilder = serviceTemplateValidatorMapBuilder.put(mitigationTemplate, getVantaValidator());
                 break;
             default:
                 String msg = "No check configured for mitigationTemplate: " + mitigationTemplate + ". Each template must be associated with some validation checks.";
