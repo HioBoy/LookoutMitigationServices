@@ -522,6 +522,13 @@ public class RequestValidator {
             LOG.info(exceptionMessage);
             throw new IllegalArgumentException(exceptionMessage);
         }
+        if (StringUtils.containsWhitespace(resourceId)) {
+            String exceptionMessage = String.format("%s - Resource ID: %s",
+                                                    "Invalid resource ID! An IP Address List resource ID cannot contain whitespace characters",
+                                                    resourceId);
+            LOG.info(exceptionMessage);
+            throw new IllegalArgumentException(exceptionMessage);
+        }
     }
 
     private static void validateUserARN(String userARN) {

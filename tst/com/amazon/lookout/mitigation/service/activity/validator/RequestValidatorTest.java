@@ -1250,4 +1250,32 @@ public class RequestValidatorTest {
                                  .startsWith("Invalid resource ID! An IP Address List resource ID cannot be a Network CIDR"));
     }
 
+    /**
+     * Test the case where the request resourceId contains an ascii-printable whitespace.
+     */
+    @Test
+    public void testInvalidWhitespaceResourceIdIpAddressListMitigation() {
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(
+                                            MitigationActionMetadata.builder().withUser("Username")
+                                                                    .withToolName("Toolname")
+                                                                    .withDescription("Description")
+                                                                    .withRelatedTickets(Arrays.asList("1234", "5655"))
+                                                                    .build());
+        request.setResourceId("ResourceId 1 2 3 ");
+        request.setResourceType("IPAddressList");
+
+        Throwable caughtExcepion = null;
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch_host_status_updator_blackwatch_pop_pro";
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage()
+                                 .startsWith("Invalid resource ID! An IP Address List resource ID cannot contain whitespace characters"));
+    }
+
 }
