@@ -76,6 +76,7 @@ public class RequestValidator {
     private final Set<String> mitigationTemplates = Sets.newHashSet(MitigationTemplate.values());
     
     private static final int DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS = 100;
+    private static final int DEFAULT_MAX_LENGTH_MITIGATION_NAME = 200;
     
     private static final int DEFAULT_MAX_LENGTH_MITIGATION_ID = 100;
     private static final int DEFAULT_MAX_LENGTH_RESOURCE_ID = 256;
@@ -447,8 +448,8 @@ public class RequestValidator {
     }
 
     private static void validateMitigationName(String mitigationName) {
-        if (isInvalidFreeFormText(mitigationName, false, DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS)) {
-            String msg = "Invalid mitigation name found! A valid mitigation name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_USER_INPUT_STRINGS + " ascii-printable characters.";
+        if (isInvalidFreeFormText(mitigationName, false, DEFAULT_MAX_LENGTH_MITIGATION_NAME)) {
+            String msg = "Invalid mitigation name found! A valid mitigation name must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_MITIGATION_NAME + " ascii-printable characters.";
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
