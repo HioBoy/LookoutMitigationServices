@@ -53,6 +53,8 @@ package.LookoutMitigationService = {
             BlackWatchMitigationCommons = 1.0;
             
             CoralSpringLauncher = 4.3;
+            CoralQueryStringValue = 1.1;
+            CoralTibcoValue = 1.1;
 
             LookoutBlackWatchHostConfig = 1.0;
 
@@ -186,6 +188,10 @@ package.LookoutMitigationService = {
             CoralUtil = 1.1;
             CoralRetry = 2.0;
             CoralClientOdinSupport = 1.2;
+            CoralRpcSupport = 1.1;
+            OdinAWSCredentials = 1.4;
+            CoralQueryStringValue = 1.1;
+            CoralTibcoValue = 1.1;
         };
     };
 

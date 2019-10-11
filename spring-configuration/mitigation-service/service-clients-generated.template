@@ -97,6 +97,7 @@
                 <constructor-arg name="albCapacityHelper" ref="albCapacityHelper" />
                 <constructor-arg name="eipCapacityHelper" ref="eipCapacityHelper" />
                 <constructor-arg name="nlbCapacityHelper" ref="nlbCapacityHelper" />
+                <constructor-arg name="ec2InstanceCapacityHelper" ref="ec2InstanceCapacityHelper" />
             </bean>
         {% endif %}
 
