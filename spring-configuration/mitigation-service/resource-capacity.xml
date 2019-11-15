@@ -11,9 +11,8 @@
     <bean id="eipCapacityHelper" class="com.amazon.blackwatch.mitigation.resource.helper.capacityhelper.EipCapacityHelper">
         <constructor-arg name="resourcePropertiesProvider" ref="bardockEc2PropertiesProvider" />
         <constructor-arg name="resourceBandwidthProvider" ref="ec2InstanceBandwidthProvider" />
-        <constructor-arg name="timeoutDuration" ref="timeoutDuration" />
-        <constructor-arg name="timerExecutor" ref="timerExecutor" />
-        <constructor-arg name="capacityHelperExecutor" ref="capacityHelperExecutor" />
+        <constructor-arg name="ec2baApplicationConfig" ref="ec2baApplicationConfig" />
+        <constructor-arg name="gunpowderApplicationConfig" ref="gunpowderApplicationConfig" />
     </bean>
 
     <bean id="bardockEc2PropertiesProvider"
@@ -34,9 +33,6 @@
     <bean id="nlbCapacityHelper" class="com.amazon.blackwatch.mitigation.resource.helper.capacityhelper.NlbCapacityHelper">
         <constructor-arg name="resourcePropertiesProvider" ref="elbInternalNlbResourcePropertiesProvider" />
         <constructor-arg name="resourceBandwidthProvider" ref="nlbResourceBandwidthProvider" />
-        <constructor-arg name="timeoutDuration" ref="timeoutDuration" />
-        <constructor-arg name="timerExecutor" ref="timerExecutor" />
-        <constructor-arg name="capacityHelperExecutor" ref="capacityHelperExecutor" />
     </bean>
 
     <bean id="elbInternalNlbResourcePropertiesProvider" class="com.amazon.blackwatch.mitigation.resource.helper.nlb.ElbInternalNlbResourcePropertiesProvider">
@@ -152,9 +148,6 @@
     <bean id="albCapacityHelper" class="com.amazon.blackwatch.mitigation.resource.helper.capacityhelper.AlbCapacityHelper">
         <constructor-arg name="resourcePropertiesProvider" ref="albResourcesPropertiesProvider" />
         <constructor-arg name="resourceBandwidthProvider" ref="albResourceBandwidthProvider" />
-        <constructor-arg name="timeoutDuration" ref="timeoutDuration" />
-        <constructor-arg name="timerExecutor" ref="timerExecutor" />
-        <constructor-arg name="capacityHelperExecutor" ref="capacityHelperExecutor" />
     </bean>
 
     <bean id="albResourcesPropertiesProvider"
@@ -169,46 +162,6 @@
     </bean>
 
     <!-- SHARED CAPACITY HELPER DEPENDENCIES -->
-
-    <bean id="timeoutDuration" class="java.time.Duration" factory-method="ofSeconds">
-        <constructor-arg name="seconds" value="30"/>
-    </bean>
-
-    <!-- mitigation service worker threads * 2 -->
-    <bean id="numberOfCapacityHelperThreads" class="java.lang.Integer">
-        <constructor-arg value="100" />
-    </bean>
-
-    <bean name="timerExecutor" class="java.util.concurrent.ScheduledThreadPoolExecutor" destroy-method="shutdown">
-        <constructor-arg name="corePoolSize" ref="numberOfCapacityHelperThreads" />
-        <constructor-arg name="threadFactory">
-            <bean factory-bean="schedulerThreadFactoryBuilder" factory-method="build" />
-        </constructor-arg>
-    </bean>
-
-    <bean id="threadFactoryBuilder" class="com.google.common.util.concurrent.ThreadFactoryBuilder" scope="prototype" />
-    <bean id="schedulerThreadFactoryBuilder" factory-bean="threadFactoryBuilder" factory-method="setNameFormat">
-        <constructor-arg value="capacity-helper-timeout-%d" />
-    </bean>
-
-    <bean id="workQueue" class="java.util.concurrent.LinkedBlockingQueue" />
-
-    <bean name="capacityHelperExecutor" class="java.util.concurrent.ThreadPoolExecutor" destroy-method="shutdown">
-        <constructor-arg name="corePoolSize" ref="numberOfCapacityHelperThreads" />
-        <constructor-arg name="maximumPoolSize" ref="numberOfCapacityHelperThreads" />
-        <constructor-arg name="keepAliveTime" value="0" />
-        <constructor-arg name="unit" value="#{T(java.util.concurrent.TimeUnit).MILLISECONDS}" />
-        <constructor-arg name="workQueue" ref="workQueue" />
-        <constructor-arg name="threadFactory">
-            <bean factory-bean="capacityHelperExecutorThreadFactoryBuilder" factory-method="build" />
-        </constructor-arg>
-    </bean>
-
-    <bean id="capacityHelperExecutorThreadFactoryBuilder"
-          factory-bean="threadFactoryBuilder"
-          factory-method="setNameFormat">
-        <constructor-arg value="capacity-helper-worker-%d" />
-    </bean>
 
     <bean id="thresholdMaster" class="com.amazon.bardock.resources.threshold.ThresholdMaster">
         <constructor-arg name="thresholdModifiers" ref="thresholdModifiers" />
