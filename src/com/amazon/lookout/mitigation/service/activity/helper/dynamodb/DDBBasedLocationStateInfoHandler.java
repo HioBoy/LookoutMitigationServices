@@ -178,11 +178,13 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
 
     public LocationState requestHostStatusChange(String location, String hostName, HostStatusEnum requestedStatus,
                                                  String changeReason, String changeUser, String changeHost,
-                                                 List<String> relatedLinks, TSDMetrics tsdMetrics) {
+                                                 List<String> relatedLinks, boolean createMissingHost,
+                                                 TSDMetrics tsdMetrics) {
         try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedLocationStateInfoHandler.requestHostStatusChange")) {
             LocationState locationState = getLocationState(location, tsdMetrics);
 
-            if (locationState.requestHostStatusChange(hostName, requestedStatus, changeReason, changeUser, changeHost, relatedLinks)) {
+            if (locationState.requestHostStatusChange(hostName, requestedStatus, changeReason, changeUser, changeHost,
+                    relatedLinks, createMissingHost)) {
                 updateLocationState(locationState, subMetrics);
             }
 

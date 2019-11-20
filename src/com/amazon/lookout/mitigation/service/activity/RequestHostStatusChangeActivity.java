@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -89,18 +90,34 @@ public class RequestHostStatusChangeActivity extends Activity {
 
             // Step 1. Validate this request
             HostStatusEnum requestedStatus = requestValidator.validateRequestHostStatusChangeRequest(request);
-            hostNameValidator.validateHostname(request);
+
+            boolean createMissingHost;
+            String validateHostnameErrorMessage = "";
+            try {
+                hostNameValidator.validateHostname(request);
+                createMissingHost = true;
+            } catch (IllegalArgumentException ex) {
+                validateHostnameErrorMessage = ex.getMessage();
+                createMissingHost = false;
+            }
 
             // Step 2. Request status change
-            locationStateInfoHandler.requestHostStatusChange(
-                    request.getLocation().toLowerCase(),
-                    request.getHostName(),
-                    requestedStatus,
-                    request.getReason(),
-                    request.getUserName(),
-                    localHostName,
-                    request.getRelatedLinks(),
-                    tsdMetrics);
+            try {
+                locationStateInfoHandler.requestHostStatusChange(
+                        request.getLocation().toLowerCase(),
+                        request.getHostName(),
+                        requestedStatus,
+                        request.getReason(),
+                        request.getUserName(),
+                        localHostName,
+                        request.getRelatedLinks(),
+                        createMissingHost,
+                        tsdMetrics);
+            } catch (NoSuchElementException ex) {
+                // exception thrown when createMissingHost is false and host was not found in DDB
+                // error message includes both host not found and hostname validation failure message
+                throw new IllegalArgumentException(ex.getMessage() + " " + validateHostnameErrorMessage);
+            }
 
             // Step 3. Create and return result
             RequestHostStatusChangeResponse response = new RequestHostStatusChangeResponse();
