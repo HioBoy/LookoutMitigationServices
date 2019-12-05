@@ -11,7 +11,7 @@
     <context:annotation-config/>
     
     <!-- Activities that belong to border locations goes here -->
-    
+
     <bean class="com.amazon.lookout.mitigation.service.activity.AbortDeploymentActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="currentDao" ref="currentDao" />
@@ -178,8 +178,6 @@
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
         <constructor-arg name="realm" value="${realm}"/>
-        <constructor-arg name="readCapacityUnits" ref="${domain}.LocationState.readCapacityUnits"/>
-        <constructor-arg name="writeCapacityUnits" ref="${domain}.LocationState.writeCapacityUnits"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
 
@@ -187,18 +185,16 @@
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="domain" value="${domain}"/>
         <constructor-arg name="realm" value="${realm}"/>
-        <constructor-arg name="readCapacityUnits" ref="${domain}.MitigationState.readCapacityUnits"/>
-        <constructor-arg name="writeCapacityUnits" ref="${domain}.MitigationState.writeCapacityUnits"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+
     </bean>
     
     <bean id="resourceAllocationStateDynamoDBHelper" class="com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDynamoDBHelper">
         <constructor-arg name="dynamoDBClient" ref="dynamoDBClient"/>
         <constructor-arg name="realm" value="${realm}"/>
         <constructor-arg name="domain" value="${domain}"/>
-        <constructor-arg name="readCapacityUnits" ref="${domain}.ResourceAllocationState.readCapacityUnits"/>
-        <constructor-arg name="writeCapacityUnits" ref="${domain}.ResourceAllocationState.writeCapacityUnits"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+
     </bean>
     
     <bean id="resourceAllocationHelper" class="com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationHelper">
@@ -271,17 +267,15 @@
         </constructor-arg>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
     </bean>
-    
+
     <bean id="currentDao" class="com.amazon.lookout.mitigation.datastore.CurrentRequestsDAOImpl">
         <constructor-arg name="client" ref="dynamoDBClient" />
-        <constructor-arg name="tableThroughput" ref="currentRequestsTableThroughput" />
         <constructor-arg name="region" value="${realm}" />
         <constructor-arg name="domain" value="${domain}" />
     </bean>
 
     <bean id="archiveDao" class="com.amazon.lookout.mitigation.datastore.ArchivedRequestsDAOImpl">
         <constructor-arg name="client" ref="dynamoDBClient" />
-        <constructor-arg name="tableThroughput" ref="archivedRequestsTableThroughput" />
         <constructor-arg name="region" value="${realm}" />
         <constructor-arg name="domain" value="${domain}" />
     </bean>
@@ -294,7 +288,6 @@
 
     <bean id="workflowIdsDao" class="com.amazon.lookout.mitigation.datastore.WorkflowIdsDAOImpl">
         <constructor-arg name="client" ref="dynamoDBClient" />
-        <constructor-arg name="tableThroughput" ref="workflowIdsTableThroughput" />
         <constructor-arg name="region" value="${realm}" />
         <constructor-arg name="domain" value="${domain}" />
     </bean>
@@ -315,7 +308,6 @@
 
     <bean id="mitigationConfigSymlinksDAO" class="com.amazon.lookout.mitigation.datastore.MitigationConfigSymlinksDAOImpl">
         <constructor-arg name="client" ref="dynamoDBClient" />
-        <constructor-arg name="tableThroughput" ref="mitigationConfigSymlinksTableThroughput" />
         <constructor-arg name="region" value="${realm}" />
         <constructor-arg name="domain" value="${domain}" />
     </bean>
@@ -334,6 +326,7 @@
         <constructor-arg name="signatureKeyMaterialSet" value="com.amazon.blackwatch.config.signature.${realm}.${domain}.keypair"/>
         <constructor-arg name="hasPrivateSignatureKey" value="true"/>
     </bean>
+
 
     <bean id="blackWatchS3Helper" class="com.amazon.lookout.mitigation.activities.helper.BlackWatchS3Helper">
         <constructor-arg name="configS3Helper" ref="blackWatchConfigS3Helper"/>

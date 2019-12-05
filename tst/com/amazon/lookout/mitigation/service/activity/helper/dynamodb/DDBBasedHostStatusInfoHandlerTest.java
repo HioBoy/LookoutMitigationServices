@@ -10,7 +10,6 @@ import java.util.Random;
 
 import com.amazon.blackwatch.host.status.model.HostInformation;
 import com.amazon.blackwatch.location.state.model.LocationState;
-import com.amazon.blackwatch.location.state.model.LocationType;
 import com.google.common.collect.ImmutableMap;
 import org.junit.BeforeClass;
 import org.junit.Test;

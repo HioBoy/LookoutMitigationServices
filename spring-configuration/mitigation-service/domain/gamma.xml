@@ -19,29 +19,5 @@
         <constructor-arg value="Test:Prod"/>
     </bean>
 
-    <bean id="gamma.LocationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-
-    <bean id="gamma.LocationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-    
-    <bean id="gamma.MitigationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-
-    <bean id="gamma.MitigationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-    
-    <bean id="gamma.ResourceAllocationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-
-    <bean id="gamma.ResourceAllocationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-
     <import resource="file:${spring.config.root}/mitigation-service/domain/gamma-locations-generated.xml"/>
 </beans>

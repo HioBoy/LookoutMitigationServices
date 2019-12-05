@@ -18,29 +18,5 @@
         <constructor-arg value="Prod"/>
     </bean>
 
-    <bean id="prod-cn.LocationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="200"/>
-    </bean>
-
-    <bean id="prod-cn.LocationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-    
-    <bean id="prod-cn.MitigationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="200"/>
-    </bean>
-
-    <bean id="prod-cn.MitigationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="200"/>
-    </bean>
-    
-    <bean id="prod-cn.ResourceAllocationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="200"/>
-    </bean>
-
-    <bean id="prod-cn.ResourceAllocationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="200"/>
-    </bean>
-
     <import resource="file:${spring.config.root}/mitigation-service/domain/prod-cn-locations-generated.xml"/>
 </beans>

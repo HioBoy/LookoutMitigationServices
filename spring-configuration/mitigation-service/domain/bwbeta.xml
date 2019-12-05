@@ -22,30 +22,6 @@
     <bean id="bwbeta.blackwatchMWSMetricDataset" class="java.lang.String">
         <constructor-arg value="Test"/>
     </bean>
- 
-    <bean id="bwbeta.LocationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-
-    <bean id="bwbeta.LocationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-    
-    <bean id="bwbeta.MitigationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-
-    <bean id="bwbeta.MitigationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-    
-    <bean id="bwbeta.ResourceAllocationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-
-    <bean id="bwbeta.ResourceAllocationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
 
     <import resource="file:${spring.config.root}/mitigation-service/domain/other-locations-generated.xml"/>
 </beans>

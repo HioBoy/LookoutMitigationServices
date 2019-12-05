@@ -19,18 +19,6 @@
     <bean id="prod-border.dogfishBucketSuffix" class="java.lang.String">
         <constructor-arg value="prod" />
     </bean>
-
-    <alias name="prod.LocationState.readCapacityUnits" alias="prod-border.LocationState.readCapacityUnits"/>
-
-    <alias name="prod.LocationState.writeCapacityUnits" alias="prod-border.LocationState.writeCapacityUnits"/>
-
-    <alias name="prod.MitigationState.readCapacityUnits" alias="prod-border.MitigationState.readCapacityUnits"/>
-
-    <alias name="prod.MitigationState.writeCapacityUnits" alias="prod-border.MitigationState.writeCapacityUnits"/>
-    
-    <alias name="prod.ResourceAllocationState.readCapacityUnits" alias="prod-border.ResourceAllocationState.readCapacityUnits"/>
-
-    <alias name="prod.ResourceAllocationState.writeCapacityUnits" alias="prod-border.ResourceAllocationState.writeCapacityUnits"/>
     
     <import resource="file:${spring.config.root}/mitigation-service/domain/prod-locations-generated.xml"/>
 </beans>

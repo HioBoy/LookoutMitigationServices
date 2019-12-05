@@ -7,6 +7,13 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
+import com.amazonaws.services.dynamodbv2.model.BillingMode;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.GlobalSecondaryIndex;
+import com.amazonaws.services.dynamodbv2.model.LocalSecondaryIndex;
+import com.amazonaws.services.dynamodbv2.model.Projection;
+import com.amazonaws.services.dynamodbv2.model.ProjectionType;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.mockito.Mockito;
@@ -41,6 +48,8 @@ import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.google.common.collect.ImmutableMap;
 
 import com.amazon.lookout.utils.DynamoDBLocalMocks;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class DDBBasedActivityTestHelper {
     protected static final String deviceName = DeviceName.BLACKWATCH_BORDER.name();
@@ -91,6 +100,7 @@ public class DDBBasedActivityTestHelper {
     
     @BeforeClass
     public static void setupOnce() {
+
         TestUtils.configureLogging();
         dynamoDBClient = DynamoDBTestUtil.get().getClient();
         dynamoDBClient = DynamoDBLocalMocks.setupSpyDdbClient(dynamoDBClient);
@@ -99,10 +109,24 @@ public class DDBBasedActivityTestHelper {
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
 
+        Answer<Void> provisioningThroughputAnswer = new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                Object[] args = invocation.getArguments();
+                CreateTableRequest createTableRequest = ((CreateTableRequest)args[0]);
+                createTableRequest.setProvisionedThroughput(new ProvisionedThroughput(5L, 5L));
+
+                invocation.callRealMethod();
+                return null;
+            }
+        };
+
+        Mockito.doAnswer(provisioningThroughputAnswer).when(dynamoDBClient).createTable(any(CreateTableRequest.class));
+
         mitigationStateDDBHelper = new MitigationStateDynamoDBHelper(
-                dynamoDBClient, realm, domain, readCapacityUnits, writeCapacityUnits, metricsFactory);
+                dynamoDBClient, realm, domain, metricsFactory);
         resourceAllocationStateDDBHelper = new ResourceAllocationStateDynamoDBHelper(
-                dynamoDBClient, realm, domain, readCapacityUnits, writeCapacityUnits, metricsFactory);
+                dynamoDBClient, realm, domain, metricsFactory);
         resourceAllocationHelper = new ResourceAllocationHelper(
                 mitigationStateDDBHelper, resourceAllocationStateDDBHelper, metricsFactory);
         
@@ -124,10 +148,10 @@ public class DDBBasedActivityTestHelper {
     @Before
     public void resetState() {
         mitigationStateDDBHelper.deleteTable();
-        mitigationStateDDBHelper.createTableIfNotExist(readCapacityUnits, writeCapacityUnits);
+        mitigationStateDDBHelper.createTableIfNotExist(BillingMode.PAY_PER_REQUEST);
         
         resourceAllocationStateDDBHelper.deleteTable();
-        resourceAllocationStateDDBHelper.createTableIfNotExist(readCapacityUnits, writeCapacityUnits);
+        resourceAllocationStateDDBHelper.createTableIfNotExist(BillingMode.PAY_PER_REQUEST);
         
         requestValidator = new RequestValidator("/random/path/location/json");
 

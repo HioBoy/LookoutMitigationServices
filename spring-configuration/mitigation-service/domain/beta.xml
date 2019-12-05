@@ -17,35 +17,6 @@
     <bean id="beta.masterRegion" class="java.lang.String">
         <constructor-arg value="IAD"/>
     </bean>
-    
-    <!-- Currently (Oct 2014) there is no beta for BW, setting it to Test for making the spring configs happy. -->
-    <bean id="beta.blackwatchMWSMetricDataset" class="java.lang.String">
-        <constructor-arg value="Test"/>
-    </bean>
- 
-    <bean id="beta.LocationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-
-    <bean id="beta.LocationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-    
-    <bean id="beta.MitigationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-
-    <bean id="beta.MitigationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-    
-    <bean id="beta.ResourceAllocationState.readCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
-
-    <bean id="beta.ResourceAllocationState.writeCapacityUnits" class="java.lang.Long">
-        <constructor-arg value="50"/>
-    </bean>
 
     <import resource="file:${spring.config.root}/mitigation-service/domain/other-locations-generated.xml"/>
 </beans>

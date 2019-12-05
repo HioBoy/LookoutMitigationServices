@@ -33,7 +33,10 @@ import com.amazon.lookout.models.prefixes.DogfishIPPrefix;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.model.BillingMode;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -49,8 +52,11 @@ import java.io.IOException;
 import java.util.*;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
 
 import com.amazon.lookout.utils.DynamoDBLocalMocks;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     
@@ -115,12 +121,15 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static MitigationState mitigationState1;
     private static MitigationState mitigationState2;
 
+    protected static final long readCapacityUnits = 5L;
+    protected static final long writeCapacityUnits = 5L;
+
     @Before
     public void beforeTests() {
         mitigationStateDynamoDBHelper.deleteTable();
-        mitigationStateDynamoDBHelper.createTableIfNotExist(5L, 5L);
+        mitigationStateDynamoDBHelper.createTableIfNotExist(BillingMode.PAY_PER_REQUEST);
         resourceAllocationStateDDBHelper.deleteTable();
-        resourceAllocationStateDDBHelper.createTableIfNotExist(5L, 5L);
+        resourceAllocationStateDDBHelper.createTableIfNotExist(BillingMode.PAY_PER_REQUEST);
         
         //reset the Dogfish mock
         DogfishIPPrefix prefix = new DogfishIPPrefix();
@@ -140,6 +149,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         // mock TSDMetric
         Mockito.doReturn(metrics).when(metricsFactory).newMetrics();
         Mockito.doReturn(metrics).when(metrics).newMetrics();
+
         tsdMetrics = new TSDMetrics(metricsFactory);
         elbResourceHelper = Mockito.mock(ELBResourceHelper.class);
         dogfishProvider = Mockito.mock(DogFishMetadataProvider.class);
@@ -165,10 +175,21 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         dynamoDBClient = DynamoDBTestUtil.get().getClient();
         dynamoDBClient = DynamoDBLocalMocks.setupSpyDdbClient(dynamoDBClient);
 
-        mitigationStateDynamoDBHelper = new MitigationStateDynamoDBHelper(dynamoDBClient, realm, domain, 
-                5L, 5L, metricsFactory);
-        resourceAllocationStateDDBHelper = new ResourceAllocationStateDynamoDBHelper(dynamoDBClient, realm, domain, 
-                5L, 5L, metricsFactory);
+        Answer<Void> provisioningThroughputAnswer = new Answer<Void>() {
+            @Override
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                Object[] args = invocation.getArguments();
+                CreateTableRequest createTableRequest = ((CreateTableRequest)args[0]);
+                createTableRequest.setProvisionedThroughput(new ProvisionedThroughput(5L, 5L));
+                invocation.callRealMethod();
+                return null;
+            }
+        };
+
+        Mockito.doAnswer(provisioningThroughputAnswer).when(dynamoDBClient).createTable(any(CreateTableRequest.class));
+
+        mitigationStateDynamoDBHelper = new MitigationStateDynamoDBHelper(dynamoDBClient, realm, domain, metricsFactory);
+        resourceAllocationStateDDBHelper = new ResourceAllocationStateDynamoDBHelper(dynamoDBClient, realm, domain, metricsFactory);
         resourceAllocationHelper = new ResourceAllocationHelper(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, metricsFactory);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
