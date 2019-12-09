@@ -212,7 +212,15 @@
 
     <bean id="thresholdMaster" class="com.amazon.bardock.resources.threshold.ThresholdMaster">
         <constructor-arg name="thresholdModifiers" ref="thresholdModifiers" />
+        <constructor-arg name="bobbinLog" ref="bobbinLog" />
     </bean>
+
+    <bean id="bobbinLog" class="com.amazon.bardock.detection.bobbin.Bobbin">
+        <constructor-arg name="output" ref="bobbinOutput" />
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
+
+    <bean id="bobbinOutput" class="com.amazon.bardock.detection.bobbin.BobbinNullOutput" />
 
     <util:list id="thresholdModifiers">
         <ref bean="defaultThresholdModifier" />
