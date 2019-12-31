@@ -255,7 +255,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
 
     private List<BlackWatchLocation> getAllBlackWatchLocationsAtSameAirportCode(LocationState currentLocation, TSDMetrics tsdMetrics) {
         List<BlackWatchLocation> locationStateList = new ArrayList<>();
-        String airportCode = currentLocation.retrieveAiportCode();
+        String airportCode = currentLocation.retrieveAirportCode();
 
         for (BlackWatchLocation locationState : getAllBlackWatchLocations(tsdMetrics)) {
             if (locationState.getLocation().contains(airportCode)) {
