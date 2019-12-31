@@ -6,6 +6,9 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.amazon.lookout.mitigation.datastore.LocationStateLocksDAO;
+import com.amazon.lookout.mitigation.service.activity.validator.HostnameValidator;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import lombok.NonNull;
 
 import org.apache.commons.lang3.Validate;
@@ -44,19 +47,25 @@ public class UpdateBlackWatchLocationStateActivity extends Activity {
     private static final Set<String> REQUEST_EXCEPTIONS = Collections.unmodifiableSet(
             Arrays.stream(UpdateBlackWatchLocationStateExceptions.values())
             .map(e -> e.name())
-            .collect(Collectors.toSet())); 
+            .collect(Collectors.toSet()));
 
     private final RequestValidator requestValidator;
     private final LocationStateInfoHandler locationStateInfoHandler;
+    private final LocationStateLocksDAO locationStateLocksDAO;
 
-    @ConstructorProperties({"requestValidator", "locationStateInfoHandler"})
+    @ConstructorProperties({"requestValidator", "locationStateInfoHandler", "locationStateLocksDAO"})
     public UpdateBlackWatchLocationStateActivity(@NonNull RequestValidator requestValidator,
-            @NonNull LocationStateInfoHandler locationStateInfoHandler) {
+                                                 @NonNull LocationStateInfoHandler locationStateInfoHandler,
+                                                 @NonNull LocationStateLocksDAO locationStateLocksDAO) {
+
         Validate.notNull(requestValidator);
         this.requestValidator = requestValidator;
 
         Validate.notNull(locationStateInfoHandler);
         this.locationStateInfoHandler = locationStateInfoHandler;
+
+        Validate.notNull(locationStateLocksDAO);
+        this.locationStateLocksDAO = locationStateLocksDAO;
     }
 
     @Validated
@@ -75,14 +84,19 @@ public class UpdateBlackWatchLocationStateActivity extends Activity {
             // Step 1. Validate this request
             requestValidator.validateUpdateBlackWatchLocationStateRequest(request);
 
-            String location = request.getLocation().toLowerCase();
-            String reason = request.getReason();
-            boolean adminIn = request.isAdminIn();
-            String locationType = request.getLocationType();
-            
-            // Step 2. Update AdminIn state for this location
-            locationStateInfoHandler.updateBlackWatchLocationAdminIn(location, adminIn, reason, locationType, tsdMetrics);
+            if (locationStateLocksDAO.acquireWriterLock(DeviceName.BLACKWATCH_BORDER, request.getLocation())) {
+                String location = request.getLocation().toLowerCase();
+                String reason = request.getReason();
+                boolean adminIn = request.isAdminIn();
+                String locationType = request.getLocationType();
+                String changeId = request.getChangeId();
+                String operationId = request.getOperationId();
+                //overrideLocks is set to true because this API is exposed only to BLACKWATCH developers for forced operation
+                boolean overrideLocks = true;
 
+                // Step 2. Update AdminIn state for this location
+                locationStateInfoHandler.updateBlackWatchLocationAdminIn(location, adminIn, reason, locationType, operationId, changeId, overrideLocks, tsdMetrics);
+            }
             // Step 3. Create the response object to return back to the client.
             UpdateBlackWatchLocationStateResponse response = new UpdateBlackWatchLocationStateResponse();
             response.setRequestId(requestId);
@@ -102,6 +116,7 @@ public class UpdateBlackWatchLocationStateActivity extends Activity {
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + UpdateBlackWatchLocationStateExceptions.InternalError.name(), 1);
             throw new InternalServerError500(msg);
         } finally {
+            locationStateLocksDAO.releaseWriterLock(DeviceName.BLACKWATCH_BORDER, request.getLocation());
             tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_SUCCESS, requestSuccessfullyProcessed ? 1 : 0);
             tsdMetrics.addCount(LookoutMitigationServiceConstants.ENACT_FAILURE, requestSuccessfullyProcessed ? 0 : 1);
             tsdMetrics.end();

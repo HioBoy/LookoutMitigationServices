@@ -3,6 +3,9 @@ package com.amazon.lookout.mitigation.service.activity;
 import java.util.Arrays;
 import java.util.List;
 
+import com.amazon.blackwatch.location.state.storage.LocationStateDynamoDBHelper;
+import com.amazon.lookout.mitigation.datastore.LocationStateLocksDAO;
+import com.amazon.lookout.mitigation.service.activity.helper.mws.MWSHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.HostnameValidator;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -46,7 +49,10 @@ public class ActivityTestHelper {
     protected static LocationStateInfoHandler locationStateInfoHandler;
     protected static BlackWatchMitigationInfoHandler blackwatchMitigationInfoHandler;
     protected static ActiveMitigationsHelper activeMitigationsHelper;
-    
+    protected static MWSHelper mwsHelper;
+    protected static LocationStateDynamoDBHelper locationStateDynamoDBHelper;
+    protected static LocationStateLocksDAO locationStateLocksDAO;
+
     @BeforeClass
     public static void setupOnce() {
         TestUtils.configureLogging();
@@ -60,5 +66,8 @@ public class ActivityTestHelper {
         locationStateInfoHandler = mock(LocationStateInfoHandler.class);
         blackwatchMitigationInfoHandler = mock(BlackWatchMitigationInfoHandler.class);
         activeMitigationsHelper = mock(ActiveMitigationsHelper.class);
+        locationStateLocksDAO = mock(LocationStateLocksDAO.class);
+        locationStateDynamoDBHelper = mock(LocationStateDynamoDBHelper.class);
+        mwsHelper = mock(MWSHelper.class);
     }
 }

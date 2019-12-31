@@ -79,6 +79,12 @@
         <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
     </bean>
 
+    <bean class="com.amazon.lookout.mitigation.service.activity.GetLocationOperationalStatusActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="hostStatusHandler" ref="ddbBasedHostStatusInfoHandler"/>
+        <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
+    </bean>
+
     <bean class="com.amazon.lookout.mitigation.service.activity.RequestHostStatusChangeActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="hostnameValidator" ref="hostnameValidator"/>
@@ -101,6 +107,14 @@
     <bean class="com.amazon.lookout.mitigation.service.activity.UpdateBlackWatchLocationStateActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
         <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
+        <constructor-arg name="locationStateLocksDAO" ref="locationStateLocksDAO"/>
+    </bean>
+
+    <bean class="com.amazon.lookout.mitigation.service.activity.UpdateLocationStateActivity">
+        <constructor-arg name="requestValidator" ref="requestValidator"/>
+        <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
+        <constructor-arg name="hostnameValidator" ref="hostnameValidator"/>
+        <constructor-arg name="locationStateLocksDAO" ref="locationStateLocksDAO"/>
     </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.DeactivateBlackWatchMitigationActivity">
@@ -156,6 +170,8 @@
 
     <bean id="ddbBasedLocationStateInfoHandler" class="com.amazon.lookout.mitigation.service.activity.helper.dynamodb.DDBBasedLocationStateInfoHandler">
         <constructor-arg name="locationStateDynamoDBHelper" ref="locationStateDynamoDBHelper"/>
+        <constructor-arg name="activeMitigationsHelper" ref="activeMitigationsHelper"/>
+        <constructor-arg name="mwsHelper" ref="mwsHelper"/>
     </bean>
 
     <bean id="locationStateDynamoDBHelper" class="com.amazon.blackwatch.location.state.storage.LocationStateDynamoDBHelper">
@@ -290,6 +306,13 @@
         <constructor-arg name="domain" value="${domain}" />
     </bean>
 
+    <bean id="locationStateLocksDAO" class="com.amazon.lookout.mitigation.datastore.LocationStateLocksDAOImpl">
+        <constructor-arg name="client" ref="dynamoDBClient" />
+        <constructor-arg name="tableThroughput" ref="locationStateLocksTableThroughput" />
+        <constructor-arg name="region" value="${realm}" />
+        <constructor-arg name="domain" value="${domain}" />
+    </bean>
+
     <bean id="mitigationConfigSymlinksDAO" class="com.amazon.lookout.mitigation.datastore.MitigationConfigSymlinksDAOImpl">
         <constructor-arg name="client" ref="dynamoDBClient" />
         <constructor-arg name="tableThroughput" ref="mitigationConfigSymlinksTableThroughput" />
@@ -325,6 +348,20 @@
         <constructor-arg name="mitigationConfigSymlinksDao" ref="mitigationConfigSymlinksDAO" />
         <constructor-arg name="blackWatchS3Helper" ref="blackWatchS3Helper" />
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+    </bean>
+
+    <bean id="mwsHelper" class="com.amazon.lookout.mitigation.service.activity.helper.mws.MWSHelper">
+        <constructor-arg name="mwsClientProvider" ref="mwsClientProvider"/>
+        <constructor-arg name="mwsMetricDataset" ref="${domain}.blackwatchMWSMetricDataset"/>
+    </bean>
+
+    <bean id="mwsClientProvider" class="amazon.mws.query.MonitoringQueryClientProvider">
+        <constructor-arg name="odinAWSCredsProvider" ref="mwsCredentialsProvider"/>
+        <constructor-arg name="regionName" value="${realm}"/>
+    </bean>
+
+    <bean id="mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
+        <constructor-arg value="com.amazon.lookout.mws.blackwatch"/>
     </bean>
 </beans>
 

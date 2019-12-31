@@ -26,13 +26,15 @@ public class UpdateBlackWatchLocationStateActivityTest extends ActivityTestHelpe
         requestValidator = spy(new RequestValidator(
                 "/random/path/location/json"));
         updateBlackWatchLocationStateActivity = 
-                spy(new UpdateBlackWatchLocationStateActivity(requestValidator, locationStateInfoHandler));
+                spy(new UpdateBlackWatchLocationStateActivity(requestValidator, locationStateInfoHandler, locationStateLocksDAO));
         
         request = new UpdateBlackWatchLocationStateRequest();
         request.setLocation(location);
         request.setReason(reason);
         request.setAdminIn(true);
         request.setLocationType(LocationType.POP_HAPUNA12.name());
+        request.setChangeId("changeId");
+        request.setOperationId("operationId");
     }
 
     /**

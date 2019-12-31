@@ -3,8 +3,15 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import amazon.mws.data.Datapoint;
 import com.amazon.blackwatch.host.status.model.HostStatusEnum;
+import com.amazon.blackwatch.location.state.model.LocationOperation;
+import com.amazon.coral.service.InternalFailure;
+import com.amazon.lookout.mitigation.ActiveMitigationsHelper;
+import com.amazon.lookout.mitigation.service.activity.helper.mws.MWSRequestException;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
@@ -18,18 +25,29 @@ import com.amazon.blackwatch.location.state.storage.LocationStateDynamoDBHelper;
 import com.amazon.lookout.mitigation.service.BlackWatchLocation;
 import com.amazon.lookout.mitigation.service.activity.helper.LocationStateInfoHandler;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
+import com.amazon.lookout.mitigation.service.activity.helper.mws.MWSHelper;
 
 public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedLocationStateInfoHandler.class);
     public static final String DDB_QUERY_FAILURE_COUNT = "DynamoDBQueryFailureCount";
 
+    private static final int DATAPOINTS_TO_BE_EVALUATED = 2; //MWS Datapoints that needs to be evaluated
+
     private final int totalSegments = 2;
 
     private LocationStateDynamoDBHelper locationStateDynamoDBHelper;
 
-    @ConstructorProperties({ "locationStateDynamoDBHelper" })
-    public DDBBasedLocationStateInfoHandler(@NonNull LocationStateDynamoDBHelper locationStateDynamoDBHelper) {
+    private ActiveMitigationsHelper activeMitigationsHelper;
+
+    private MWSHelper mwsHelper;
+
+    @ConstructorProperties({ "locationStateDynamoDBHelper", "activeMitigationsHelper", "mwsHelper"})
+    public DDBBasedLocationStateInfoHandler(@NonNull LocationStateDynamoDBHelper locationStateDynamoDBHelper,
+                                            @NonNull ActiveMitigationsHelper activeMitigationsHelper,
+                                            @NonNull MWSHelper mwsHelper) {
         this.locationStateDynamoDBHelper = locationStateDynamoDBHelper;
+        this.activeMitigationsHelper = activeMitigationsHelper;
+        this.mwsHelper = mwsHelper;
     }
 
     @Override
@@ -86,8 +104,8 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
             List<BlackWatchLocation> listOfBlackWatchLocation = new ArrayList<>();
             try {
                 List<LocationState> locationsWithAdminIn = locationStateDynamoDBHelper.getAllLocationStates(totalSegments);
-                for (LocationState ls : locationsWithAdminIn) {
-                   listOfBlackWatchLocation.add(convertLocationState(ls));
+                for (LocationState locationState : locationsWithAdminIn) {
+                   listOfBlackWatchLocation.add(convertLocationState(locationState));
                 }
             } catch (Exception ex) {
                 String msg = String.format("Caught Exception when scaning for the Location State");
@@ -117,18 +135,50 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         }
     }
 
+    private Map<String, LocationOperation> computeOperationLocks(LocationState locationState, boolean requestAdminIn,
+                                                                 String operationId, String changeId, boolean overrideLocks) {
+        if (locationState == null) {
+            String msg = "Invalid request! - location is not found in " + locationStateDynamoDBHelper.getLocationStateTableName() + " and "
+                    + "LocationType is not specified.";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+
+        Map<String, LocationOperation> operationLocks = locationState.getOrCreateOperationLocksMap();
+        LOG.info("Location: " + locationState.getLocationName() + "AdminIn = \"" + requestAdminIn + "\"  requested for changeId: " + changeId);
+
+        if (requestAdminIn) {
+            if (overrideLocks) {
+                LOG.info("Force adminIn operation. Clearing OperationLocks.");
+                operationLocks.clear();
+            }
+            operationLocks.remove(operationId);
+        } else {
+            LocationOperation locationOperation = new LocationOperation();
+            locationOperation.setChangeId(changeId);
+            locationOperation.setTimestamp(System.currentTimeMillis());
+            operationLocks.putIfAbsent(operationId, locationOperation);
+        }
+        return operationLocks;
+    }
+
     /**
      * Update AdminIn state given a location and reason.
      * @param tsdMetrics A TSDMetrics object.
      */
     @Override
-    public void updateBlackWatchLocationAdminIn(String location, boolean adminIn, String reason, String locationType, TSDMetrics tsdMetrics) {
+    public void updateBlackWatchLocationAdminIn(String location, boolean requestAdminIn, String reason,
+                                                String locationType, String operationId, String changeId,
+                                                boolean overrideLocks, TSDMetrics tsdMetrics) {
         Validate.notNull(tsdMetrics);
         Validate.notEmpty(location);
         Validate.notEmpty(reason);
 
         try(TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedLocationStateInfoHandler.updateBlackWatchLocationAdminIn")) {
             LocationState ls = getLocationState(location, subMetrics);
+
+            Map<String, LocationOperation> operationLocks = computeOperationLocks(ls, requestAdminIn, operationId, changeId, overrideLocks);
+            boolean adminIn = operationLocks.isEmpty();
 
             LocationType setType = null;
             if (locationType != null && locationType.trim().length() != 0) {
@@ -141,7 +191,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
                     throw new IllegalArgumentException(msg);
                 }
             }
-            
+
             if (adminIn == true) {
                 if (setType == null) {
                     if (ls == null) {
@@ -165,9 +215,12 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
             if (ls == null) {
                 ls = LocationState.builder().locationName(location).build();
             }
+
             ls.setAdminIn(adminIn);
             ls.setChangeReason(reason);
             ls.setChangeTime(System.currentTimeMillis());
+            ls.setOperationLocks(operationLocks);
+
             if (setType != null) {
                 ls.setLocationType(locationType);
             }
@@ -190,5 +243,94 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
 
             return locationState;
         }
+    }
+
+    public List<String> getPendingOperationLocks(String location, TSDMetrics tsdMetrics) {
+        LocationState locationState = getLocationState(location, tsdMetrics);
+        Map<String, LocationOperation> operationLocks = locationState.getOrCreateOperationLocksMap();
+        List<String> pendingOperationLocks = new ArrayList<>();
+        operationLocks.values().forEach(locationOperation -> pendingOperationLocks.add(locationOperation.getChangeId()));
+        return pendingOperationLocks;
+    }
+
+    private List<BlackWatchLocation> getAllBlackWatchLocationsAtSameAirportCode(LocationState currentLocation, TSDMetrics tsdMetrics) {
+        List<BlackWatchLocation> locationStateList = new ArrayList<>();
+        String airportCode = currentLocation.retrieveAiportCode();
+
+        for (BlackWatchLocation locationState : getAllBlackWatchLocations(tsdMetrics)) {
+            if (locationState.getLocation().contains(airportCode)) {
+                locationStateList.add(locationState);
+            }
+        }
+        return locationStateList;
+    }
+
+    private double getAnnouncedRoutesCount(String location, TSDMetrics tsdMetrics) throws MWSRequestException {
+        List<Datapoint> datapoints = mwsHelper.getBGPTotalAnnouncements(location, tsdMetrics);
+        if (datapoints.size() < DATAPOINTS_TO_BE_EVALUATED) {
+            throw new IllegalStateException("Last two datapoints for the location: " + location + " not found");
+        }
+        datapoints = datapoints.subList(datapoints.size() - DATAPOINTS_TO_BE_EVALUATED, datapoints.size());
+        double routeCount = 0;
+        for (Datapoint datapoint : datapoints) {
+            routeCount += datapoint.getValue();
+        }
+        return routeCount;
+    }
+
+    private boolean evaluateOperationalFlags(LocationState locationState, boolean areRoutesAnnounced, boolean hasExpectedMitigations) {
+        boolean isOperational;
+        /* A weird safe check where conditions to consider stack operational changes on AdminIn value
+         * Stack Operational when taking InService -> stack operational when hasExpectedMitigations, InService and routesAnnounced are true
+         * Stack Operational when taking Out of Service ->  If any of InService and routesAnnounced is true
+         * */
+        if(locationState.getAdminIn()){
+            isOperational = hasExpectedMitigations && locationState.getInService() && areRoutesAnnounced;
+        } else {
+            isOperational = locationState.getInService() || areRoutesAnnounced;
+        }
+        LOG.info("Location: " + locationState.getLocationName() + "\n\nFlags:\n AdminIn: " + locationState.getAdminIn()
+                + "\n InService: " + locationState.getInService() + "\n hasExpectedMitigations: " + hasExpectedMitigations
+                + "\n areRoutesAnnounced: " + areRoutesAnnounced + "\n isOperational: " + isOperational);
+        return isOperational;
+    }
+
+    private boolean isLocationOperational(String location, List<BlackWatchLocation> allStacksAtLocation, TSDMetrics tsdMetrics) {
+        LocationState locationState = getLocationState(location, tsdMetrics);
+        try {
+            boolean areRoutesAnnounced = getAnnouncedRoutesCount(location, tsdMetrics) > 0;
+            boolean hasExpectedMitigations = activeMitigationsHelper.hasExpectedMitigations(DeviceName.BLACKWATCH_BORDER, allStacksAtLocation, location);
+            return evaluateOperationalFlags(locationState, areRoutesAnnounced, hasExpectedMitigations);
+        } catch (MWSRequestException e) {
+            String msg = "Error getting data from MWS " + e;
+            throw new InternalFailure(msg);
+        }
+    }
+
+    @Override
+    public boolean validateOtherStacksInService(String location, TSDMetrics tsdMetrics) {
+        LOG.info("Validating if other stacks are in service for location: " + location);
+        LocationState locationState = getLocationState(location, tsdMetrics);
+        List<BlackWatchLocation> allStacksAtLocation = getAllBlackWatchLocationsAtSameAirportCode(locationState, tsdMetrics);
+        boolean otherStackinService = allStacksAtLocation.size() > 1 ? true : false;
+        for (BlackWatchLocation stack : allStacksAtLocation) {
+            /*
+             * This is intermediate check when request to take a stack out arrives while other stack
+             * is being taken out (other stack: AdminIn = false, but InService true).
+             */
+            if (!stack.isAdminIn()) {
+                return false;
+            }
+            otherStackinService = otherStackinService && isLocationOperational(stack.getLocation(), allStacksAtLocation, tsdMetrics);
+        }
+        return otherStackinService;
+    }
+
+    @Override
+    public boolean checkIfLocationIsOperational(String location, TSDMetrics tsdMetrics) {
+        LOG.info("Checking if location: " + location + ", is operational.");
+        LocationState locationState = getLocationState(location, tsdMetrics);
+        List<BlackWatchLocation> allStacksAtLocation = getAllBlackWatchLocationsAtSameAirportCode(locationState, tsdMetrics);
+        return isLocationOperational(location, allStacksAtLocation, tsdMetrics);
     }
 }

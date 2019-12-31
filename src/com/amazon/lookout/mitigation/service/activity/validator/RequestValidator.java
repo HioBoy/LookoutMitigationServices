@@ -4,18 +4,17 @@ import java.beans.ConstructorProperties;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.Map;
-import java.util.LinkedHashMap;
-import java.util.stream.Collectors;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.amazon.arest.client.repackaged.google.common.base.Strings;
 import com.amazon.blackwatch.host.status.model.HostStatusEnum;
+import com.amazon.lookout.mitigation.service.GetLocationOperationalStatusRequest;
 import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
+import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
 import lombok.NonNull;
 
 import org.apache.commons.lang3.StringUtils;
@@ -52,6 +51,8 @@ import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
+import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
+import com.amazon.lookout.mitigation.service.GetLocationOperationalStatusRequest;
 import com.amazon.lookout.mitigation.service.activity.GetLocationDeploymentHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivity;
 import com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity;
@@ -62,6 +63,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+
 /**
  * RequestValidator is a basic validator for requests to ensure the requests are well-formed and contain all the required inputs.
  * This validator performs template-agnostic validation - it doesn't dive deep into specific requirements of each template, the TemplateBasedRequestValidator
@@ -322,7 +324,17 @@ public class RequestValidator {
         Validate.isTrue(request.getRollbackToMitigationVersion() > 0,
                 "rollback to mitigation version should be larger than 0");
     }
-    
+
+    /**
+     * Validates if the request object passed to the GetLocationAdminInStatusRequest API is valid
+     * @param An instance of GetLocationAdminInStatusRequest representing the input to the GetLocationAdminInStatus API
+     * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
+     */
+    public void validateGetLocationOperationalStatusRequest(GetLocationOperationalStatusRequest request) {
+        validateLocation(request.getLocation());
+    }
+
+
     /**
      * Validates if the request object passed to the GetLocationHostStatus API is valid
      * @param An instance of GetLocationHostStatusRequest representing the input to the GetLocationHostStatus API
@@ -368,6 +380,17 @@ public class RequestValidator {
         validateLocation(request.getLocation());
         validateChangeReason(request.getReason());
         validateLocationType(request.getLocationType());
+        validateChangeId(request.getChangeId());
+    }
+
+    /**
+     * Validates if the request object passed to the UpdateLocationStateRequest API is valid
+     * @param An instance of UpdateLocationStateRequest representing the input to the UpdateLocationState API
+     * @return void No values are returned but it will throw back an IllegalArgumentException if any of the parameters aren't considered valid.
+     */
+    public void validateUpdateLocationStateRequest(UpdateLocationStateRequest request) {
+        validateLocation(request.getLocation());
+        validateChangeId(request.getChangeId());
     }
     
     /**
@@ -686,7 +709,15 @@ public class RequestValidator {
             }
         }
     }
-    
+
+    private void validateChangeId(String changeId) {
+        if (Strings.isNullOrEmpty(changeId)) {
+            String msg = "Invalid changeId type found - " + changeId +".";
+            LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+
     private boolean checkLocationTypeInEnum(String locationType) {
         try {
             LocationType.valueOf(locationType);
@@ -695,7 +726,7 @@ public class RequestValidator {
             return false;
         }
     }
-   
+
     private static String COMMUNITY_STRING_ERROR_MSG = 
             "The community string must be a space seperated list of <asn>:<value> where asn and value are integers.";
     

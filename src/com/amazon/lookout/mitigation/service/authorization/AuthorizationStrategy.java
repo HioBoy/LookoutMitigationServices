@@ -13,7 +13,9 @@ import java.util.Set;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.amazon.lookout.mitigation.service.GetLocationOperationalStatusRequest;
 import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
+import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
 import lombok.Data;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -396,6 +398,12 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                         generateHostStatusRequestInfo(action, READ_OPERATION_PREFIX, request.getLocation()));
 
         addRequestInfoParser(
+                GetLocationOperationalStatusRequest.class,
+                (action, request) ->
+                        new RequestInfo(generateActionName(action, READ_OPERATION_PREFIX),
+                                getBlackWatchAPIRelativeId()));
+
+        addRequestInfoParser(
                 RequestHostStatusChangeRequest.class,
                 (action, request) ->
                         generateHostStatusRequestInfo(action, WRITE_OPERATION_PREFIX, request.getLocation()));
@@ -434,6 +442,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
         addRequestInfoParser(
                 UpdateBlackWatchLocationStateRequest.class,
+                (action, request) ->
+                        generateLocationStateRequestInfo(action, WRITE_OPERATION_PREFIX));
+
+        addRequestInfoParser(
+                UpdateLocationStateRequest.class,
                 (action, request) ->
                         generateLocationStateRequestInfo(action, WRITE_OPERATION_PREFIX));
     }
