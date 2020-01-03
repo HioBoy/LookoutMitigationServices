@@ -43,6 +43,13 @@
                 service-client-class="com.amazonaws.askec2.AskEC2ServiceClient"
                 qualifier="{{ location['ec2_internal_api_client_qualifier'] }}"/>
 
+            <bean id="Ec2InstanceResourcePropertiesProvider.{{ realm_domain }}"
+                    class="com.amazon.blackwatch.mitigation.resource.helper.ec2.Ec2InstanceResourcePropertiesProvider">
+                <constructor-arg name="awsCredentialsProvider" ref="askEC2InternalServiceCredentialsProvider.${realm}.${domain}"/>
+                <constructor-arg name="askEC2ServiceClient" ref="eipInternalAPIClientBean.{{ realm_domain }}"/>
+                <constructor-arg name="metricsFactory" ref="metricsFactory" />
+            </bean>
+
             <bean id="eipResourceHelper.{{ realm_domain }}"
                     class="com.amazon.blackwatch.mitigation.resource.helper.EIPResourceHelper">
                 <constructor-arg name="awsCredentialsProvider" ref="askEC2InternalServiceCredentialsProvider.${realm}.${domain}"/>

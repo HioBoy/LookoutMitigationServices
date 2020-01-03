@@ -4,7 +4,20 @@
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
 
     <!-- EC2 INSTANCE CAPACITY HELPER -->
-    <bean id="ec2InstanceCapacityHelper" class="com.amazon.blackwatch.mitigation.resource.helper.capacityhelper.Ec2InstanceCapacityHelper" />
+
+    <bean id="ec2InstanceCapacityHelper" class="com.amazon.blackwatch.mitigation.resource.helper.capacityhelper.Ec2InstanceCapacityHelper">
+        <constructor-arg name="resourcePropertiesProvider" ref="Ec2InstanceResourcePropertiesProvider"/>
+        <constructor-arg name="resourceBandwidthProvider" ref="ec2InstanceBandwidthProvider" />
+        <constructor-arg name="ec2baApplicationConfig" ref="ec2baApplicationConfig" />
+        <constructor-arg name="gunpowderApplicationConfig" ref="gunpowderApplicationConfig" />
+    </bean>
+
+    <bean id="Ec2InstanceResourcePropertiesProvider"
+            class="com.amazon.blackwatch.mitigation.resource.helper.ec2.Ec2InstanceResourcePropertiesProvider">
+        <constructor-arg name="awsCredentialsProvider" ref="askEC2InternalServiceCredentialsProvider.${realm}.${domain}"/>
+        <constructor-arg name="askEC2ServiceClient" ref="eipInternalAPIClientBean.${realm}.${domain}"/>
+        <constructor-arg name="metricsFactory" ref="metricsFactory" />
+    </bean>
 
     <!-- EIP CAPACITY HELPER -->
 
