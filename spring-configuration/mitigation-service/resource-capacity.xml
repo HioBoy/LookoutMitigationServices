@@ -14,8 +14,7 @@
 
     <bean id="Ec2InstanceResourcePropertiesProvider"
             class="com.amazon.blackwatch.mitigation.resource.helper.ec2.Ec2InstanceResourcePropertiesProvider">
-        <constructor-arg name="awsCredentialsProvider" ref="askEC2InternalServiceCredentialsProvider.${realm}.${domain}"/>
-        <constructor-arg name="askEC2ServiceClient" ref="eipInternalAPIClientBean.${realm}.${domain}"/>
+        <constructor-arg name="askEC2ServiceClients" ref="${domain}.askEc2ServiceClients"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory" />
     </bean>
 

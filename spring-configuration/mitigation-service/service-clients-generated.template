@@ -43,13 +43,6 @@
                 service-client-class="com.amazonaws.askec2.AskEC2ServiceClient"
                 qualifier="{{ location['ec2_internal_api_client_qualifier'] }}"/>
 
-            <bean id="Ec2InstanceResourcePropertiesProvider.{{ realm_domain }}"
-                    class="com.amazon.blackwatch.mitigation.resource.helper.ec2.Ec2InstanceResourcePropertiesProvider">
-                <constructor-arg name="awsCredentialsProvider" ref="askEC2InternalServiceCredentialsProvider.${realm}.${domain}"/>
-                <constructor-arg name="askEC2ServiceClient" ref="eipInternalAPIClientBean.{{ realm_domain }}"/>
-                <constructor-arg name="metricsFactory" ref="metricsFactory" />
-            </bean>
-
             <bean id="eipResourceHelper.{{ realm_domain }}"
                     class="com.amazon.blackwatch.mitigation.resource.helper.EIPResourceHelper">
                 <constructor-arg name="awsCredentialsProvider" ref="askEC2InternalServiceCredentialsProvider.${realm}.${domain}"/>
@@ -143,6 +136,17 @@
     {% endfor %}
 {% endfor %}
 
+<util:map id="bwbeta.askEc2ServiceClients"
+                  key-type="java.lang.String"
+                  value-type="com.amazonaws.askec2.AskEC2ServiceClient">
+     {% for realm_domain, location in locations['border_beta'].items() %}
+         {% set region, stage = realm_domain.split('.') %}
+         {% if location['ec2_internal_api_client_qualifier']%}
+                 <entry key="{{ region }}" value-ref="askEC2ClientWithCredentials.{{ realm_domain }}" />
+         {% endif %}
+     {% endfor %}
+ </util:map>
+
 <!-- TODO Generate these mappings in a more efficient manner https://sim.amazon.com/issues/BLACKWATCH-4094 -->
 <util:map id="bwbeta.askEc2ResourceInfoHelpers"
                  key-type="java.lang.String"
@@ -167,6 +171,17 @@
                 <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="beta.askEc2ServiceClients"
+                 key-type="java.lang.String"
+                 value-type="com.amazonaws.askec2.AskEC2ServiceClient">
+    {% for realm_domain, location in locations['edge_beta'].items() %}
+        {% set region, stage = realm_domain.split('.') %}
+        {% if location['ec2_internal_api_client_qualifier'] %}
+                <entry key="{{ region }}" value-ref="askEC2ClientWithCredentials.{{ realm_domain }}" />
+        {% endif %}
     {% endfor %}
 </util:map>
 
@@ -197,6 +212,8 @@
 </util:map>
 
 <!-- Gamma stack of Blackwatch uses prod stack of askEc2 -->
+<alias name="prod.askEc2ServiceClients" alias="gamma.askEc2ServiceClients">
+
 <util:map id="gamma.askEc2ResourceInfoHelpers"
                  key-type="java.lang.String"
                  value-type="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
@@ -220,6 +237,17 @@
                 <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="prod.askEc2ServiceClients"
+                 key-type="java.lang.String"
+                 value-type="com.amazonaws.askec2.AskEC2ServiceClient">
+    {% for realm_domain, location in locations['border_prod'].items() %}
+        {% set region, stage = realm_domain.split('.') %}
+        {% if location['ec2_internal_api_client_qualifier' ] %}
+                <entry key="{{ region }}" value-ref="askEC2ClientWithCredentials.{{ realm_domain }}" />
+        {% endif %}
     {% endfor %}
 </util:map>
 
@@ -249,6 +277,8 @@
     {% endfor %}
 </util:map>
 
+<alias name="prod.askEc2ServiceClient" alias="prod-border.askEc2ServiceClients"/>
+
 <util:map id="prod-border.askEc2ResourceInfoHelpers"
                  key-type="java.lang.String"
                  value-type="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
@@ -275,6 +305,17 @@
     {% endfor %}
 </util:map>
 
+<util:map id="prod-cn.askEc2ServiceClients"
+                 key-type="java.lang.String"
+                 value-type="com.amazonaws.askec2.AskEC2ServiceClient">
+    {% for realm_domain, location in locations['border_prod-cn'].items() %}
+        {% set region, stage = realm_domain.split('.') %}
+        {% if location['ec2_internal_api_client_qualifier']%}
+                <entry key="{{ region }}" value-ref="askEC2ClientWithCredentials.{{ realm_domain }}" />
+        {% endif %}
+    {% endfor %}
+</util:map>
+
 <util:map id="prod-cn.askEc2ResourceInfoHelpers"
                  key-type="java.lang.String"
                  value-type="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
@@ -298,6 +339,17 @@
                 <entry key="{{ region }}" value-ref="publicIpFetcher.{{ realm_domain }}" />
             {% endif %}
         {% endfor %}
+    {% endfor %}
+</util:map>
+
+<util:map id="edge-prod-cn.askEc2ServiceClients"
+                 key-type="java.lang.String"
+                 value-type="com.amazonaws.askec2.AskEC2ServiceClient">
+    {% for realm_domain, location in locations['edge_edge-prod-cn'].items() %}
+        {% set region, stage = realm_domain.split('.') %}
+        {% if location['ec2_internal_api_client_qualifier']%}
+                <entry key="{{ region }}" value-ref="askEC2ClientWithCredentials.{{ realm_domain }}" />
+        {% endif %}
     {% endfor %}
 </util:map>
 
