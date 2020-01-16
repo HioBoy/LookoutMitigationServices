@@ -277,7 +277,7 @@
     {% endfor %}
 </util:map>
 
-<alias name="prod.askEc2ServiceClient" alias="prod-border.askEc2ServiceClients"/>
+<alias name="prod.askEc2ServiceClients" alias="prod-border.askEc2ServiceClients"/>
 
 <util:map id="prod-border.askEc2ResourceInfoHelpers"
                  key-type="java.lang.String"
