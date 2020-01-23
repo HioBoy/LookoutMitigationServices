@@ -361,7 +361,7 @@
     </bean>
 
     <bean id="mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg value="com.amazon.lookout.mws.blackwatch"/>
+        <constructor-arg value="com.amazon.lookout.mws.blackwatch.${realm}.${domain}"/>
     </bean>
 </beans>
 
