@@ -66,7 +66,7 @@ public class DDBBasedHostStatusInfoHandlerTest {
         dynamoDBClient = DynamoDBLocalMocks.setupSpyDdbClient(dynamoDBClient);
         
         hostStatusInfoHandler = new DDBBasedHostStatusInfoHandler(dynamoDBClient, domain, realm);
-        hostStatusDynamoDBHelper = new HostStatusDynamoDBHelper(dynamoDBClient, realm, domain, 51, 51, metricsFactory);
+        hostStatusDynamoDBHelper = new HostStatusDynamoDBHelper(dynamoDBClient, realm, domain, metricsFactory);
 
         // mock TSDMetric
         Mockito.doReturn(metrics).when(metricsFactory).newMetrics();
