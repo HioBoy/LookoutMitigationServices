@@ -64,20 +64,6 @@ package.LookoutMitigationService = {
             CoralSslProxySupport = 1.0;
             RIPJavaHelper = 1.2;
             BlackWatchBorderLocationConfig = 1.0;
-            AmazonApolloEnvironmentInfoJava = 1.2; # For resolves-conflict-dependencies
-            CoralClientOdinSupport = 1.2; # For resolves-conflict-dependencies
-            CoralCore = 1.1; # For resolves-conflict-dependencies
-            CoralHttpSupport = 1.1; # For resolves-conflict-dependencies
-            CoralMetricsQuerylogReporter = 1.1; # For resolves-conflict-dependencies
-            CoralModeledExceptions = 1.1; # For resolves-conflict-dependencies
-            CoralRetry = 2.0; # For resolves-conflict-dependencies
-            GoogleGuava = 21.x; # For resolves-conflict-dependencies
-            Jackson-databind = 2.8.x; # For resolves-conflict-dependencies
-            JakartaCommons-codec = 1; # For resolves-conflict-dependencies
-            JakartaCommons-httpclient = 3.1; # For resolves-conflict-dependencies
-            Javassist = 3.20.x; # For resolves-conflict-dependencies
-            Zlib = 1; # For resolves-conflict-dependencies
-            log4j = 2.8; # For resolves-conflict-dependencies
             LookoutMWSClientJava = 1.0;
 
         };
@@ -140,6 +126,7 @@ package.LookoutMitigationService = {
             CoralThrottleEngine = 1.1; # For resolves-conflict-dependencies
             CoralUtil = 1.1; # For resolves-conflict-dependencies
             JakartaCommons-logging = 1.2; # For resolves-conflict-dependencies
+            log4j = 2.8;
         };
     };
 
@@ -194,6 +181,8 @@ package.LookoutMitigationService = {
             OdinAWSCredentials = 1.4;
             CoralQueryStringValue = 1.1;
             CoralTibcoValue = 1.1;
+            CoralClientCall = 1.1;
+            CoralIdentity = 1.1;
         };
     };
 
