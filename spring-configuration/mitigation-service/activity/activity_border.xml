@@ -349,12 +349,11 @@
     </bean>
 
     <bean id="mwsClientProvider" class="amazon.mws.query.MonitoringQueryClientProvider">
-        <constructor-arg name="odinAWSCredsProvider" ref="mwsCredentialsProvider"/>
+        <!-- reuse the s3 access credential for publish metrics to MWS instead of creating a new one.
+        -->
+        <constructor-arg name="odinAWSCredsProvider" ref="s3OdinCredential"/>
         <constructor-arg name="regionName" value="${realm}"/>
     </bean>
 
-    <bean id="mwsCredentialsProvider" class="amazon.odin.awsauth.OdinAWSCredentialsProvider">
-        <constructor-arg value="com.amazon.lookout.mws.blackwatch.${realm}.${domain}"/>
-    </bean>
 </beans>
 
