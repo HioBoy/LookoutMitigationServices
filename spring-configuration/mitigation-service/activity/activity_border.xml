@@ -294,7 +294,6 @@
 
     <bean id="locksDao" class="com.amazon.lookout.mitigation.datastore.MitigationServiceLocksDAOImpl">
         <constructor-arg name="client" ref="dynamoDBClient" />
-        <constructor-arg name="tableThroughput" ref="mitigationServiceLocksTableThroughput" />
         <constructor-arg name="region" value="${realm}" />
         <constructor-arg name="domain" value="${domain}" />
     </bean>
