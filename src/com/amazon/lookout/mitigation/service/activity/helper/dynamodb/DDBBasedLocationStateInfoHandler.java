@@ -313,15 +313,19 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         LocationState locationState = getLocationState(location, tsdMetrics);
         List<BlackWatchLocation> allStacksAtLocation = getAllBlackWatchLocationsAtSameAirportCode(locationState, tsdMetrics);
         boolean otherStackinService = allStacksAtLocation.size() > 1 ? true : false;
+        LOG.info("Stacks at this location: " + allStacksAtLocation.toString());
         for (BlackWatchLocation stack : allStacksAtLocation) {
             /*
              * This is intermediate check when request to take a stack out arrives while other stack
              * is being taken out (other stack: AdminIn = false, but InService true).
              */
-            if (!stack.isAdminIn()) {
-                return false;
+            if(!stack.getLocation().equals(location)) {
+                if ( !stack.isAdminIn()) {
+                    return false;
+                }
+                otherStackinService = otherStackinService 
+                        && isLocationOperational(stack.getLocation(), allStacksAtLocation, tsdMetrics);
             }
-            otherStackinService = otherStackinService && isLocationOperational(stack.getLocation(), allStacksAtLocation, tsdMetrics);
         }
         return otherStackinService;
     }
