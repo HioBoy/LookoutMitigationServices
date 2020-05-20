@@ -59,6 +59,8 @@ public class DogFishMetadataProvider implements Runnable {
             final DogfishJSON awsDogfishJSON = dogfishFetcher.getCurrentObject();
             final Optional<DateTime> latestAwsDogfishUpdateTimeStamp = dogfishFetcher.getLastUpdateTimestamp();
 
+            LOG.info("latestAwsDogfishUpdateTimestamp : " + latestAwsDogfishUpdateTimeStamp);
+            LOG.info("lastAwsDogfishUpdateTimestamp : " + lastAwsDogfishUpdateTimestamp);
             if (cidrToPrefixMetadataTrie == null ||
                     isNewerThanCache(awsDogfishJSON, lastAwsDogfishUpdateTimestamp, latestAwsDogfishUpdateTimeStamp)) {
                 LOG.info("Updating the dogfish prefix trie");
@@ -80,7 +82,7 @@ public class DogFishMetadataProvider implements Runnable {
         for (DogfishIPPrefix prefix : awsDogfishJSON.getPrefixes()) {
             try {
                 trie.insert(IPUtils.parseCidr(prefix.getIpPrefix()), prefix);
-            }    
+            }
             catch (Exception e) {
                 LOG.warn("[INVALID_PREFIX] Could not enter metadata to trie for prefix: " + prefix.getIpPrefix());
             }
@@ -88,11 +90,13 @@ public class DogFishMetadataProvider implements Runnable {
         cidrToPrefixMetadataTrie = trie;
     }
 
+    // update dogfish trie if cache data is too old (> 1 day old) or downloaded data is newer than existing trie
     private boolean isNewerThanCache(DogfishJSON dogfishJSON, Optional<DateTime> lastLocalDogfishJSONUpdateTimeStamp,
         Optional<DateTime> dogfishJSONTimeStamp) {
         return (null != dogfishJSON
-        && (!lastLocalDogfishJSONUpdateTimeStamp.isPresent()
-        || lastLocalDogfishJSONUpdateTimeStamp.get().isBefore(dogfishJSONTimeStamp.get())));
+            && (!lastLocalDogfishJSONUpdateTimeStamp.isPresent()
+            || lastLocalDogfishJSONUpdateTimeStamp.get().isBefore(DateTime.now().minusDays(1))
+            || lastLocalDogfishJSONUpdateTimeStamp.get().isBefore(dogfishJSONTimeStamp.get())));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})  // due to legacy lookout code, not fixing
