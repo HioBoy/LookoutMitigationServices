@@ -33,6 +33,7 @@ public class DogFishMetadataProvider implements Runnable {
     private static final Log LOG = LogFactory.getLog(DogFishMetadataProvider.class);
     private final AwsDogfishPrefixesMetadataFetcher dogfishFetcher;
     private Optional<DateTime> lastAwsDogfishUpdateTimestamp = Optional.empty();
+    private DateTime lastUpdateTimestamp = DateTime.now();
     private final MetricsFactory metricsFactory;
     private static volatile AllIpVersionsCidrsTrie<DogfishIPPrefix> cidrToPrefixMetadataTrie;
 
@@ -62,9 +63,10 @@ public class DogFishMetadataProvider implements Runnable {
             LOG.info("latestAwsDogfishUpdateTimestamp : " + latestAwsDogfishUpdateTimeStamp);
             LOG.info("lastAwsDogfishUpdateTimestamp : " + lastAwsDogfishUpdateTimestamp);
             if (cidrToPrefixMetadataTrie == null ||
-                    isNewerThanCache(awsDogfishJSON, lastAwsDogfishUpdateTimestamp, latestAwsDogfishUpdateTimeStamp)) {
+                isNewerThanCache(awsDogfishJSON, lastAwsDogfishUpdateTimestamp, latestAwsDogfishUpdateTimeStamp)) {
                 LOG.info("Updating the dogfish prefix trie");
                 lastAwsDogfishUpdateTimestamp = latestAwsDogfishUpdateTimeStamp;
+                lastUpdateTimestamp = DateTime.now();
                 buildPrefixTrie(awsDogfishJSON);
             } else {
                 LOG.info("The local copy and remote S3 copy of the dog fish file is same. No need to download new dog fish data");
@@ -95,7 +97,7 @@ public class DogFishMetadataProvider implements Runnable {
         Optional<DateTime> dogfishJSONTimeStamp) {
         return (null != dogfishJSON
             && (!lastLocalDogfishJSONUpdateTimeStamp.isPresent()
-            || lastLocalDogfishJSONUpdateTimeStamp.get().isBefore(DateTime.now().minusDays(1))
+            || this.lastUpdateTimestamp.isBefore(DateTime.now().minusDays(1))
             || lastLocalDogfishJSONUpdateTimeStamp.get().isBefore(dogfishJSONTimeStamp.get())));
     }
 
