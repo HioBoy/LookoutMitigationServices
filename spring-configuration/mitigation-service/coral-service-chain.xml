@@ -41,6 +41,7 @@
 
                 <!-- Here are protocol handlers. You need at least one.-->
                 <bean class="com.amazon.coral.service.http.HttpBindingHandler"/>
+                <bean class="com.amazon.coral.service.HttpAwsJsonHandler"/>
                 <bean class="com.amazon.coral.service.HttpRpcHandler"/>
 
                 <!-- ContentHandler has to be before the AuthenticationHandler to be able to use the Explorer. -->
