@@ -39,7 +39,7 @@ public interface BlackWatchMitigationInfoHandler {
 
     public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceType,
             Integer minsToLive, MitigationActionMetadata metadata,
-            BlackWatchTargetConfig targetConfig, String userARN, TSDMetrics tsdMetrics);
+            BlackWatchTargetConfig targetConfig, String userARN, TSDMetrics tsdMetrics, boolean allowAutoMitigationOverride);
     
     public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId,
             Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,

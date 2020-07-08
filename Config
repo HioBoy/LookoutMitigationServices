@@ -138,6 +138,7 @@ package.LookoutMitigationService = {
             LookoutTestCommons = 1.0;
             DynamoDBLocal = 1.11.x;
             Log4j-core = 2.8; # For resolves-conflict-dependencies
+            JUnit-4-12-migration = 5.x;
         };
     };
 

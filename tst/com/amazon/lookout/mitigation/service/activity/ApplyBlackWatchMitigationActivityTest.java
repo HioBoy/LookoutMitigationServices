@@ -52,7 +52,7 @@ public class ApplyBlackWatchMitigationActivityTest extends ActivityTestHelper {
         ApplyBlackWatchMitigationResponse retResponse = new ApplyBlackWatchMitigationResponse();
         Mockito.doReturn(retResponse).when(blackwatchMitigationInfoHandler).applyBlackWatchMitigation(anyString(), 
                 anyString(), anyInt(),  isA(MitigationActionMetadata.class),
-                isA(BlackWatchTargetConfig.class), anyString(), isA(TSDMetrics.class));
+                isA(BlackWatchTargetConfig.class), anyString(), isA(TSDMetrics.class), anyBoolean());
 
         ApplyBlackWatchMitigationResponse response = applyBlackWatchMitigationActivity.enact(request);
         assertEquals(requestId, response.getRequestId());

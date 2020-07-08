@@ -373,7 +373,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     @Override
     public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceTypeString,
             Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
-            String userARN, TSDMetrics tsdMetrics) {
+            String userARN, TSDMetrics tsdMetrics, boolean allowAutoMitigationOverride) {
         Validate.notNull(resourceId);
         Validate.notNull(resourceTypeString);
         Validate.notNull(targetConfig);
@@ -482,7 +482,9 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                             .filter(ms -> isRequestIpCoveredByExistingMitigation(ipAddressToCheck, ms))
                             .findAny();
 
-                    if (mitigationStateWithSupersetPrefix.isPresent()) {
+                    //If customers is ok to allow BAM overriding mitigation, then do nothing.
+                    //Otherwise, throw out the error
+                    if (!allowAutoMitigationOverride && mitigationStateWithSupersetPrefix.isPresent()) {
                         String errorMsg = String.format("The request is rejected since the user %s is "
                                 + "auto mitigation (BAM or EC2), and mitigation %s already exists on a superset prefix",
                                 userARN,

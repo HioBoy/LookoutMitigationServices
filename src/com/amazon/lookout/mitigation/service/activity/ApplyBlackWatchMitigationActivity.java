@@ -92,10 +92,11 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
             String resourceType = request.getResourceType();
             Integer minsToLive = request.getMinutesToLive();
             MitigationActionMetadata metadata = request.getMitigationActionMetadata();
+            boolean allowAutoMitigationOverride = request.isAllowAutoMitigationOverride();
 
             ApplyBlackWatchMitigationResponse response = blackwatchMitigationInfoHandler
                     .applyBlackWatchMitigation(resourceId, resourceType, minsToLive,
-                            metadata, targetConfig, userARN, tsdMetrics);
+                            metadata, targetConfig, userARN, tsdMetrics, allowAutoMitigationOverride);
             response.setRequestId(requestId);
 
             return response;
