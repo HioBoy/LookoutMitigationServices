@@ -1048,7 +1048,13 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
         @Test
         public void testApplyBlackWatchMitigation_BamAndEc2RequestIpCoveredByExistingMitigationButAllowOverride_Success() {
-            String resourceId = "10.0.0.128";
+            ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                    "IPList-ABCD", testIPAddressListResourceType, 10, testMetadata,
+                    parseJSON(String.format(ipListTemplate, "\"10.0.0.0\"")), "ARN-1222", tsdMetrics, true);
+            assertNotNull(response);
+            assertTrue(response.isNewMitigationCreated());
+
+            String resourceId = "10.0.0.0";
 
             Map<String, Set<String>> recordedResources1 = ImmutableMap.of(
                     BlackWatchMitigationResourceType.IPAddress.name(),
@@ -1063,11 +1069,11 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
             mitigationStateDynamoDBHelper.batchUpdateState(ImmutableList.of(mitigationState1, mitigationState2));
 
-            ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+            ApplyBlackWatchMitigationResponse response_bam = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                     resourceId, testIPAddressResourceType, 10, testMetadata,
-                    parseJSON(testValidJSON), testBamAndEc2OwnerArnPrefix + "/BAM", tsdMetrics, true);
-            assertNotNull(response);
-            assertTrue(response.isNewMitigationCreated());
+                    parseJSON(testValidJSON), testBamAndEc2OwnerArnPrefix + "/BAM", tsdMetrics, false);
+            assertNotNull(response_bam);
+            assertTrue(response_bam.isNewMitigationCreated());
 
             // Validate owner arn of mitigation is correct
             MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(response.getMitigationId());

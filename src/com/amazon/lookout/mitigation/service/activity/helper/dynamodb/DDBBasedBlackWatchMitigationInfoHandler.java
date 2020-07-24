@@ -455,6 +455,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     mitigationState = MitigationState.builder()
                             .mitigationId(mitigationId)
                             .resourceId(canonicalResourceId)
+                            .allowAutoMitigationOverride(allowAutoMitigationOverride)
                             .resourceType(resourceTypeString)
                             .ownerARN(userARN)
                             .build();
@@ -484,7 +485,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
 
                     //If customers is ok to allow BAM overriding mitigation, then do nothing.
                     //Otherwise, throw out the error
-                    if (!allowAutoMitigationOverride && mitigationStateWithSupersetPrefix.isPresent()) {
+                    if (mitigationStateWithSupersetPrefix.isPresent() && !mitigationStateWithSupersetPrefix.get().isAllowAutoMitigationOverride()) {
                         String errorMsg = String.format("The request is rejected since the user %s is "
                                 + "auto mitigation (BAM or EC2), and mitigation %s already exists on a superset prefix",
                                 userARN,
