@@ -228,6 +228,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                             .withLatestMitigationActionMetadata(mitigationActionMetadata)
                             .withLocationMitigationState(locationMitigationState)
                             .withRecordedResources(ms.getRecordedResources())
+                            .withAllowAutoMitigationOverride(ms.isAllowAutoMitigationOverride())
                             .build();
                     listOfBlackWatchMitigations.add(mitigationDefinition);
                     if (listOfBlackWatchMitigations.size() >= maxNumberOfEntriesToReturn) {
