@@ -11,6 +11,7 @@ import org.joda.time.DateTime;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.Assert;
+import org.junit.Rule;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.test.common.util.TestUtils;
@@ -22,6 +23,7 @@ import com.amazon.lookout.models.prefixes.DogfishJSON;
 import com.amazon.lookout.ip.trie.AllIpVersionsCidrsTrie;
 import com.amazon.lookout.ip.IPUtils;
 
+import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
 import static org.mockito.Mockito.*;
@@ -36,6 +38,8 @@ public class DogFishMetadataProviderTest {
     private final List<DogfishIPPrefix> ipPrefixes = new ArrayList<>();
     private MetricsFactory metricsFactory;
     private static Metrics metrics = Mockito.mock(Metrics.class);
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
 
     String[] ipv4Prefixes = { "103.246.150.0/24", "10.12.13.161/32", "54.231.226.0/32", "103.246.150.122/32" };
     String[] ipv4 = { "103.246.150.1", "10.12.13.161", "54.231.226.0", "103.246.150.122" };
@@ -172,44 +176,50 @@ public class DogFishMetadataProviderTest {
     }
 
     /**
+     * Test null
+     */
+    @Test
+    public void testNullDogfish() {
+        awsDogfishFetcher = mock(AwsDogfishPrefixesMetadataFetcher.class);
+        awsDogfishJSON = mock(DogfishJSON.class);
+        DateTime currentTime = new DateTime();
+
+        Mockito.doNothing().when(awsDogfishFetcher).ensureLoadAttempted();
+        when(awsDogfishFetcher.isDataReady()).thenReturn(false);
+        when(awsDogfishFetcher.getCurrentObject()).thenReturn(null);
+        
+        awsDogFishMetadataProvider = spy(new DogFishMetadataProvider(awsDogfishFetcher, metricsFactory)); 
+        String testIP = "32.31.45.11/24";
+
+        thrown.expect(IllegalArgumentException.class);
+        awsDogFishMetadataProvider.attemptToFetchFile();
+    }
+
+    /**
      * Test Invalid IPs and CIDRs
      */
     @Test
     public void testInvalidIPAndCidr() {
-        for (int i = 0; i < invalidIpv4.length; i++) {
-            try {
-                awsDogFishMetadataProvider.getCIDRMetaData(invalidIpv4[i]);
-            }
-            catch (Exception e) {
-                Assert.assertEquals(e.getMessage(), "Invalid IP/CIDR");
-            }
-        }
+        String testIP = "32.31.45.11/24";
 
-        for (int i = 0; i < invalidIpv6.length; i++) {
-            try {
-                awsDogFishMetadataProvider.getCIDRMetaData(invalidIpv6[i]);
-            }
-            catch (Exception e) {
-                Assert.assertEquals(e.getMessage(), "Invalid IP/CIDR");
-            }
-        }
+        awsDogFishMetadataProvider.fetchFile();
+        DogfishIPPrefix fetchedPrefix = awsDogFishMetadataProvider.getCIDRMetaData(testIP);
+        Assert.assertEquals(fetchedPrefix, null);
 
-        for (int i = 0; i < invalidIpv4Cidr.length; i++) {
-            try {
-                awsDogFishMetadataProvider.getCIDRMetaData(invalidIpv4Cidr[i]);
-            }
-            catch (Exception e) {
-                Assert.assertEquals(e.getMessage(), "Invalid IP/CIDR");
-            }
-        }
+        int index = 0;
+        DogfishIPPrefix prefix = new DogfishIPPrefix();
+        prefix.setIpPrefix(testIP);
+        prefix.setNetwork(networks[index]);
+        prefix.setService(services[index]);
+        prefix.setRegion(regions[index]);
+        prefix.setAz(azs[index]);
+        prefix.setType(types[index]);
+        prefix.setDescription(descriptions[index]);
+        prefix.setIpVersion(DogfishIPPrefix.IP_VERSION_IPV4);
+        ipPrefixes.add(prefix);
 
-        for (int i = 0; i < invalidIpv6Cidr.length; i++) {
-            try {
-                awsDogFishMetadataProvider.getCIDRMetaData(invalidIpv6Cidr[i]);
-            }
-            catch (Exception e) {
-                Assert.assertEquals(e.getMessage(), "Invalid IP/CIDR");
-            }
-        }
+        awsDogFishMetadataProvider.fetchFile();
+        fetchedPrefix = awsDogFishMetadataProvider.getCIDRMetaData(testIP);
+        Assert.assertEquals(fetchedPrefix.getIpPrefix(), testIP);
     }
 }

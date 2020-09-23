@@ -47,29 +47,61 @@ public class DogFishMetadataProvider implements Runnable {
     @Override
     public void run() {
         try {
-            fetchFile();
+            attemptToFetchFile();
         }
         catch (Exception ex) {
             LOG.error("A problem occurred when running the dog fish file fetcher.", ex);
+        }
+
+    }
+
+    public void attemptToFetchFile() {
+        final int MAX_RETRIES = 3;
+        final int RETRY_SLEEP_MILLIS = 100;
+        
+        for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            fetchFile();
+            if (cidrToPrefixMetadataTrie != null) { 
+                return;
+            } else {
+                try {
+                    // exponential backoff sleep before retrying 
+                    Thread.sleep((RETRY_SLEEP_MILLIS*(long) Math.pow(2, attempt))*((long) (1.0 + Math.random())/(long) 2.0));
+                } catch (InterruptedException e) {
+                    final String msg = "Interrupted while waiting to retry fetching dogfish data";
+                    LOG.warn(msg);
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+            
+        }
+        // failed attempts at getting dogfish data, dogfish lookups will fail causing impact if no cache data exists
+        if (cidrToPrefixMetadataTrie == null) {
+            String msg = String.format("[DOGFISH_DATA_MISSING] Failed to get dogfish data after %d retries. No cached data to fall back to.", MAX_RETRIES);
+            LOG.warn(msg);
+            throw new IllegalArgumentException(msg);
         }
     }
     
     public synchronized void fetchFile() {
         LOG.info("Running Periodic Worker to check if dog fish file download is required");
         try (TSDMetrics metrics = new TSDMetrics(metricsFactory, "RunDogFishMetadataProvider")) {
-            final DogfishJSON awsDogfishJSON = dogfishFetcher.getCurrentObject();
-            final Optional<DateTime> latestAwsDogfishUpdateTimeStamp = dogfishFetcher.getLastUpdateTimestamp();
+            if (dogfishFetcher.isDataReady()) {
+                final DogfishJSON awsDogfishJSON = dogfishFetcher.getCurrentObject();
+                final Optional<DateTime> latestAwsDogfishUpdateTimeStamp = dogfishFetcher.getLastUpdateTimestamp();
 
-            LOG.info("latestAwsDogfishUpdateTimestamp : " + latestAwsDogfishUpdateTimeStamp);
-            LOG.info("lastAwsDogfishUpdateTimestamp : " + lastAwsDogfishUpdateTimestamp);
-            if (cidrToPrefixMetadataTrie == null ||
-                isNewerThanCache(awsDogfishJSON, lastAwsDogfishUpdateTimestamp, latestAwsDogfishUpdateTimeStamp)) {
-                LOG.info("Updating the dogfish prefix trie");
-                lastAwsDogfishUpdateTimestamp = latestAwsDogfishUpdateTimeStamp;
-                lastUpdateTimestamp = DateTime.now();
-                buildPrefixTrie(awsDogfishJSON);
-            } else {
-                LOG.info("The local copy and remote S3 copy of the dog fish file is same. No need to download new dog fish data");
+                LOG.info("latestAwsDogfishUpdateTimestamp : " + latestAwsDogfishUpdateTimeStamp);
+                LOG.info("lastAwsDogfishUpdateTimestamp : " + lastAwsDogfishUpdateTimestamp);
+                if ((cidrToPrefixMetadataTrie == null ||
+                    isNewerThanCache(awsDogfishJSON, lastAwsDogfishUpdateTimestamp, latestAwsDogfishUpdateTimeStamp))) {
+                    LOG.info("Updating the dogfish prefix trie");
+                    lastAwsDogfishUpdateTimestamp = latestAwsDogfishUpdateTimeStamp;
+                    lastUpdateTimestamp = DateTime.now();
+                    buildPrefixTrie(awsDogfishJSON);
+                } else {
+                    LOG.info("ThePrefix metadata is not available from the helper local copy and remote S3 copy of the dog fish file is same. No need to download new dog fish data");
+                }
             }
         }
     }
