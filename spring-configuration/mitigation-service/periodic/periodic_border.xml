@@ -30,6 +30,11 @@
                     <property name="period" value="180"/>
                     <property name="timeUnit" ref="seconds"/>
                 </bean>
+                <bean class="com.amazon.aws158.commons.periodic.PeriodicWork">
+                    <property name="runnable" ref="awsDogfishPrefixesMetadataFetcher"/>
+                    <property name="period" value="180"/>
+                    <property name="timeUnit" ref="seconds"/>
+                </bean>
             </set>
         </property>
         <!-- must be longer than leaderElectionLeaseDurationMillis for clean shutdown -->
@@ -37,6 +42,21 @@
         <property name="shutdownTimeoutUnit" value="SECONDS"/>
     </bean>
     
+    <bean id="awsDogfishPrefixesMetadataFetcher" class="com.amazon.lookout.mitigation.service.activity.helper.AwsDogfishPrefixesMetadataFetcher">
+        <constructor-arg name="pathToDiskCache" value="${root}/var/prefixes"/>
+        <constructor-arg name="fileName" value="dogfish.json"/>
+        <constructor-arg name="syncAlarmThresholdMinutes" value="90"/> <!-- 1.5 hours -->
+        <constructor-arg name="acceptableAgeOfCachedContentMinutes" value="180"/> <!-- 3 hours -->
+        <constructor-arg name="region" value="us-east-1" />  <!-- lookout's prefix buckets are all in IAD -->
+        <constructor-arg name="domain" ref="${domain}.dogfishBucketSuffix"/>
+        <constructor-arg name="materialSet" ref="consolidatedMetadataMaterialSet"/>
+        <constructor-arg name="reportees">
+            <list>
+                <ref bean="amazonPrefixesMetadataTracker"/>
+            </list>
+        </constructor-arg>
+        <constructor-arg name="metricsFactory" ref="metricsFactory"/>
+    </bean>
     <bean id="dogFishMetadataProvider" class="com.amazon.lookout.mitigation.service.workflow.helper.DogFishMetadataProvider">
         <constructor-arg name="dogfishFetcher" ref="awsDogfishPrefixesMetadataFetcher"/>
         <constructor-arg name="metricsFactory" ref="metricsFactory"/>
