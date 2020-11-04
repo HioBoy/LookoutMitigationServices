@@ -860,10 +860,8 @@ public class RequestValidator {
         // Merge global PPS/BPS into the target config
         BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
 
-        if (!request.getResourceType().equalsIgnoreCase("GLB")) {
-            // Validate the new target configuration
-            targetConfig.validate();
-        }
+        // Validate the new target configuration
+        targetConfig.validate();
 
         validateUserARN(userARN);
         return targetConfig;

@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1276,6 +1277,49 @@ public class RequestValidatorTest {
         assertTrue(caughtExcepion instanceof IllegalArgumentException);
         assertTrue(caughtExcepion.getMessage()
                                  .startsWith("Invalid resource ID! An IP Address List resource ID cannot contain whitespace characters"));
+    }
+
+    @Test(expected=IllegalArgumentException.class)
+    public void testGlbRequestsAreValidated() {
+        // We tolerate a rate limit of zero when only the default shaper is present.
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(
+                MitigationActionMetadata.builder().withUser("Username")
+                        .withToolName("Toolname")
+                        .withDescription("Description")
+                        .withRelatedTickets(Arrays.asList("1234", "5655"))
+                        .build());
+        request.setResourceId("AGlbArn");
+        request.setResourceType("GLB");
+
+        String json = ""
+                + "{" +
+                "  \"glb_mitigation_config\": {\n" +
+                "    \"listener_config\": {\n" +
+                "      \"default\": {\n" +
+                "        \"regional_capacity_limits\": {\n" +
+                "          \"no-such-1\": {\n" + // this should cause the validate call, if made, to throw an exception
+                "            \"global_pps\": 330000\n" +
+                "          },\n" +
+                "          \"eu-west-2\": {\n" +
+                "            \"global_pps\": 440000\n" +
+                "          }\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  },\n"
+                + "  \"mitigation_config\": {"
+                + "    \"global_traffic_shaper\": {"
+                + "      \"default\": {"
+                + "        \"global_pps\": 0"
+                + "      }"
+                + "    }"
+                + "  }"
+                + "}";
+
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
     }
 
 }
