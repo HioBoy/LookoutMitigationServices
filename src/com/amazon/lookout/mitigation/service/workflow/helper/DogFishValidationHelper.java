@@ -14,16 +14,19 @@ public class DogFishValidationHelper {
     private final boolean isMasterRegion;
     private final DogFishMetadataProvider dogfishMetadata;
     private final Map<String, String> regionEndpoints;
+    private final Map<String, Boolean> handleActiveBWAPIMitigations;
     private final String masterEndpoint;
     
     public DogFishValidationHelper(@NonNull String region, @NonNull String masterRegion, 
-            @NonNull DogFishMetadataProvider dogfishMetadata, @NonNull Map<String, String> regionEndpoints) {
+            @NonNull DogFishMetadataProvider dogfishMetadata, @NonNull Map<String, String> regionEndpoints,
+            @NonNull Map<String, Boolean> handleActiveBWAPIMitigations) {
         Validate.notNull(region, "Region cannot be null!");
         Validate.notNull(masterRegion, "Master region cannot be null!");
         this.region = region;
         this.isMasterRegion = masterRegion.equals(region);
         this.dogfishMetadata = dogfishMetadata;
         this.regionEndpoints = regionEndpoints;
+        this.handleActiveBWAPIMitigations = handleActiveBWAPIMitigations;
         Validate.notNull(regionEndpoints.get(region), "Region is not found in the region endpoint map!");
         masterEndpoint = regionEndpoints.get(masterRegion);
         Validate.notNull(regionEndpoints.get(masterRegion), "Master region is not found in the region endpoint map!");
@@ -49,7 +52,7 @@ public class DogFishValidationHelper {
                     + " Regional endpoint:%s", 
                     cidr, regionEndpoints.get(fetchedRegion));
             throw new IllegalArgumentException(message);
-        } else if (regionEndpoints.containsKey(fetchedRegion)) {
+        } else if (regionEndpoints.containsKey(fetchedRegion) && Boolean.TRUE.equals(handleActiveBWAPIMitigations.get(fetchedRegion))) {
             String message = String.format("The resource:%s was found in a region with an active mitigation service, "
                     + "please use that regional endpoint to create a mitigation for the resource. Regional endpoint:%s", 
                     cidr, regionEndpoints.get(fetchedRegion));

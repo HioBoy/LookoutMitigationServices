@@ -17,11 +17,15 @@ public class DogFishValidationHelperTest {
     
     private static DogFishValidationHelper helper;
     Map<String, String> regionEndpoints = ImmutableMap.of(testRegion1, 
-            "test-1.amazon.com", testRegion2, "test-2.amazon.com");
+            "test-1.amazon.com", testRegion2, "test-2.amazon.com",
+            testRegion4, "test-4.amazon.com");
+    Map<String, Boolean> handleActiveBWAPIMitigations = ImmutableMap.of(testRegion1,
+            Boolean.TRUE, testRegion2, Boolean.TRUE, testRegion4, Boolean.FALSE);
     private static final String testRegion1 = "test-1";
     private static final String testRegion2= "test-2";
     private static final String testRegion3= "test-3";
-    
+    private static final String testRegion4 = "test-4";
+
     private static final DogFishMetadataProvider dogFishProvider 
         = Mockito.mock(DogFishMetadataProvider.class);
     
@@ -30,7 +34,7 @@ public class DogFishValidationHelperTest {
         DogfishIPPrefix prefix = new DogfishIPPrefix();
         prefix.setRegion(testRegion1);
         
-        helper = new DogFishValidationHelper(testRegion1, testRegion1, dogFishProvider, regionEndpoints);
+        helper = new DogFishValidationHelper(testRegion1, testRegion1, dogFishProvider, regionEndpoints, handleActiveBWAPIMitigations);
         Mockito.doReturn(prefix).when(dogFishProvider).getCIDRMetaData(Mockito.anyString());
         helper.validateCIDRInRegion("1.2.3.4");
     }
@@ -39,7 +43,7 @@ public class DogFishValidationHelperTest {
     public void dogFishValidationHelperMasterRegionTest() {
         DogfishIPPrefix prefix = new DogfishIPPrefix();
         prefix.setRegion(testRegion3);//region where an endpoint mapping doesn't exist
-        helper = new DogFishValidationHelper(testRegion1, testRegion1, dogFishProvider, regionEndpoints);
+        helper = new DogFishValidationHelper(testRegion1, testRegion1, dogFishProvider, regionEndpoints, handleActiveBWAPIMitigations);
         Mockito.doReturn(prefix).when(dogFishProvider).getCIDRMetaData(Mockito.anyString());
         helper.validateCIDRInRegion("1.2.3.4");
     }
@@ -48,7 +52,7 @@ public class DogFishValidationHelperTest {
     public void dogFishValidationHelperNotFoundTest() {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("not found in DogFish");
-        helper = new DogFishValidationHelper(testRegion1, testRegion1, dogFishProvider, regionEndpoints);
+        helper = new DogFishValidationHelper(testRegion1, testRegion1, dogFishProvider, regionEndpoints, handleActiveBWAPIMitigations);
         Mockito.doReturn(null).when(dogFishProvider).getCIDRMetaData(Mockito.anyString());
         helper.validateCIDRInRegion("1.2.3.4");
     }
@@ -59,7 +63,16 @@ public class DogFishValidationHelperTest {
         prefix.setRegion(testRegion3);//region where an endpoint mapping doesn't exist
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("without an active");
-        helper = new DogFishValidationHelper(testRegion1, testRegion2, dogFishProvider, regionEndpoints);
+        helper = new DogFishValidationHelper(testRegion1, testRegion2, dogFishProvider, regionEndpoints, handleActiveBWAPIMitigations);
+        Mockito.doReturn(prefix).when(dogFishProvider).getCIDRMetaData(Mockito.anyString());
+        helper.validateCIDRInRegion("1.2.3.4");
+    }
+
+    @Test
+    public void dogFishValidationHelperRegionNotHandlingActiveMitigationsTest() {
+        DogfishIPPrefix prefix = new DogfishIPPrefix();
+        prefix.setRegion(testRegion4); // testRegion4 does not handle active mitigations, accept mitigations in master region
+        helper = new DogFishValidationHelper(testRegion1, testRegion1, dogFishProvider, regionEndpoints, handleActiveBWAPIMitigations);
         Mockito.doReturn(prefix).when(dogFishProvider).getCIDRMetaData(Mockito.anyString());
         helper.validateCIDRInRegion("1.2.3.4");
     }

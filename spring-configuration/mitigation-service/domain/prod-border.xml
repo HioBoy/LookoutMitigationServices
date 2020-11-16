@@ -12,6 +12,8 @@
 
     <alias name="prod.regionEndpointsMap" alias="prod-border.regionEndpointsMap"/>
 
+    <alias name="prod.handleActiveBWAPIMitigationsMap" alias="prod-border.handleActiveBWAPIMitigationsMap" />
+
     <bean id="prod-border.masterRegion" class="java.lang.String">
         <constructor-arg value="IAD"/>
     </bean>

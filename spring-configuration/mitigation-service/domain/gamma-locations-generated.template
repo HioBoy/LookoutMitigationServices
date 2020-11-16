@@ -26,4 +26,12 @@
         <!-- edge gamma endpoint -->
         <entry key="IAD" value="lookout-mitigation-service-us-east-1-gamma-iad.iad.proxy.amazon.com"/>
     </util:map>
+
+    <util:map id="gamma.handleActiveBWAPIMitigationsMap">
+        {% for location in locations['border_gamma'].values() %}
+        <entry key="{{ location['mitigation_region'] }}" value="{{ location['handleActiveBWAPIMitigations'] }}" />
+        {% endfor %}
+        <!-- edge gamma endpoint -->
+        <entry key="IAD" value="true" />
+    </util:map>
 </beans>

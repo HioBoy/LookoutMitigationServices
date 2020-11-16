@@ -24,5 +24,11 @@
         <entry key="{{ location['mitigation_region'] }}" value="{{ location['mitsvc_endpoint'].split('//')[1] }}"/>
         {% endfor %}
     </util:map>
+
+    <util:map id="prod.handleActiveBWAPIMitigationsMap">
+        {% for location in locations['border_prod'].values() %}
+        <entry key="{{ location['mitigation_region'] }}" value="{{ location['handleActiveBWAPIMitigations'] }}" />
+        {% endfor %}
+    </util:map>
 </beans>
 

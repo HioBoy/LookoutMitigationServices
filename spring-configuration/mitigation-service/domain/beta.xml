@@ -10,6 +10,10 @@
         <entry key="IAD" value="lookout-mitigation-service-beta.amazon.com"/>
     </util:map>
 
+    <util:map id="beta.handleActiveBWAPIMitigationsMap">
+        <entry key="IAD" value="true"/>
+    </util:map>
+
     <bean id="beta.dogfishBucketSuffix" class="java.lang.String">
         <constructor-arg value="beta" />
     </bean>

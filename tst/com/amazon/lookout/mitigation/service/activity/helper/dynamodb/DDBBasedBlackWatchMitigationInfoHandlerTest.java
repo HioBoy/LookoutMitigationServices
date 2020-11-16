@@ -86,6 +86,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final String testSecondaryRegion = "us-west-1";
     private static final Map<String, String> endpointMap = ImmutableMap.of(testMasterRegion, "master-1.a.c", 
             testSecondaryRegion, "secondary-1.a.c");
+    private static final Map<String, Boolean> handleActiveBWAPIMitigations = ImmutableMap.of(testMasterRegion, Boolean.TRUE,
+            testSecondaryRegion, Boolean.TRUE);
 
     private static final String testOwnerARN1 = "testOwnerARN1";
     private static final String testOwnerARN2 = "testOwnerARN2";
@@ -138,7 +140,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         prefix.setRegion(testMasterRegion);
 
         Mockito.doReturn(prefix).when(dogfishProvider).getCIDRMetaData(Mockito.anyString());
-        dogfishValidator = new DogFishValidationHelper(testMasterRegion, testMasterRegion, dogfishProvider, endpointMap);
+        dogfishValidator = new DogFishValidationHelper(testMasterRegion, testMasterRegion, dogfishProvider, endpointMap, handleActiveBWAPIMitigations);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
                 resourceTypeValidatorMap, resourceTypeHelpers,  4, testBamAndEc2OwnerArnPrefix, "us-east-1");
@@ -155,7 +157,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         tsdMetrics = new TSDMetrics(metricsFactory);
         elbResourceHelper = Mockito.mock(ELBResourceHelper.class);
         dogfishProvider = Mockito.mock(DogFishMetadataProvider.class);
-        dogfishValidator = new DogFishValidationHelper(testMasterRegion, testMasterRegion, dogfishProvider, endpointMap);
+        dogfishValidator = new DogFishValidationHelper(testMasterRegion, testMasterRegion, dogfishProvider, endpointMap, handleActiveBWAPIMitigations);
 
         resourceTypeValidatorMap.put(BlackWatchMitigationResourceType.IPAddress, 
                 new IPAddressResourceTypeValidator());
@@ -952,7 +954,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testApplyBlackWatchMitigationValidIPAddressDogFishFailedNotPrimaryUnknown() {
         //DogFish returned Non Mit SVC region - but we aren't primary.
         dogfishValidator = new DogFishValidationHelper(testSecondaryRegion, testMasterRegion, 
-                dogfishProvider, endpointMap);
+                dogfishProvider, endpointMap, handleActiveBWAPIMitigations);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
                 resourceTypeValidatorMap, resourceTypeHelpers, 4, testOwnerARN1, "us-east-1");
@@ -970,7 +972,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     public void testApplyBlackWatchMitigationValidIPAddressDogFishFailedNotPrimary() {
         //DogFish returned Non Mit SVC region - but we aren't primary.
         dogfishValidator = new DogFishValidationHelper(testSecondaryRegion, testMasterRegion, 
-                dogfishProvider, endpointMap);
+                dogfishProvider, endpointMap, handleActiveBWAPIMitigations);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
                 resourceTypeValidatorMap, resourceTypeHelpers, 4, testOwnerARN1, "us-east-1");
