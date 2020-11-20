@@ -184,6 +184,8 @@ package.LookoutMitigationService = {
             CoralTibcoValue = 1.1;
             CoralClientCall = 1.1;
             CoralIdentity = 1.1;
+            AWS158Metrics = 1.1;
+            Log4j-1_2-api = 2.8;
         };
     };
 
