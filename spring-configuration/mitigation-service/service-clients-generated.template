@@ -13,6 +13,10 @@
 {% for stack in locations.values() %}
     {% for realm_domain, location in stack.items() %}
         {% set region, stage = realm_domain.split('.') %}
+        {% set partition = 'aws' %}
+        {% if  stage.endswith('cn') %}
+            {% set partition = 'aws-cn' %}
+        {% endif %}
         {% if location['elb_internal_api_client_qualifier'] %}
 
             <coral:client id="elbInternalAPIClientBean.{{ realm_domain }}"
@@ -68,6 +72,8 @@
             </bean>
 
             <bean id="askEc2ResourceInfoHelper.{{ realm_domain }}" class="com.amazon.bardock.resources.ec2.AskEc2ResourceInfoHelper">
+                <constructor-arg name="partition" value="{{ partition }}" />
+                <constructor-arg name="region" value="{{ region }}" />
                 <constructor-arg name="askEC2Client" ref="askEC2ClientWithCredentials.{{ realm_domain }}" />
                 <constructor-arg name="metricsFactory" ref="metricsFactory" />
             </bean>

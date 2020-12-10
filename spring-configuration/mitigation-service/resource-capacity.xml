@@ -175,7 +175,7 @@
 
     <!-- SHARED CAPACITY HELPER DEPENDENCIES -->
 
-    <bean id="thresholdMaster" class="com.amazon.bardock.resources.threshold.ThresholdMaster">
+    <bean id="thresholdMaster" class="com.amazon.bardock.resources.threshold.ThresholdCollator">
         <constructor-arg name="thresholdModifiers" ref="thresholdModifiers" />
         <constructor-arg name="bobbinLog" ref="bobbinLog" />
     </bean>
