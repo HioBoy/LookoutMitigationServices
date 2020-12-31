@@ -30,5 +30,10 @@
         <entry key="{{ location['mitigation_region'] }}" value="{{ location['handleActiveBWAPIMitigations'] }}" />
         {% endfor %}
     </util:map>
-</beans>
 
+    <util:map id="prod.acceptMitigationsAtMasterRegionMap">
+        {% for location in locations['border_prod'].values() %}
+        <entry key="{{ location['mitigation_region'] }}" value="{{ location.get('acceptMitigationsAtMasterRegion', False) }}" />
+        {% endfor %}
+    </util:map>
+</beans>

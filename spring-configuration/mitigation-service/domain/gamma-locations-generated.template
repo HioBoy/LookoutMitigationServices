@@ -34,4 +34,12 @@
         <!-- edge gamma endpoint -->
         <entry key="IAD" value="true" />
     </util:map>
+
+    <util:map id="gamma.acceptMitigationsAtMasterRegionMap">
+        {% for location in locations['border_gamma'].values() %}
+        <entry key="{{ location['mitigation_region'] }}" value="{{ location.get('acceptMitigationsAtMasterRegion', False) }}" />
+        {% endfor %}
+        <!-- edge gamma endpoint -->
+        <entry key="IAD" value="true" />
+    </util:map>
 </beans>

@@ -234,6 +234,7 @@
         <constructor-arg name="dogfishMetadata" ref="dogFishMetadataProvider"/>
         <constructor-arg name="regionEndpoints" ref="${domain}.regionEndpointsMap"/>
         <constructor-arg name="handleActiveBWAPIMitigations" ref="${domain}.handleActiveBWAPIMitigationsMap" />
+        <constructor-arg name="acceptMitigationsAtMasterRegion" ref="${domain}.acceptMitigationsAtMasterRegionMap" />
     </bean>
 
     <bean id="ipaddressResourceTypeHelper" class="com.amazon.blackwatch.mitigation.resource.helper.BlackWatchIPAddressResourceTypeHelper" />    
