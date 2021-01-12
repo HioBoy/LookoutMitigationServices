@@ -15,6 +15,7 @@ import java.util.List;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
@@ -40,6 +41,7 @@ import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.junit.rules.ExpectedException;
 
 
 public class RequestValidatorTest {
@@ -55,6 +57,9 @@ public class RequestValidatorTest {
     private static final String currentRegion = "test-region";
 
     private RequestValidator validator = new RequestValidator(currentRegion);
+
+    @Rule
+    public ExpectedException invalidRegion = ExpectedException.none();
     
     @BeforeClass
     public static void setUpOnce() {
@@ -1279,9 +1284,11 @@ public class RequestValidatorTest {
                                  .startsWith("Invalid resource ID! An IP Address List resource ID cannot contain whitespace characters"));
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testGlbRequestsAreValidated() {
-        // We tolerate a rate limit of zero when only the default shaper is present.
+        invalidRegion.expect(IllegalArgumentException.class);
+        invalidRegion.expectMessage("Key: no-such-1 must be a region in the aws partition");
+
         ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
         request.setMitigationActionMetadata(
                 MitigationActionMetadata.builder().withUser("Username")
@@ -1295,7 +1302,7 @@ public class RequestValidatorTest {
         String json = ""
                 + "{" +
                 "  \"glb_mitigation_config\": {\n" +
-                "    \"listener_config\": {\n" +
+                "    \"listener_configs\": {\n" +
                 "      \"default\": {\n" +
                 "        \"regional_capacity_limits\": {\n" +
                 "          \"no-such-1\": {\n" + // this should cause the validate call, if made, to throw an exception
@@ -1307,15 +1314,8 @@ public class RequestValidatorTest {
                 "        }\n" +
                 "      }\n" +
                 "    }\n" +
-                "  },\n"
-                + "  \"mitigation_config\": {"
-                + "    \"global_traffic_shaper\": {"
-                + "      \"default\": {"
-                + "        \"global_pps\": 0"
-                + "      }"
-                + "    }"
-                + "  }"
-                + "}";
+                "  }\n"+
+                "}";
 
         request.setMitigationSettingsJSON(json);
         String userARN = "arn:aws:iam::005436146250:user/blackwatch";

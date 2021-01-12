@@ -860,8 +860,10 @@ public class RequestValidator {
         // Merge global PPS/BPS into the target config
         BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
 
-        // Validate the new target configuration
-        targetConfig.validate();
+        // The GLB resource type not need the default shaper because we generate it,
+        // so call validate with defaultRateLimitRequired = !isGlbResource
+        boolean isGlbResource = request.getResourceType().equalsIgnoreCase("GLB");
+        targetConfig.validate(!isGlbResource);
 
         validateUserARN(userARN);
         return targetConfig;
