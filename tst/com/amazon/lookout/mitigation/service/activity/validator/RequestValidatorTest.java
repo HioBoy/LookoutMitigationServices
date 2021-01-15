@@ -806,7 +806,7 @@ public class RequestValidatorTest {
         caughtExcepion = null;
 
         // Specify a global rate limit.
-        request.setGlobalPPS(5L);
+        request.setGlobalPPS(120L);
         validator.validateApplyBlackWatchMitigationRequest(request, userARN);
 
         JSON="{\"ipv6_per_dest_depth\":56, \"mitigation_config\":{}}";
@@ -901,7 +901,7 @@ public class RequestValidatorTest {
 
         final String userARN = "arn:aws:iam::005436146250:user/blackwatch";
 
-        final Long theRateLimit = 42L;
+        final Long theRateLimit = 120L;
         request.setGlobalPPS(theRateLimit);
 
         final BlackWatchTargetConfig newTargetConfig = validator.validateUpdateBlackWatchMitigationRequest(
@@ -923,7 +923,7 @@ public class RequestValidatorTest {
 
         final String userARN = "arn:aws:iam::005436146250:user/blackwatch";
 
-        final Long theRateLimit = 43L;
+        final Long theRateLimit = 120L;
 
         String json = String.format(""
             + "{"
@@ -939,7 +939,7 @@ public class RequestValidatorTest {
 
         final BlackWatchTargetConfig newTargetConfig = validator.validateUpdateBlackWatchMitigationRequest(
                 request, new BlackWatchTargetConfig(), userARN);
-        assertSame(theRateLimit, getDefaultRateLimit(newTargetConfig));
+        assertSame(theRateLimit.longValue(), getDefaultRateLimit(newTargetConfig).longValue());
     }
 
     @Test
