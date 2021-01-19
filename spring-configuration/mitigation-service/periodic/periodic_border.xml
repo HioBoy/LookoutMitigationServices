@@ -41,15 +41,29 @@
         <property name="shutdownTimeout" value="70"/>
         <property name="shutdownTimeoutUnit" value="SECONDS"/>
     </bean>
-    
+
+    <bean id="dogfishS3Bucket"
+          class="com.amazon.lookout.mitigation.service.activity.helper.blackwatch.DogfishHelper"
+          factory-method="getDogfishS3Bucket">
+        <constructor-arg name="region" value="${realm}"/>
+    </bean>
+
+    <bean id="dogfishS3Client"
+          class="com.amazon.lookout.mitigation.service.activity.helper.blackwatch.DogfishHelper"
+          factory-method="getDogfishS3Client">
+        <constructor-arg name="region" value="${realm}"/>
+        <constructor-arg name="domain" value="${domain}"/>
+        <constructor-arg name="credential" ref="ServiceRolesUserCredentialsProvider"/>
+    </bean>
+
     <bean id="awsDogfishPrefixesMetadataFetcher" class="com.amazon.lookout.mitigation.service.activity.helper.AwsDogfishPrefixesMetadataFetcher">
         <constructor-arg name="pathToDiskCache" value="${root}/var/prefixes"/>
         <constructor-arg name="fileName" value="dogfish.json"/>
         <constructor-arg name="syncAlarmThresholdMinutes" value="90"/> <!-- 1.5 hours -->
         <constructor-arg name="acceptableAgeOfCachedContentMinutes" value="180"/> <!-- 3 hours -->
-        <constructor-arg name="region" value="us-east-1" />  <!-- lookout's prefix buckets are all in IAD -->
-        <constructor-arg name="domain" ref="${domain}.dogfishBucketSuffix"/>
-        <constructor-arg name="materialSet" ref="consolidatedMetadataMaterialSet"/>
+        <constructor-arg name="dogfishS3Bucket" ref="dogfishS3Bucket" />
+        <constructor-arg name="dogfishS3Key" value="v1/aws-dogfish.json"/>
+        <constructor-arg name="dogfishS3Client" ref="dogfishS3Client"/>
         <constructor-arg name="reportees">
             <list>
                 <ref bean="amazonPrefixesMetadataTracker"/>

@@ -96,13 +96,6 @@
         <constructor-arg name="locationStateInfoHandler" ref="ddbBasedLocationStateInfoHandler"/>
     </bean>
 
-    <bean id="consolidatedMetadataMaterialSet"
-          class="com.amazon.lookout.mitigation.service.activity.helper.blackwatch.Utils"
-          factory-method="getMetadataMaterialSet">
-        <constructor-arg name="domain" value="${domain}"/>
-        <constructor-arg name="region" value="${realm}"/>
-        <constructor-arg name="isAWSOptinRegion" ref="isOptInRegion" />
-    </bean>
 
     <bean class="com.amazon.lookout.mitigation.service.activity.UpdateBlackWatchLocationStateActivity">
         <constructor-arg name="requestValidator" ref="requestValidator"/>
@@ -222,11 +215,6 @@
         <constructor-arg value="#{ripRegion.getAirportCode()}" />
     </bean>
 
-    <bean id="isOptInRegion"
-          class="com.amazon.lookout.mitigation.service.activity.helper.blackwatch.Utils"
-          factory-method="isAWSOptInRegion">
-        <constructor-arg value="${realm}" />
-    </bean>
 
     <bean id="dogfishHelper" class="com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper">
         <constructor-arg name="region" ref="regionAirportCode"/>
