@@ -41,7 +41,7 @@ package.LookoutMitigationService = {
             JakartaCommons-lang3 = 3.x;
             FindBugsAnnotations = 3.1.0;
             
-            CoralAwsAuthentication = 1.3; # To support authenticating/authorizing calls to LookoutMitigationService.
+            CoralAwsAuthentication = 1.5; # To support authenticating/authorizing calls to LookoutMitigationService.
             OdinAWSCredentials = 1.4;
             Cachemere = 1.2;
             CachemereJakalPlugin = 1.4;
@@ -186,6 +186,11 @@ package.LookoutMitigationService = {
             CoralIdentity = 1.1;
             AWS158Metrics = 1.1;
             Log4j-1_2-api = 2.8;
+
+            AWSAuthRuntimeClient = 1.5;
+            FindBugsAnnotations = 3.1.0;
+            AWSAuthRuntimeClientCredentialsProvider = 1.1;
+            CoralAwsAuthentication = 1.5;
         };
     };
 
