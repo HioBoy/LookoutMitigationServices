@@ -1,4 +1,3 @@
-
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import static org.junit.Assert.*;
@@ -21,9 +20,9 @@ import com.amazon.lookout.mitigation.service.HostStatusInLocation;
 import com.amazon.lookout.test.common.dynamodb.DynamoDBTestUtil;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazon.blackwatch.host.status.model.HostStatus;
-import com.amazon.blackwatch.host.status.model.HostType;
 import com.amazon.blackwatch.host.status.model.HostStatusEnum;
 import com.amazon.blackwatch.host.status.storage.HostStatusDynamoDBHelper;
+import com.amazon.lookout.mitigation.host.HostType;
 import com.amazon.coral.metrics.Metrics;
 import com.amazon.coral.metrics.MetricsFactory;
 
