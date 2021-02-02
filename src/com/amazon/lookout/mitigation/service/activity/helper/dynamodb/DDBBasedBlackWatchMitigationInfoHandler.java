@@ -451,6 +451,18 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     }
 
                 } else {
+                    // check if ElasticIP is already allocated
+                    if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
+                        Validate.notNull(ipAddress);
+                        ResourceAllocationState resourceAllocationState = resourceAllocationStateDynamoDBHelper.getResourceAllocationState(ipAddress);
+                        // resourceAllocationState is non-null when ElasticIP is already allocated
+                        if (resourceAllocationState != null) {
+                            String msg = String.format("Could not create EIP mitigation for resourceId:%s resourceType:%s "
+                                    + "since ElasticIP:%s conflicts with an existing mitigation with mitigationId:%s.",
+                                    canonicalResourceId, resourceType, ipAddress, resourceAllocationState.getMitigationId());
+                            throw new MitigationNotOwnedByRequestor400(msg);
+                        }
+                    }
                     newMitigationCreated = true;
                     mitigationId = generateMitigationId(realm);
                     mitigationState = MitigationState.builder()
