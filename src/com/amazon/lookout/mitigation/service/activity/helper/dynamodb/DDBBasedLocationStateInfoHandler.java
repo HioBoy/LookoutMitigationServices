@@ -20,8 +20,8 @@ import org.apache.commons.logging.LogFactory;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.blackwatch.location.state.model.LocationState;
-import com.amazon.blackwatch.location.state.model.LocationType;
 import com.amazon.blackwatch.location.state.storage.LocationStateDynamoDBHelper;
+import com.amazon.lookout.mitigation.location.type.LocationType;
 import com.amazon.lookout.mitigation.service.BlackWatchLocation;
 import com.amazon.lookout.mitigation.service.activity.helper.LocationStateInfoHandler;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;

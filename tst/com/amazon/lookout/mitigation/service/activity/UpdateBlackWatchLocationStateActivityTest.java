@@ -8,7 +8,7 @@ import org.mockito.Mockito;
 
 import static org.mockito.Mockito.*;
 
-import com.amazon.blackwatch.location.state.model.LocationType;
+import com.amazon.lookout.mitigation.location.type.LocationType;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateResponse;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;

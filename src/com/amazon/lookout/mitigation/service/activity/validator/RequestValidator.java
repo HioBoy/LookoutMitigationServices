@@ -25,10 +25,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.util.CollectionUtils;
 
-import com.amazon.blackwatch.location.state.model.LocationType;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.lookout.ip.IPUtils;
+import com.amazon.lookout.mitigation.location.type.LocationType;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;

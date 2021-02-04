@@ -51,6 +51,7 @@ package.LookoutMitigationService = {
             HostStatusCommon = 1.0;
             BlackWatchLocationStateCommons = 1.0;
             BlackWatchMitigationCommons = 1.0;
+            BlackWatchMitigationServiceLocationProvider = 1.0;
             
             CoralSpringLauncher = 4.3;
             CoralQueryStringValue = 1.1;
