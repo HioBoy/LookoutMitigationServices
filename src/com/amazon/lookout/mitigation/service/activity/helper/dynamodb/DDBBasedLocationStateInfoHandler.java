@@ -223,6 +223,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
 
             if (setType != null) {
                 ls.setLocationType(locationType);
+                ls.setHasLocationTypeOverride(true);
             }
 
             updateLocationState(ls, subMetrics);

@@ -128,7 +128,7 @@ public class DDBBasedHostStatusInfoHandlerTest {
                     .changeUser(changeUser)
                     .changeHost(changeHost)
                     .build();
-            locState1.updateHosts(ImmutableMap.of(HostType.BLACKWATCH.name(), hostInfo1), changeUser, changeHost);
+            locState1.updateHosts(ImmutableMap.of(HostType.BLACKWATCH, hostInfo1), changeUser, changeHost);
 
             //add a record with different location name
             hostStatus = HostStatus.builder()
@@ -230,7 +230,7 @@ public class DDBBasedHostStatusInfoHandlerTest {
                     .changeUser(changeUser)
                     .changeHost(changeHost)
                     .build();
-            locState1.updateHosts(ImmutableMap.of(HostType.BLACKWATCH.name(), hostInfo1), changeUser, changeHost);
+            locState1.updateHosts(ImmutableMap.of(HostType.BLACKWATCH, hostInfo1), changeUser, changeHost);
 
             // insert records in host status table for a location in ddb table
             for (HostStatus hs : listOfHostStatus) {
