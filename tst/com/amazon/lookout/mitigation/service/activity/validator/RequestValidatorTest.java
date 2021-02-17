@@ -904,8 +904,9 @@ public class RequestValidatorTest {
         final Long theRateLimit = 120L;
         request.setGlobalPPS(theRateLimit);
 
+        String resouceType = "IPAddress";
         final BlackWatchTargetConfig newTargetConfig = validator.validateUpdateBlackWatchMitigationRequest(
-                request, new BlackWatchTargetConfig(), userARN);
+                request, resouceType, new BlackWatchTargetConfig(), userARN);
         assertSame(theRateLimit, getDefaultRateLimit(newTargetConfig));
     }
 
@@ -937,9 +938,32 @@ public class RequestValidatorTest {
             + "}", theRateLimit);
         request.setMitigationSettingsJSON(json);
 
+        String resouceType = "IPAddress";
         final BlackWatchTargetConfig newTargetConfig = validator.validateUpdateBlackWatchMitigationRequest(
-                request, new BlackWatchTargetConfig(), userARN);
+                request, resouceType, new BlackWatchTargetConfig(), userARN);
         assertSame(theRateLimit.longValue(), getDefaultRateLimit(newTargetConfig).longValue());
+    }
+
+    @Test
+    public void testValidateUpdateBlackWatchMitigationWithEmptyJsonForGLB() {
+        UpdateBlackWatchMitigationRequest request = new UpdateBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+
+        final String validMitigationId = "US-WEST-1_2016-02-05T00:43:04.6767Z_55";
+        request.setMitigationId(validMitigationId);
+
+        final String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+
+        String json = "{}";
+        request.setMitigationSettingsJSON(json);
+
+        String resouceType = "GLB";
+        final BlackWatchTargetConfig newTargetConfig = validator.validateUpdateBlackWatchMitigationRequest(
+                request, resouceType, new BlackWatchTargetConfig(), userARN);
     }
 
     @Test

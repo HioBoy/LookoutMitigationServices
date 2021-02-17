@@ -3,6 +3,7 @@ package com.amazon.lookout.mitigation.service.activity;
 import java.util.Collections;
 import java.util.Set;
 
+import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
@@ -81,19 +82,26 @@ public class UpdateBlackWatchMitigationActivity extends Activity {
             // If the mitigation doesn't exist we will validate the request anyway and
             // fail when we try to update.
             String currentJson;
+            String resourceType;
             try {
-                currentJson = blackwatchMitigationInfoHandler
-                    .getMitigationState(mitigationId)
-                    .getMitigationSettingsJSON();
+                MitigationState mitigationState = blackwatchMitigationInfoHandler.getMitigationState(mitigationId);
+                currentJson = mitigationState.getMitigationSettingsJSON();
+                resourceType = mitigationState.getResourceType();
             } catch (NullPointerException e) {
                 currentJson = null;
+                resourceType = null;
             }
+
+            if (resourceType == null) {
+                throw new IllegalArgumentException(String.format("Resource type not found in mitigation: %s", mitigationId));
+            }
+
             BlackWatchTargetConfig currentTargetConfig = RequestValidator.parseMitigationSettingsJSON(
                     currentJson);
 
             // Merge PPS & BPS, then validate
             BlackWatchTargetConfig targetConfig = requestValidator.validateUpdateBlackWatchMitigationRequest(
-                    request, currentTargetConfig, userARN);
+                    request, resourceType, currentTargetConfig, userARN);
 
             UpdateBlackWatchMitigationResponse response = blackwatchMitigationInfoHandler.updateBlackWatchMitigation(
                     mitigationId, minsToLive, metadata, targetConfig, userARN, tsdMetrics);

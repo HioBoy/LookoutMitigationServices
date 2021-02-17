@@ -12,6 +12,7 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazon.arest.client.repackaged.google.common.base.Strings;
 import com.amazon.blackwatch.host.status.model.HostStatusEnum;
+import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.lookout.mitigation.service.GetLocationOperationalStatusRequest;
 import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
@@ -822,6 +823,7 @@ public class RequestValidator {
      
     public BlackWatchTargetConfig validateUpdateBlackWatchMitigationRequest(
             @NonNull UpdateBlackWatchMitigationRequest request,
+            @NonNull String resourceType,
             @NonNull BlackWatchTargetConfig existingTargetConfig,
             @NonNull String userARN) {
         validateMetadata(request.getMitigationActionMetadata());
@@ -839,7 +841,10 @@ public class RequestValidator {
 
         BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS(),
                                                  errorOnDuplicateRates);
-        targetConfig.validate();
+        // The GLB resource type not need the default shaper because we generate it,
+        // so call validate with defaultRateLimitRequired = !isGlbResource
+        boolean isGlbResource = resourceType.equalsIgnoreCase("GLB");
+        targetConfig.validate(!isGlbResource);
         validateUserARN(userARN);
 
         return targetConfig;

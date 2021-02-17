@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import java.util.Arrays;
 
+import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -43,6 +44,7 @@ public class UpdateBlackWatchMitigationActivityTest extends ActivityTestHelper {
 
         when(requestValidator.validateUpdateBlackWatchMitigationRequest(
                     isA(UpdateBlackWatchMitigationRequest.class),
+                    anyString(),
                     isA(BlackWatchTargetConfig.class),
                     anyString())).thenReturn(new BlackWatchTargetConfig());
     }
@@ -55,6 +57,11 @@ public class UpdateBlackWatchMitigationActivityTest extends ActivityTestHelper {
         Mockito.doReturn(identity).when(updateBlackWatchMitigationActivity).getIdentity();
         
         UpdateBlackWatchMitigationResponse retResponse = new UpdateBlackWatchMitigationResponse();
+        MitigationState mitigationState = MitigationState.builder()
+                .mitigationId("123")
+                .resourceType("IPAddress")
+                .build();
+        Mockito.doReturn(mitigationState).when(blackwatchMitigationInfoHandler).getMitigationState(anyString());
         Mockito.doReturn(retResponse).when(blackwatchMitigationInfoHandler).updateBlackWatchMitigation(anyString(), 
                 anyInt(), isA(MitigationActionMetadata.class), isA(BlackWatchTargetConfig.class),
                 anyString(), isA(TSDMetrics.class));
