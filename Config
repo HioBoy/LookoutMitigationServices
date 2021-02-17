@@ -153,7 +153,9 @@ package.LookoutMitigationService = {
             Log4j-core = 2.8;
             JakartaCommons-httpclient = 3.1;
 
+            Jackson-annotations = 2.x;
             Jackson-databind = 2.x;
+            Jackson-core = 2.x;
             Javassist = 3.20.x;
 
 
