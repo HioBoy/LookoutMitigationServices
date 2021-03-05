@@ -106,6 +106,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final String testIPAddressListResourceType = BlackWatchMitigationResourceType.IPAddressList.name();
     private static final String testELBResourceType = BlackWatchMitigationResourceType.ELB.name();
     private static final String testLocation = "BR-SFO5-1";
+    private static final String testLocation2 = "BR-SFO5-2";
     private static final String testValidJSON = "{ }";
     //Generated with: echo -n $ESCAPED_STRING | sha256sum
     private static final String validJSONChecksum = "257c1be96ae69f4b01c2c69bdb6d78605f59175819fb007d0bf245bf48444c4a";
@@ -228,6 +229,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         setting.setPPS(151515L);
         setting.setBPS(121212L);
         locationMitigationState.put(testLocation, setting);
+        locationMitigationState.put(testLocation, null); // set per location state to null explicitly
         mitigationState1 = MitigationState.builder()
                 .mitigationId(testMitigation1)
                 .resourceId(testIPAddressResourceIdCanonical)
@@ -298,9 +300,11 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         Map<String, MitigationStateSetting> locationMitigationStateSettingsExpected = ms.getLocationMitigationState();
         assertEquals(locationMitigationStateSettings.keySet(), locationMitigationStateSettingsExpected.keySet());
         for (String key : locationMitigationStateSettings.keySet()) {
-            assertEquals(locationMitigationStateSettings.get(key).getBPS(), locationMitigationStateSettingsExpected.get(key).getBPS());
-            assertEquals(locationMitigationStateSettings.get(key).getPPS(), locationMitigationStateSettingsExpected.get(key).getPPS());
-            assertEquals(locationMitigationStateSettings.get(key).getMitigationSettingsJSONChecksum(), locationMitigationStateSettingsExpected.get(key).getMitigationSettingsJSONChecksum());
+            if (locationMitigationStateSettings.get(key) != null) {
+                assertEquals(locationMitigationStateSettings.get(key).getBPS(), locationMitigationStateSettingsExpected.get(key).getBPS());
+                assertEquals(locationMitigationStateSettings.get(key).getPPS(), locationMitigationStateSettingsExpected.get(key).getPPS());
+                assertEquals(locationMitigationStateSettings.get(key).getMitigationSettingsJSONChecksum(), locationMitigationStateSettingsExpected.get(key).getMitigationSettingsJSONChecksum());
+            }
         }
     }
 

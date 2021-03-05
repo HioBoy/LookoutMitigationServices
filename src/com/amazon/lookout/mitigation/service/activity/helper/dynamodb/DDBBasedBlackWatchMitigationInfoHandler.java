@@ -170,8 +170,15 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     
                     Map<String, MitigationStateSetting> locState = ObjectUtils.defaultIfNull(
                             ms.getLocationMitigationState(), new HashMap<String, MitigationStateSetting>());
-                    Map<String, LocationMitigationStateSettings> locationMitigationState = EntryStream.of(locState)
-                        .mapValues(v -> v != null ? convertMitSSToLocMSS(v) : null).toMap();
+                    Map<String, LocationMitigationStateSettings> locationMitigationState = new HashMap<>();
+
+                    for (Map.Entry<String, MitigationStateSetting> entry: locState.entrySet()) {
+                        LocationMitigationStateSettings locationMitigationStateSettings = null;
+                        if (entry.getValue() != null) {
+                            locationMitigationStateSettings = convertMitSSToLocMSS(entry.getValue());
+                        }
+                        locationMitigationState.put(entry.getKey(), locationMitigationStateSettings);
+                    }
 
                     // PPS & BPS: return the values stored in JSON global_traffic_shaper,
                     // if they exist.  If not, fall back to the fields in MitigationState.
