@@ -18,6 +18,12 @@ import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
 public interface BlackWatchMitigationInfoHandler {
     public void deactivateMitigation(String mitigationId, MitigationActionMetadata actionMetadata);
     public void changeOwnerARN(String mitigationId, String newOwnerARN, String expectedOwnerARN, MitigationActionMetadata actionMetadata);
+
+    /**
+     * Change blackwatch mitigation state to desired newState
+     */
+    public void changeMitigationState(String mitigationId, MitigationState.State expectedState, MitigationState.State newState, MitigationActionMetadata actionMetadata);
+
     public List<BlackWatchMitigationDefinition> getBlackWatchMitigations(
             String mitigationId, String resourceId, String resourceType,
             String ownerARN, long maxNumberOfEntriesToReturn,

@@ -9,30 +9,12 @@ import java.util.List;
 import java.util.Set;
 
 import javax.annotation.concurrent.ThreadSafe;
-
-import com.amazon.arest.client.repackaged.google.common.base.Strings;
 import com.amazon.blackwatch.host.status.model.HostStatusEnum;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
-import com.amazon.lookout.mitigation.service.GetLocationOperationalStatusRequest;
-import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
-import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
-import lombok.NonNull;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Validate;
-import org.apache.commons.lang3.builder.RecursiveToStringStyle;
-import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.util.CollectionUtils;
-
-import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType;
-import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
-import com.amazon.lookout.ip.IPUtils;
-import com.amazon.lookout.mitigation.location.type.LocationType;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationOwnerARNRequest;
+import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationStateRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
@@ -49,6 +31,7 @@ import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
+import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
@@ -59,11 +42,27 @@ import com.amazon.lookout.mitigation.service.activity.GetMitigationHistoryActivi
 import com.amazon.lookout.mitigation.service.activity.ListBlackWatchMitigationsActivity;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
+
+import lombok.NonNull;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.builder.RecursiveToStringStyle;
+import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.util.CollectionUtils;
+
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
+import com.amazon.lookout.ip.IPUtils;
+import com.amazon.lookout.mitigation.location.type.LocationType;
 import com.amazon.lookout.model.RequestType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.base.Strings;
 
 /**
  * RequestValidator is a basic validator for requests to ensure the requests are well-formed and contain all the required inputs.
@@ -185,6 +184,13 @@ public class RequestValidator {
         validateMitigationId(request.getMitigationId());
         validateUserARN(request.getNewOwnerARN());
         validateUserARN(request.getExpectedOwnerARN());
+    }
+
+    public void validateChangeBlackWatchMitigationStateRequest(@NonNull ChangeBlackWatchMitigationStateRequest request) {
+        validateMetadata(request.getMitigationActionMetadata());
+        validateMitigationId(request.getMitigationId());
+        validateMitigationState(request.getExpectedState());
+        validateMitigationState(request.getNewState());
     }
     
     public void validateListBlackWatchMitigationsRequest(@NonNull ListBlackWatchMitigationsRequest request) {
@@ -516,6 +522,16 @@ public class RequestValidator {
         if (isInvalidFreeFormText(mitigationId, false, DEFAULT_MAX_LENGTH_MITIGATION_ID)) {
             String msg = "Invalid mitigation ID! A valid mitigation ID must contain more than 0 and less than: " + DEFAULT_MAX_LENGTH_MITIGATION_ID + " ascii-printable characters.";
             LOG.info(msg);
+            throw new IllegalArgumentException(msg);
+        }
+    }
+
+    private static void validateMitigationState(@NonNull String mitigationState) {
+        try {
+            MitigationState.State.valueOf(mitigationState);
+        } catch (IllegalArgumentException ie) {
+            String msg = String.format("Invalid mitigation state: %s! Valid mitigation states are %s",
+                    mitigationState, Arrays.toString(MitigationState.State.values()));
             throw new IllegalArgumentException(msg);
         }
     }

@@ -13,6 +13,7 @@ import java.util.Set;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationStateRequest;
 import com.amazon.lookout.mitigation.service.GetLocationOperationalStatusRequest;
 import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
@@ -449,6 +450,12 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 UpdateLocationStateRequest.class,
                 (action, request) ->
                         generateLocationStateRequestInfo(action, WRITE_OPERATION_PREFIX));
+
+        addRequestInfoParser(
+                ChangeBlackWatchMitigationStateRequest.class,
+                (action, request) ->
+                        new RequestInfo(generateActionName(action, WRITE_OPERATION_PREFIX),
+                                getBlackWatchAPIRelativeId()));
     }
 
     private static RequestInfoFunction<Object> getRequestInfoFunction(Object request) {

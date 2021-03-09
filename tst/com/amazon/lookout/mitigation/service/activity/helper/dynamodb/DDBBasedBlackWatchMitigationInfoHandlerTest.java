@@ -108,6 +108,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static final String testLocation = "BR-SFO5-1";
     private static final String testLocation2 = "BR-SFO5-2";
     private static final String testValidJSON = "{ }";
+    private static final String testValidJSON2 = "{ \"mitigation_config\": {} }";
     //Generated with: echo -n $ESCAPED_STRING | sha256sum
     private static final String validJSONChecksum = "257c1be96ae69f4b01c2c69bdb6d78605f59175819fb007d0bf245bf48444c4a";
     private static final String ipListTemplate = "{\"destinations\":[%s]}";
@@ -417,6 +418,61 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
 
     @Test
+    public void testChangeMitigationState() {
+        MitigationActionMetadata requestMetadata = MitigationActionMetadata.builder()
+                .withUser("Eren")
+                .withToolName("JUnit_update")
+                .withDescription("Test Descr_update")
+                .withRelatedTickets(Arrays.asList("4321"))
+                .build();
+        Long oldChangeTime = mitigationState1.getChangeTime();
+        MitigationState.State expectedState  = State.Active;
+        MitigationState.State newState  = State.Expired;
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2));
+        blackWatchMitigationInfoHandler.changeMitigationState(mitigationState1.getMitigationId(), expectedState, newState, requestMetadata);
+        MitigationState newMitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationState1.getMitigationId());
+        assertEquals(newState.name(), newMitigationState.getState());
+        assertEquals(requestMetadata.getUser(), newMitigationState.getLatestMitigationActionMetadata().getUser());
+        assertEquals(requestMetadata.getToolName(), newMitigationState.getLatestMitigationActionMetadata().getToolName());
+        assertEquals(requestMetadata.getDescription(), newMitigationState.getLatestMitigationActionMetadata().getDescription());
+        assertEquals(requestMetadata.getRelatedTickets(), newMitigationState.getLatestMitigationActionMetadata().getRelatedTickets());
+        assertNotEquals(newMitigationState.getChangeTime().longValue(), oldChangeTime.longValue());
+    }
+
+    @Test
+    public void testChangeMitigationStateConditionalFailure() {
+        MitigationActionMetadata requestMetadata = MitigationActionMetadata.builder()
+                .withUser("Eren")
+                .withToolName("JUnit_update")
+                .withDescription("Test Descr_update")
+                .withRelatedTickets(Arrays.asList("4321"))
+                .build();
+        MitigationState.State expectedState  = State.Expired;
+        MitigationState.State newState  = State.To_Delete;
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2));
+        try {
+            blackWatchMitigationInfoHandler.changeMitigationState(mitigationState1.getMitigationId(), expectedState, newState, requestMetadata);
+        } catch (ConditionalCheckFailedException e) {
+            MitigationState newMitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationState1.getMitigationId());
+            assertEquals(State.Active.name(), newMitigationState.getState());
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testChangeMitigationStateMitigationDoesNotExists() {
+        MitigationActionMetadata requestMetadata = MitigationActionMetadata.builder()
+                .withUser("Eren")
+                .withToolName("JUnit_update")
+                .withDescription("Test Descr_update")
+                .withRelatedTickets(Arrays.asList("4321"))
+                .build();
+        MitigationState.State expectedState  = State.Active;
+        MitigationState.State newState  = State.Expired;
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2));
+        blackWatchMitigationInfoHandler.changeMitigationState(mitigationState1.getMitigationId() + "nonexistent", expectedState, newState, requestMetadata);
+    }
+
+    @Test
     public void testGetBlackWatchMitigationsIPNormalize() {
         ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
             testIPv6AddressResourceId, testIPAddressResourceType, 30, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics, false);
@@ -635,9 +691,44 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         
         thrown.expect(IllegalArgumentException.class);
         blackWatchMitigationInfoHandler.updateBlackWatchMitigation(
-                "NotThere", 30, testMetadata, parseJSON(testValidJSON), "ARN-1122", tsdMetrics);
+                mitState.getMitigationId(), 30, testMetadata, parseJSON(testValidJSON), "ARN-1122", tsdMetrics);
     }
-    
+
+    @Test
+    public void testUpdateBlackWatchMitigationFailedState() {
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        MitigationState mitState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
+        mitState.setState(State.Failed.name());
+        mitigationStateDynamoDBHelper.updateMitigationState(mitState);
+
+        thrown.expect(IllegalArgumentException.class);
+        blackWatchMitigationInfoHandler.updateBlackWatchMitigation(
+                mitState.getMitigationId(), 30, testMetadata, parseJSON(testValidJSON), "ARN-1122", tsdMetrics);
+    }
+
+    @Test
+    public void testUpdateBlackWatchMitigationFailedStateUpdatingConfig() {
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        MitigationState mitState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
+        mitState.setState(State.Failed.name());
+        mitigationStateDynamoDBHelper.updateMitigationState(mitState);
+
+        blackWatchMitigationInfoHandler.updateBlackWatchMitigation(
+                mitState.getMitigationId(), 30, testMetadata, parseJSON(testValidJSON2), "ARN-1122", tsdMetrics);
+        mitState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
+        assertEquals(State.Active.name(), mitState.getState());
+    }
+
     @Test
     public void testApplyBlackWatchMitigationNewIPAddressSuccess() {
         
@@ -747,7 +838,45 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 "ARN-1222", tsdMetrics, false);
         assertTrue(ms.getMinutesToLive() > 0);
     }
-    
+
+    @Test
+    public void testApplyBlackWatchMitigationFailedState() {
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        MitigationState mitState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
+        mitState.setState(State.Failed.name());
+        mitigationStateDynamoDBHelper.updateMitigationState(mitState);
+
+        thrown.expect(IllegalArgumentException.class);
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata,
+                parseJSON(testValidJSON), "ARN-1222", tsdMetrics, false);
+    }
+
+    @Test
+    public void testApplyBlackWatchMitigationFailedStateNewJson() {
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        MitigationState mitState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
+        mitState.setState(State.Failed.name());
+        mitigationStateDynamoDBHelper.updateMitigationState(mitState);
+
+        // new json so mitigation should be fine
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata,
+                parseJSON(testValidJSON2), "ARN-1222", tsdMetrics, false);
+        MitigationState updatedState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
+        assertEquals(State.Active.name(), updatedState.getState());
+    }
+
     @Test
     public void testApplyBlackWatchMitigationMissingTableEntries() {
         ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(

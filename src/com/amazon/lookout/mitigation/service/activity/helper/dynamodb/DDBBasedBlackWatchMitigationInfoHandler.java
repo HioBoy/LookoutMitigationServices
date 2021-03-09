@@ -46,6 +46,7 @@ import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -299,6 +300,18 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     // need to validate updated mitigation settings
                     mitigationSettingsJSON = targetConfig.getJsonString();
 
+                    BlackWatchTargetConfig existingTargetConfig = null;
+                    try {
+                        existingTargetConfig = BlackWatchTargetConfig.fromJSONString(mitigationState.getMitigationSettingsJSON());
+                    } catch (IOException e) {
+                        throw new IllegalStateException(String.format("Failed to parse mitigation config for existing mitigation %s", mitigationId), e);
+                    }
+
+                    if (mitigationState.getState().equals(State.Failed.name()) && existingTargetConfig.equals(targetConfig)) {
+                        String message = String.format("Trying to update mitigation %s in FAILED state with same target config", mitigationState.getMitigationId());
+                        throw new IllegalArgumentException(message);
+                    }
+
                     String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
                     Map<BlackWatchMitigationResourceType, Set<String>> resourceMap =
                             typeValidator.getCanonicalMapOfResources(resourceId, targetConfig);
@@ -450,13 +463,23 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                         throw new IllegalArgumentException(message);
                     } else if (mitigationState.getState().equals(MitigationState.State.To_Delete.name())) {
                         throw new IllegalArgumentException(TO_DELETE_CONDITIONAL_FAILURE_MESSAGE);
+                    } else if (mitigationState.getState().equals(MitigationState.State.Failed.name())) {
+                        BlackWatchTargetConfig existingTargetConfig = null;
+                        try {
+                            existingTargetConfig = BlackWatchTargetConfig.fromJSONString(mitigationState.getMitigationSettingsJSON());
+                        } catch (IOException e) {
+                            throw new IllegalStateException(String.format("Failed to parse mitigation config for existing mitigation %s", mitigationId), e);
+                        }
+                        if (existingTargetConfig.equals(targetConfig)) {
+                            String message = String.format("Mitigation %s is in FAILED state, cannot apply same target config", mitigationState.getMitigationId());
+                            throw new IllegalArgumentException(message);
+                        }
                     }
                     if (!mitigationState.getOwnerARN().equals(userARN)) {
                         String message = String.format("Cannot apply update to mitigationId:%s as the calling owner:%s "
                                 + "does not match the recorded owner:%s", mitigationId, userARN, mitigationState.getOwnerARN());
                         throw new MitigationNotOwnedByRequestor400(message);
                     }
-
                 } else {
                     // check if ElasticIP is already allocated
                     if (resourceTypeString.equals(BlackWatchMitigationResourceType.ElasticIP.name())) {
@@ -694,6 +717,27 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         expectedValue.setComparisonOperator(ComparisonOperator.EQ);
         Map<String, ExpectedAttributeValue> expectedAttributes =
                 ImmutableMap.of(MitigationState.OWNER_ARN_KEY, expectedValue);
+        condition.setExpected(expectedAttributes);
+        mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
+    }
+
+    public void changeMitigationState(String mitigationId, MitigationState.State expectedState, MitigationState.State newState,
+                                      MitigationActionMetadata actionMetadata) {
+        // Get current state
+        MitigationState state = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+        if (state == null) {
+            throw new IllegalArgumentException("Specified mitigationId : " + mitigationId + " does not exist");
+        }
+        state.setState(newState.name());
+        BlackWatchMitigationActionMetadata actionMetadataBlackWatch =
+                BlackWatchHelper.coralMetadataToBWMetadata(actionMetadata);
+        state.setLatestMitigationActionMetadata(actionMetadataBlackWatch);
+        state.setChangeTime(System.currentTimeMillis());
+        DynamoDBSaveExpression condition = new DynamoDBSaveExpression();
+        ExpectedAttributeValue expectedValue = new ExpectedAttributeValue(new AttributeValue(expectedState.name()));
+        expectedValue.setComparisonOperator(ComparisonOperator.EQ);
+        Map<String, ExpectedAttributeValue> expectedAttributes =
+                ImmutableMap.of(MitigationState.STATE_KEY, expectedValue);
         condition.setExpected(expectedAttributes);
         mitigationStateDynamoDBHelper.performConditionalMitigationStateUpdate(state, condition);
     }
