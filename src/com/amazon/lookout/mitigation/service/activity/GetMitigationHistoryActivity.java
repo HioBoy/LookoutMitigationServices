@@ -3,13 +3,13 @@ package com.amazon.lookout.mitigation.service.activity;
 import java.beans.ConstructorProperties;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.amazon.lookout.mitigation.datastore.model.GetMitigationHistoryResult;
+import com.amazon.lookout.mitigation.service.FailedMitigationDeployments;
 import lombok.NonNull;
 
-import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -24,16 +24,12 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.GetMitigationHistoryRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationHistoryResponse;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
-import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocationAndStatus;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.constants.LookoutMitigationServiceConstants;
 
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
-import com.amazon.lookout.mitigation.datastore.model.RequestPage;
 import com.amazon.lookout.mitigation.datastore.RequestsDAO;
-import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
 
 /**
  * Get mitigation history by mitigation name and device name.
@@ -98,7 +94,7 @@ public class GetMitigationHistoryActivity extends Activity {
             final String lastEvaluatedKey = request.getExclusiveLastEvaluatedKey();
 
             // Get the mitigation history
-            final RequestPage<MitigationRequestDescriptionWithLocationAndStatus> result
+            final GetMitigationHistoryResult result
                 = requestsDao.getMitigationHistory(device, location, mitigationName,
                         maxNumberOfHistoryEntriesToFetch, lastEvaluatedKey);
 
@@ -106,9 +102,13 @@ public class GetMitigationHistoryActivity extends Activity {
             GetMitigationHistoryResponse response = new GetMitigationHistoryResponse();
             response.setDeviceName(device.name());
             response.setMitigationName(mitigationName);
-            response.setListOfMitigationRequestDescriptionsWithLocationAndStatus(result.getPage());
+            response.setListOfMitigationRequestDescriptionsWithLocationAndStatus(result.getRequestPage().getPage());
             response.setRequestId(requestId);
-            response.setExclusiveLastEvaluatedKey(result.getLastEvaluatedKey());
+            response.setExclusiveLastEvaluatedKey(result.getRequestPage().getLastEvaluatedKey());
+            response.setFailedMitigationDeployments(FailedMitigationDeployments.builder()
+                    .withLastFailedJob(result.getMostRecentFailedJob())
+                    .withNumRecentFailures(result.getNumRecentFailures())
+                    .build());
             return response;
         } catch (IllegalArgumentException | IllegalStateException ex) {
             String msg = String.format(ActivityHelper.BAD_REQUEST_EXCEPTION_MESSAGE_FORMAT, requestId, "GetMitigationHistoryActivity", ex.getMessage());
