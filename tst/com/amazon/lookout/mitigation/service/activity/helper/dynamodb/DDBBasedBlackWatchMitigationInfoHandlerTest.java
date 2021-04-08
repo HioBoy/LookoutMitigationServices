@@ -120,14 +120,17 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         = new HashMap<BlackWatchMitigationResourceType, BlackWatchResourceTypeValidator>();
     
     private static final Map<String, Set<String>> recordedResourcesMap = new HashMap<String, Set<String>>();
-    private static final MitigationStateSetting setting = new MitigationStateSetting();  
+    private static final MitigationStateSetting setting = new MitigationStateSetting();
+    private static final MitigationStateSetting mitSettingWithFailure = new MitigationStateSetting();
     private static final Map<String, MitigationStateSetting> locationMitigationState = 
             new HashMap<String, MitigationStateSetting> ();
+    private static final Map<String, MitigationStateSetting> locationMitigationStateWithFailures = new HashMap<>();
     private static DogFishMetadataProvider dogfishProvider;
     private static DogFishValidationHelper dogfishValidator;
     
     private static MitigationState mitigationState1;
     private static MitigationState mitigationState2;
+    private static MitigationState mitigationState3;
 
     protected static final long readCapacityUnits = 5L;
     protected static final long writeCapacityUnits = 5L;
@@ -229,8 +232,17 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         setting.setMitigationSettingsJSONChecksum("234534dfgdfg3344");
         setting.setPPS(151515L);
         setting.setBPS(121212L);
+
+        mitSettingWithFailure.setMitigationSettingsJSONChecksum("abcdefgh");
+        mitSettingWithFailure.setPPS(1000L);
+        mitSettingWithFailure.setBPS(1000L);
+        mitSettingWithFailure.setNumFailures(10);
+        mitSettingWithFailure.setRecentFailedJobId(10);
+
         locationMitigationState.put(testLocation, setting);
         locationMitigationState.put(testLocation, null); // set per location state to null explicitly
+
+        locationMitigationStateWithFailures.put(testLocation, mitSettingWithFailure);
         mitigationState1 = MitigationState.builder()
                 .mitigationId(testMitigation1)
                 .resourceId(testIPAddressResourceIdCanonical)
@@ -268,6 +280,23 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                         .description("Test Descr")
                         .relatedTickets(Arrays.asList("1234", "5655"))
                         .build())
+                .build();
+
+        mitigationState3 = MitigationState.builder()
+                .mitigationId(testMitigation1)
+                .resourceId(testIPAddressResourceIdCanonical)
+                .resourceType(testIPAddressResourceType)
+                .changeTime(testChangeTime)
+                .ownerARN(testOwnerARN1)
+                .recordedResources(recordedResourcesMap)
+                .locationMitigationState(locationMitigationStateWithFailures)
+                .state(State.Failed.name())
+                .ppsRate(1121L)
+                .bpsRate(2323L)
+                .mitigationSettingsJSON("{\"mitigation_config\": {\"ip_validation\": {\"action\": \"DROP\"}}}")
+                .mitigationSettingsJSONChecksum("ABABABABA")
+                .minutesToLive(testMinsToLive)
+                .latestMitigationActionMetadata(testBWMetadata)
                 .build();
     }
     
@@ -437,6 +466,29 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         assertEquals(requestMetadata.getDescription(), newMitigationState.getLatestMitigationActionMetadata().getDescription());
         assertEquals(requestMetadata.getRelatedTickets(), newMitigationState.getLatestMitigationActionMetadata().getRelatedTickets());
         assertNotEquals(newMitigationState.getChangeTime().longValue(), oldChangeTime.longValue());
+    }
+
+    @Test
+    public void testChangeMitigationStateFailedToActive() {
+        MitigationActionMetadata requestMetadata = MitigationActionMetadata.builder()
+                .withUser("Eren")
+                .withToolName("JUnit_update")
+                .withDescription("Test Descr_update")
+                .withRelatedTickets(Arrays.asList("4321"))
+                .build();
+        Long oldChangeTime = mitigationState3.getChangeTime();
+        MitigationState.State expectedState  = State.Failed;
+        MitigationState.State newState  = State.Active;
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState3));
+        blackWatchMitigationInfoHandler.changeMitigationState(mitigationState3.getMitigationId(), expectedState, newState, requestMetadata);
+        MitigationState newMitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationState3.getMitigationId());
+        assertEquals(newState.name(), newMitigationState.getState());
+        assertEquals(requestMetadata.getUser(), newMitigationState.getLatestMitigationActionMetadata().getUser());
+        assertEquals(requestMetadata.getToolName(), newMitigationState.getLatestMitigationActionMetadata().getToolName());
+        assertEquals(requestMetadata.getDescription(), newMitigationState.getLatestMitigationActionMetadata().getDescription());
+        assertEquals(requestMetadata.getRelatedTickets(), newMitigationState.getLatestMitigationActionMetadata().getRelatedTickets());
+        assertNotEquals(newMitigationState.getChangeTime().longValue(), oldChangeTime.longValue());
+        assertTrue(newMitigationState.getLocationMitigationState().entrySet().stream().allMatch(entry -> entry.getValue().getNumFailures() == 0));
     }
 
     @Test
@@ -721,12 +773,14 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
         MitigationState mitState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
         mitState.setState(State.Failed.name());
+        mitState.setLocationMitigationState(locationMitigationStateWithFailures);
         mitigationStateDynamoDBHelper.updateMitigationState(mitState);
 
         blackWatchMitigationInfoHandler.updateBlackWatchMitigation(
                 mitState.getMitigationId(), 30, testMetadata, parseJSON(testValidJSON2), "ARN-1122", tsdMetrics);
         mitState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
         assertEquals(State.Active.name(), mitState.getState());
+        assertTrue(mitState.getLocationMitigationState().entrySet().stream().allMatch(entry -> entry.getValue().getNumFailures() == 0));
     }
 
     @Test
@@ -867,6 +921,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
         MitigationState mitState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
         mitState.setState(State.Failed.name());
+        mitState.setLocationMitigationState(locationMitigationStateWithFailures);
         mitigationStateDynamoDBHelper.updateMitigationState(mitState);
 
         // new json so mitigation should be fine
@@ -875,6 +930,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 parseJSON(testValidJSON2), "ARN-1222", tsdMetrics, false);
         MitigationState updatedState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
         assertEquals(State.Active.name(), updatedState.getState());
+        assertTrue(updatedState.getLocationMitigationState().entrySet().stream().allMatch(entry -> entry.getValue().getNumFailures() == 0));
     }
 
     @Test

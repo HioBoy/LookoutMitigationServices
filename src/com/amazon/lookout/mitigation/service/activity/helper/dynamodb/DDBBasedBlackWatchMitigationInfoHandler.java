@@ -307,9 +307,14 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                         throw new IllegalStateException(String.format("Failed to parse mitigation config for existing mitigation %s", mitigationId), e);
                     }
 
-                    if (mitigationState.getState().equals(State.Failed.name()) && existingTargetConfig.equals(targetConfig)) {
-                        String message = String.format("Trying to update mitigation %s in FAILED state with same target config", mitigationState.getMitigationId());
-                        throw new IllegalArgumentException(message);
+                    if (mitigationState.getState().equals(State.Failed.name())) {
+                        if (existingTargetConfig.equals(targetConfig)) {
+                            String message = String.format("Trying to update mitigation %s in FAILED state with same target config", mitigationState.getMitigationId());
+                            throw new IllegalArgumentException(message);
+                        }
+
+                        // reset num failures when transitioning from Failed -> Active state
+                        resetNumFailures(mitigationState);
                     }
 
                     String canonicalResourceId = typeValidator.getCanonicalStringRepresentation(resourceId);
@@ -474,6 +479,9 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                             String message = String.format("Mitigation %s is in FAILED state, cannot apply same target config", mitigationState.getMitigationId());
                             throw new IllegalArgumentException(message);
                         }
+
+                        // set numFailures to be 0 when transitioning to ACTIVE state
+                        resetNumFailures(mitigationState);
                     }
                     if (!mitigationState.getOwnerARN().equals(userARN)) {
                         String message = String.format("Cannot apply update to mitigationId:%s as the calling owner:%s "
@@ -610,6 +618,16 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         }
     }
 
+    private void resetNumFailures(MitigationState mitigationState) {
+        if (mitigationState.getLocationMitigationState() != null) {
+            mitigationState.getLocationMitigationState().entrySet().stream().forEach((entry) -> {
+                if (entry.getValue() != null) {
+                    entry.getValue().setNumFailures(0);
+                }
+            });
+        }
+    }
+
     boolean isRequestIpCoveredByExistingMitigation(
             final String ipAddress,
             final MitigationState mitigationState) {
@@ -728,6 +746,12 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         if (state == null) {
             throw new IllegalArgumentException("Specified mitigationId : " + mitigationId + " does not exist");
         }
+
+        // reset num failures when transitioning from failed to active
+        if (expectedState.equals(State.Failed) && newState.equals(State.Active)) {
+            resetNumFailures(state);
+        }
+
         state.setState(newState.name());
         BlackWatchMitigationActionMetadata actionMetadataBlackWatch =
                 BlackWatchHelper.coralMetadataToBWMetadata(actionMetadata);
