@@ -19,10 +19,13 @@ import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationHelper;
 import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDynamoDBHelper;
 import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchResourceTypeValidator;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
+import com.amazon.lookout.mitigation.service.ApplyConfigError;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
+import com.amazon.lookout.mitigation.service.FailureDetails;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationNotOwnedByRequestor400;
+import com.amazon.lookout.mitigation.service.StatusCodeSummary;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
@@ -236,6 +239,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                             .withLatestMitigationActionMetadata(mitigationActionMetadata)
                             .withLocationMitigationState(locationMitigationState)
                             .withRecordedResources(ms.getRecordedResources())
+                            .withFailureDetails(parseFailureDetails(ms))
                             .withAllowAutoMitigationOverride(ms.isAllowAutoMitigationOverride())
                             .build();
                     listOfBlackWatchMitigations.add(mitigationDefinition);
@@ -253,6 +257,39 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             }
             return listOfBlackWatchMitigations;
         }
+    }
+
+    private FailureDetails parseFailureDetails(MitigationState ms) {
+        if (ms.getFailureDetails() == null) {
+            return null;
+        }
+
+        FailureDetails failureDetails = new FailureDetails();
+        final Map<String, StatusCodeSummary> statusCodes = new HashMap<>();
+        final List<ApplyConfigError> applyConfigErrors = new ArrayList<>();
+
+        final com.amazon.blackwatch.mitigation.state.model.FailureDetails msFailureDetails = ms.getFailureDetails();
+        if (msFailureDetails.getStatusDescriptions() != null) {
+            failureDetails.setStatusDescriptions(msFailureDetails.getStatusDescriptions());
+        }
+
+        if (msFailureDetails.getStatusCodes() != null) {
+            msFailureDetails.getStatusCodes().entrySet().forEach(entry -> {
+                statusCodes.put(entry.getKey(),
+                        StatusCodeSummary.builder().withHostCount(entry.getValue().getHostCount()).build());
+            });
+        }
+
+        if (msFailureDetails.getApplyConfigErrors() != null) {
+            msFailureDetails.getApplyConfigErrors().stream().forEach(error -> {
+                applyConfigErrors
+                        .add(ApplyConfigError.builder().withCode(error.getCode()).withMessage(error.getMessage()).build());
+            });
+        }
+
+        failureDetails.setStatusCodes(statusCodes);
+        failureDetails.setApplyConfigErrors(applyConfigErrors);
+        return failureDetails;
     }
 
     @Override

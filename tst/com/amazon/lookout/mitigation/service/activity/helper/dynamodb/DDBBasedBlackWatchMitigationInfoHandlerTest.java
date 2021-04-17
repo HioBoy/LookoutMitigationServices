@@ -12,6 +12,7 @@ import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMe
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.state.model.ELBBriefInformation;
+import com.amazon.blackwatch.mitigation.state.model.FailureDetails;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState.State;
 import com.amazon.blackwatch.mitigation.state.model.MitigationStateSetting;
@@ -282,6 +283,11 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                         .build())
                 .build();
 
+        FailureDetails failureDetails = new FailureDetails();
+        failureDetails.setStatusDescriptions(ImmutableSet.of("status description"));
+        failureDetails.setStatusCodes(ImmutableMap.of("LOAD_FAILED", new FailureDetails.StatusCodesSummary(10)));
+        failureDetails.setApplyConfigErrors(ImmutableList.of(new FailureDetails.ApplyConfigError("OUTSIDE_RANGE", "outside range")));
+
         mitigationState3 = MitigationState.builder()
                 .mitigationId(testMitigation1)
                 .resourceId(testIPAddressResourceIdCanonical)
@@ -297,6 +303,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 .mitigationSettingsJSONChecksum("ABABABABA")
                 .minutesToLive(testMinsToLive)
                 .latestMitigationActionMetadata(testBWMetadata)
+                .failureDetails(failureDetails)
                 .build();
     }
     
@@ -335,6 +342,21 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 assertEquals(locationMitigationStateSettings.get(key).getPPS(), locationMitigationStateSettingsExpected.get(key).getPPS());
                 assertEquals(locationMitigationStateSettings.get(key).getMitigationSettingsJSONChecksum(), locationMitigationStateSettingsExpected.get(key).getMitigationSettingsJSONChecksum());
             }
+        }
+
+        if (ms.getFailureDetails() != null) {
+            // validate apply config errors
+            final ApplyConfigError applyConfigError = bwMitigationDefinition.getFailureDetails().getApplyConfigErrors().get(0);
+            assertEquals(applyConfigError.getCode(), ms.getFailureDetails().getApplyConfigErrors().get(0).getCode());
+            assertEquals(applyConfigError.getMessage(), ms.getFailureDetails().getApplyConfigErrors().get(0).getMessage());
+
+
+            // validate status descriptions
+            assertEquals(bwMitigationDefinition.getFailureDetails().getStatusDescriptions(), ms.getFailureDetails().getStatusDescriptions());
+
+            // validate status codes
+            final Map.Entry<String, StatusCodeSummary> statusCodeSummaryEntry = bwMitigationDefinition.getFailureDetails().getStatusCodes().entrySet().stream().findFirst().get();
+            assertEquals(statusCodeSummaryEntry.getValue().getHostCount(), ms.getFailureDetails().getStatusCodes().get(statusCodeSummaryEntry.getKey()).getHostCount());
         }
     }
 
@@ -562,7 +584,16 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         validateMitigation(listOfBlackwatchMitigation.get(0), mitigationState1);
         validateMitigation(listOfBlackwatchMitigation.get(1), mitigationState2);
     }
-    
+
+    @Test
+    public void testGetBlackWatchMitigationsFailureDetails() {
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState3));
+        //no filter, should return all mitigations
+        List<BlackWatchMitigationDefinition> listOfBlackwatchMitigation = blackWatchMitigationInfoHandler.getBlackWatchMitigations(null, null, null, null, 1, tsdMetrics);
+        assertEquals(listOfBlackwatchMitigation.size(), 1);
+        validateMitigation(listOfBlackwatchMitigation.get(0), mitigationState3);
+    }
+
     @Test
     public void testGetBlackWatchMitigationsFilterByMitigationId() {
         mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2)); 
