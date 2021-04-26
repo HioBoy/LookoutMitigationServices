@@ -1,5 +1,0 @@
-#!/apollo/bin/env sh
-
-# Remove previous dogfish data on activation
-
-rm -f ${APOLLO_ENVIRONMENT_ROOT}/var/prefixes/dogfish.json

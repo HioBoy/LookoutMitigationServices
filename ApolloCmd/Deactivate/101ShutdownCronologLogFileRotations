@@ -1,8 +1,0 @@
-#!/apollo/bin/env sh
- 
-# Runs after 100ShutdownProcessManager
- 
-for logname in PMAdmin.log; do
-    "${APOLLO_ENVIRONMENT_ROOT}/bin/cronolog-rotate-log-hourly-stop.sh" \
-        "${APOLLO_ENVIRONMENT_ROOT}/var/output/logs/$logname"
-done

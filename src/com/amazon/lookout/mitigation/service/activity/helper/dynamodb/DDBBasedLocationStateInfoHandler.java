@@ -41,6 +41,12 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
 
     private MWSHelper mwsHelper;
 
+    public DDBBasedLocationStateInfoHandler(@NonNull LocationStateDynamoDBHelper locationStateDynamoDBHelper) {
+        this.locationStateDynamoDBHelper = locationStateDynamoDBHelper;
+        this.activeMitigationsHelper = null;
+        this.mwsHelper = null;
+    }
+
     @ConstructorProperties({ "locationStateDynamoDBHelper", "activeMitigationsHelper", "mwsHelper"})
     public DDBBasedLocationStateInfoHandler(@NonNull LocationStateDynamoDBHelper locationStateDynamoDBHelper,
                                             @NonNull ActiveMitigationsHelper activeMitigationsHelper,

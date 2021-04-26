@@ -2,162 +2,46 @@
 
 <project name="LookoutMitigationService-1.0" basedir="." default="release" xmlns:ht="happytrails" xmlns:coral="antlib:com.amazon.coral">
 
-  <import file="${happytrails.root}/happytrails.xml"/>
+    <import file="${happytrails.root}/happytrails.xml"/>
 
-  <!-- Define HappierTrails property overrides here -->
-  <property name="findbugs.failOnError" value="true"/>
-  <property name="checkstyle.failOnError" value="false"/>
-  <property name="sources.javac.extra.args" value="-Xlint:all -Xlint:-path -Xlint:-processing -Xlint:-try -Werror"/>
+    <!-- Define HappierTrails property overrides here -->
+    <property name="findbugs.failOnError" value="true"/>
+    <property name="checkstyle.failOnError" value="false"/>
+    <property name="sources.javac.extra.args" value="-Xlint:all -Xlint:-path -Xlint:-processing -Xlint:-try -Werror"/>
 
-  <ht:import file="coral-launcher.xml" optional="false"/>
-  <ht:import file="coral-generator.xml" optional="false"/>
-  <ht:import file="dynamodb-local.xml" />
-    
-    
-  <ht:import file="happier-trails.xml"/>
+    <ht:import file="dynamodb-local.xml" />
+    <ht:import file="happier-trails.xml"/>
 
-  <!-- LogScanUtils for validating logscan regex -->
-  <property name="ht.logscan.path" value="monitoring/LogScanConfigs" />
-  <ht:import file="validate-logscan-regex-3.2.xml" optional="false"/>
-  
-  <!-- Set any property overrides -->
-  <property name="coral-src.dir" location="${output.dir}/private/src"/>
-  
-  <!-- Create directories -->
-  <target name="init">
-    <mkdir dir="${coral-src.dir}"/>
-  </target>
-    
-  <!-- Generate the Apollo script to start your service
-    Note: When modifying properties/env/jvmargs/etc here, remember to also
-    update the server target as well
-  -->
-  <target name="start-mitigation-service-script">
-      <coral:apollo target="${output.dir}/bin/startMitigationService.sh">
-          <location dir="${basedir}" pattern="spring-configuration/bootstrap.xml"/>  
 
-          <sysproperty key="user.timezone" value="UTC"/>
-          <sysproperty key="java.net.preferIPv4Stack" value="true"/>
-          <sysproperty key="spring.config.root" value="$${APOLLO_ACTUAL_ENVIRONMENT_ROOT}/spring-configuration" />
+    <!-- Set any property overrides -->
+    <property name="coral-src.dir" location="${output.dir}/private/src"/>
 
-          <!-- Set java-util.log to use log4j 2.x as the implementation -->
-          <sysproperty key="java.util.logging.manager" value="org.apache.logging.log4j.jul.LogManager" />
-          <!-- Set log4j 2.x to use asynchronous logging. -->
-          <sysproperty key="Log4jContextSelector" value="org.apache.logging.log4j.core.async.AsyncLoggerContextSelector" />
-          <!-- Set log4j 2.x to use the specified configuration. -->
-          <sysproperty key="log4j.configurationFile" value="$${ENVROOT}/log-configuration/log4j2.xml" />
+    <!-- Create directories -->
+    <target name="init">
+        <mkdir dir="${coral-src.dir}"/>
+    </target>
 
-          <env key="LANG" value="en_US.UTF-8"/>
-          <env key="NLS_LANG" value="American_America.UTF8"/>
-          <sysproperty key="file.encoding" value="UTF-8"/>
 
-          <sysproperty key="javax.net.ssl.trustStore" value="${APOLLO_ACTUAL_ENVIRONMENT_ROOT}/certs/InternalAndExternalTrustStore.jks"/>
-          <sysproperty key="javax.net.ssl.trustStorePassword" value="amazon"/>
+    <!-- build the activity stubs. This is not part of the usual build -->
+    <target name="activity-stub">
+        <property name="activity-stub.dir" value="${output.dir}/private/stub"/>
+        <mkdir dir="${activity-stub.dir}"/>
 
-          <!-- Heap Sizing -->
-          <!-- Set via brazil-config to vary between prod and other stages -->
-          <jvmarg value="$$JVM_OPTS"/>
-        
-          <!-- Debug port -->
-          <jvmarg value="-Xdebug"/>
-          <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=localhost:11003"/>
+        <coral:generate dir="${activity-stub.dir}" mode="stub">
+            <package name="LookoutMitigationServiceModel"/>
+        </coral:generate>
+    </target>
 
-          <!-- OOM Conditions -->
-          <jvmarg value="-XX:+HeapDumpOnOutOfMemoryError"/>
-          <jvmarg value="-XX:HeapDumpPath=var/tmp"/>
-          <jvmarg value="-XX:OnOutOfMemoryError=&quot;/bin/kill -9 %p&quot;"/>
 
-          <!-- reduce size for log buffer -->
-          <sysproperty key="AsyncLogger.RingBufferSize" value="8192" />
-      </coral:apollo>
-  </target>
 
-  <!-- build the activity stubs. This is not part of the usual build -->
-  <target name="activity-stub">
-    <property name="activity-stub.dir" value="${output.dir}/private/stub"/>
-    <mkdir dir="${activity-stub.dir}"/>
+    <target name="build" depends="standard-build"/>
 
-    <coral:generate dir="${activity-stub.dir}" mode="stub">
-      <package name="LookoutMitigationServiceModel"/>
-    </coral:generate>
-  </target>
+    <target name="set-test-additional-jvmargs" depends="dynamodb-local">
+        <property name="tests.additional.jvmargs" value="-enableassertions ${dynamodb-local.system-properties}"/>
+    </target>
 
-  <!-- Copy process manager config and spring configuration-->
-  <target name="copy-configs">
-      <copy todir="${output.dir}">
-          <fileset dir="${basedir}">
-              <include name="brazil-config/**/*"/>
-              <include name="spring-configuration/**/*"/>
-              <include name="log-configuration/**/*" />
-          </fileset>
-      </copy>
-  </target>
-  
-  <!-- Copy monitoring configuration -->
-  <target name="copy-monitoring">
-      <copy todir="${output.dir}">
-          <fileset dir="${basedir}">
-              <include name="monitoring/**/*"/>
-          </fileset>
-      </copy>
-  </target>
-  
-  <!-- Copy Apollo Commands -->
-  <target name="copy-apollo-cmd">
-      <copy todir="${output.dir}">
-          <fileset dir="${basedir}">
-              <include name="ApolloCmd/**/*" />
-          </fileset>
-      </copy>
-      <chmod dir="${output.dir}/ApolloCmd/" perm="a+x" includes="**/*"/>
-  </target>
+    <target name="coverage" depends="set-test-additional-jvmargs,standard-coverage"/>
+    <target name="test" depends="set-test-additional-jvmargs,unit-tests"/>
 
-  <target name="build" depends="standard-build,copy-apollo-cmd,copy-configs,copy-monitoring,start-mitigation-service-script"/>
-      
-  <target name="server" depends="build">
-    <coral:launch>
-      <location dir="${basedir}" pattern="spring-configuration/bootstrap.xml"/>
-
-      <sysproperty key="root" value="${output.dir}"/>
-      <sysproperty key="spring.config.root" value="${output.dir}/spring-configuration" />
-      <sysproperty key="domain" value="beta"/>
-      <sysproperty key="realm" value="us-east-1"/>
-      <sysproperty key="user.timezone" value="UTC"/>
-
-      <sysproperty key="apollo.OCF.Log4j.logSeverityLevel" value="debug"/>
-      <sysproperty key="apollo.OCF.HttpServer.httpRegularPort" value="8000"/>
-      <sysproperty key="apollo.OCF.HttpServer.httpSecurePort" value="8443"/>
- 
-      <classpath path="${bp:run.classpath}"/>
-
-      <env key="LANG" value="en_US.UTF-8"/>
-      <env key="NLS_LANG" value="American_America.UTF8"/>
-
-      <jvmarg line="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=6050"/>
-    </coral:launch>
-  </target>
-    
-  <target name="set-test-additional-jvmargs" depends="dynamodb-local">
-    <property name="tests.additional.jvmargs" value="-enableassertions ${dynamodb-local.system-properties}"/>
-  </target>
-    
-  <target name="coverage" depends="set-test-additional-jvmargs,standard-coverage"/>
-  <target name="test" depends="set-test-additional-jvmargs,unit-tests"/>
-
-  <macrodef name="lkt-java">
-    <attribute name="classname"/>
-    <element name="java-elements" implicit="true"/>
-    <sequential>
-      <property name="ca-certs.dir" value="${bp:[AmazonCACerts]run.configfarm.certs}"/>
-      <java classname="@{classname}" fork="true">
-        <classpath>
-           <pathelement path="${bp:testrun.classpath}"/>
-        </classpath>
-        <sysproperty key="javax.net.ssl.trustStore" value="${ca-certs.dir}/certs/InternalAndExternalTrustStore.jks"/>
-        <sysproperty key="javax.net.ssl.trustStorePassword" value="amazon"/>
-        <java-elements/>
-      </java>
-    </sequential>
-  </macrodef>
 
 </project>

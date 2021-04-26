@@ -35,15 +35,49 @@ public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
     private final String hostStatusTableName;
     private final Table table;
 
-    public DDBBasedHostStatusInfoHandler(@NonNull AmazonDynamoDB dynamoDBClient, @NonNull String domain, @NonNull String realm) {
+    public DDBBasedHostStatusInfoHandler(AmazonDynamoDB dynamoDBClient, String domain, String realm) {
+        this(dynamoDBClient, domain, realm, null, null);
+    }
+
+    /**
+     * Constructor to create a DDBBasedHostStatusInfoHandler with optional CellName and AZName
+     * @param dynamoDBClient : dynamoDBClient
+     * @param domain : The name of the domain like beta or prod
+     * @param realm : The name of the region like us-east-1
+     * @param cellName : The name of the cell which is used by Vanta
+     * @param azName : The name of the az which is used by Vanta
+     *
+     */
+    public DDBBasedHostStatusInfoHandler(@NonNull AmazonDynamoDB dynamoDBClient, @NonNull String domain, @NonNull String realm,
+                                         String cellName, String azName) {
         this.dynamoDBClient = dynamoDBClient;
         this.dynamoDB = new DynamoDB(dynamoDBClient);
-        this.hostStatusTableName = String.format(HostStatus.TABLE_NAME_FORMAT, realm.toUpperCase(), domain.toUpperCase());
+
+        // If no cellName or azName, the table name only contains realm and domain
+        if (this.hasCellAZ(cellName, azName)) {
+            this.hostStatusTableName = String.format(HostStatus.TABLE_NAME_FORMAT_CELL_AZ, realm.toUpperCase(),
+                    domain.toUpperCase(), cellName.toUpperCase(), azName.toUpperCase());
+        } else {
+            this.hostStatusTableName = String.format(HostStatus.TABLE_NAME_FORMAT, realm.toUpperCase(), domain.toUpperCase());
+
+        }
+
         this.table = dynamoDB.getTable(this.hostStatusTableName);
     }
 
     private static String hostStatusEnumToString(HostStatusEnum in) {
         return in != null ? in.name() : null;
+    }
+
+    /**
+     * Returns a value indicating whether the region and domain combination contains cell and az
+     *
+     * @param cellName a string of the cell name
+     * @param azName a string of the az name
+     * @return a boolean value
+     */
+    private  boolean hasCellAZ(String cellName, String azName) {
+        return cellName != null && !cellName.isEmpty() && azName != null && !azName.isEmpty();
     }
 
     /**
