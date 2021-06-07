@@ -64,7 +64,7 @@ public class UpdateBlackWatchMitigationActivityTest extends ActivityTestHelper {
         Mockito.doReturn(mitigationState).when(blackwatchMitigationInfoHandler).getMitigationState(anyString());
         Mockito.doReturn(retResponse).when(blackwatchMitigationInfoHandler).updateBlackWatchMitigation(anyString(), 
                 anyInt(), isA(MitigationActionMetadata.class), isA(BlackWatchTargetConfig.class),
-                anyString(), isA(TSDMetrics.class));
+                anyString(), isA(TSDMetrics.class), anyBoolean());
         
         UpdateBlackWatchMitigationResponse response = updateBlackWatchMitigationActivity.enact(request);
         assertEquals(requestId, response.getRequestId());

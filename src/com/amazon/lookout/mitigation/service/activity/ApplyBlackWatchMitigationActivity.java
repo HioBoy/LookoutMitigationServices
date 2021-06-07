@@ -93,10 +93,11 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
             Integer minsToLive = request.getMinutesToLive();
             MitigationActionMetadata metadata = request.getMitigationActionMetadata();
             boolean allowAutoMitigationOverride = request.isAllowAutoMitigationOverride();
+            boolean bypassConfigValidations = request.isBypassConfigValidations();
 
             ApplyBlackWatchMitigationResponse response = blackwatchMitigationInfoHandler
                     .applyBlackWatchMitigation(resourceId, resourceType, minsToLive,
-                            metadata, targetConfig, userARN, tsdMetrics, allowAutoMitigationOverride);
+                            metadata, targetConfig, userARN, tsdMetrics, allowAutoMitigationOverride, bypassConfigValidations);
             response.setRequestId(requestId);
 
             return response;

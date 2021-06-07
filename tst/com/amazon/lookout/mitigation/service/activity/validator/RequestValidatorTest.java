@@ -945,6 +945,41 @@ public class RequestValidatorTest {
     }
 
     @Test
+    public void testValidateUpdateBlackWatchMitigationWithInvalidJsonBypassValidations() {
+        UpdateBlackWatchMitigationRequest request = new UpdateBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+
+        final String validMitigationId = "US-WEST-1_2016-02-05T00:43:04.6767Z_55";
+        request.setMitigationId(validMitigationId);
+        request.setBypassConfigValidations(true);
+
+        final String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+
+        final Long theRateLimit = 0L;
+
+        String json = String.format(""
+                + "{"
+                + "  \"mitigation_config\": {"
+                + "    \"global_traffic_shaper\": {"
+                + "      \"default\": {"
+                + "        \"global_pps\": %d"
+                + "      }"
+                + "    }"
+                + "  }"
+                + "}", theRateLimit);
+        request.setMitigationSettingsJSON(json);
+
+        String resouceType = "IPAddress";
+        final BlackWatchTargetConfig newTargetConfig = validator.validateUpdateBlackWatchMitigationRequest(
+                request, resouceType, new BlackWatchTargetConfig(), userARN);
+        assertSame(theRateLimit.longValue(), getDefaultRateLimit(newTargetConfig).longValue());
+    }
+
+    @Test
     public void testValidateUpdateBlackWatchMitigationWithEmptyJsonForGLB() {
         UpdateBlackWatchMitigationRequest request = new UpdateBlackWatchMitigationRequest();
         request.setMitigationActionMetadata(MitigationActionMetadata.builder()
@@ -1224,6 +1259,41 @@ public class RequestValidatorTest {
             + "    }"
             + "  }"
             + "}";
+
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
+    // similar test as testNamedDefaultZeroRateLimitSpecifiedInJSON but since
+    // bypass validation is set, the test should succeed.
+    @Test
+    public void testNamedDefaultZeroRateLimitSpecifiedInJSONBypassValidation() {
+        // A zero rate limit for the default shaper is rejected when more than one
+        // shaper exist.
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("IPAddressList");
+        request.setBypassConfigValidations(true);
+
+        String json = ""
+                + "{"
+                + "  \"mitigation_config\": {"
+                + "    \"global_traffic_shaper\": {"
+                + "      \"default\": {"
+                + "        \"global_pps\": 0"
+                + "      },"
+                + "      \"not_default\": {"
+                + "        \"global_pps\": 1000"
+                + "      }"
+                + "    }"
+                + "  }"
+                + "}";
 
         request.setMitigationSettingsJSON(json);
         String userARN = "arn:aws:iam::005436146250:user/blackwatch";

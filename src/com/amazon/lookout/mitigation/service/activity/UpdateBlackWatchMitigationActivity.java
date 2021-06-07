@@ -104,7 +104,7 @@ public class UpdateBlackWatchMitigationActivity extends Activity {
                     request, resourceType, currentTargetConfig, userARN);
 
             UpdateBlackWatchMitigationResponse response = blackwatchMitigationInfoHandler.updateBlackWatchMitigation(
-                    mitigationId, minsToLive, metadata, targetConfig, userARN, tsdMetrics);
+                    mitigationId, minsToLive, metadata, targetConfig, userARN, tsdMetrics, request.isBypassConfigValidations());
             
             response.setRequestId(requestId);
             return response;

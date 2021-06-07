@@ -300,13 +300,14 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     @Override
     public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId,
             Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
-            String userARN, TSDMetrics tsdMetrics) {
+            String userARN, TSDMetrics tsdMetrics, boolean bypassConfigValidations) {
         Validate.notNull(mitigationId);
         Validate.notNull(userARN);
         Validate.notNull(tsdMetrics);
+        validateBypassConfigValidation(userARN, bypassConfigValidations);
+
         try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler"
                 + ".updateBlackWatchMitigation")) {
-
             // since Optimistic locking is enabled for MitigationState table, let's retry couple of
             // times to update the mitigation state since workers can update this in parallel
             for (int attempt = 0; attempt < MAX_UPDATE_RETRIES; attempt++) {
@@ -368,6 +369,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 String previousOwnerARN = mitigationState.getOwnerARN();
                 mitigationState.setState(MitigationState.State.Active.name());
                 mitigationState.setChangeTime(System.currentTimeMillis());
+                mitigationState.setBypassConfigValidations(bypassConfigValidations);
                 mitigationState.setOwnerARN(userARN);
                 if (mitigationSettingsJSON != null) {
                     // update mitigation settings JSON
@@ -436,16 +438,16 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     @Override
     public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceTypeString,
             Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
-            String userARN, TSDMetrics tsdMetrics, boolean allowAutoMitigationOverride) {
+            String userARN, TSDMetrics tsdMetrics, boolean allowAutoMitigationOverride, boolean bypassConfigValidations) {
         Validate.notNull(resourceId);
         Validate.notNull(resourceTypeString);
         Validate.notNull(targetConfig);
         Validate.notNull(userARN);
         Validate.notNull(tsdMetrics);
+        validateBypassConfigValidation(userARN, bypassConfigValidations);
 
         try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler"
                 + ".applyBlackWatchMitigation")) {
-        
             boolean newMitigationCreated = false;
             String mitigationId;
             
@@ -544,6 +546,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                             .mitigationId(mitigationId)
                             .resourceId(canonicalResourceId)
                             .allowAutoMitigationOverride(allowAutoMitigationOverride)
+                            .bypassConfigValidations(bypassConfigValidations)
                             .resourceType(resourceTypeString)
                             .ownerARN(userARN)
                             .build();
@@ -652,6 +655,12 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             String message = String.format("Failed to update MitigationState due to ConditionalCheckFailedException " +
                     "even after retrying for %d times, please try calling this API again", MAX_UPDATE_RETRIES);
             throw new IllegalArgumentException(message);
+        }
+    }
+
+    private void validateBypassConfigValidation(String userArn, boolean bypassConfigValidations) {
+        if (bypassConfigValidations && userArn.startsWith(bamAndEc2OwnerArnPrefix)) {
+            throw new IllegalArgumentException("Auto mitigations should not skip validation!");
         }
     }
 

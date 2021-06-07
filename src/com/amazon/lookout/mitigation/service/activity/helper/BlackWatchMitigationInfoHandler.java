@@ -45,9 +45,10 @@ public interface BlackWatchMitigationInfoHandler {
 
     public ApplyBlackWatchMitigationResponse applyBlackWatchMitigation(String resourceId, String resourceType,
             Integer minsToLive, MitigationActionMetadata metadata,
-            BlackWatchTargetConfig targetConfig, String userARN, TSDMetrics tsdMetrics, boolean allowAutoMitigationOverride);
+            BlackWatchTargetConfig targetConfig, String userARN, TSDMetrics tsdMetrics, boolean allowAutoMitigationOverride,
+            boolean bypassConfigValidations);
     
     public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId,
             Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
-            String userARN, TSDMetrics tsdMetrics);
+            String userARN, TSDMetrics tsdMetrics, boolean bypassConfigValidations);
 }

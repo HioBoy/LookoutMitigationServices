@@ -859,8 +859,10 @@ public class RequestValidator {
                                                  errorOnDuplicateRates);
         // The GLB resource type not need the default shaper because we generate it,
         // so call validate with defaultRateLimitRequired = !isGlbResource
-        boolean isGlbResource = resourceType.equalsIgnoreCase("GLB");
-        targetConfig.validate(!isGlbResource);
+        if (!request.isBypassConfigValidations()) {
+            boolean isGlbResource = resourceType.equalsIgnoreCase("GLB");
+            targetConfig.validate(!isGlbResource);
+        }
         validateUserARN(userARN);
 
         return targetConfig;
@@ -883,8 +885,12 @@ public class RequestValidator {
 
         // The GLB resource type not need the default shaper because we generate it,
         // so call validate with defaultRateLimitRequired = !isGlbResource
-        boolean isGlbResource = request.getResourceType().equalsIgnoreCase("GLB");
-        targetConfig.validate(!isGlbResource);
+        if (!request.isBypassConfigValidations()) {
+            boolean isGlbResource = request.getResourceType().equalsIgnoreCase("GLB");
+            targetConfig.validate(!isGlbResource);
+        } else {
+            LOG.info("Validation bypassed for request, since bypass flag is set");
+        }
 
         validateUserARN(userARN);
         return targetConfig;
