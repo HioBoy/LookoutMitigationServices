@@ -2,7 +2,10 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 
 import com.amazon.blackwatch.location.state.model.LocationState;
@@ -38,7 +41,7 @@ public class GetLocationHostStatusActivityTest extends ActivityTestHelper {
      * Test host status retrieval works
      */
     @Test
-    public void testLocationHostStatus() {
+    public void testLocationHostStatus() throws IOException {
         Mockito.doNothing().when(requestValidator).validateGetLocationHostStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationHostStatusActivity).getRequestId();
 
@@ -53,6 +56,7 @@ public class GetLocationHostStatusActivityTest extends ActivityTestHelper {
         HostStatusInLocation hostStatusinLocation = new HostStatusInLocation();
         hostStatusinLocation.setHostName("host1");
         hostStatusinLocation.setIsActive(true);
+        hostStatusinLocation.setDeploymentIds(Collections.singletonMap("LookoutBlackWatch", "d-test-id"));
         listOfHostStatusInLocations.add(hostStatusinLocation);
         
         hostStatusinLocation = new HostStatusInLocation();
@@ -68,13 +72,14 @@ public class GetLocationHostStatusActivityTest extends ActivityTestHelper {
         assertEquals(listOfHostStatusInLocations, response.getListOfHostStatusesInLocation());
         assertEquals(location, response.getLocation());
         assertEquals(requestId, response.getRequestId());
+        assertEquals(deploymentIds, response.getListOfHostStatusesInLocation().get(0).getDeploymentIds());
     }
     
     /**
      * Test empty list of host status retrieval works
      */
     @Test
-    public void testEmptyLocationHostStatus() {
+    public void testEmptyLocationHostStatus() throws IOException {
         LocationState locationState = LocationState.builder()
                 .locationName(location)
                 .build();

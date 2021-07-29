@@ -50,7 +50,24 @@ public class DDBBasedHostStatusInfoHandlerTest {
     private static TSDMetrics tsdMetrics;
 
     private static final String HOST_TYPE = HostType.BLACKWATCH.name();
-    private static final String STATUS_DETAILS = "{\"CPU speed\":12345}";
+    private static final String STATUS_DETAILS = "{"
+            +   "\"applyConfigErrors\":[{"
+            +     "\"code\":\"PARSE_FAILED\","
+            +     "\"message\":\"invalid JSON\""
+            +   "}],"
+            +   "\"deploymentIds\":{"
+            +     "\"LookoutBlackWatch\":\"d-test-id\""
+            +   "},"
+            +   "\"ports\":{"
+            +     "\"eth0\":{"
+            +       "\"deviceName\":\"fra56-br-bmt-sw1\","
+            +       "\"deviceDescription\":\"Juniper Networks, Inc. ex4300-48t Ethernet Switch, kernel JUNOS 14.1X53-D35.3, Build date: 2016-03-01 02:55:24 UTC Copyright (c) 1996-2016 Juniper Networks, Inc.\","
+            +       "\"portName\":\"ge-0/0/1\","
+            +       "\"portDescription\":\"CFHOST: fra56-br-bmt-sw1 ge-0/0/1 --> Eth0 Blackwatch01\","
+            +       "\"portRole\":\"DATA\""
+            +     "}"
+            +   "}"
+            + "}";
     private static final String STATUS_DESCRIPTION = "config 123455 is rejected by blackwatch process";
 
     private final String location1 = "location 1";
@@ -162,6 +179,7 @@ public class DDBBasedHostStatusInfoHandlerTest {
             // validate all host status of a location are retrieved.
             List<HostStatusInLocation> hostStatuses = hostStatusInfoHandler.getHostsStatus(locState1, tsdMetrics);
             assertEquals(recordCount, hostStatuses.size());
+            assertEquals(hostStatuses.get(0).getDeploymentIds().get("LookoutBlackWatch"), "d-test-id");
 
             for (int i = 0; i < recordCount; ++i) {
                 assertEquals(i, Integer.parseInt(hostStatuses.get(i).getHostName().split(host1)[1]));
@@ -240,6 +258,7 @@ public class DDBBasedHostStatusInfoHandlerTest {
             // validate all host status of a location are retrieved.
             List<HostStatusInLocation> hostStatuses = hostStatusInfoHandler.getHostsStatus(locState1, tsdMetrics);
             assertEquals(listOfHostStatus.size(), hostStatuses.size());
+            assertEquals(hostStatuses.get(0).getDeploymentIds().get("LookoutBlackWatch"), "d-test-id");
 
             for (int i = 0; i < recordCount; ++i) {
                 HostStatus hs = listOfHostStatus.get(i);
@@ -261,9 +280,8 @@ public class DDBBasedHostStatusInfoHandlerTest {
      * Test location does not have any host statuses
      */
     @Test
-    public void testGetLocationHostStatusAtNonExistingLocation() {
+    public void testGetLocationHostStatusAtNonExistingLocation() throws IOException {
         LocationState randomLocState = LocationState.builder().locationName("randomLocation1").build();
         assertEquals(0, hostStatusInfoHandler.getHostsStatus(randomLocState, tsdMetrics).size());
     }
 }
-

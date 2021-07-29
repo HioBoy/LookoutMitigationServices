@@ -1,7 +1,9 @@
 package com.amazon.lookout.mitigation.service.activity;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import com.amazon.blackwatch.location.state.storage.LocationStateDynamoDBHelper;
 import com.amazon.lookout.mitigation.datastore.LocationStateLocksDAO;
@@ -32,6 +34,7 @@ public class ActivityTestHelper {
     protected static final long workflowId = 1000;
     protected static final int maxNumberOfHistoryEntriesToFetch = 20;
     protected static final String requestId = "1000001";
+    protected static final Map<String, String> deploymentIds = Collections.singletonMap("LookoutBlackWatch", "d-test-id");
     protected static final Identity identity = new Identity();
     protected static final List<String> locations = Arrays.asList("G-IAD55");
     protected static final MitigationActionMetadata mitigationActionMetadata = new MitigationActionMetadata();
@@ -70,4 +73,4 @@ public class ActivityTestHelper {
         locationStateDynamoDBHelper = mock(LocationStateDynamoDBHelper.class);
         mwsHelper = mock(MWSHelper.class);
     }
-}
+}   

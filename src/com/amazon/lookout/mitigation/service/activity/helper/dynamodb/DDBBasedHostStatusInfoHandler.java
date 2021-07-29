@@ -1,12 +1,16 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.amazon.blackwatch.host.status.model.HostStatusDetails;
 import com.amazon.blackwatch.host.status.model.HostStatusEnum;
 import com.amazon.blackwatch.location.state.model.LocationHostStatus;
 import com.amazon.blackwatch.location.state.model.LocationState;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.NonNull;
 
 import org.apache.commons.lang.Validate;
@@ -28,6 +32,7 @@ import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
     private static final Log LOG = LogFactory.getLog(DDBBasedHostStatusInfoHandler.class);
     public static final String DDB_QUERY_FAILURE_COUNT = "DynamoDBQueryFailureCount";
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final AmazonDynamoDB dynamoDBClient;
     private final DynamoDB dynamoDB;
@@ -86,7 +91,7 @@ public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
      * @param tsdMetrics A TSDMetrics object.
      */
     @Override
-    public List<HostStatusInLocation> getHostsStatus(LocationState locationState, TSDMetrics tsdMetrics) {
+    public List<HostStatusInLocation> getHostsStatus(LocationState locationState, TSDMetrics tsdMetrics) throws IOException {
         Validate.notNull(locationState);
         Validate.notNull(tsdMetrics);
 
@@ -107,6 +112,11 @@ public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
                     hostStatusinLocation.setHostType(item.getString(HostStatus.HOST_TYPE_KEY));
                     hostStatusinLocation.setDeviceName(item.getString(HostStatus.DEVICE_NAME_KEY));
                     hostStatusinLocation.setHardwareType(item.getString(HostStatus.HARDWARE_TYPE_KEY));
+                    final HostStatusDetails statusDetails = getStatusDetailsObject(item.getJSON(HostStatus.STATUS_DETAILS_KEY));
+                    if (statusDetails != null && statusDetails.getDeploymentIds() != null){
+                        hostStatusinLocation.setDeploymentIds(statusDetails.getDeploymentIds());
+                    }
+
                     LocationHostStatus locationHostStatus = locationState.getOrCreateHosts().get(hostName);
                     if (locationHostStatus != null) {
                         hostStatusinLocation.setCurrentStatus(hostStatusEnumToString(locationHostStatus.getCurrentStatus()));
@@ -131,5 +141,21 @@ public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
             }
             return listOfHostStatusInLocations;
         }
+    }
+
+    /**
+     * Convert JSON string of HostStatusDetails to an object form.
+     * @param String : JSON string of HostStatusDetails
+     * @return HostStatusDetails : Object of HostStatusDetails.
+     */
+    public static HostStatusDetails getStatusDetailsObject(String statusDetails) throws IOException {
+        if (statusDetails != null) {
+            HostStatusDetails ret = MAPPER.readValue(statusDetails, HostStatusDetails.class);
+            if (ret == null) {
+                throw new JsonParseException(null, "Could not parse string to HostStatusDetails object.");
+            }
+            return ret;
+        }
+        return null;
     }
 }
