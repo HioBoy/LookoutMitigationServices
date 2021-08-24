@@ -36,7 +36,7 @@ package.LookoutMitigationService = {
             JakartaCommons-lang3 = 3.x;
             FindBugsAnnotations = 3.1.0;
             
-            CoralAwsAuthentication = 1.5; # To support authenticating/authorizing calls to LookoutMitigationService.
+            CoralAwsAuthentication = 1.6; # To support authenticating/authorizing calls to LookoutMitigationService.
             OdinAWSCredentials = 1.4;
 
             LookoutMitigationServiceCommons = 1.0;
