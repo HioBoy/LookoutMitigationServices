@@ -131,6 +131,10 @@ package.LookoutMitigationService = {
             JakartaCommons-lang3 = 3.x;
             FindBugsAnnotations = 3.1.0;
             RIPJavaHelper = 2.0;
+            AWSAuthRuntimeClient = 1.6;
+            AWSAuthRuntimeClientCore = 1.6;
+            AWSAuthRuntimeServiceJavaClient = 1.5;
+            CoralAwsAuthentication = 1.6;
         };
     };
 
