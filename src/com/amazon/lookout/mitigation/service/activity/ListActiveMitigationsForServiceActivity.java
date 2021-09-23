@@ -1,10 +1,10 @@
 package com.amazon.lookout.mitigation.service.activity;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import com.amazon.lookout.mitigation.exception.ExternalDependencyException;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
@@ -39,7 +39,8 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
 
     private enum ListActiveMitigationsExceptions {
         BadRequest,
-        InternalError
+        InternalError,
+        ExternalDependencyError
     }
 
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
@@ -90,6 +91,14 @@ public class ListActiveMitigationsForServiceActivity extends Activity {
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + 
                     ListActiveMitigationsExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg);
+        } catch (final ExternalDependencyException exception) {
+            //Branching out this ddb exception to avoid logging an error and cutting transient tickets.
+            String msg = "Internal error in ListActiveMitigationsForServiceActivity for requestId: " +
+                    requestId + ", reason: " + exception.getMessage();
+            LOG.warn(msg + " for request " + ReflectionToStringBuilder.toString(request), exception);
+            requestSuccessfullyProcessed = false;
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + ListActiveMitigationsExceptions.ExternalDependencyError.name());
+            throw new InternalServerError500(msg);
         } catch (Exception internalError) {
             String msg = "Internal error in ListActiveMitigationsForServiceActivity for requestId: " + 
                     requestId + ", reason: " + internalError.getMessage();

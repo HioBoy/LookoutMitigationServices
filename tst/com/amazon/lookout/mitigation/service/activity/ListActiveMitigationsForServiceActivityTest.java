@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import com.amazon.lookout.mitigation.exception.ExternalDependencyException;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -40,7 +41,7 @@ public class ListActiveMitigationsForServiceActivityTest extends ActivityTestHel
     }
     
     @Test
-    public void testListActiveMitigations() {
+    public void testListActiveMitigations() throws ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateListActiveMitigationsForServiceRequest(request);
         Mockito.doReturn(requestId).when(listActiveMitigationsForServiceActivity).getRequestId();
         

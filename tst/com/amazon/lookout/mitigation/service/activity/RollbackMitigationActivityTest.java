@@ -1,35 +1,20 @@
 package com.amazon.lookout.mitigation.service.activity;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-
+import com.amazon.lookout.mitigation.exception.ExternalDependencyException;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Matchers.any;
 
-import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.BadRequest400;
-import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.MissingMitigationVersionException404;
-import com.amazon.lookout.mitigation.service.MitigationModificationResponse;
-import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
-import com.amazon.lookout.mitigation.service.MitigationRequestDescriptionWithLocations;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
-import com.amazon.lookout.mitigation.service.mitigation.model.MitigationStatus;
-import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.mitigation.service.mitigation.model.WorkflowStatus;
-import com.amazon.lookout.model.RequestType;
 
 import com.amazon.lookout.mitigation.RequestCreator;
-import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
-import com.amazon.lookout.mitigation.datastore.WorkflowIdsDAO;
 import com.amazon.lookout.mitigation.datastore.RequestsDAO;
 
 public class RollbackMitigationActivityTest extends ActivityTestHelper {
@@ -94,7 +79,7 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
      * Test missing mitigaiton case
      */
     @Test(expected = MissingMitigationVersionException404.class)
-    public void testMissingMitigation() {
+    public void testMissingMitigation() throws ExternalDependencyException {
         doThrow(new MissingMitigationVersionException404()).when(requestCreator)
             .queueRequest(any(), any(), any());
         rollbackMitigationActivity.enact(request);

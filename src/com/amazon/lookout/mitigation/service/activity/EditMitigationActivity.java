@@ -1,6 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity;
 
-import org.apache.commons.lang3.Validate;
+import com.amazon.lookout.mitigation.exception.ExternalDependencyException;
 
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.stream.Collectors;
 
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
@@ -54,7 +53,8 @@ public class EditMitigationActivity extends Activity {
         StaleRequest,
         DuplicateDefinition,
         MissingMitigation,
-        InternalError
+        InternalError,
+        ExternalDependencyError
     }
 
     // Maintain a Set<String> for all the exceptions to allow passing it to the ActivityHelper which is called from
@@ -152,6 +152,13 @@ public class EditMitigationActivity extends Activity {
                     ReflectionToStringBuilder.toString(editRequest)), ex);
             tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.MissingMitigation.name());
             throw ex;
+        } catch (final ExternalDependencyException ex) {
+            //Branching out this ddb exception to avoid logging an error and cutting transient tickets.
+            LOG.warn(String.format("Caught " + ex.getClass().getSimpleName() + " in EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, ex.getMessage(),
+                    ReflectionToStringBuilder.toString(editRequest)), ex);
+            requestSuccessfullyProcessed = false;
+            tsdMetrics.addOne(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX + EditExceptions.ExternalDependencyError.name());
+            throw new InternalServerError500(ex);
         } catch (Exception internalError) {
             String errMsg = String.format("Internal error while fulfilling request for EditMitigationActivity for requestId: %s, reason: %s for request: %s", requestId, internalError.getMessage(),
                     ReflectionToStringBuilder.toString(editRequest));

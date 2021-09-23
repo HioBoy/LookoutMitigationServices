@@ -3,6 +3,7 @@ package com.amazon.lookout.mitigation.service.activity;
 import amazon.mws.data.Datapoint;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.blackwatch.location.state.model.LocationState;
+import com.amazon.lookout.mitigation.exception.ExternalDependencyException;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.BlackWatchLocation;
 import com.amazon.lookout.mitigation.service.GetLocationOperationalStatusRequest;
@@ -54,7 +55,7 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
      * Test GetLocationOperationalStatus Works for AdminIn
      */
     @Test
-    public void testGetLocationOperationalStatusAdminIn() {
+    public void testGetLocationOperationalStatusAdminIn() throws ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateGetLocationOperationalStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationOperationalStatusActivity).getRequestId();
 
@@ -78,7 +79,7 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
      * Test GetLocationOperationalStatus Works for AdminOut
      */
     @Test
-    public void testGetLocationOperationalStatusAdminOut() {
+    public void testGetLocationOperationalStatusAdminOut() throws ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateGetLocationOperationalStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationOperationalStatusActivity).getRequestId();
 
@@ -108,7 +109,7 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
      * Test GetLocationOperationalStatus Works when all of the conditions for isOperational are statisfied
      */
     @Test
-    public void testIfAllConditionsSatisfied() throws MWSRequestException {
+    public void testIfAllConditionsSatisfied() throws MWSRequestException, ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateGetLocationOperationalStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationOperationalStatusActivity).getRequestId();
 
@@ -147,7 +148,7 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
      * Test GetLocationOperationalStatus Works when ExpectedMitigations not present
      */
     @Test
-    public void testIfExpectedMitigationsNotPresent() throws MWSRequestException {
+    public void testIfExpectedMitigationsNotPresent() throws MWSRequestException, ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateGetLocationOperationalStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationOperationalStatusActivity).getRequestId();
 
@@ -187,7 +188,7 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
      * Test GetLocationOperationalStatus Works when no routes announced not present
      */
     @Test
-    public void testIfNoAnnouncedRoutes() throws MWSRequestException {
+    public void testIfNoAnnouncedRoutes() throws MWSRequestException, ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateGetLocationOperationalStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationOperationalStatusActivity).getRequestId();
 
@@ -227,7 +228,7 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
      * Test GetLocationOperationalStatus Works when inService=false
      */
     @Test
-    public void testIfInServiceFalse() throws MWSRequestException {
+    public void testIfInServiceFalse() throws MWSRequestException, ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateGetLocationOperationalStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationOperationalStatusActivity).getRequestId();
 
@@ -273,7 +274,7 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
      * Test GetLocationOperationalStatus Works when location does not exist
      */
     @Test(expected = BadRequest400.class)
-    public void testGetLocationOperationalStatusWhenLocationDoesNotExist() {
+    public void testGetLocationOperationalStatusWhenLocationDoesNotExist() throws ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateGetLocationOperationalStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationOperationalStatusActivity).getRequestId();
 

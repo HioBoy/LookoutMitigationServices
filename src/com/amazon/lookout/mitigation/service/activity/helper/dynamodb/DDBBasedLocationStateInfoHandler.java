@@ -10,6 +10,7 @@ import com.amazon.blackwatch.host.status.model.HostStatusEnum;
 import com.amazon.blackwatch.location.state.model.LocationOperation;
 import com.amazon.coral.service.InternalFailure;
 import com.amazon.lookout.mitigation.ActiveMitigationsHelper;
+import com.amazon.lookout.mitigation.exception.ExternalDependencyException;
 import com.amazon.lookout.mitigation.service.activity.helper.mws.MWSRequestException;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import lombok.NonNull;
@@ -306,7 +307,8 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         return isOperational;
     }
 
-    private boolean isLocationOperational(String location, List<BlackWatchLocation> allStacksAtLocation, TSDMetrics tsdMetrics) {
+    private boolean isLocationOperational(String location, List<BlackWatchLocation> allStacksAtLocation, TSDMetrics tsdMetrics)
+            throws ExternalDependencyException {
         LocationState locationState = getLocationState(location, tsdMetrics);
         boolean areRoutesAnnounced = hasAnnouncedRoutes(location, tsdMetrics);
         boolean hasExpectedMitigations = activeMitigationsHelper.hasExpectedMitigations(DeviceName.BLACKWATCH_BORDER, allStacksAtLocation, location);
@@ -314,7 +316,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
     }
 
     @Override
-    public boolean validateOtherStacksInService(String location, TSDMetrics tsdMetrics) {
+    public boolean validateOtherStacksInService(String location, TSDMetrics tsdMetrics) throws ExternalDependencyException {
         LOG.info("Validating if other stacks are in service for location: " + location);
         LocationState locationState = getLocationState(location, tsdMetrics);
         List<BlackWatchLocation> allStacksAtLocation = getAllBlackWatchLocationsAtSameAirportCode(locationState, tsdMetrics);
@@ -337,7 +339,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
     }
 
     @Override
-    public boolean checkIfLocationIsOperational(String location, TSDMetrics tsdMetrics) {
+    public boolean checkIfLocationIsOperational(String location, TSDMetrics tsdMetrics) throws ExternalDependencyException {
         LOG.info("Checking if location: " + location + ", is operational.");
         LocationState locationState = getLocationState(location, tsdMetrics);
         List<BlackWatchLocation> allStacksAtLocation = getAllBlackWatchLocationsAtSameAirportCode(locationState, tsdMetrics);

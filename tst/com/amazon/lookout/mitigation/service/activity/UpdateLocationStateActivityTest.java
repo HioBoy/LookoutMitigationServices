@@ -2,6 +2,7 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.blackwatch.location.state.model.LocationState;
+import com.amazon.lookout.mitigation.exception.ExternalDependencyException;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
@@ -104,7 +105,7 @@ public class UpdateLocationStateActivityTest extends ActivityTestHelper {
      * OtherStacks Inservice
      */
     @Test
-    public void testUpdateLocationStateAdminOutAcquireLock() {
+    public void testUpdateLocationStateAdminOutAcquireLock() throws ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateUpdateLocationStateRequest(request);
         Mockito.doReturn(requestId).when(updateLocationStateActivity).getRequestId();
 
@@ -138,7 +139,7 @@ public class UpdateLocationStateActivityTest extends ActivityTestHelper {
      * OtherStacks Inservice
      */
     @Test(expected = BadRequest400.class)
-    public void testUpdateLocationStateAdminOutNoStackInService() {
+    public void testUpdateLocationStateAdminOutNoStackInService() throws ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateUpdateLocationStateRequest(request);
         Mockito.doReturn(requestId).when(updateLocationStateActivity).getRequestId();
 
