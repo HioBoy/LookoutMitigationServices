@@ -272,17 +272,21 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         return locationStateList;
     }
 
-    private double getAnnouncedRoutesCount(String location, TSDMetrics tsdMetrics) throws MWSRequestException {
-        List<Datapoint> datapoints = mwsHelper.getBGPTotalAnnouncements(location, tsdMetrics);
-        if (datapoints.size() < DATAPOINTS_TO_BE_EVALUATED) {
-            throw new IllegalStateException("Last two datapoints for the location: " + location + " not found");
-        }
-        datapoints = datapoints.subList(datapoints.size() - DATAPOINTS_TO_BE_EVALUATED, datapoints.size());
+    private boolean hasAnnouncedRoutes(String location, TSDMetrics tsdMetrics) {
         double routeCount = 0;
-        for (Datapoint datapoint : datapoints) {
-            routeCount += datapoint.getValue();
+        try {
+            List<Datapoint> datapoints = mwsHelper.getBGPTotalAnnouncements(location, tsdMetrics);
+            if (datapoints.size() < DATAPOINTS_TO_BE_EVALUATED) {
+                throw new IllegalStateException("Last two datapoints for the location: " + location + " not found");
+            }
+            datapoints = datapoints.subList(datapoints.size() - DATAPOINTS_TO_BE_EVALUATED, datapoints.size());
+            for (Datapoint datapoint : datapoints) {
+                routeCount += datapoint.getValue();
+            }
+        } catch (MWSRequestException e) {
+            return true;
         }
-        return routeCount;
+        return (routeCount == 0) ? false : true;
     }
 
     private boolean evaluateOperationalFlags(LocationState locationState, boolean areRoutesAnnounced, boolean hasExpectedMitigations) {
@@ -304,14 +308,9 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
 
     private boolean isLocationOperational(String location, List<BlackWatchLocation> allStacksAtLocation, TSDMetrics tsdMetrics) {
         LocationState locationState = getLocationState(location, tsdMetrics);
-        try {
-            boolean areRoutesAnnounced = getAnnouncedRoutesCount(location, tsdMetrics) > 0;
-            boolean hasExpectedMitigations = activeMitigationsHelper.hasExpectedMitigations(DeviceName.BLACKWATCH_BORDER, allStacksAtLocation, location);
-            return evaluateOperationalFlags(locationState, areRoutesAnnounced, hasExpectedMitigations);
-        } catch (MWSRequestException e) {
-            String msg = "Error getting data from MWS " + e;
-            throw new InternalFailure(msg);
-        }
+        boolean areRoutesAnnounced = hasAnnouncedRoutes(location, tsdMetrics);
+        boolean hasExpectedMitigations = activeMitigationsHelper.hasExpectedMitigations(DeviceName.BLACKWATCH_BORDER, allStacksAtLocation, location);
+        return evaluateOperationalFlags(locationState, areRoutesAnnounced, hasExpectedMitigations);
     }
 
     @Override
