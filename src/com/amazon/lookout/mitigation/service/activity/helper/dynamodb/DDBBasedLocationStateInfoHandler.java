@@ -286,7 +286,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         } catch (MWSRequestException e) {
             return true;
         }
-        return (routeCount == 0) ? false : true;
+        return routeCount != 0;
     }
 
     private boolean evaluateOperationalFlags(LocationState locationState, boolean areRoutesAnnounced, boolean hasExpectedMitigations) {
