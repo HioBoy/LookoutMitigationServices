@@ -4,6 +4,7 @@ import java.beans.ConstructorProperties;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import amazon.mws.data.Datapoint;
 import com.amazon.blackwatch.host.status.model.HostStatusEnum;
@@ -259,6 +260,24 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         List<String> pendingOperationLocks = new ArrayList<>();
         operationLocks.values().forEach(locationOperation -> pendingOperationLocks.add(locationOperation.getChangeId()));
         return pendingOperationLocks;
+    }
+
+    /**
+     * Method to get mapping operationId -> changeId
+     * @param location String
+     * @param tsdMetrics A TSDMetrics Object
+     *
+     */
+    @Override
+    public Map<String, String> getOperationChanges(String location, TSDMetrics tsdMetrics) {
+        LOG.info("Getting operation changes for location: " + location);
+        LocationState locationState = getLocationState(location, tsdMetrics);
+        Map<String, LocationOperation> operationLocks = locationState.getOrCreateOperationLocksMap();
+        return operationLocks.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue().getChangeId()
+                ));
     }
 
     private List<BlackWatchLocation> getAllBlackWatchLocationsAtSameAirportCode(LocationState currentLocation, TSDMetrics tsdMetrics) {

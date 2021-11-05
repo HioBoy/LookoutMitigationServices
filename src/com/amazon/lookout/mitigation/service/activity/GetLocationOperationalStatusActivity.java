@@ -91,6 +91,7 @@ public class GetLocationOperationalStatusActivity extends Activity {
             response.setRequestId(requestId);
             response.setIsOperational(locationStateInfoHandler.checkIfLocationIsOperational(location, tsdMetrics));
             response.setPendingOperations(locationStateInfoHandler.getPendingOperationLocks(location, tsdMetrics));
+            response.setOperationChanges(locationStateInfoHandler.getOperationChanges(location, tsdMetrics));
 
             requestSuccessfullyProcessed = true;
             return response;

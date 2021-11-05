@@ -18,6 +18,8 @@ import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -68,6 +70,9 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
         Mockito.doReturn(new ArrayList<String>()).when(locationStateInfoHandler)
                 .getPendingOperationLocks(eq(location), isA(TSDMetrics.class));
 
+        Mockito.doReturn(new TreeMap<>()).when(locationStateInfoHandler)
+                .getOperationChanges(eq(location), isA(TSDMetrics.class));
+
         GetLocationOperationalStatusResponse response = getLocationOperationalStatusActivity.enact(request);
 
         assertEquals(requestId, response.getRequestId());
@@ -98,6 +103,9 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
         Mockito.doReturn(pendingOperations).when(locationStateInfoHandler)
                 .getPendingOperationLocks(eq(location), isA(TSDMetrics.class));
 
+        Mockito.doReturn(new TreeMap<>()).when(locationStateInfoHandler)
+                .getOperationChanges(eq(location), isA(TSDMetrics.class));
+
         GetLocationOperationalStatusResponse response = getLocationOperationalStatusActivity.enact(request);
 
         assertEquals(requestId, response.getRequestId());
@@ -121,6 +129,9 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
         Mockito.doReturn(true).when(activeMitigationsHelper)
                 .hasExpectedMitigations(eq(DeviceName.BLACKWATCH_BORDER), Mockito.anyListOf(BlackWatchLocation.class), eq(location));
 
+        Mockito.doReturn(new TreeMap<>()).when(locationStateInfoHandler)
+                .getOperationChanges(eq(location), isA(TSDMetrics.class));
+
         //RoutesAnnounced
         List<Datapoint> datapoints = new ArrayList<>();
         Datapoint datapoint1 = new Datapoint();
@@ -141,6 +152,7 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
         assertEquals(requestId, response.getRequestId());
         assertEquals(true, response.isIsOperational());
         assertEquals(new ArrayList<String>(), response.getPendingOperations());
+        assertEquals(new TreeMap<String, String>(), response.getOperationChanges());
     }
 
 
@@ -151,6 +163,8 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
     public void testIfExpectedMitigationsNotPresent() throws MWSRequestException, ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateGetLocationOperationalStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationOperationalStatusActivity).getRequestId();
+        Mockito.doReturn(new TreeMap<>()).when(locationStateInfoHandler)
+                .getOperationChanges(eq(location), isA(TSDMetrics.class));
 
         Mockito.doReturn(locationState).when(locationStateInfoHandler)
                 .getLocationState(eq(location), isA(TSDMetrics.class));
@@ -182,6 +196,7 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
 
         assertEquals(requestId, response.getRequestId());
         assertEquals(false, response.isIsOperational());
+        assertEquals(new TreeMap<String, String>(), response.getOperationChanges());
     }
 
     /**
@@ -191,6 +206,8 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
     public void testIfNoAnnouncedRoutes() throws MWSRequestException, ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateGetLocationOperationalStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationOperationalStatusActivity).getRequestId();
+        Mockito.doReturn(new TreeMap<>()).when(locationStateInfoHandler)
+                .getOperationChanges(eq(location), isA(TSDMetrics.class));
 
         Mockito.doReturn(locationState).when(locationStateInfoHandler)
                 .getLocationState(eq(location), isA(TSDMetrics.class));
@@ -222,6 +239,7 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
 
         assertEquals(requestId, response.getRequestId());
         assertEquals(false, response.isIsOperational());
+        assertEquals(new TreeMap<String, String>(), response.getOperationChanges());
     }
 
     /**
@@ -231,6 +249,8 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
     public void testIfInServiceFalse() throws MWSRequestException, ExternalDependencyException {
         Mockito.doNothing().when(requestValidator).validateGetLocationOperationalStatusRequest(request);
         Mockito.doReturn(requestId).when(getLocationOperationalStatusActivity).getRequestId();
+        Mockito.doReturn(new TreeMap<>()).when(locationStateInfoHandler)
+                .getOperationChanges(eq(location), isA(TSDMetrics.class));
 
         LocationState locationState = LocationState.builder()
                 .locationName(location)
@@ -268,6 +288,7 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
 
         assertEquals(requestId, response.getRequestId());
         assertEquals(false, response.isIsOperational());
+        assertEquals(new TreeMap<String, String>(), response.getOperationChanges());
     }
 
     /**
@@ -287,6 +308,42 @@ public class GetLocationOperationalStatusActivityTest extends ActivityTestHelper
         Mockito.doReturn(new ArrayList<String>()).when(locationStateInfoHandler)
                 .getPendingOperationLocks(eq(location), isA(TSDMetrics.class));
 
+        Mockito.doReturn(new TreeMap<>()).when(locationStateInfoHandler)
+                .getOperationChanges(eq(location), isA(TSDMetrics.class));
+
         GetLocationOperationalStatusResponse response = getLocationOperationalStatusActivity.enact(request);
+    }
+
+
+    /**
+     * Test GetLocationOperationalStatus Works when Operation Changes is present
+     */
+    @Test
+    public void testGetLocationOperationalStatusWithOperationChanges() throws ExternalDependencyException {
+        Mockito.doNothing().when(requestValidator).validateGetLocationOperationalStatusRequest(request);
+        Mockito.doReturn(requestId).when(getLocationOperationalStatusActivity).getRequestId();
+
+        Mockito.doReturn(locationState).when(locationStateInfoHandler)
+                .getLocationState(eq(location), isA(TSDMetrics.class));
+
+        Mockito.doReturn(true).when(locationStateInfoHandler)
+                .checkIfLocationIsOperational(eq(location), isA(TSDMetrics.class));
+
+        Mockito.doReturn(new ArrayList<String>()).when(locationStateInfoHandler)
+                .getPendingOperationLocks(eq(location), isA(TSDMetrics.class));
+
+        Map<String, String> mockOperationChanges = new TreeMap<>();
+        mockOperationChanges.put("operationId1", "changeId1");
+
+        Mockito.doReturn(mockOperationChanges).when(locationStateInfoHandler)
+                .getOperationChanges(eq(location), isA(TSDMetrics.class));
+
+        GetLocationOperationalStatusResponse response = getLocationOperationalStatusActivity.enact(request);
+
+        assertEquals(requestId, response.getRequestId());
+        assertTrue(response.isIsOperational());
+        assertEquals(new ArrayList<String>(), response.getPendingOperations());
+        assertEquals(1, response.getOperationChanges().size());
+        assertEquals(mockOperationChanges, response.getOperationChanges());
     }
 }
