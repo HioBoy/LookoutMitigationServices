@@ -2,14 +2,18 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import java.beans.ConstructorProperties;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import amazon.mws.data.Datapoint;
 import com.amazon.blackwatch.host.status.model.HostStatusEnum;
 import com.amazon.blackwatch.location.state.model.LocationOperation;
-import com.amazon.coral.service.InternalFailure;
 import com.amazon.lookout.mitigation.ActiveMitigationsHelper;
 import com.amazon.lookout.mitigation.exception.ExternalDependencyException;
 import com.amazon.lookout.mitigation.service.activity.helper.mws.MWSRequestException;
@@ -42,6 +46,8 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
     private ActiveMitigationsHelper activeMitigationsHelper;
 
     private MWSHelper mwsHelper;
+
+    private final Pattern locationNameRegex = Pattern.compile("^(?<location>.*)-(?<stack>[0-9]*)$");
 
     public DDBBasedLocationStateInfoHandler(@NonNull LocationStateDynamoDBHelper locationStateDynamoDBHelper) {
         this.locationStateDynamoDBHelper = locationStateDynamoDBHelper;
@@ -91,10 +97,10 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         out.setAdminIn(in.getAdminIn());
         out.setInService(in.getInService());
         out.setChangeUser(in.getChangeUser());
-        out.setChangeTime(in.getChangeTime());
+        out.setChangeTime(Optional.of(in).map(LocationState::getChangeTime).orElse(0L));
         out.setChangeReason(in.getChangeReason());
-        out.setActiveBGPSpeakerHosts(in.getActiveBGPSpeakerHosts());
-        out.setActiveBlackWatchHosts(in.getActiveBlackWatchHosts());
+        out.setActiveBGPSpeakerHosts(Optional.of(in).map(LocationState::getActiveBGPSpeakerHosts).orElse(0));
+        out.setActiveBlackWatchHosts(Optional.of(in).map(LocationState::getActiveBlackWatchHosts).orElse(0));
         out.setLocationType(in.getLocationType());
         out.setBuildStatus(locationBuildStatus);
         return out;
@@ -280,16 +286,74 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
                 ));
     }
 
-    private List<BlackWatchLocation> getAllBlackWatchLocationsAtSameAirportCode(LocationState currentLocation, TSDMetrics tsdMetrics) {
-        List<BlackWatchLocation> locationStateList = new ArrayList<>();
-        String airportCode = currentLocation.retrieveAirportCode();
+    /**
+     * This function builds and returns the location pair name of a location. It doesn't check if the pair
+     * exists, it just builds the name based on the established naming conventions
+     *
+     * @param locationName name of a border location who's pair matches the form: br-abc12-1
+     * @return the paired stack name, with the stack name replaced by the pair, in the example above, br-abc12-2
+     */
+    String locationPairName(@NonNull String locationName) {
+        Matcher locationNameMatcher = locationNameRegex.matcher(locationName);
 
-        for (BlackWatchLocation locationState : getAllBlackWatchLocations(tsdMetrics)) {
-            if (locationState.getLocation().contains(airportCode)) {
-                locationStateList.add(locationState);
+        if (!locationNameMatcher.matches()) {
+            LOG.warn(String.format("Location '%s' is not in the right format", locationName));
+            return null;
+        }
+
+        String locationNameNoStack = locationNameMatcher.group("location");
+        int stackNumber;
+        try {
+            stackNumber = Integer.parseInt(locationNameMatcher.group("stack"));
+        } catch (NumberFormatException ex) {
+            LOG.warn(String.format("Location '%s' is not in the right format", locationName));
+            return null;
+        }
+
+        if (stackNumber <= 0) {
+            LOG.warn("Location stack number must be greater than 0 for location " + locationName);
+            return null;
+        }
+
+        int pairStackNum;
+        if (stackNumber % 2 != 0) {
+            /* If stack number is odd, then the pair is the next highest stack number (1 -> 2) */
+            pairStackNum = stackNumber + 1;
+        } else {
+            /* If stack number is even, then the pair is the next lower stack number (2 -> 1) */
+            pairStackNum = stackNumber - 1;
+        }
+
+        return String.format("%s-%d", locationNameNoStack, pairStackNum);
+    }
+
+    /**
+     * This function returns all locations protecting the same network. This logic can be adjusted over time if
+     * future BlackWatch locations have more complex protection schemes.
+     * @param currentLocation a LocationState that we use to build a list of BlackWatchLocation objects that protect the same network.
+     * @param tsdMetrics a TSDMetrics object
+     * @return A list of BlackWatchLocations that protect the same network as currentLocation
+     *         including a BlackWatchLocation representing currentLocation as well.
+     */
+    List<BlackWatchLocation> getAllBlackWatchLocationsProtectingTheSameNetwork(LocationState currentLocation, TSDMetrics tsdMetrics) {
+        boolean locTypeStartsWithTc = Optional.of(currentLocation)
+                .map(LocationState::getLocationType)
+                .map(locType -> locType.startsWith("TC"))
+                .orElse(false);
+
+        if (locTypeStartsWithTc) {
+            /* Only border/transit center locations protect resources in pairs */
+            String locationPairName = locationPairName(currentLocation.getLocationName());
+            LocationState pairLocationState = getLocationState(locationPairName, tsdMetrics);
+
+            if (pairLocationState != null) {
+                return Arrays.asList(convertLocationState(currentLocation), convertLocationState(pairLocationState));
+            } else {
+                LOG.warn(String.format("Could not find location pair of '%s'", currentLocation.getLocationName()));
             }
         }
-        return locationStateList;
+
+        return Collections.singletonList(convertLocationState(currentLocation));
     }
 
     private boolean hasAnnouncedRoutes(String location, TSDMetrics tsdMetrics) {
@@ -338,7 +402,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
     public boolean validateOtherStacksInService(String location, TSDMetrics tsdMetrics) throws ExternalDependencyException {
         LOG.info("Validating if other stacks are in service for location: " + location);
         LocationState locationState = getLocationState(location, tsdMetrics);
-        List<BlackWatchLocation> allStacksAtLocation = getAllBlackWatchLocationsAtSameAirportCode(locationState, tsdMetrics);
+        List<BlackWatchLocation> allStacksAtLocation = getAllBlackWatchLocationsProtectingTheSameNetwork(locationState, tsdMetrics);
         boolean otherStackinService = allStacksAtLocation.size() > 1 ? true : false;
         LOG.info("Stacks at this location: " + allStacksAtLocation.toString());
         for (BlackWatchLocation stack : allStacksAtLocation) {
@@ -361,7 +425,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
     public boolean checkIfLocationIsOperational(String location, TSDMetrics tsdMetrics) throws ExternalDependencyException {
         LOG.info("Checking if location: " + location + ", is operational.");
         LocationState locationState = getLocationState(location, tsdMetrics);
-        List<BlackWatchLocation> allStacksAtLocation = getAllBlackWatchLocationsAtSameAirportCode(locationState, tsdMetrics);
+        List<BlackWatchLocation> allStacksAtLocation = getAllBlackWatchLocationsProtectingTheSameNetwork(locationState, tsdMetrics);
         return isLocationOperational(location, allStacksAtLocation, tsdMetrics);
     }
 }
