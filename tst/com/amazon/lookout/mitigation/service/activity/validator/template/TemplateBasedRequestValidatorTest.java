@@ -19,7 +19,6 @@ import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.helper.RequestTestHelper;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazonaws.services.s3.AmazonS3;
 
 @SuppressWarnings("unchecked")
 public class TemplateBasedRequestValidatorTest {
@@ -42,8 +41,7 @@ public class TemplateBasedRequestValidatorTest {
      */
     @Test
     public void testHappyCase() {
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(
-                mock(AmazonS3.class));
+        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator();
         MitigationModificationRequest request = RequestTestHelper.generateCreateMitigationRequest();
         request.setPreDeploymentChecks(null);
         request.setLocation("AMS1");
@@ -63,8 +61,7 @@ public class TemplateBasedRequestValidatorTest {
      */
     @Test
     public void testInvalidOrBadTemplateCase() {
-        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator(
-                mock(AmazonS3.class));
+        TemplateBasedRequestValidator templateBasedValidator = new TemplateBasedRequestValidator();
         MitigationModificationRequest request = 
                 RequestTestHelper.generateCreateMitigationRequest("BadTemplate", "Name");
         Throwable caughtException = null;

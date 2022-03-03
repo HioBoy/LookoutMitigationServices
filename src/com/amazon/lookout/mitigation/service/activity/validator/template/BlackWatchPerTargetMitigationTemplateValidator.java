@@ -23,8 +23,7 @@ import com.amazonaws.services.s3.AmazonS3;
 public abstract class BlackWatchPerTargetMitigationTemplateValidator extends BlackWatchMitigationTemplateValidator {
     private static final Pattern MITIGATION_NAME_VALIDATION_REGEX = Pattern.compile("[\\w-_=\\.]{1,255}");
     
-    public BlackWatchPerTargetMitigationTemplateValidator(AmazonS3 blackWatchConfigS3Client) {
-        super(blackWatchConfigS3Client);
+    public BlackWatchPerTargetMitigationTemplateValidator() {
     }
 
     @Override

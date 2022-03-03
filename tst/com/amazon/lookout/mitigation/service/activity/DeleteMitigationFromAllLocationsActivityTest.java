@@ -56,7 +56,7 @@ public class DeleteMitigationFromAllLocationsActivityTest {
     private DeleteMitigationFromAllLocationsActivity createActivityWithValidators() {
         return new DeleteMitigationFromAllLocationsActivity(
             new RequestValidator("/random/path/location/json"),
-            new TemplateBasedRequestValidator(mock(AmazonS3.class)),
+            new TemplateBasedRequestValidator(),
             mock(RequestCreator.class));
     }
 

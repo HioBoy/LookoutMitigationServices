@@ -38,7 +38,7 @@ public class EditMitigationActivityTest {
     private EditMitigationActivity createActivityWithValidators() {
         return new EditMitigationActivity(
             new RequestValidator("/random/path/location/json"),
-            new TemplateBasedRequestValidator(mock(AmazonS3.class)),
+            new TemplateBasedRequestValidator(),
             mock(RequestCreator.class));
     }
 }

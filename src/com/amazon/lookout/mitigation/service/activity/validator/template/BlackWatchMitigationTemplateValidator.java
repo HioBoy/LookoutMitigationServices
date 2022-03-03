@@ -36,18 +36,16 @@ import com.amazonaws.util.IOUtils;
 
 public abstract class BlackWatchMitigationTemplateValidator implements DeviceBasedServiceTemplateValidator {
     private static final Log LOG = LogFactory.getLog(BlackWatchMitigationTemplateValidator.class);
-    
+
     protected static final int MAX_ALARM_CHECK_PERIOD_SEC = 1800;
     protected static final int MAX_ALARM_CHECK_DELAY_SEC = 1200;
 
     private static final String BLACKWATCH_TRAFFIC_FILTER = "traffic_filter_config";
-    protected AmazonS3 blackWatchConfigS3Client;
 
-    public BlackWatchMitigationTemplateValidator(AmazonS3 blackWatchConfigS3Client) {
+    public BlackWatchMitigationTemplateValidator() {
         super();
-        this.blackWatchConfigS3Client = blackWatchConfigS3Client;
     }
-    
+
     @Override
     public void validateRequestForTemplate(MitigationModificationRequest request, String mitigationTemplate, TSDMetrics tsdMetric) {
         Validate.notEmpty(mitigationTemplate, "mitigation template can not be empty");
@@ -66,14 +64,14 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
 
         validateRequestForTemplateAndDevice(request, mitigationTemplate, deviceName, tsdMetric);
     }
-    
+
     protected void validateDeploymentChecks(MitigationModificationRequest request) {
         if (!(request.getPreDeploymentChecks() == null || request.getPreDeploymentChecks().isEmpty())) {
             throw new IllegalArgumentException("Pre-deployment checks are not supported");
         }
 
         List<MitigationDeploymentCheck> postDeploymentChecks = request.getPostDeploymentChecks();
-        if (postDeploymentChecks == null || postDeploymentChecks.isEmpty()){
+        if (postDeploymentChecks == null || postDeploymentChecks.isEmpty()) {
             //we allow post deployment check to be empty for the blackwatch border template
             if (request.getMitigationTemplate().equals(MitigationTemplate.BlackWatchBorder_PerTarget_AWSCustomer) ||
                     request.getMitigationTemplate().equals(MitigationTemplate.BlackWatchPOP_PerTarget_EdgeCustomer) ||
@@ -84,7 +82,7 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
         }
 
         Validate.notEmpty(postDeploymentChecks, "Missing post deployment for blackwatch mitigation deployment");
-        
+
         for (MitigationDeploymentCheck check : postDeploymentChecks) {
             Validate.isTrue(check instanceof AlarmCheck, String.format("BlackWatch mitigation post deployment check "
                     + "only supports alarm check, but found %s", check));
@@ -99,7 +97,7 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
             Validate.isTrue(alarmCheck.getCheckTotalPeriodSec() > alarmCheck.getCheckEveryNSec(),
                     "Alarm check total time must be larger than alarm check interval.");
 
-            if (alarmCheck.getAlarms() == null || alarmCheck.getAlarms().isEmpty()){
+            if (alarmCheck.getAlarms() == null || alarmCheck.getAlarms().isEmpty()) {
                 throw new IllegalArgumentException(String.format("Found empty map of alarms %s",
                         ReflectionToStringBuilder.toString(alarmCheck, new RecursiveToStringStyle())));
             }
@@ -110,10 +108,10 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
             }
         }
     }
-    
+
     static void validateS3Object(S3Object s3Object, String usageDescription) {
         Validate.notNull(s3Object);
-        
+
         if (s3Object.getBucket() != null) {
             // BlackWatchAgentPython allows an s3 object's bucket to be missing,
             // in which case it downloads the object from the same S3 bucket it
@@ -123,11 +121,11 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
                     String.format("%s S3 object [%s] empty value for s3 bucket",
                             usageDescription, ReflectionToStringBuilder.toString(s3Object)));
         }
-        
+
         Validate.notEmpty(s3Object.getKey(),
                 String.format("%s S3 object [%s] missing s3 key",
                         usageDescription, ReflectionToStringBuilder.toString(s3Object)));
-        
+
         if (s3Object.isEnableRefresh()) {
             Validate.isTrue(s3Object.getMd5() == null,
                     String.format("%s S3 object [%s] with refresh enabled has object md5 checksum set",
@@ -135,7 +133,7 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
             Validate.isTrue(s3Object.getSha256() == null,
                     String.format("%s S3 object [%s] with refresh enabled has object sha256 checksum set",
                             usageDescription, ReflectionToStringBuilder.toString(s3Object)));
-            
+
             if (s3Object.getRefreshInterval() != null) {
                 Validate.isTrue(s3Object.getRefreshInterval() > 0,
                         String.format("%s S3 object [%s] refresh interval [%s] is not greater than 0",
@@ -144,76 +142,31 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
             }
         } else {
             //must have either md5 or sha256 set.
-            Validate.isTrue((s3Object.getMd5() != null || s3Object.getSha256() != null), 
+            Validate.isTrue((s3Object.getMd5() != null || s3Object.getSha256() != null),
                     String.format("%s S3 object [%s] missing both md5 and sha256 checksum",
                             usageDescription, ReflectionToStringBuilder.toString(s3Object)));
-            
+
             Validate.isTrue(s3Object.getRefreshInterval() == null,
                     String.format("%s S3 object [%s] with refresh disabled has refresh interval set",
                             usageDescription, ReflectionToStringBuilder.toString(s3Object)));
         }
     }
-    
+
     protected void validateBlackWatchConfigBasedConstraint(Constraint constraint) {
         Validate.isTrue(constraint instanceof BlackWatchConfigBasedConstraint,
                 "BlackWatch mitigationDefinition must contain single constraint of type BlackWatchConfigBasedConstraint.");
-        
-        BlackWatchConfigBasedConstraint blackWatchConfig = (BlackWatchConfigBasedConstraint)constraint;
-        
+
+        BlackWatchConfigBasedConstraint blackWatchConfig = (BlackWatchConfigBasedConstraint) constraint;
+
         S3Object config = blackWatchConfig.getConfig();
         validateS3Object(config, "BlackWatch Config");
-        
+
         if (blackWatchConfig.getConfigData() != null) {
             for (S3Object configData : blackWatchConfig.getConfigData()) {
                 validateS3Object(configData, "BlackWatch Config Data");
-                
-                if (configData.getKey().contains(BLACKWATCH_TRAFFIC_FILTER)) {
-                    validateBlackWatchTrafficFilterConfig(configData);
-                }
-            }
-        }
-    }
-    
-    private void validateBlackWatchTrafficFilterConfig(S3Object config) {
-        try {
-            // download configuration from s3
-            com.amazonaws.services.s3.model.S3Object s3Object = 
-                    blackWatchConfigS3Client.getObject(new GetObjectRequest(config.getBucket(), config.getKey()));
-            InputStream objectData = s3Object.getObjectContent();
-            String originConfig = IOUtils.toString(objectData);
-            objectData.close();
-            
-            // process configuration
-            String processedConfig = TrafficFilterConfiguration.processConfiguration(originConfig);
-            
-            // if configuration is different, update it with new value
-            if (!TrafficFilterConfiguration.isSameConfig(originConfig, processedConfig)) {
-                // upload the processed configuration content to s3 as a new object
-                ObjectMetadata metadata = new ObjectMetadata();
-                metadata.setContentLength(processedConfig.length());
-                InputStream objectStream = new ByteArrayInputStream(processedConfig.getBytes(StandardCharsets.UTF_8));
-                // the config object will be modified to hold the processed configuration s3 object
-                PutObjectRequest request = new PutObjectRequest(config.getBucket(), config.getKey(), objectStream, metadata);
-                PutObjectResult response = blackWatchConfigS3Client.putObject(request);
-                objectStream.close();
-                // md5 checksum
-                config.setMd5(response.getETag());
-            }
-        } catch (IOException io) {
-            throw new InternalServerError500(String.format(
-                    "Failed to fetch traffic filter content from s3. s3 object %s",
-                    ReflectionToStringBuilder.toString(config)), io);
-        } catch (AmazonS3Exception ex) {
-            if (ex.getErrorType().equals(ErrorType.Client)) {
-                throw new IllegalArgumentException(String.format(
-                        "Failed to fetch traffic filter content from s3. s3 object %s",
-                        ReflectionToStringBuilder.toString(config)), ex);
-            } else {
-                throw new InternalServerError500(String.format(
-                        "Failed to fetch traffic filter content from s3. s3 object %s",
-                        ReflectionToStringBuilder.toString(config)), ex);
             }
         }
     }
 }
+
 

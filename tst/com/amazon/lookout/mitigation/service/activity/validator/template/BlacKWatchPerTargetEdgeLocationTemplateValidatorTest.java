@@ -40,9 +40,6 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
     @Mock
     protected TSDMetrics tsdMetric;
     
-    @Mock
-    protected AmazonS3 s3Client;
-    
     private BlackWatchPerTargetEdgeLocationTemplateValidator validator;
 
     private static final AlarmCheck ALARM_CHECK = new AlarmCheck(); 
@@ -63,7 +60,7 @@ public class BlacKWatchPerTargetEdgeLocationTemplateValidatorTest {
         // mock TSDMetric
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
-        validator = new BlackWatchPerTargetEdgeLocationTemplateValidator(s3Client);
+        validator = new BlackWatchPerTargetEdgeLocationTemplateValidator();
     }
 
     /**

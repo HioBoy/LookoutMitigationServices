@@ -12,9 +12,7 @@ import com.amazonaws.services.s3.AmazonS3;
  */
 public class BlackWatchPerTargetBorderLocationTemplateValidator extends BlackWatchPerTargetMitigationTemplateValidator {
     
-    public BlackWatchPerTargetBorderLocationTemplateValidator(
-            AmazonS3 blackWatchConfigS3Client) {
-        super(blackWatchConfigS3Client);
+    public BlackWatchPerTargetBorderLocationTemplateValidator() {
     }
 
     protected void validateLocation(final String location) {

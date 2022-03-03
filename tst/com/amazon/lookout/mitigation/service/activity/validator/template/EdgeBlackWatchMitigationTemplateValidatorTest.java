@@ -38,9 +38,6 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
     
     @Mock
     protected TSDMetrics tsdMetrics;
-    
-    @Mock
-    protected AmazonS3 s3Client;
 
     private EdgeBlackWatchMitigationTemplateValidator validator;
     
@@ -62,7 +59,7 @@ public class EdgeBlackWatchMitigationTemplateValidatorTest {
         // mock TSDMetric
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
-        validator = new EdgeBlackWatchMitigationTemplateValidator(s3Client);
+        validator = new EdgeBlackWatchMitigationTemplateValidator();
     }
 
     /**

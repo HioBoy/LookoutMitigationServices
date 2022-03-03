@@ -38,9 +38,6 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
     protected Metrics metrics;
     
     @Mock
-    protected AmazonS3 s3Client;
-    
-    @Mock
     protected TSDMetrics tsdMetric;
     
     private BlackWatchPerTargetBorderLocationTemplateValidator validator;
@@ -63,7 +60,7 @@ public class BlackWatchPerTargetBorderLocationTemplateValidatorTest {
         // mock TSDMetric
         doReturn(metrics).when(metricsFactory).newMetrics();
         doReturn(metrics).when(metrics).newMetrics();
-        validator = new BlackWatchPerTargetBorderLocationTemplateValidator(s3Client);
+        validator = new BlackWatchPerTargetBorderLocationTemplateValidator();
     }
 
     /**

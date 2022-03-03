@@ -5,9 +5,7 @@ import org.apache.commons.lang.Validate;
 
 public class VantaLocationTemplateValidator extends BlackWatchPerTargetMitigationTemplateValidator {
 
-    public VantaLocationTemplateValidator(
-            AmazonS3 blackWatchConfigS3Client) {
-        super(blackWatchConfigS3Client);
+    public VantaLocationTemplateValidator() {
     }
 
     protected void validateLocation(final String location) {

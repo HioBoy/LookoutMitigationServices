@@ -31,17 +31,14 @@ public class TemplateBasedRequestValidator {
     private static final Log LOG = LogFactory.getLog(TemplateBasedRequestValidator.class);
     
     private static final String MITIGATION_TEMPLATE_KEY = "MitigationTemplate";
-    
-    private final AmazonS3 blackWatchS3Client;
+
 
     // Map of templateName -> ServiceTemplateValidator which is responsible for validating this template.
     private final ImmutableMap<String, ServiceTemplateValidator> serviceTemplateValidatorMap;
     
-    @ConstructorProperties({"blackWatchS3Client"})
-    public TemplateBasedRequestValidator(@NonNull AmazonS3 blackWatchS3Client) 
+    //@ConstructorProperties({"blackWatchS3Client"})
+    public TemplateBasedRequestValidator()
     {
-        
-        this.blackWatchS3Client = blackWatchS3Client;
         
         // this line should be the last line of constructor, as it might relies on the variable assigned before.
         this.serviceTemplateValidatorMap = getServiceTemplateValidatorMap();
@@ -96,19 +93,19 @@ public class TemplateBasedRequestValidator {
     }
     
     private ServiceTemplateValidator getBlackWatchEdgeCustomerValidator() {
-        return new EdgeBlackWatchMitigationTemplateValidator(blackWatchS3Client);
+        return new EdgeBlackWatchMitigationTemplateValidator();
     }
 
     private ServiceTemplateValidator getBlackWatchBorderValidator() {
-        return new BlackWatchPerTargetBorderLocationTemplateValidator(blackWatchS3Client);
+        return new BlackWatchPerTargetBorderLocationTemplateValidator();
     }
 
     private ServiceTemplateValidator getBlackWatchEdgeValidator() {
-        return new BlackWatchPerTargetEdgeLocationTemplateValidator(blackWatchS3Client);
+        return new BlackWatchPerTargetEdgeLocationTemplateValidator();
     }
 
     private ServiceTemplateValidator getVantaValidator() {
-        return new VantaLocationTemplateValidator(blackWatchS3Client);
+        return new VantaLocationTemplateValidator();
     }
     
     /**

@@ -14,13 +14,10 @@ import com.amazonaws.services.s3.AmazonS3;
 
 public class BlackWatchMitigationTemplateValidatorTest {
     
-    @Mock
-    protected AmazonS3 s3Client;
-    
     private class BlackWatchMitigationTemplateTestValidator extends BlackWatchMitigationTemplateValidator {
 
         public BlackWatchMitigationTemplateTestValidator() {
-            super(s3Client);
+            super();
         }
         
         @Override
