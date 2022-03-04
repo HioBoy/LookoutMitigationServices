@@ -38,10 +38,6 @@ public class EdgeBlackWatchMitigationTemplateValidator extends BlackWatchMitigat
     private static final Pattern VALID_GLOBAL_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_GLOBAL_(%s)", LOCATION_PATTERN));
     private static final Pattern VALID_POP_OVERRIDE_MITIGATION_NAME_PATTERN = Pattern.compile(String.format("BLACKWATCH_POP_OVERRIDE_(%s)", LOCATION_PATTERN));
     
-    public EdgeBlackWatchMitigationTemplateValidator() {
-        super();
-    }
-    
     @Override
     public void validateRequestForTemplateAndDevice(
             MitigationModificationRequest request, String mitigationTemplate,

@@ -5,9 +5,6 @@ import org.apache.commons.lang.Validate;
 
 public class VantaLocationTemplateValidator extends BlackWatchPerTargetMitigationTemplateValidator {
 
-    public VantaLocationTemplateValidator() {
-    }
-
     protected void validateLocation(final String location) {
         Validate.notEmpty(location, "location can not be empty");
     }

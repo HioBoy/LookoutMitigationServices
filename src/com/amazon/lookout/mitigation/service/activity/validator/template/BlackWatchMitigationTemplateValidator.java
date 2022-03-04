@@ -42,10 +42,6 @@ public abstract class BlackWatchMitigationTemplateValidator implements DeviceBas
 
     private static final String BLACKWATCH_TRAFFIC_FILTER = "traffic_filter_config";
 
-    public BlackWatchMitigationTemplateValidator() {
-        super();
-    }
-
     @Override
     public void validateRequestForTemplate(MitigationModificationRequest request, String mitigationTemplate, TSDMetrics tsdMetric) {
         Validate.notEmpty(mitigationTemplate, "mitigation template can not be empty");

@@ -15,10 +15,6 @@ import com.amazonaws.services.s3.AmazonS3;
 public class BlackWatchMitigationTemplateValidatorTest {
     
     private class BlackWatchMitigationTemplateTestValidator extends BlackWatchMitigationTemplateValidator {
-
-        public BlackWatchMitigationTemplateTestValidator() {
-            super();
-        }
         
         @Override
         public void validateRequestForTemplateAndDevice(

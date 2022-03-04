@@ -11,9 +11,6 @@ import com.amazonaws.services.s3.AmazonS3;
  *
  */
 public class BlackWatchPerTargetBorderLocationTemplateValidator extends BlackWatchPerTargetMitigationTemplateValidator {
-    
-    public BlackWatchPerTargetBorderLocationTemplateValidator() {
-    }
 
     protected void validateLocation(final String location) {
         Validate.notEmpty(location, "location can not be empty");

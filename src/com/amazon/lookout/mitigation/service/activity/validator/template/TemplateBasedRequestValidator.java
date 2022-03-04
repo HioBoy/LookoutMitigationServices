@@ -35,12 +35,10 @@ public class TemplateBasedRequestValidator {
 
     // Map of templateName -> ServiceTemplateValidator which is responsible for validating this template.
     private final ImmutableMap<String, ServiceTemplateValidator> serviceTemplateValidatorMap;
-    
-    //@ConstructorProperties({"blackWatchS3Client"})
+
     public TemplateBasedRequestValidator()
     {
-        
-        // this line should be the last line of constructor, as it might relies on the variable assigned before.
+        // this line should be the last line of constructor, as it may rely on the variable assigned before.
         this.serviceTemplateValidatorMap = getServiceTemplateValidatorMap();
     }
     
