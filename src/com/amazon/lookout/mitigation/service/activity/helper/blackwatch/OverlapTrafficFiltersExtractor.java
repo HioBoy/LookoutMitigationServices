@@ -77,7 +77,7 @@ public class OverlapTrafficFiltersExtractor {
                 } else {
                     TrafficFilter overlapFilter = curFilter.findOverlap(originFilter);
                     if (overlapFilter != null) {
-                        TrafficFilter existingFilter = foundFilterMap.get(overlapFilter.getFilterAttributes());
+                        TrafficFilter existingFilter = foundFilterMap.get(overlapFilter.getAttributes());
                         // if the overlap filter has already been found in the filterMap before,
                         // Add overlap filter's related origin filter list to the existing filter.
                         if (existingFilter != null) {
@@ -87,7 +87,7 @@ public class OverlapTrafficFiltersExtractor {
                             it.previous();
                             it.add(overlapFilter);
                             it.next();
-                            foundFilterMap.put(overlapFilter.getFilterAttributes(), overlapFilter);
+                            foundFilterMap.put(overlapFilter.getAttributes(), overlapFilter);
                         }
                         // if the overlap filter is same as origin filter. we can stop processing this origin filter.
                         // this is similar as when origin filter is same as current filter.
@@ -101,12 +101,8 @@ public class OverlapTrafficFiltersExtractor {
             if (shouldInsertOriginFilter) {
                 // insert origin filter to the tail of the extracted filter list
                 extractedFilterList.offer(originFilter);
-                foundFilterMap.put(originFilter.getFilterAttributes(), originFilter);
+                foundFilterMap.put(originFilter.getAttributes(), originFilter);
             }
-        }
-        
-        for (TrafficFilter filter : extractedFilterList) {
-            filter.fillMissingAttribute();
         }
         
         return extractedFilterList;

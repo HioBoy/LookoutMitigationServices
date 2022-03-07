@@ -28,14 +28,7 @@ public class PortRangeTest {
     public void testConstructor_4() {
         PortRange.fromString("1:-65535");
     }
-    
-    @Test
-    public void testSingleValue() {
-        PortRange range = PortRange.fromString(" 80  ");
-        assertEquals(80, range.getLowerEnd());
-        assertEquals(80, range.getUpperEnd());
-    }
-   
+
     @Test
     public void testOverlap_1() {
         PortRange p1 = PortRange.fromString("30000:65535");
