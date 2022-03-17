@@ -146,6 +146,8 @@ package.LookoutMitigationService = {
             AWSJavaClientJmxSPI = 1.12.x;
             AWSKeyManagementJavaClient = 1.12.x;
             Jackson-dataformat-cbor = 2.12.x;
+            AWSPersistenceJavaClient = 1.12.x;
+            AWSSecurityTokenServiceJavaClient = 1.12.x;
         };
     };
 
