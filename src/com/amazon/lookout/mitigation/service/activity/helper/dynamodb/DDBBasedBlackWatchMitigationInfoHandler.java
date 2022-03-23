@@ -20,6 +20,7 @@ import com.amazon.blackwatch.mitigation.state.storage.ResourceAllocationStateDyn
 import com.amazon.blackwatch.mitigation.resource.validator.BlackWatchResourceTypeValidator;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.ApplyConfigError;
+import com.amazon.lookout.mitigation.service.BuildConfigError;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
 import com.amazon.lookout.mitigation.service.FailureDetails;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
@@ -267,6 +268,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         FailureDetails failureDetails = new FailureDetails();
         final Map<String, StatusCodeSummary> statusCodes = new HashMap<>();
         final List<ApplyConfigError> applyConfigErrors = new ArrayList<>();
+        final List<BuildConfigError> buildConfigErrors = new ArrayList<>();
 
         final com.amazon.blackwatch.mitigation.state.model.FailureDetails msFailureDetails = ms.getFailureDetails();
         if (msFailureDetails.getStatusDescriptions() != null) {
@@ -276,7 +278,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         if (msFailureDetails.getStatusCodes() != null) {
             msFailureDetails.getStatusCodes().entrySet().forEach(entry -> {
                 statusCodes.put(entry.getKey(),
-                        StatusCodeSummary.builder().withHostCount(entry.getValue().getHostCount()).build());
+                        StatusCodeSummary.builder().withHostCount(entry.getValue().getHostCount()).withLocationCount(entry.getValue().getLocationCount()).build());
             });
         }
 
@@ -287,8 +289,15 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
             });
         }
 
+        if (msFailureDetails.getBuildConfigErrors() != null) {
+            msFailureDetails.getBuildConfigErrors().stream().forEach(error -> {
+                buildConfigErrors.add(BuildConfigError.builder().withCode(error.getCode()).withMessage(error.getMessage()).build());
+            });
+        }
+
         failureDetails.setStatusCodes(statusCodes);
         failureDetails.setApplyConfigErrors(applyConfigErrors);
+        failureDetails.setBuildConfigErrors(buildConfigErrors);
         return failureDetails;
     }
 

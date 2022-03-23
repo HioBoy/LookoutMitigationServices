@@ -861,7 +861,11 @@ public class RequestValidator {
         // so call validate with defaultRateLimitRequired = !isGlbResource
         if (!request.isBypassConfigValidations()) {
             boolean isGlbResource = resourceType.equalsIgnoreCase("GLB");
-            targetConfig.validate(!isGlbResource);
+            if (isGlbResource) {
+                targetConfig.validateAsGlbControlPlaneConfig();
+            } else {
+                targetConfig.validateAsControlPlaneConfig();
+            }
         }
         validateUserARN(userARN);
 
@@ -887,7 +891,11 @@ public class RequestValidator {
         // so call validate with defaultRateLimitRequired = !isGlbResource
         if (!request.isBypassConfigValidations()) {
             boolean isGlbResource = request.getResourceType().equalsIgnoreCase("GLB");
-            targetConfig.validate(!isGlbResource);
+            if (isGlbResource) {
+                targetConfig.validateAsGlbControlPlaneConfig();
+            } else {
+                targetConfig.validateAsControlPlaneConfig();
+            }
         } else {
             LOG.info("Validation bypassed for request, since bypass flag is set");
         }

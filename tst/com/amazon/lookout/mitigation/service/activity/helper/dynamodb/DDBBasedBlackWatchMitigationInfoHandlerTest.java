@@ -285,8 +285,11 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
 
         FailureDetails failureDetails = new FailureDetails();
         failureDetails.setStatusDescriptions(ImmutableSet.of("status description"));
-        failureDetails.setStatusCodes(ImmutableMap.of("LOAD_FAILED", new FailureDetails.StatusCodesSummary(10)));
+        failureDetails.setStatusCodes(ImmutableMap.of(
+                "LOAD_FAILED", new FailureDetails.StatusCodesSummary(10, 0),
+                "CONTROL_PLANE_VALIDATION_FAILED", new FailureDetails.StatusCodesSummary(0, 3)));
         failureDetails.setApplyConfigErrors(ImmutableList.of(new FailureDetails.ApplyConfigError("OUTSIDE_RANGE", "outside range")));
+        failureDetails.setBuildConfigErrors(ImmutableList.of(new FailureDetails.BuildConfigError("CONTROL_PLANE_VALIDATION_FAILED", "Invalid")));
 
         mitigationState3 = MitigationState.builder()
                 .mitigationId(testMitigation1)
