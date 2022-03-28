@@ -1,6 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity.helper.blackwatch;
 
-import amazon.odin.awsauth.OdinAWSCredentialsProvider;
+import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -52,7 +52,7 @@ public class DogfishHelper {
         return getService(region, "dogfish").getCustomProperties().get("s3_bucket_name");
     }
 
-    public static AmazonS3Client getDogfishS3Client(String region, String domain, OdinAWSCredentialsProvider credential) {
+    public static AmazonS3Client getDogfishS3Client(String region, String domain, AWSCredentialsProvider credential) {
         String stsServiceEndpoint = getService(region, "sts").getEndpoint();
         String dogfishRole = getDogfishRole(region, domain);
         AWSSecurityTokenService stsClient = AWSSecurityTokenServiceClientBuilder.standard()
