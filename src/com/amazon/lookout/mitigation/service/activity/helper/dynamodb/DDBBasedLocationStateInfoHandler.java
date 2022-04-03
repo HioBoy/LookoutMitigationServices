@@ -373,7 +373,8 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         return routeCount != 0;
     }
 
-    private boolean evaluateOperationalFlags(LocationState locationState, boolean areRoutesAnnounced, boolean hasExpectedMitigations) {
+    public boolean evaluateOperationalFlags(LocationState locationState, boolean areRoutesAnnounced,
+                                             boolean hasExpectedMitigations, List<String> activeBWAPIMitigations) {
         boolean isOperational;
         /* A weird safe check where conditions to consider stack operational changes on AdminIn value
          * Stack Operational when taking InService -> stack operational when hasExpectedMitigations, InService and routesAnnounced are true
@@ -382,7 +383,9 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         if(locationState.getAdminIn()){
             isOperational = hasExpectedMitigations && locationState.getInService() && areRoutesAnnounced;
         } else {
-            isOperational = locationState.getInService() || areRoutesAnnounced;
+            //when we admin out a location
+            //the isOperation flag will become false only when all conditions are false
+            isOperational = locationState.getInService() || areRoutesAnnounced || !activeBWAPIMitigations.isEmpty();
         }
         LOG.info("Location: " + locationState.getLocationName() + "\n\nFlags:\n AdminIn: " + locationState.getAdminIn()
                 + "\n InService: " + locationState.getInService() + "\n hasExpectedMitigations: " + hasExpectedMitigations
@@ -395,7 +398,8 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         LocationState locationState = getLocationState(location, tsdMetrics);
         boolean areRoutesAnnounced = hasAnnouncedRoutes(location, tsdMetrics);
         boolean hasExpectedMitigations = activeMitigationsHelper.hasExpectedMitigations(DeviceName.BLACKWATCH_BORDER, allStacksAtLocation, location);
-        return evaluateOperationalFlags(locationState, areRoutesAnnounced, hasExpectedMitigations);
+        List<String> activeBWAPIMitigations = activeMitigationsHelper.getBWAPIMitigationNameList(DeviceName.BLACKWATCH_BORDER, location);
+        return evaluateOperationalFlags(locationState, areRoutesAnnounced, hasExpectedMitigations, activeBWAPIMitigations);
     }
 
     @Override

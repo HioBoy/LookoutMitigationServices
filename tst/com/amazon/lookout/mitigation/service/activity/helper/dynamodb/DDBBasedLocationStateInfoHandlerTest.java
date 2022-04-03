@@ -13,6 +13,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -154,6 +155,53 @@ public class DDBBasedLocationStateInfoHandlerTest {
         assertFalse(locationNames.contains(location1));
         assertFalse(locationNames.contains(location2));
         assertTrue(locationNames.contains(location3));
+    }
+
+    @Test
+    public void testEvaluateOperationalFlags() {
+        LocationState locationState = LocationState.builder()
+                .locationName(location1)
+                .locationType(LocationType.TC_BLACKWATCH15.name())
+                .adminIn(true)
+                .inService(true)
+                .build();
+        List<String> activeBWAPIMitigations = new ArrayList<String>();
+        assertTrue(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, true, true, activeBWAPIMitigations));
+        assertFalse(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, false, true, activeBWAPIMitigations));
+        assertFalse(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, true, false, activeBWAPIMitigations));
+
+        locationState = LocationState.builder()
+                .locationName(location1)
+                .locationType(LocationType.TC_BLACKWATCH15.name())
+                .adminIn(true)
+                .inService(false)
+                .build();
+        assertFalse(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, true, true, activeBWAPIMitigations));
+
+        locationState = LocationState.builder()
+                .locationName(location1)
+                .locationType(LocationType.TC_BLACKWATCH15.name())
+                .adminIn(false)
+                .inService(false)
+                .build();
+        assertTrue(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, true, true, activeBWAPIMitigations));
+        assertFalse(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, false, true, activeBWAPIMitigations));
+        locationState = LocationState.builder()
+                .locationName(location1)
+                .locationType(LocationType.TC_BLACKWATCH15.name())
+                .adminIn(false)
+                .inService(true)
+                .build();
+        assertTrue(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, false, true, activeBWAPIMitigations));
+        locationState = LocationState.builder()
+                .locationName(location1)
+                .locationType(LocationType.TC_BLACKWATCH15.name())
+                .adminIn(false)
+                .inService(false)
+                .build();
+        activeBWAPIMitigations.add("BWAPI_abc");
+        assertTrue(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, false, true, activeBWAPIMitigations));
+
     }
 
     //TODO: Add tests for other methods DDBBasedLocationStateInfoHandler
