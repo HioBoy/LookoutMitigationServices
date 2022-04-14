@@ -31,9 +31,9 @@ import static org.mockito.Matchers.eq;
 
 public class DDBBasedLocationStateInfoHandlerTest {
 
-    private static final String location1 = "brg-test-1";
-    private static final String location2 = "brg-test-2";
-    private static final String location3 = "brg-test-3";
+    private static final String location1 = "brg-test99-1";
+    private static final String location2 = "brg-test99-2";
+    private static final String location3 = "brg-test99-3";
     private LocationState locationState1;
     private LocationState locationState2;
     private LocationState locationState3;
@@ -129,10 +129,39 @@ public class DDBBasedLocationStateInfoHandlerTest {
         assertEquals("br-sea56-12", ddbBasedLocationStateInfoHandler.locationPairName("br-sea56-11"));
         assertEquals("br-sea56-f1-1", ddbBasedLocationStateInfoHandler.locationPairName("br-sea56-f1-2"));
         assertEquals("br-sea56-f1-2", ddbBasedLocationStateInfoHandler.locationPairName("br-sea56-f1-1"));
+        assertEquals("br-sea4-d2", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-d1"));
+        assertEquals("br-sea4-d1", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-d2"));
+        
+        assertEquals("br-sea4-d9", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-d10"));
+        assertEquals("br-sea4-d10", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-d9"));
+
+        assertEquals("br-sea4-d11", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-d12"));
+        assertEquals("br-sea4-d12", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-d11"));
+
+        assertEquals("br-sea4-d99", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-d100"));
+        assertEquals("br-sea4-d100", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-d99"));
+
+        assertEquals("br-sea4-9", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-10"));
+        assertEquals("br-sea4-10", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-9"));
+
+        assertEquals("br-sea4-11", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-12"));
+        assertEquals("br-sea4-12", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-11"));
+
+        assertEquals("br-sea4-99", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-100"));
+        assertEquals("br-sea4-100", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-99"));
+
+        assertEquals("br-sea4-f1-9", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-f1-10"));
+        assertEquals("br-sea4-f1-10", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-f1-9"));
+
+        assertEquals("br-sea4-f1-11", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-f1-12"));
+        assertEquals("br-sea4-f1-12", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-f1-11"));
+
+        assertEquals("br-sea4-f1-99", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-f1-100"));
+        assertEquals("br-sea4-f1-100", ddbBasedLocationStateInfoHandler.locationPairName("br-sea4-f1-99"));
+
         assertNull(ddbBasedLocationStateInfoHandler.locationPairName("br-sea56-0"));
-        assertNull(ddbBasedLocationStateInfoHandler.locationPairName("br-sea56-g2"));
         assertNull(ddbBasedLocationStateInfoHandler.locationPairName("br-sea56-"));
-        assertNull(ddbBasedLocationStateInfoHandler.locationPairName("br-sea56-22222222222222222222222222222222222222222222222222222222222222222222"));
+        assertNull(ddbBasedLocationStateInfoHandler.locationPairName("br-sea-1"));
     }
 
     @Test

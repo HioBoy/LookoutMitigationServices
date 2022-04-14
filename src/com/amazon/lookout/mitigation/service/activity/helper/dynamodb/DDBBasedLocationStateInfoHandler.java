@@ -47,7 +47,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
 
     private MWSHelper mwsHelper;
 
-    private final Pattern locationNameRegex = Pattern.compile("^(?<location>.*)-(?<stack>[0-9]*)$");
+    private final Pattern locationNameRegex = Pattern.compile("^(?<location>[A-Za-z]+-[A-Za-z]+[0-9]+(?:(?:-[fF][0-9]+-)|(?:-[dD])|(?:-)))(?<stack>[0-9]+)$");
 
     public DDBBasedLocationStateInfoHandler(@NonNull LocationStateDynamoDBHelper locationStateDynamoDBHelper) {
         this.locationStateDynamoDBHelper = locationStateDynamoDBHelper;
@@ -324,7 +324,7 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
             pairStackNum = stackNumber - 1;
         }
 
-        return String.format("%s-%d", locationNameNoStack, pairStackNum);
+        return String.format("%s%d", locationNameNoStack, pairStackNum);
     }
 
     /**
