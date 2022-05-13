@@ -2,9 +2,12 @@ package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.amazon.blackwatch.host.status.model.PortDetails;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.amazon.blackwatch.host.status.model.HostStatusDetails;
 import com.amazon.blackwatch.host.status.model.HostStatusEnum;
@@ -113,8 +116,22 @@ public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
                     hostStatusinLocation.setDeviceName(item.getString(HostStatus.DEVICE_NAME_KEY));
                     hostStatusinLocation.setHardwareType(item.getString(HostStatus.HARDWARE_TYPE_KEY));
                     final HostStatusDetails statusDetails = getStatusDetailsObject(item.getJSON(HostStatus.STATUS_DETAILS_KEY));
-                    if (statusDetails != null && statusDetails.getDeploymentIds() != null){
-                        hostStatusinLocation.setDeploymentIds(statusDetails.getDeploymentIds());
+                    if (statusDetails != null) {
+                        if (statusDetails.getDeploymentIds() != null) {
+                            hostStatusinLocation.setDeploymentIds(statusDetails.getDeploymentIds());
+                        }
+
+                        if (statusDetails.getPorts() != null) {
+                            Map<String, com.amazon.lookout.mitigation.service.PortDetails> ports = new HashMap<>();
+                            statusDetails.getPorts().entrySet().stream().forEach(entry -> {
+                                String port = entry.getKey();
+                                PortDetails portDetails = entry.getValue();
+                                if (portDetails != null) {
+                                    ports.put(port, transformPortDetails(portDetails));
+                                }
+                            });
+                            hostStatusinLocation.setPorts(ports);
+                        }
                     }
 
                     LocationHostStatus locationHostStatus = locationState.getOrCreateHosts().get(hostName);
@@ -157,5 +174,15 @@ public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
             return ret;
         }
         return null;
+    }
+
+    public static com.amazon.lookout.mitigation.service.PortDetails transformPortDetails(PortDetails portDetails) {
+        com.amazon.lookout.mitigation.service.PortDetails details = new com.amazon.lookout.mitigation.service.PortDetails();
+        details.setDeviceName(portDetails.getDeviceName());
+        details.setDeviceDescription(portDetails.getDeviceDescription());
+        details.setPortName(portDetails.getPortName());
+        details.setPortDescription(portDetails.getPortDescription());
+        details.setPortRole(portDetails.getPortRole().name());
+        return details;
     }
 }

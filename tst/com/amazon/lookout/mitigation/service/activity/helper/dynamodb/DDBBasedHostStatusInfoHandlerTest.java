@@ -9,6 +9,7 @@ import java.util.Random;
 
 import com.amazon.blackwatch.host.status.model.HostInformation;
 import com.amazon.blackwatch.location.state.model.LocationState;
+import com.amazon.lookout.mitigation.service.PortDetails;
 import com.google.common.collect.ImmutableMap;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -259,6 +260,12 @@ public class DDBBasedHostStatusInfoHandlerTest {
             List<HostStatusInLocation> hostStatuses = hostStatusInfoHandler.getHostsStatus(locState1, tsdMetrics);
             assertEquals(listOfHostStatus.size(), hostStatuses.size());
             assertEquals(hostStatuses.get(0).getDeploymentIds().get("LookoutBlackWatch"), "d-test-id");
+            final PortDetails details = hostStatuses.get(0).getPorts().get("eth0");
+            assertEquals(details.getDeviceName(), "fra56-br-bmt-sw1");
+            assertEquals(details.getDeviceDescription(), "Juniper Networks, Inc. ex4300-48t Ethernet Switch, kernel JUNOS 14.1X53-D35.3, Build date: 2016-03-01 02:55:24 UTC Copyright (c) 1996-2016 Juniper Networks, Inc.");
+            assertEquals(details.getPortName(), "ge-0/0/1");
+            assertEquals(details.getPortDescription(), "CFHOST: fra56-br-bmt-sw1 ge-0/0/1 --> Eth0 Blackwatch01");
+            assertEquals(details.getPortRole(), "DATA");
 
             for (int i = 0; i < recordCount; ++i) {
                 HostStatus hs = listOfHostStatus.get(i);
