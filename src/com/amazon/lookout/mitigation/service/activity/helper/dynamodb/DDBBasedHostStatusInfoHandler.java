@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Optional;
 
 import com.amazon.blackwatch.host.status.model.PortDetails;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -182,7 +183,8 @@ public class DDBBasedHostStatusInfoHandler implements HostStatusInfoHandler {
         details.setDeviceDescription(portDetails.getDeviceDescription());
         details.setPortName(portDetails.getPortName());
         details.setPortDescription(portDetails.getPortDescription());
-        details.setPortRole(portDetails.getPortRole().name());
+        details.setPortRole(
+                Optional.ofNullable(portDetails.getPortRole()).orElse(PortDetails.PortRole.UNKNOWN).name());
         return details;
     }
 }
