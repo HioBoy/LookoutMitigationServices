@@ -11,6 +11,7 @@ import org.junit.Test;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig.GlobalTrafficShaper;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig.MitigationConfig;
+import com.amazon.coral.metrics.NullMetricsFactory;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
@@ -24,13 +25,14 @@ public class BlackWatchMitigationActivitiesTest extends DDBBasedActivityTestHelp
     private ApplyBlackWatchMitigationActivity applyBlackWatchMitigationActivity;
     private UpdateBlackWatchMitigationActivity updateBlackWatchMitigationActivity;
     private ListBlackWatchMitigationsActivity listBlackWatchMitigationsActivity;
-    
+
     @Before
     public void createActivities() {
         applyBlackWatchMitigationActivity = setupActivity(
                 new ApplyBlackWatchMitigationActivity(requestValidator, blackwatchMitigationInfoHandler));
         updateBlackWatchMitigationActivity = setupActivity(
-                new UpdateBlackWatchMitigationActivity(requestValidator, blackwatchMitigationInfoHandler));
+                new UpdateBlackWatchMitigationActivity(requestValidator, blackwatchMitigationInfoHandler,
+                        /* regionalMitigationsEnabled: */ false));
         listBlackWatchMitigationsActivity = setupActivity(
                 new ListBlackWatchMitigationsActivity(requestValidator, blackwatchMitigationInfoHandler));
     }
@@ -77,6 +79,99 @@ public class BlackWatchMitigationActivitiesTest extends DDBBasedActivityTestHelp
         assertEquals(Long.valueOf(1500000L), mitigation1.getGlobalBPS());
         assertEquals(Long.valueOf(1000L), mitigation1.getGlobalPPS());
         assertEquals("Active", mitigation1.getState());
+    }
+
+    @Test
+    public void testApplyNewIPAddressRegionalMitigation() {
+        applyBlackWatchMitigationActivity = setupActivity(
+                new ApplyBlackWatchMitigationActivity(
+                        requestValidator,
+                        blackwatchMitigationInfoHandler,
+                        /* regionalMitigationsEnabled: */ true,
+                        NullMetricsFactory.Default.get()));
+
+        String mitigationSettingsJson = "{\n" +
+                "    \"global_deployment\": {\n" +
+                "        \"placement_tags\": [\"REGIONAL\"]\n" +
+                "    },\n" +
+                "    \"mitigation_config\": {\n" +
+                "        \"global_traffic_shaper\": {\n" +
+                "            \"default\": {\n" +
+                "                \"global_pps\": 1000,\n" +
+                "                \"action\": \"DROP\"\n" +
+                "            }\n" +
+                "        }\n" +
+                "    }\n" +
+                "}";
+
+        ApplyBlackWatchMitigationResponse response = applyBlackWatchMitigationActivity.enact(
+                ApplyBlackWatchMitigationRequest.builder()
+                        .withResourceType("IPAddress")
+                        .withResourceId("1.2.3.4")
+                        .withMitigationActionMetadata(mitigationActionMetadata)
+                        .withMitigationSettingsJSON(mitigationSettingsJson)
+                        .build());
+        assertNotNull(response);
+        assertNotNull(response.getMitigationId());
+        assertTrue(response.isNewMitigationCreated());
+        assertEquals(requestId, response.getRequestId());
+
+        BlackWatchMitigationDefinition mitigation = assertMitigationExists(response.getMitigationId());
+        assertEquals(response.getMitigationId(), mitigation.getMitigationId());
+        assertEquals("IPAddress", mitigation.getResourceType());
+        assertEquals("1.2.3.4/32", mitigation.getResourceId());
+        assertEquals(mitigationActionMetadata, mitigation.getLatestMitigationActionMetadata());
+        assertEquals(Long.valueOf(1000L), mitigation.getGlobalPPS());
+        assertEquals("Active", mitigation.getState());
+    }
+
+    @Test
+    public void testUpdateIPAddressRegionalMitigation() {
+        applyBlackWatchMitigationActivity = setupActivity(
+                new ApplyBlackWatchMitigationActivity(
+                        requestValidator,
+                        blackwatchMitigationInfoHandler,
+                        /* regionalMitigationsEnabled: */ true,
+                        NullMetricsFactory.Default.get()));
+        updateBlackWatchMitigationActivity = setupActivity(
+                new UpdateBlackWatchMitigationActivity(
+                        requestValidator,
+                        blackwatchMitigationInfoHandler,
+                        /* regionalMitigationsEnabled: */ true));
+
+        String mitigationSettingsJson = "{\n" +
+                "    \"global_deployment\": {\n" +
+                "        \"placement_tags\": [\"REGIONAL\"]\n" +
+                "    },\n" +
+                "    \"mitigation_config\": {\n" +
+                "        \"global_traffic_shaper\": {\n" +
+                "            \"default\": {\n" +
+                "                \"global_pps\": 1000,\n" +
+                "                \"action\": \"DROP\"\n" +
+                "            }\n" +
+                "        }\n" +
+                "    }\n" +
+                "}";
+
+        ApplyBlackWatchMitigationResponse applyResponse = applyBlackWatchMitigationActivity.enact(
+                ApplyBlackWatchMitigationRequest.builder()
+                        .withResourceType("IPAddress")
+                        .withResourceId("1.2.3.4")
+                        .withMitigationActionMetadata(mitigationActionMetadata)
+                        .withMitigationSettingsJSON(mitigationSettingsJson)
+                        .build());
+        String mitigationId = applyResponse.getMitigationId();
+
+        UpdateBlackWatchMitigationResponse updateResponse = updateBlackWatchMitigationActivity.enact(
+                UpdateBlackWatchMitigationRequest.builder()
+                        .withMitigationId(mitigationId)
+                        .withMitigationActionMetadata(mitigationActionMetadata)
+                        .build());
+
+        assertNotNull(updateResponse);
+        assertEquals(mitigationId, updateResponse.getMitigationId());
+        assertEquals(userArn, updateResponse.getPreviousOwnerARN());
+        assertEquals(requestId, updateResponse.getRequestId());
     }
 
     @Test

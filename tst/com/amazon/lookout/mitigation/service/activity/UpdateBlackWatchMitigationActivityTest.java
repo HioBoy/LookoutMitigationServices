@@ -37,7 +37,7 @@ public class UpdateBlackWatchMitigationActivityTest extends ActivityTestHelper {
     public void setup() {
         TestUtils.configureLogging();
         updateBlackWatchMitigationActivity = 
-                spy(new UpdateBlackWatchMitigationActivity(requestValidator, blackwatchMitigationInfoHandler));
+                spy(new UpdateBlackWatchMitigationActivity(requestValidator, blackwatchMitigationInfoHandler, false));
         identity.setAttribute(Identity.AWS_USER_ARN, userArn);
         request = new UpdateBlackWatchMitigationRequest();
         request.setMitigationId("");

@@ -51,8 +51,11 @@ public class UpdateBlackWatchMitigationActivity extends Activity {
 
     @NonNull
     private final RequestValidator requestValidator;
+
     @NonNull
     private final BlackWatchMitigationInfoHandler blackwatchMitigationInfoHandler;
+
+    private final boolean regionalMitigationsEnabled;
 
     @Validated
     @Operation("UpdateBlackWatchMitigation")
@@ -104,14 +107,14 @@ public class UpdateBlackWatchMitigationActivity extends Activity {
                     request, resourceType, currentTargetConfig, userARN);
 
             // placement_tags is a new field in mitigation JSON that will control placing mitigations to
-            // BlackWatch in Region (BWIR). BWIR hasn't been enabled in BlackWatch API Coral activities
-            // yet, so here we simply disallow its usage.
+            // BlackWatch in Region (BWIR). BWIR hasn't been enabled in all regions yet.
             // placement_tags field exists as part of the BlackWatchTargetConfig model to allow BWIR
             // enablement in BlackWatch API Worker independently of BWIR enablement in BlackWatch API
             // Coral activities. It prevents Worker from failing with an "Unrecognized field" error on
             // deserialization of mitigation state.
             if (targetConfig.getGlobal_deployment() != null &&
-                    targetConfig.getGlobal_deployment().getPlacement_tags() != null) {
+                    targetConfig.getGlobal_deployment().getPlacement_tags() != null &&
+                    !regionalMitigationsEnabled) {
                 throw new IllegalArgumentException("placement_tags are not supported yet.");
             }
 
