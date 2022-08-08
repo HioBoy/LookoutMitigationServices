@@ -8,6 +8,7 @@ import com.amazon.blackwatch.helper.BlackWatchHelper;
 import com.amazon.blackwatch.mitigation.resource.helper.BlackWatchResourceTypeHelper;
 import com.amazon.blackwatch.mitigation.resource.validator.IPAddressResourceTypeValidator;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationActionMetadata;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationRegionalCellPlacement;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
@@ -22,11 +23,12 @@ import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.ApplyConfigError;
 import com.amazon.lookout.mitigation.service.BuildConfigError;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
-import com.amazon.lookout.mitigation.service.FailureDetails;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationNotOwnedByRequestor400;
 import com.amazon.lookout.mitigation.service.StatusCodeSummary;
+import com.amazon.lookout.mitigation.service.FailureDetails;
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRegionalCellPlacementResponse;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.workflow.helper.DogFishValidationHelper;
@@ -170,7 +172,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 for (MitigationState ms : mitigationStates) {
                     //Opted for a different POJO between the service layer and the DB layer.  Unfortunately it creates 
                     //this dirt.
-                    MitigationActionMetadata mitigationActionMetadata = 
+                    MitigationActionMetadata mitigationActionMetadata =
                             BlackWatchHelper.bwMetadataToCoralMetadata(ms.getLatestMitigationActionMetadata());
                     
                     Map<String, MitigationStateSetting> locState = ObjectUtils.defaultIfNull(
@@ -304,6 +306,82 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     @Override
     public MitigationState getMitigationState(final String mitigationId) {
         return mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+    }
+
+    @Override
+    public UpdateBlackWatchMitigationRegionalCellPlacementResponse
+    updateBlackWatchMitigationRegionalCellPlacement(final String mitigationId, final List<String> cellNames,
+                                                    final String userARN, final TSDMetrics tsdMetrics) {
+        // Add cell names to new cellPlacement field in Mitigation State DDB table.
+
+        try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler"
+                + ".updateBlackWatchMitigationRegionalCellPlacement")) {
+
+            MitigationState mitigationState = mitigationStateDynamoDBHelper.getMitigationState(mitigationId);
+
+            if (mitigationState == null) {
+                String message = String.format("MitigationId:%s could not be found in MitigationState table.",
+                        mitigationId);
+                subMetrics.addOne("BadMitigationId");
+                throw new IllegalArgumentException(message);
+            }
+
+            subMetrics.addZero("BadMitigationId");
+
+            String mitState = mitigationState.getState();
+            if(!mitState.equals(State.Active.name())) {
+                throw new IllegalStateException(String.format("UpdateCellPlacement API called on an existing " +
+                        "mitigation: %s which is in state: %s. " +
+                        "Rather, 'Active' state is required.", mitigationId, mitState));
+            }
+
+            BlackWatchTargetConfig existingTargetConfig = null;
+            try {
+                existingTargetConfig = BlackWatchTargetConfig.fromJSONString(
+                        mitigationState.getMitigationSettingsJSON());
+            } catch (IOException e) {
+                throw new IllegalStateException(String.format("Failed to parse mitigation config for " +
+                        "existing mitigation %s", mitigationId), e);
+            }
+
+            if (!((existingTargetConfig != null) && (existingTargetConfig.getGlobal_deployment() != null)
+                    && (existingTargetConfig.getGlobal_deployment().getPlacement_tags() != null) &&
+                    (existingTargetConfig.getGlobal_deployment().getPlacement_tags()
+                    .contains(BlackWatchTargetConfig.REGIONAL_PLACEMENT_TAG)))) {
+                String message = String.format("Mitigation with MitigationId:%s is not a regional mitigation",
+                        mitigationId);
+                throw new IllegalArgumentException(message);
+            }
+
+            if (!mitigationState.getOwnerARN().equals(userARN)) {
+                String message = String.format("Cannot update cell placement for mitigationId:%s as the " +
+                                "calling owner:%s does not match the recorded owner:%s", mitigationId,
+                        userARN, mitigationState.getOwnerARN());
+                throw new MitigationNotOwnedByRequestor400(message);
+            }
+
+            mitigationState.setChangeTime(System.currentTimeMillis());
+
+            BlackWatchMitigationRegionalCellPlacement placement = new BlackWatchMitigationRegionalCellPlacement();
+
+            placement.setCellNames(cellNames);
+            mitigationState.setRegionalPlacement(placement);
+            try {
+                saveMitigationState(mitigationState, false, subMetrics);
+
+                subMetrics.addCount("ExistingMitgationModified", 1);
+                UpdateBlackWatchMitigationRegionalCellPlacementResponse response =
+                        new UpdateBlackWatchMitigationRegionalCellPlacementResponse();
+
+                response.setMitigationId(mitigationId);
+                return response;
+            } catch (ConditionalCheckFailedException e) {
+                String message = String.format("Failed to update MitigationState due to " +
+                        "ConditionalCheckFailedException on DDB table");
+                LOG.warn(message);
+                throw e;
+            }
+        }
     }
 
     @Override
@@ -695,7 +773,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 });
     }
 
-    private void saveMitigationState(MitigationState mitigationState, boolean newMitigationCreated, 
+    private void saveMitigationState(MitigationState mitigationState, boolean newMitigationCreated,
             TSDMetrics subMetrics) {
         
         Integer minsToLive = mitigationState.getMinutesToLive();

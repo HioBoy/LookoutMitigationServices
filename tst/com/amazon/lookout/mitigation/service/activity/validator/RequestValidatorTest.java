@@ -12,7 +12,10 @@ import static org.mockito.Mockito.verify;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRegionalCellPlacementRequest;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -908,6 +911,26 @@ public class RequestValidatorTest {
         final BlackWatchTargetConfig newTargetConfig = validator.validateUpdateBlackWatchMitigationRequest(
                 request, resouceType, new BlackWatchTargetConfig(), userARN);
         assertSame(theRateLimit, getDefaultRateLimit(newTargetConfig));
+    }
+
+    @Test
+    public void testValidateUpdateBlackWatchMitigationRegionalCellPlacementWithValidRequest() {
+        UpdateBlackWatchMitigationRegionalCellPlacementRequest request =
+                new UpdateBlackWatchMitigationRegionalCellPlacementRequest();
+        List<String> cellNames = Stream.of("bzg-pdx-c1", "bz-pdx-c2").collect(Collectors.toList());
+        request.setCellNames(cellNames);
+
+        validator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testValidateUpdateBlackWatchMitigationRegionalCellPlacementWithInvalidRequest() {
+        UpdateBlackWatchMitigationRegionalCellPlacementRequest request =
+                new UpdateBlackWatchMitigationRegionalCellPlacementRequest();
+        List<String> cellNames = Stream.of("bzg-pdx-c1", "bz-pdx1-c2").collect(Collectors.toList());
+        request.setCellNames(cellNames);
+
+        validator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request);
     }
 
     @Test

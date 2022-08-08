@@ -53,9 +53,21 @@ import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import static com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig.REGIONAL_PLACEMENT_TAG;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyListOf;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.amazon.lookout.utils.DynamoDBLocalMocks;
 import org.mockito.invocation.InvocationOnMock;
@@ -80,9 +92,11 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static MetricsFactory metricsFactory = Mockito.mock(MetricsFactory.class);
     private static Metrics metrics = Mockito.mock(Metrics.class);
     private static TSDMetrics tsdMetrics;
+    private static String invalidMitigationSettingsJSON = "{\"asdf\":[],\"destinations\":[],\"mitigation_config\":{}}";
 
     private static final String testMitigation1 = "testMitigation-20160818";
     private static final String testMitigation2 = "testMitigation-20160819";
+    private static final List<String> regionalCellPlacements = Stream.of("bzg-pdx-c1", "bz-pdx-c2").collect(Collectors.toList());
     private static final String testMasterRegion = "us-east-1";
     private static final String testSecondaryRegion = "us-west-1";
     private static final Map<String, String> endpointMap = ImmutableMap.of(testMasterRegion, "master-1.a.c", 
@@ -687,6 +701,144 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     }
 
     @Test
+    public void testUpdateBlackWatchMitigationRegionalCellPlacementWithValidMitigationId() {
+        BlackWatchTargetConfig regionalMitigationTargetConfig = new BlackWatchTargetConfig();
+        BlackWatchTargetConfig.GlobalDeployment globalDeployment= new BlackWatchTargetConfig.GlobalDeployment();
+        globalDeployment.setPlacement_tags(ImmutableSet.of(REGIONAL_PLACEMENT_TAG));
+        regionalMitigationTargetConfig.setGlobal_deployment(globalDeployment);
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, regionalMitigationTargetConfig, "ARN-1222", tsdMetrics, false, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        UpdateBlackWatchMitigationRegionalCellPlacementResponse response = blackWatchMitigationInfoHandler.updateBlackWatchMitigationRegionalCellPlacement(
+                applyResponse.getMitigationId(), regionalCellPlacements, "ARN-1222", tsdMetrics);
+        assertEquals(response.getMitigationId(), applyResponse.getMitigationId());
+
+        MitigationState mitState = mitigationStateDynamoDBHelper.getMitigationState(response.getMitigationId());
+        assertEquals(mitState.getRegionalPlacement().getCellNames(), regionalCellPlacements);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testUpdateBlackWatchMitigationRegionalCellPlacementWithInValidMitigationId() {
+        // Illegal argument exception occurs when we try to update a mitigation which is not present
+        BlackWatchTargetConfig regionalMitigationTargetConfig = new BlackWatchTargetConfig();
+        BlackWatchTargetConfig.GlobalDeployment globalDeployment= new BlackWatchTargetConfig.GlobalDeployment();
+        globalDeployment.setPlacement_tags(ImmutableSet.of(REGIONAL_PLACEMENT_TAG));
+        regionalMitigationTargetConfig.setGlobal_deployment(globalDeployment);
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, regionalMitigationTargetConfig, "ARN-1222", tsdMetrics, false, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        blackWatchMitigationInfoHandler.updateBlackWatchMitigationRegionalCellPlacement(
+                "testMitigationId", regionalCellPlacements, "ARN-1222", tsdMetrics);
+    }
+
+    @Test(expected = MitigationNotOwnedByRequestor400.class)
+    public void testUpdateBlackWatchMitigationRegionalCellPlacementWhenMitigationIsOwnedByDifferentARN() {
+        BlackWatchTargetConfig regionalMitigationTargetConfig = new BlackWatchTargetConfig();
+        BlackWatchTargetConfig.GlobalDeployment globalDeployment= new BlackWatchTargetConfig.GlobalDeployment();
+        globalDeployment.setPlacement_tags(ImmutableSet.of(REGIONAL_PLACEMENT_TAG));
+        regionalMitigationTargetConfig.setGlobal_deployment(globalDeployment);
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, regionalMitigationTargetConfig, "ARN-1222", tsdMetrics, false, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        blackWatchMitigationInfoHandler.updateBlackWatchMitigationRegionalCellPlacement(
+                applyResponse.getMitigationId(), regionalCellPlacements, "Different-ARN", tsdMetrics);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testUpdateBlackWatchMitigationRegionalCellPlacementWithBadExistingMitigationSettingsJSON() {
+        BlackWatchTargetConfig regionalMitigationTargetConfig = new BlackWatchTargetConfig();
+        BlackWatchTargetConfig.GlobalDeployment globalDeployment= new BlackWatchTargetConfig.GlobalDeployment();
+        globalDeployment.setPlacement_tags(ImmutableSet.of(REGIONAL_PLACEMENT_TAG));
+        regionalMitigationTargetConfig.setGlobal_deployment(globalDeployment);
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, regionalMitigationTargetConfig, "ARN-1222", tsdMetrics, false, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        MitigationState mitState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
+        mitState.setMitigationSettingsJSON(invalidMitigationSettingsJSON);
+        mitigationStateDynamoDBHelper.updateMitigationState(mitState);
+
+        blackWatchMitigationInfoHandler.updateBlackWatchMitigationRegionalCellPlacement(
+        applyResponse.getMitigationId(), regionalCellPlacements, "ARN-1222", tsdMetrics);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testUpdateBlackWatchMitigationRegionalCellPlacementOnBadMitigationState() {
+        BlackWatchTargetConfig regionalMitigationTargetConfig = new BlackWatchTargetConfig();
+        BlackWatchTargetConfig.GlobalDeployment globalDeployment= new BlackWatchTargetConfig.GlobalDeployment();
+        globalDeployment.setPlacement_tags(ImmutableSet.of(REGIONAL_PLACEMENT_TAG));
+        regionalMitigationTargetConfig.setGlobal_deployment(globalDeployment);
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, regionalMitigationTargetConfig, "ARN-1222", tsdMetrics, false, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        MitigationState mitState = mitigationStateDynamoDBHelper.getMitigationState(applyResponse.getMitigationId());
+        mitState.setState(State.Failed.name());
+        mitigationStateDynamoDBHelper.updateMitigationState(mitState);
+
+        blackWatchMitigationInfoHandler.updateBlackWatchMitigationRegionalCellPlacement(
+                applyResponse.getMitigationId(), regionalCellPlacements, "ARN-1222", tsdMetrics);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testUpdateBlackWatchMitigationRegionalCellPlacementOnNonRegionalMitigation() {
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+        BlackWatchTargetConfig.GlobalDeployment globalDeployment= new BlackWatchTargetConfig.GlobalDeployment();
+        globalDeployment.setPlacement_tags(ImmutableSet.of(""));
+        targetConfig.setGlobal_deployment(globalDeployment);
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, targetConfig, "ARN-1222", tsdMetrics, false, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        blackWatchMitigationInfoHandler.updateBlackWatchMitigationRegionalCellPlacement(
+                applyResponse.getMitigationId(), regionalCellPlacements, "ARN-1222", tsdMetrics);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testUpdateBlackWatchMitigationRegionalCellPlacementWithNoGlobalDeployment() {
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+        BlackWatchTargetConfig.GlobalDeployment globalDeployment= new BlackWatchTargetConfig.GlobalDeployment();
+        targetConfig.setGlobal_deployment(globalDeployment);
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, targetConfig, "ARN-1222", tsdMetrics, false, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+        blackWatchMitigationInfoHandler.updateBlackWatchMitigationRegionalCellPlacement(
+                applyResponse.getMitigationId(), regionalCellPlacements, "ARN-1222", tsdMetrics);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testUpdateBlackWatchMitigationRegionalCellPlacementWithNoTargetConfig() {
+        BlackWatchTargetConfig targetConfig = new BlackWatchTargetConfig();
+        ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, targetConfig, "ARN-1222", tsdMetrics, false, false);
+        assertNotNull(applyResponse);
+        assertTrue(applyResponse.isNewMitigationCreated());
+        assertTrue(applyResponse.getMitigationId().length() > 0);
+
+
+        blackWatchMitigationInfoHandler.updateBlackWatchMitigationRegionalCellPlacement(
+                applyResponse.getMitigationId(), regionalCellPlacements, "ARN-1222", tsdMetrics);
+    }
+
+    @Test
     public void testUpdateBlackWatchMitigationSuccess() {
         ApplyBlackWatchMitigationResponse applyResponse = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
                 testIPAddressResourceId, testIPAddressResourceType, 30, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics, false, false);
@@ -695,7 +847,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         assertTrue(applyResponse.getMitigationId().length() > 0);
         
         UpdateBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.updateBlackWatchMitigation(
-                applyResponse.getMitigationId(), 30, testMetadata, parseJSON(testValidJSON), "ARN-1122", tsdMetrics, false);
+                applyResponse.getMitigationId(), 30, testMetadata, parseJSON(testValidJSON), "ARN-1222", tsdMetrics, false);
         assertNotNull(response);
     }
     

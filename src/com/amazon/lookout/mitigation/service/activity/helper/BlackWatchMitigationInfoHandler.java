@@ -10,9 +10,10 @@ import java.util.Random;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
-import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
+import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRegionalCellPlacementResponse;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationResponse;
 
 public interface BlackWatchMitigationInfoHandler {
@@ -51,4 +52,8 @@ public interface BlackWatchMitigationInfoHandler {
     public UpdateBlackWatchMitigationResponse updateBlackWatchMitigation(String mitigationId,
             Integer minsToLive, MitigationActionMetadata metadata, BlackWatchTargetConfig targetConfig,
             String userARN, TSDMetrics tsdMetrics, boolean bypassConfigValidations);
+
+    public UpdateBlackWatchMitigationRegionalCellPlacementResponse updateBlackWatchMitigationRegionalCellPlacement(
+            final String mitigationId, final List<String> cellNames, final String userARN, final TSDMetrics tsdMetrics);
+
 }

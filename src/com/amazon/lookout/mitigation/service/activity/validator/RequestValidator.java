@@ -7,6 +7,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
 import com.amazon.blackwatch.host.status.model.HostStatusEnum;
@@ -33,6 +35,7 @@ import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.MitigationRequestDescription;
 import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import com.amazon.lookout.mitigation.service.RollbackMitigationRequest;
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRegionalCellPlacementRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchLocationStateRequest;
 import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
@@ -870,6 +873,24 @@ public class RequestValidator {
         validateUserARN(userARN);
 
         return targetConfig;
+    }
+
+    public void validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(
+            @NonNull UpdateBlackWatchMitigationRegionalCellPlacementRequest request) {
+
+        final Pattern REGIONAL_CELL_NAME_PATTERN = Pattern.compile(
+                "bz[g]?-[a-z]{3}-c\\d+",
+                Pattern.CASE_INSENSITIVE);
+
+        List<String> cellNames = request.getCellNames(); // format - [bz-pdx-c1, bz-pdx-c2]
+        // Validate cellNames --> all the Cell names should match REGIONAL_CELL_NAME_PATTERN
+        for (String cellName : cellNames) {
+            Matcher matcher = REGIONAL_CELL_NAME_PATTERN.matcher(cellName);
+            if (!(matcher.matches())) {
+                throw new IllegalArgumentException(String.format(
+                        "Unrecognized cell name: '%s', expected: '%s'.", cellName, REGIONAL_CELL_NAME_PATTERN));
+            }
+        }
     }
 
     public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(
