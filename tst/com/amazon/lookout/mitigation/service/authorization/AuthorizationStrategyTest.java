@@ -16,10 +16,14 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+
+import com.google.common.collect.ImmutableSet;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 
+import lombok.SneakyThrows;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -28,6 +32,7 @@ import org.junit.runner.RunWith;
 import aws.auth.client.config.Configuration;
 
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType;
+import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.coral.security.AccessDeniedException;
 import com.amazon.coral.service.AuthorizationInfo;
 import com.amazon.coral.service.BasicAuthorizationInfo;
@@ -36,14 +41,12 @@ import com.amazon.coral.service.Identity;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.CreateMitigationRequest;
-import com.amazon.lookout.mitigation.service.DeactivateBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.EditMitigationRequest;
 import com.amazon.lookout.mitigation.service.GetLocationHostStatusRequest;
 import com.amazon.lookout.mitigation.service.GetMitigationInfoRequest;
 import com.amazon.lookout.mitigation.service.GetRequestStatusRequest;
 import com.amazon.lookout.mitigation.service.ListActiveMitigationsForServiceRequest;
-import com.amazon.lookout.mitigation.service.ListBlackWatchLocationsRequest;
 import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
@@ -177,6 +180,23 @@ public class AuthorizationStrategyTest {
             + "        \"mitigation_config\": { }"
             + "     }");
 
+    private final String MITIGATION_JSON_CONFIG_REGIONAL = "{"
+            + "  \"destinations\": [ "
+            + "     \"52.48.2.1/32\" "
+            + "    ], "
+            + "  \"global_deployment\": {"
+            + "    \"placement_tags\": [\"REGIONAL\"]"
+            + "    },"
+            + "  \"mitigation_config\": {"
+            + "    \"global_traffic_shaper\": {"
+            + "      \"default\": {"
+            + "        \"global_pps\": 1000,"
+            + "        \"global_bps\": 9999"
+            + "      }"
+            + "    }"
+            + "  }"
+            + "}";
+
     @Before
     public void setUp() {
         authStrategy = new AuthorizationStrategy(mock(Configuration.class), TEST_REGION, TEST_USER);
@@ -250,6 +270,11 @@ public class AuthorizationStrategyTest {
             throw new RuntimeException(e);
         }
         authInfo.setResourceContext(ContextHeuristics.resourceArnToContext(resource));
+
+        Map<String, Object> requestContext = new HashMap<>();
+        requestContext.put("aws:BlackWatchAPI/ResourceType", null);
+        authInfo.setRequestContext(requestContext);
+
         authInfo.setResourceOwner(TEST_USER);
         authInfo.setPolicies(new LinkedList<>());
         return authInfo;
@@ -270,6 +295,29 @@ public class AuthorizationStrategyTest {
         return authInfo;
     }
 
+    private BasicAuthorizationInfo getBasicAuthorizationInfo(
+            final String action,
+            final String resource,
+            final String ip,
+            final String resourceType,
+            final Set<String> placementTags) {
+        BasicAuthorizationInfo authInfo = getBasicAuthorizationInfo(action, resource, ip, resourceType);
+        if (placementTags != null) {
+            authInfo.getRequestContext().put("aws:BlackWatchAPI/PlacementTags", placementTags);
+        }
+        return authInfo;
+    }
+
+    @SneakyThrows
+    private static BlackWatchTargetConfig getBlackWatchTargetConfig(ApplyBlackWatchMitigationRequest request) {
+        return BlackWatchTargetConfig.fromJSONString(request.getMitigationSettingsJSON());
+    }
+
+    @SneakyThrows
+    private static BlackWatchTargetConfig getBlackWatchTargetConfig(UpdateBlackWatchMitigationRequest request) {
+        return BlackWatchTargetConfig.fromJSONString(request.getMitigationSettingsJSON());
+    }
+
     private void assertEqualAuthorizationInfos(AuthorizationInfo info1, AuthorizationInfo info2) {
         assertEquals(info1.getActionContext().get(ContextConstants.AWS_ACTION),
                 info2.getActionContext().get(ContextConstants.AWS_ACTION));
@@ -277,10 +325,7 @@ public class AuthorizationStrategyTest {
                 info2.getResourceContext().get(ContextConstants.AWS_ARN_CTX_KEY));
         assertEquals(info1.getResourceOwner(), info2.getResourceOwner());
         assertEquals(info1.getPolicies(), info2.getPolicies());
-        assertEquals(info1.getRequestContext().get(BLACKWATCH_API_CUSTOM_CONTEXT_TAG),
-                info2.getRequestContext().get(BLACKWATCH_API_CUSTOM_CONTEXT_TAG));
-        assertEquals(info1.getRequestContext().get("aws:BlackWatchAPI/ResourceType"),
-                info2.getRequestContext().get("aws:BlackWatchAPI/ResourceType"));
+        assertEquals(info1.getRequestContext(), info2.getRequestContext());
     }
 
     @SuppressWarnings("unused")
@@ -590,7 +635,7 @@ public class AuthorizationStrategyTest {
         applyRequest.setResourceId(CIDR_WITH_32);
 
         AuthorizationStrategy.DestinationIPInfo destinationIPInfoObject = AuthorizationStrategy
-                .getApplyBlackWatchMitigationDestinationIPList("ApplyBlackWatchMitigation", applyRequest);
+                .getApplyBlackWatchMitigationDestinationIPList(applyRequest, getBlackWatchTargetConfig(applyRequest));
 
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(1));
         assertThat(destinationIPInfoObject.getDestinationIPList(), contains(IP_WITH_32));
@@ -611,9 +656,9 @@ public class AuthorizationStrategyTest {
         ApplyBlackWatchMitigationRequest applyRequest = new ApplyBlackWatchMitigationRequest();
         applyRequest.setResourceType(BlackWatchMitigationResourceType.IPAddress.name());
         applyRequest.setResourceId(CIDR_WITH_24);
-
-        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList("ApplyBlackWatchMitigation",
-                applyRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
+                applyRequest,
+                getBlackWatchTargetConfig(applyRequest));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(2));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_24_LOW, IP_WITH_24_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddress.name());
@@ -633,8 +678,9 @@ public class AuthorizationStrategyTest {
         applyRequest.setResourceType(BlackWatchMitigationResourceType.IPAddress.name());
         applyRequest.setResourceId(CIDR_WITH_128);
 
-        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList("ApplyBlackWatchMitigation",
-                applyRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
+                applyRequest,
+                getBlackWatchTargetConfig(applyRequest));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(1));
         assertThat(destinationIPInfoObject.getDestinationIPList(), contains(IP_WITH_128));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddress.name());
@@ -655,8 +701,9 @@ public class AuthorizationStrategyTest {
         applyRequest.setResourceType(BlackWatchMitigationResourceType.IPAddress.name());
         applyRequest.setResourceId(CIDR_WITH_55);
 
-        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList("ApplyBlackWatchMitigation",
-                applyRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
+                applyRequest,
+                getBlackWatchTargetConfig(applyRequest));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(2));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_55_LOW, IP_WITH_55_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddress.name());
@@ -677,8 +724,9 @@ public class AuthorizationStrategyTest {
         applyRequest.setResourceType(BlackWatchMitigationResourceType.IPAddressList.name());
         applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_2);
 
-        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList("ApplyBlackWatchMitigation",
-                applyRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
+                applyRequest,
+                getBlackWatchTargetConfig(applyRequest));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(3));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_32, IP_WITH_24_LOW, IP_WITH_24_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddressList.name());
@@ -699,8 +747,9 @@ public class AuthorizationStrategyTest {
         applyRequest.setResourceType(BlackWatchMitigationResourceType.IPAddressList.name());
         applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_1);
 
-        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList("ApplyBlackWatchMitigation",
-                applyRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
+                applyRequest,
+                getBlackWatchTargetConfig(applyRequest));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(5));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_55_LOW, IP_WITH_55_HIGH, IP_WITH_32,
                 IP_WITH_24_LOW, IP_WITH_24_HIGH));
@@ -721,8 +770,9 @@ public class AuthorizationStrategyTest {
         applyRequest.setResourceType(BlackWatchMitigationResourceType.IPAddressList.name());
         applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_32);
 
-        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList("ApplyBlackWatchMitigation",
-                applyRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
+                applyRequest,
+                getBlackWatchTargetConfig(applyRequest));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(1));
         assertThat(destinationIPInfoObject.getDestinationIPList(), contains(IP_WITH_32));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddressList.name());
@@ -742,8 +792,9 @@ public class AuthorizationStrategyTest {
         applyRequest.setResourceType(BlackWatchMitigationResourceType.IPAddressList.name());
         applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_55);
 
-        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList("ApplyBlackWatchMitigation",
-                applyRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
+                applyRequest,
+                getBlackWatchTargetConfig(applyRequest));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(2));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_55_LOW, IP_WITH_55_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddressList.name());
@@ -761,8 +812,9 @@ public class AuthorizationStrategyTest {
         applyRequest.setResourceType(BlackWatchMitigationResourceType.ElasticIP.name());
         applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_55);
 
-        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList("ApplyBlackWatchMitigation",
-                applyRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
+                applyRequest,
+                getBlackWatchTargetConfig(applyRequest));
         assertNull(destinationIPInfoObject);
     }
 
@@ -778,8 +830,9 @@ public class AuthorizationStrategyTest {
         applyRequest.setResourceType(BlackWatchMitigationResourceType.ELB.name());
         applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_55);
 
-        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList("ApplyBlackWatchMitigation",
-                applyRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
+                applyRequest,
+                getBlackWatchTargetConfig(applyRequest));
         assertNull(destinationIPInfoObject);
     }
 
@@ -796,8 +849,8 @@ public class AuthorizationStrategyTest {
         UpdateBlackWatchMitigationRequest updateRequest = new UpdateBlackWatchMitigationRequest();
         updateRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_24);
 
-        destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList("UpdateBlackWatchMitigation",
-                updateRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList(
+                getBlackWatchTargetConfig(updateRequest));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(2));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_24_LOW, IP_WITH_24_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddressList.name());
@@ -817,8 +870,8 @@ public class AuthorizationStrategyTest {
         UpdateBlackWatchMitigationRequest updateRequest = new UpdateBlackWatchMitigationRequest();
         updateRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_24_128);
 
-        destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList("UpdateBlackWatchMitigation",
-                updateRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList(
+                getBlackWatchTargetConfig(updateRequest));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(3));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems( IP_WITH_128, IP_WITH_24_LOW, IP_WITH_24_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddressList.name());
@@ -833,8 +886,8 @@ public class AuthorizationStrategyTest {
         AuthorizationStrategy.DestinationIPInfo destinationIPInfoObject;
         UpdateBlackWatchMitigationRequest updateRequest = new UpdateBlackWatchMitigationRequest();
 
-        destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList("UpdateBlackWatchMitigation",
-                updateRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList(
+                getBlackWatchTargetConfig(updateRequest));
         assertNull(destinationIPInfoObject);
     }
 
@@ -849,8 +902,8 @@ public class AuthorizationStrategyTest {
         UpdateBlackWatchMitigationRequest updateRequest = new UpdateBlackWatchMitigationRequest();
         updateRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_ELASTICIP);
 
-        destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList("UpdateBlackWatchMitigation",
-                updateRequest);
+        destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList(
+                getBlackWatchTargetConfig(updateRequest));
         assertNull(destinationIPInfoObject);
     }
 
@@ -1143,5 +1196,41 @@ public class AuthorizationStrategyTest {
 
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfo);
     }
-}
 
+    @Test
+    public void testApplyBlackWatchMitigationRequest_withPlacementTag(){
+        setOperationNameForContext("ApplyBlackWatchMitigations");
+        ApplyBlackWatchMitigationRequest applyRequest = new ApplyBlackWatchMitigationRequest();
+        applyRequest.setResourceType(BlackWatchMitigationResourceType.IPAddressList.name());
+        applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_REGIONAL);
+
+        List<AuthorizationInfo> authInfoList = authStrategy.getAuthorizationInfoList(context, applyRequest);
+        assertTrue(authInfoList.size() == 1);
+
+        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo(
+                "lookout:write-ApplyBlackWatchMitigations",
+                EXPECTED_ARN_PREFIX + "BLACKWATCH_API/BLACKWATCH_MITIGATION",
+                IP_WITH_32,
+                BlackWatchMitigationResourceType.IPAddressList.name(),
+                ImmutableSet.of("REGIONAL"));
+        assertEqualAuthorizationInfos(expectedAuthInfo, authInfoList.get(0));
+    }
+
+    @Test
+    public void testUpdateBlackWatchMitigationDestinationIPList_withPlacementTag(){
+        setOperationNameForContext("UpdateBlackWatchMitigation");
+        UpdateBlackWatchMitigationRequest updateRequest = new UpdateBlackWatchMitigationRequest();
+        updateRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_REGIONAL);
+
+        List<AuthorizationInfo> authInfoList = authStrategy.getAuthorizationInfoList(context, updateRequest);
+        assertTrue(authInfoList.size() == 1);
+
+        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo(
+                "lookout:write-UpdateBlackWatchMitigation",
+                EXPECTED_ARN_PREFIX + "BLACKWATCH_API/BLACKWATCH_MITIGATION",
+                IP_WITH_32,
+                BlackWatchMitigationResourceType.IPAddressList.name(),
+                ImmutableSet.of("REGIONAL"));
+        assertEqualAuthorizationInfos(expectedAuthInfo, authInfoList.get(0));
+    }
+}

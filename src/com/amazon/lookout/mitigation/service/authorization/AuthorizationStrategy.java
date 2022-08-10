@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationStateRequest;
@@ -104,6 +105,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     private static final String BLACKWATCH_MITIGATION_RESOURCE_PREFIX = "BLACKWATCH_MITIGATION";
     private static final String BLACKWATCH_API_CUSTOM_CONTEXT_TAG = "aws:BlackWatchAPI/TargetIPSpace";
     private static final String BLACKWATCH_API_RESOURCE_TYPE_TAG = "aws:BlackWatchAPI/ResourceType";
+    private static final String BLACKWATCH_API_PLACEMENT_TAGS = "aws:BlackWatchAPI/PlacementTags";
     private static final String BLACKWATCH_API_UPDATE_MITIGATION_ACTION_NAME = "UpdateBlackWatchMitigation";
 
     // Constants used for generating ARN
@@ -171,6 +173,10 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         // https://sim.amazon.com/issues/BLACKWATCH-2900
         if (ip != null) {
             actionContext.put(BLACKWATCH_API_CUSTOM_CONTEXT_TAG, ip);
+        }
+
+        if (requestInfo.getPlacementTags() != null) {
+            actionContext.put(BLACKWATCH_API_PLACEMENT_TAGS, requestInfo.getPlacementTags());
         }
 
         // if applyBWmitigation and updateBWmitigation is called we are interested in the resourcetype as well, in all
@@ -244,7 +250,8 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     static class RequestInfo {
         private final String action;
         private final String relativeArn;
-        private DestinationIPInfo destinationIPInfoObject;
+        private @Nullable DestinationIPInfo destinationIPInfoObject;
+        private @Nullable Set<String> placementTags;
     }
 
     interface RequestInfoFunction<T> {
@@ -282,18 +289,40 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
     private static RequestInfo generateApplyBlackWatchMitigationRequestInfo(String action, String prefix,
                                                                             ApplyBlackWatchMitigationRequest request) {
+        BlackWatchTargetConfig targetConfig = parseTargetConfig(request.getMitigationSettingsJSON());
+
         return new RequestInfo(
                 generateActionName(action, prefix),
                 getBlackWatchAPIRelativeId(),
-                getApplyBlackWatchMitigationDestinationIPList(action, request));
+                getApplyBlackWatchMitigationDestinationIPList(request, targetConfig),
+                getPlacementTags(targetConfig));
     }
 
     private static RequestInfo generateUpdateBlackWatchMitigationRequestInfo(String action, String prefix,
                                                                              UpdateBlackWatchMitigationRequest request) {
+        BlackWatchTargetConfig targetConfig = parseTargetConfig(request.getMitigationSettingsJSON());
+
         return new RequestInfo(
                 generateActionName(action, prefix),
                 getBlackWatchAPIRelativeId(),
-                getUpdateBlackWatchMitigationDestinationIPList(action, request));
+                getUpdateBlackWatchMitigationDestinationIPList(targetConfig),
+                getPlacementTags(targetConfig));
+    }
+
+    private static BlackWatchTargetConfig parseTargetConfig(String mitigationSettingsJson) {
+        try {
+            return BlackWatchTargetConfig.fromJSONString(mitigationSettingsJson);
+        } catch (IOException ex) {
+            throw new IllegalArgumentException("Could not map mitigation JSON to target config: " +
+                    ex.getMessage(), ex);
+        }
+    }
+
+    private static Set<String> getPlacementTags(final BlackWatchTargetConfig targetConfig) {
+        if (targetConfig != null && targetConfig.getGlobal_deployment() != null) {
+            return targetConfig.getGlobal_deployment().getPlacement_tags();
+        }
+        return null;
     }
 
     private static RequestInfo generateLocationStateRequestInfo(String action, String prefix) {
@@ -557,12 +586,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
     /**
      * Function to extract destination IPs from the request context for ApplyBlackWatchMitigation
-     * @param action
-     * @param request
      * @return List of destination ips fetched from the request
      */
-    static DestinationIPInfo getApplyBlackWatchMitigationDestinationIPList(final String action,
-                                                                           final ApplyBlackWatchMitigationRequest request) {
+    static DestinationIPInfo getApplyBlackWatchMitigationDestinationIPList(
+            final ApplyBlackWatchMitigationRequest request,
+            final BlackWatchTargetConfig targetConfig) {
         List<String> destinationIpList = new ArrayList<String>();
 
         // If ResourceType is IPAddress
@@ -572,15 +600,6 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
             return new DestinationIPInfo(BlackWatchMitigationResourceType.IPAddress.name(), destinationIpList);
         } else if (BlackWatchMitigationResourceType.IPAddressList.name().equals(request.getResourceType())) {
             // If ResourceType is IPAddressList we need to extract destinations from mitigation json
-            BlackWatchTargetConfig targetConfig;
-            try {
-                targetConfig = BlackWatchTargetConfig.fromJSONString(
-                        request.getMitigationSettingsJSON());
-            } catch (IOException ex) {
-                throw new IllegalArgumentException("Could not map mitigation JSON to target config: " +
-                        ex.getMessage(), ex);
-            }
-
             if (targetConfig != null) {
                 if (!(CollectionUtils.isEmpty(targetConfig.getDestinations()))) {
                     for (String ip : targetConfig.getDestinations()) {
@@ -597,23 +616,10 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
     /**
      * Function to extract destination IPs from the request context for UpdateBlackWatchMitigation
-     * @param action
-     * @param request
      * @return List of destination ips fetched from the request
      */
-    static DestinationIPInfo getUpdateBlackWatchMitigationDestinationIPList(final String action,
-                                                                            final UpdateBlackWatchMitigationRequest request) {
+    static DestinationIPInfo getUpdateBlackWatchMitigationDestinationIPList(final BlackWatchTargetConfig targetConfig) {
         List<String> destinationIpList = new ArrayList<String>();
-        BlackWatchTargetConfig targetConfig;
-
-        try {
-            targetConfig = BlackWatchTargetConfig.fromJSONString(
-                    request.getMitigationSettingsJSON());
-        } catch (IOException ex) {
-            throw new IllegalArgumentException("Could not map mitigation JSON to target config: " +
-                    ex.getMessage(), ex);
-        }
-
         if (targetConfig != null) {
             if(!(CollectionUtils.isEmpty(targetConfig.getDestinations()))) {
                 for (String ip : targetConfig.getDestinations()) {
