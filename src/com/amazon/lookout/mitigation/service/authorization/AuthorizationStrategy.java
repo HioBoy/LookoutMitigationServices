@@ -2,7 +2,6 @@ package com.amazon.lookout.mitigation.service.authorization;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -10,14 +9,38 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.amazon.balsa.engine.Policy;
+import com.amazon.balsa.engine.Principal;
+import com.amazon.balsa.proto.Balsa.ActionBlock;
+import com.amazon.balsa.proto.Balsa.ConditionBlock;
+import com.amazon.balsa.proto.Balsa.ConditionEntry;
+import com.amazon.balsa.proto.Balsa.ConditionKey;
+import com.amazon.balsa.proto.Balsa.ConditionKey.KeyType;
+import com.amazon.balsa.proto.Balsa.ConditionQualifier;
+import com.amazon.balsa.proto.Balsa.ConditionType;
+import com.amazon.balsa.proto.Balsa.ConditionValue;
+import com.amazon.balsa.proto.Balsa.ConditionValue.ConditionValueType;
+import com.amazon.balsa.proto.Balsa.Effect;
+import com.amazon.balsa.proto.Balsa.PolicyBlock;
+import com.amazon.balsa.proto.Balsa.PrincipalMapBlock;
+import com.amazon.balsa.proto.Balsa.PrincipalMapEntry;
+import com.amazon.balsa.proto.Balsa.Provider;
+import com.amazon.balsa.proto.Balsa.ResourceBlock;
+import com.amazon.balsa.proto.Balsa.ResourceValue;
+import com.amazon.balsa.proto.Balsa.ResourceValue.ResourceType;
+import com.amazon.balsa.proto.Balsa.StatementBlock;
+import com.amazon.balsa.proto.Balsa.Version;
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationStateRequest;
 import com.amazon.lookout.mitigation.service.GetLocationOperationalStatusRequest;
 import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
+
+import com.google.common.collect.ImmutableList;
 import lombok.Data;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -62,6 +85,10 @@ import com.amazon.lookout.mitigation.service.constants.MitigationTemplateToDevic
 import com.aws.rip.RIPHelper;
 import com.aws.rip.models.exception.RegionIsInTestException;
 import com.aws.rip.models.exception.RegionNotFoundException;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singletonList;
 
 /**
  * AuthorizationStrategy looks at the context and request to generate action and resource names to
@@ -120,7 +147,17 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     @Getter
     private final String arnPrefix;
 
+    private final Policy regionalMitigationPolicy;
+
     public AuthorizationStrategy(Configuration arcConfig, String region, String ownerAccountId) {
+        this(arcConfig, region, ownerAccountId, ImmutableList.of());
+    }
+
+    public AuthorizationStrategy(
+            Configuration arcConfig,
+            String region,
+            String ownerAccountId,
+            List<String> regionalMitigationsRoleAllowlist) {
         super(arcConfig);
         Validate.notNull(arcConfig);
         Validate.notEmpty(region);
@@ -136,6 +173,10 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
             LOG.error("Region " + region +" is still under testing");
         }
         this.arnPrefix = "arn:" + partition + ":" + VENDOR + ":" + region + ":" + ownerAccountId + ":";
+
+        this.regionalMitigationPolicy = generateRegionalMitigationPolicy(
+                regionalMitigationsRoleAllowlist,
+                ownerAccountId);
     }
 
     /**
@@ -166,9 +207,6 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         // associated with this authorization call
         authorizationInfo.setResourceOwner(ownerAccountId);
 
-        // Any custom policies to include in the authorization check
-        authorizationInfo.setPolicies(Collections.emptyList());
-
         // destination ip to be evaluated against IPSpace listed in IAM policy
         // https://sim.amazon.com/issues/BLACKWATCH-2900
         if (ip != null) {
@@ -176,7 +214,19 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         }
 
         if (requestInfo.getPlacementTags() != null) {
+            // PlacementTags is a multivalued condition key. IAM policies that use it should use ForAllValues and
+            // ForAnyValue condition operators.
+            // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_multi-value-conditions.html#reference_policies_multi-key-or-value-conditions
             actionContext.put(BLACKWATCH_API_PLACEMENT_TAGS, requestInfo.getPlacementTags());
+        }
+
+        if (requestInfo.getPlacementTags() != null &&
+                requestInfo.getPlacementTags().contains(BlackWatchTargetConfig.REGIONAL_PLACEMENT_TAG)) {
+            LOG.debug("Applying additional IAM policy to deny REGIONAL mitigation unless the caller IAM role is " +
+                    "explicitly allowlisted: " + toJson(regionalMitigationPolicy));
+            authorizationInfo.setPolicies(singletonList(regionalMitigationPolicy));
+        } else {
+            authorizationInfo.setPolicies(emptyList());
         }
 
         // if applyBWmitigation and updateBWmitigation is called we are interested in the resourcetype as well, in all
@@ -185,6 +235,77 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         authorizationInfo.setRequestContext(actionContext);
 
         return authorizationInfo;
+    }
+
+    private static Policy generateRegionalMitigationPolicy(List<String> roleAllowlist, String ownerAccountId) {
+        // If request PlacementTags contain REGIONAL tag then explicitly deny all principals except for the ones
+        // specified in the roleAllowlist policy condition.
+        // This is a resource-based policy.
+        // https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_identity-vs-resource.html
+        // https://w.amazon.com/bin/view/AWSAuth/AccessManagement/Aspen/Resource_Policies
+        ConditionBlock.Builder conditionBuilder = ConditionBlock.newBuilder()
+                .addEntry(ConditionEntry.newBuilder()
+                        .setQualifier(ConditionQualifier.FOR_ANY_VALUE)
+                        .setType(ConditionType.STRING_EQUALS)
+                        .setKey(ConditionKey.newBuilder()
+                                .setKeyType(KeyType.STRING)
+                                .setStringKey(BLACKWATCH_API_PLACEMENT_TAGS))
+                        .addValue(ConditionValue.newBuilder()
+                                .setType(ConditionValueType.STRING)
+                                .setString(BlackWatchTargetConfig.REGIONAL_PLACEMENT_TAG)));
+        if (!roleAllowlist.isEmpty()) {
+            conditionBuilder.addEntry(ConditionEntry.newBuilder()
+                    .setQualifier(ConditionQualifier.SINGLE_VALUE)
+                    .setType(ConditionType.ARN_NOT_EQUALS)
+                    .setKey(ConditionKey.newBuilder()
+                            .setKeyType(KeyType.STRING)
+                            // If the caller uses an assumed role then aws:PrincipalArn condition key matches ARN of the
+                            // IAM role (example: `arn:aws:iam::AWS-account-ID:role/role-name`), not ARNs of the assumed
+                            // role (example: `arn:aws:sts::AWS-account-ID:assumed-role/role-name/role-session-name`).
+                            // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html#condition-keys-principalarn
+                            .setStringKey("aws:PrincipalArn"))
+                    .addAllValue(roleAllowlist.stream()
+                            .map(role -> ConditionValue.newBuilder()
+                                    .setType(ConditionValueType.STRING)
+                                    .setString(role)
+                                    .build())
+                            .collect(Collectors.toList())));
+        }
+
+        Policy policy = new Policy(PolicyBlock.newBuilder()
+                .setVersion(Version.V_2012_10_17)
+                .addStatement(StatementBlock.newBuilder()
+                        .setEffect(Effect.DENY)
+                        // Principal is required in a resource-based policy: "You must use the Principal element in
+                        // resource-based policies.", but "When you specify an assumed-role session in a Principal
+                        // element, you cannot use a wildcard "*" to mean all sessions. Principals must always name a
+                        // specific session." We cannot use a specific session in the "Principal" block because clients
+                        // autogenerate session names. So we use "*" in the "Principal" block and use aws:PrincipalArn
+                        // condition to match only allowlisted principals.
+                        // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_principal.html
+                        .setPrincipalMapBlock(PrincipalMapBlock.newBuilder()
+                                .addEntry(PrincipalMapEntry.newBuilder()
+                                        .setProvider(Provider.STAR)
+                                        .addPrincipal("*")))
+                        .setActionBlock(ActionBlock.newBuilder()
+                                .addAction("lookout:write-ApplyBlackWatchMitigation")
+                                .addAction("lookout:write-UpdateBlackWatchMitigation"))
+                        .setResourceBlock(ResourceBlock.newBuilder()
+                                .addResource(ResourceValue.newBuilder()
+                                        .setType(ResourceType.STRING)
+                                        .setString("arn:aws:lookout:*:*:BLACKWATCH_API/*")))
+                        .setConditionBlock(conditionBuilder))
+                .build());
+        policy.setIssuer(new Principal(ownerAccountId, emptySet()));
+        return policy;
+    }
+
+    private static String toJson(Policy policy) {
+        try {
+            return policy.toPrettyJsonString();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**

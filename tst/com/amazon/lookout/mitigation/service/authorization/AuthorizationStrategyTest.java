@@ -1,5 +1,7 @@
 package com.amazon.lookout.mitigation.service.authorization;
 
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -11,14 +13,17 @@ import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
@@ -31,6 +36,10 @@ import org.junit.runner.RunWith;
 
 import aws.auth.client.config.Configuration;
 
+import com.amazon.balsa.Balsa;
+import com.amazon.balsa.engine.Policy;
+import com.amazon.balsa.engine.Principal;
+import com.amazon.balsa.error.PolicyParseException;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchMitigationResourceType;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
 import com.amazon.coral.security.AccessDeniedException;
@@ -185,7 +194,7 @@ public class AuthorizationStrategyTest {
             + "     \"52.48.2.1/32\" "
             + "    ], "
             + "  \"global_deployment\": {"
-            + "    \"placement_tags\": [\"REGIONAL\"]"
+            + "    \"placement_tags\": $PLACEMENT_TAGS"
             + "    },"
             + "  \"mitigation_config\": {"
             + "    \"global_traffic_shaper\": {"
@@ -1198,11 +1207,50 @@ public class AuthorizationStrategyTest {
     }
 
     @Test
-    public void testApplyBlackWatchMitigationRequest_withPlacementTag(){
+    @Parameters({
+            "REGIONAL",
+            "GLOBAL REGIONAL"
+    })
+    public void testApplyBlackWatchMitigation_withRegionalPlacementTag(String placementTags) throws Exception {
         setOperationNameForContext("ApplyBlackWatchMitigations");
         ApplyBlackWatchMitigationRequest applyRequest = new ApplyBlackWatchMitigationRequest();
         applyRequest.setResourceType(BlackWatchMitigationResourceType.IPAddressList.name());
-        applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_REGIONAL);
+        applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_REGIONAL.replace(
+                "$PLACEMENT_TAGS",
+                spaceDelimitedToJsonList(placementTags)));
+
+        AuthorizationStrategy authStrategyUnderTest = new AuthorizationStrategy(
+                mock(Configuration.class),
+                TEST_REGION,
+                TEST_USER,
+                ImmutableList.of(
+                    "arn:aws:iam::112233445566:role/first_role",
+                    "arn:aws:iam::112233445566:role/second_role"));
+        List<AuthorizationInfo> authInfoList = authStrategyUnderTest.getAuthorizationInfoList(context, applyRequest);
+        assertTrue(authInfoList.size() == 1);
+
+        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo(
+                "lookout:write-ApplyBlackWatchMitigations",
+                EXPECTED_ARN_PREFIX + "BLACKWATCH_API/BLACKWATCH_MITIGATION",
+                IP_WITH_32,
+                BlackWatchMitigationResourceType.IPAddressList.name(),
+                ImmutableSet.copyOf(placementTags.split(" ")));
+        expectedAuthInfo.setPolicies(singletonList(expectedRegionalPolicy()));
+        assertEqualAuthorizationInfos(expectedAuthInfo, authInfoList.get(0));
+    }
+
+    @Test
+    @Parameters({
+            "REGIONAL",
+            "GLOBAL REGIONAL"
+    })
+    public void testApplyBlackWatchMitigation_withRegionalPlacementTag_withNoAllowlistedRoles(String placementTags) {
+        setOperationNameForContext("ApplyBlackWatchMitigations");
+        ApplyBlackWatchMitigationRequest applyRequest = new ApplyBlackWatchMitigationRequest();
+        applyRequest.setResourceType(BlackWatchMitigationResourceType.IPAddressList.name());
+        applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_REGIONAL.replace(
+                "$PLACEMENT_TAGS",
+                spaceDelimitedToJsonList(placementTags)));
 
         List<AuthorizationInfo> authInfoList = authStrategy.getAuthorizationInfoList(context, applyRequest);
         assertTrue(authInfoList.size() == 1);
@@ -1212,15 +1260,54 @@ public class AuthorizationStrategyTest {
                 EXPECTED_ARN_PREFIX + "BLACKWATCH_API/BLACKWATCH_MITIGATION",
                 IP_WITH_32,
                 BlackWatchMitigationResourceType.IPAddressList.name(),
-                ImmutableSet.of("REGIONAL"));
+                ImmutableSet.copyOf(placementTags.split(" ")));
+        expectedAuthInfo.setPolicies(singletonList(expectedRegionalPolicyWithNoAllowlistedRoles()));
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfoList.get(0));
     }
 
     @Test
-    public void testUpdateBlackWatchMitigationDestinationIPList_withPlacementTag(){
+    @Parameters({
+            "REGIONAL",
+            "GLOBAL REGIONAL"
+    })
+    public void testUpdateBlackWatchMitigation_withRegionalPlacementTag(String placementTags) {
         setOperationNameForContext("UpdateBlackWatchMitigation");
         UpdateBlackWatchMitigationRequest updateRequest = new UpdateBlackWatchMitigationRequest();
-        updateRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_REGIONAL);
+        updateRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_REGIONAL.replace(
+                "$PLACEMENT_TAGS",
+                spaceDelimitedToJsonList(placementTags)));
+
+        AuthorizationStrategy authStrategyUnderTest = new AuthorizationStrategy(
+                mock(Configuration.class),
+                TEST_REGION,
+                TEST_USER,
+                ImmutableList.of(
+                        "arn:aws:iam::112233445566:role/first_role",
+                        "arn:aws:iam::112233445566:role/second_role"));
+        List<AuthorizationInfo> authInfoList = authStrategyUnderTest.getAuthorizationInfoList(context, updateRequest);
+        assertTrue(authInfoList.size() == 1);
+
+        BasicAuthorizationInfo expectedAuthInfo = getBasicAuthorizationInfo(
+                "lookout:write-UpdateBlackWatchMitigation",
+                EXPECTED_ARN_PREFIX + "BLACKWATCH_API/BLACKWATCH_MITIGATION",
+                IP_WITH_32,
+                BlackWatchMitigationResourceType.IPAddressList.name(),
+                ImmutableSet.copyOf(placementTags.split(" ")));
+        expectedAuthInfo.setPolicies(singletonList(expectedRegionalPolicy()));
+        assertEqualAuthorizationInfos(expectedAuthInfo, authInfoList.get(0));
+    }
+
+    @Test
+    @Parameters({
+            "REGIONAL",
+            "GLOBAL REGIONAL"
+    })
+    public void testUpdateBlackWatchMitigation_withRegionalPlacementTag_withNoAllowlistedRoles(String placementTags) {
+        setOperationNameForContext("UpdateBlackWatchMitigation");
+        UpdateBlackWatchMitigationRequest updateRequest = new UpdateBlackWatchMitigationRequest();
+        updateRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_REGIONAL.replace(
+                "$PLACEMENT_TAGS",
+                spaceDelimitedToJsonList(placementTags)));
 
         List<AuthorizationInfo> authInfoList = authStrategy.getAuthorizationInfoList(context, updateRequest);
         assertTrue(authInfoList.size() == 1);
@@ -1230,7 +1317,68 @@ public class AuthorizationStrategyTest {
                 EXPECTED_ARN_PREFIX + "BLACKWATCH_API/BLACKWATCH_MITIGATION",
                 IP_WITH_32,
                 BlackWatchMitigationResourceType.IPAddressList.name(),
-                ImmutableSet.of("REGIONAL"));
+                ImmutableSet.copyOf(placementTags.split(" ")));
+        expectedAuthInfo.setPolicies(singletonList(expectedRegionalPolicyWithNoAllowlistedRoles()));
         assertEqualAuthorizationInfos(expectedAuthInfo, authInfoList.get(0));
+    }
+
+    private static Policy expectedRegionalPolicy() {
+        String policyJson = "{" +
+                "  \"Version\" : \"2012-10-17\"," +
+                "  \"Statement\" : [ {" +
+                "    \"Effect\" : \"Deny\"," +
+                "    \"Principal\": \"*\"," +
+                "    \"Action\" : [ \"lookout:write-ApplyBlackWatchMitigation\", " +
+                "                   \"lookout:write-UpdateBlackWatchMitigation\" ]," +
+                "    \"Resource\" : \"arn:aws:lookout:*:*:BLACKWATCH_API/*\"," +
+                "    \"Condition\" : {" +
+                "      \"ForAnyValue:StringEquals\" : {" +
+                "        \"aws:BlackWatchAPI/PlacementTags\" : \"REGIONAL\"" +
+                "      }," +
+                "      \"ArnNotEquals\" : {" +
+                "        \"aws:PrincipalArn\" : [" +
+                "           \"arn:aws:iam::112233445566:role/first_role\"," +
+                "           \"arn:aws:iam::112233445566:role/second_role\" ]" +
+                "      }" +
+                "    }" +
+                "  } ]" +
+                "}";
+        return expectedRegionalPolicy(policyJson);
+    }
+
+
+    private static Policy expectedRegionalPolicyWithNoAllowlistedRoles() {
+        String policyJson = "{" +
+                "  \"Version\" : \"2012-10-17\"," +
+                "  \"Statement\" : [ {" +
+                "    \"Effect\" : \"Deny\"," +
+                "    \"Principal\": \"*\"," +
+                "    \"Action\" : [ \"lookout:write-ApplyBlackWatchMitigation\", " +
+                "                   \"lookout:write-UpdateBlackWatchMitigation\" ]," +
+                "    \"Resource\" : \"arn:aws:lookout:*:*:BLACKWATCH_API/*\"," +
+                "    \"Condition\" : {" +
+                "      \"ForAnyValue:StringEquals\" : {" +
+                "        \"aws:BlackWatchAPI/PlacementTags\" : \"REGIONAL\"" +
+                "      }" +
+                "    }" +
+                "  } ]" +
+                "}";
+        return expectedRegionalPolicy(policyJson);
+    }
+
+    private static Policy expectedRegionalPolicy(String policyJson) {
+        try {
+            Policy policy = Balsa.getInstance().parse(new StringReader(policyJson));
+            policy.setIssuer(new Principal(TEST_USER, emptySet()));
+            return policy;
+        } catch (PolicyParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String spaceDelimitedToJsonList(String value) {
+        return Arrays.stream(value.split(" "))
+                .map(tag -> String.format("\"%s\"", tag))
+                .collect(Collectors.joining(",", "[", "]"));
     }
 }
