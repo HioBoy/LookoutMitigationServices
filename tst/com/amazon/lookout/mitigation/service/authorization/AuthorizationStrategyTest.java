@@ -3,9 +3,9 @@ package com.amazon.lookout.mitigation.service.authorization;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNull;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.containsString;
@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -60,6 +61,7 @@ import com.amazon.lookout.mitigation.service.ListBlackWatchMitigationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationDefinition;
 import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
+import com.amazon.lookout.mitigation.service.authorization.AuthorizationStrategy.DestinationIPInfo;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
@@ -532,14 +534,23 @@ public class AuthorizationStrategyTest {
     @Test
     public void testGetRelativeId() {
         // deviceName and mitigationTemplate is null
-        String relativeId = AuthorizationStrategy.getMitigationRelativeId(serviceName, null, null);
+        String relativeId = AuthorizationStrategy.getMitigationRelativeId(
+                serviceName,
+                Optional.empty(),
+                Optional.empty());
         assertEquals(AuthorizationStrategy.ANY_TEMPLATE + "/" + serviceName + "-" + DeviceName.ANY_DEVICE, relativeId);
 
         // deviceName is null
-        relativeId = AuthorizationStrategy.getMitigationRelativeId(serviceName, null, mitigationTemplate);
+        relativeId = AuthorizationStrategy.getMitigationRelativeId(
+                serviceName,
+                Optional.empty(),
+                Optional.of(mitigationTemplate));
         assertEquals(mitigationTemplate + "/" + serviceName + "-" + DeviceName.ANY_DEVICE, relativeId);
 
-        relativeId = AuthorizationStrategy.getMitigationRelativeId(serviceName, deviceName, mitigationTemplate);
+        relativeId = AuthorizationStrategy.getMitigationRelativeId(
+                serviceName,
+                Optional.of(deviceName),
+                Optional.of(mitigationTemplate));
         assertEquals(mitigationTemplate + "/" + serviceName + "-" + deviceName, relativeId);
 
         // test Location Relative ID
@@ -644,7 +655,8 @@ public class AuthorizationStrategyTest {
         applyRequest.setResourceId(CIDR_WITH_32);
 
         AuthorizationStrategy.DestinationIPInfo destinationIPInfoObject = AuthorizationStrategy
-                .getApplyBlackWatchMitigationDestinationIPList(applyRequest, getBlackWatchTargetConfig(applyRequest));
+                .getApplyBlackWatchMitigationDestinationIPList(applyRequest, getBlackWatchTargetConfig(applyRequest))
+                .orElseThrow(() -> new RuntimeException("Empty result"));
 
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(1));
         assertThat(destinationIPInfoObject.getDestinationIPList(), contains(IP_WITH_32));
@@ -667,7 +679,8 @@ public class AuthorizationStrategyTest {
         applyRequest.setResourceId(CIDR_WITH_24);
         destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
                 applyRequest,
-                getBlackWatchTargetConfig(applyRequest));
+                getBlackWatchTargetConfig(applyRequest))
+                .orElseThrow(() -> new RuntimeException("Empty result"));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(2));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_24_LOW, IP_WITH_24_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddress.name());
@@ -689,7 +702,8 @@ public class AuthorizationStrategyTest {
 
         destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
                 applyRequest,
-                getBlackWatchTargetConfig(applyRequest));
+                getBlackWatchTargetConfig(applyRequest))
+                .orElseThrow(() -> new RuntimeException("Empty result"));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(1));
         assertThat(destinationIPInfoObject.getDestinationIPList(), contains(IP_WITH_128));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddress.name());
@@ -712,7 +726,8 @@ public class AuthorizationStrategyTest {
 
         destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
                 applyRequest,
-                getBlackWatchTargetConfig(applyRequest));
+                getBlackWatchTargetConfig(applyRequest))
+                .orElseThrow(() -> new RuntimeException("Empty result"));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(2));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_55_LOW, IP_WITH_55_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddress.name());
@@ -735,7 +750,8 @@ public class AuthorizationStrategyTest {
 
         destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
                 applyRequest,
-                getBlackWatchTargetConfig(applyRequest));
+                getBlackWatchTargetConfig(applyRequest))
+                .orElseThrow(() -> new RuntimeException("Empty result"));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(3));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_32, IP_WITH_24_LOW, IP_WITH_24_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddressList.name());
@@ -758,7 +774,8 @@ public class AuthorizationStrategyTest {
 
         destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
                 applyRequest,
-                getBlackWatchTargetConfig(applyRequest));
+                getBlackWatchTargetConfig(applyRequest))
+                .orElseThrow(() -> new RuntimeException("Empty result"));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(5));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_55_LOW, IP_WITH_55_HIGH, IP_WITH_32,
                 IP_WITH_24_LOW, IP_WITH_24_HIGH));
@@ -781,7 +798,8 @@ public class AuthorizationStrategyTest {
 
         destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
                 applyRequest,
-                getBlackWatchTargetConfig(applyRequest));
+                getBlackWatchTargetConfig(applyRequest))
+                .orElseThrow(() -> new RuntimeException("Empty result"));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(1));
         assertThat(destinationIPInfoObject.getDestinationIPList(), contains(IP_WITH_32));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddressList.name());
@@ -803,7 +821,8 @@ public class AuthorizationStrategyTest {
 
         destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
                 applyRequest,
-                getBlackWatchTargetConfig(applyRequest));
+                getBlackWatchTargetConfig(applyRequest))
+                .orElseThrow(() -> new RuntimeException("Empty result"));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(2));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_55_LOW, IP_WITH_55_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddressList.name());
@@ -815,16 +834,15 @@ public class AuthorizationStrategyTest {
      */
     @Test
     public void testGetDestinationIPList_ApplyBWMitigation_ElasticIP() {
-
-        AuthorizationStrategy.DestinationIPInfo destinationIPInfoObject;
         ApplyBlackWatchMitigationRequest applyRequest = new ApplyBlackWatchMitigationRequest();
         applyRequest.setResourceType(BlackWatchMitigationResourceType.ElasticIP.name());
         applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_55);
 
-        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
-                applyRequest,
-                getBlackWatchTargetConfig(applyRequest));
-        assertNull(destinationIPInfoObject);
+        Optional<DestinationIPInfo> destinationIPInfoObject = AuthorizationStrategy
+                .getApplyBlackWatchMitigationDestinationIPList(
+                        applyRequest,
+                        getBlackWatchTargetConfig(applyRequest));
+        assertFalse(destinationIPInfoObject.isPresent());
     }
 
     /** $$ ApplyBlackWatchMitigationRequest $$
@@ -833,16 +851,15 @@ public class AuthorizationStrategyTest {
      */
     @Test
     public void testGetDestinationIPList_ApplyBWMitigation_ELB() {
-
-        AuthorizationStrategy.DestinationIPInfo destinationIPInfoObject;
         ApplyBlackWatchMitigationRequest applyRequest = new ApplyBlackWatchMitigationRequest();
         applyRequest.setResourceType(BlackWatchMitigationResourceType.ELB.name());
         applyRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_55);
 
-        destinationIPInfoObject = AuthorizationStrategy.getApplyBlackWatchMitigationDestinationIPList(
-                applyRequest,
-                getBlackWatchTargetConfig(applyRequest));
-        assertNull(destinationIPInfoObject);
+        Optional<DestinationIPInfo> destinationIPInfoObject = AuthorizationStrategy
+                .getApplyBlackWatchMitigationDestinationIPList(
+                        applyRequest,
+                        getBlackWatchTargetConfig(applyRequest));
+        assertFalse(destinationIPInfoObject.isPresent());
     }
 
     /** $$ UpdateBlackWatchMitigationRequest $$
@@ -859,7 +876,8 @@ public class AuthorizationStrategyTest {
         updateRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_24);
 
         destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList(
-                getBlackWatchTargetConfig(updateRequest));
+                getBlackWatchTargetConfig(updateRequest))
+                .orElseThrow(() -> new RuntimeException("Empty result"));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(2));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems(IP_WITH_24_LOW, IP_WITH_24_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddressList.name());
@@ -880,7 +898,8 @@ public class AuthorizationStrategyTest {
         updateRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_IPADDRESSLIST_24_128);
 
         destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList(
-                getBlackWatchTargetConfig(updateRequest));
+                getBlackWatchTargetConfig(updateRequest))
+                .orElseThrow(() -> new RuntimeException("Empty result"));
         assertThat(destinationIPInfoObject.getDestinationIPList().size(), is(3));
         assertThat(destinationIPInfoObject.getDestinationIPList(), hasItems( IP_WITH_128, IP_WITH_24_LOW, IP_WITH_24_HIGH));
         assertEquals(destinationIPInfoObject.getResourceType(), BlackWatchMitigationResourceType.IPAddressList.name());
@@ -891,13 +910,11 @@ public class AuthorizationStrategyTest {
      */
     @Test
     public void testGetDestinationIPList_UpdateBWMitigation_No_Config_Json() {
-
-        AuthorizationStrategy.DestinationIPInfo destinationIPInfoObject;
         UpdateBlackWatchMitigationRequest updateRequest = new UpdateBlackWatchMitigationRequest();
 
-        destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList(
-                getBlackWatchTargetConfig(updateRequest));
-        assertNull(destinationIPInfoObject);
+        Optional<DestinationIPInfo> destinationIPInfoObject = AuthorizationStrategy
+                .getUpdateBlackWatchMitigationDestinationIPList(getBlackWatchTargetConfig(updateRequest));
+        assertFalse(destinationIPInfoObject.isPresent());
     }
 
     /** $$ UpdateBlackWatchMitigationRequest $$
@@ -906,14 +923,12 @@ public class AuthorizationStrategyTest {
      */
     @Test
     public void testGetDestinationIPList_UpdateBWMitigation_ElasticIP_2() {
-
-        AuthorizationStrategy.DestinationIPInfo destinationIPInfoObject;
         UpdateBlackWatchMitigationRequest updateRequest = new UpdateBlackWatchMitigationRequest();
         updateRequest.setMitigationSettingsJSON(MITIGATION_JSON_CONFIG_ELASTICIP);
 
-        destinationIPInfoObject = AuthorizationStrategy.getUpdateBlackWatchMitigationDestinationIPList(
-                getBlackWatchTargetConfig(updateRequest));
-        assertNull(destinationIPInfoObject);
+        Optional<DestinationIPInfo> destinationIPInfoObject = AuthorizationStrategy
+                .getUpdateBlackWatchMitigationDestinationIPList(getBlackWatchTargetConfig(updateRequest));
+        assertFalse(destinationIPInfoObject.isPresent());
     }
 
     /**

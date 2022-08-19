@@ -7,11 +7,11 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
 import com.amazon.balsa.engine.Policy;
@@ -41,11 +41,11 @@ import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
 
 import com.google.common.collect.ImmutableList;
-import lombok.Data;
+import com.google.common.collect.ImmutableSet;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
+import lombok.Value;
 import org.apache.commons.lang.Validate;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -115,7 +115,6 @@ import static java.util.Collections.singletonList;
  * action: <vendor>:read-<operationname> or <vendor>:write-<operationname>
  * resource: arn:<partition>:<vendor>:<region>:<namespace>:<mitigationtemplate>/<servicename>-<devicename>
  */
-
 @ThreadSafe
 public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     /**
@@ -136,16 +135,16 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
     private static final String BLACKWATCH_API_RESOURCE_PREFIX = "BLACKWATCH_API";
     private static final String BLACKWATCH_MITIGATION_RESOURCE_PREFIX = "BLACKWATCH_MITIGATION";
-    private static final String BLACKWATCH_API_CUSTOM_CONTEXT_TAG = "aws:BlackWatchAPI/TargetIPSpace";
+    private static final String BLACKWATCH_API_TARGET_IP_SPACE_TAG = "aws:BlackWatchAPI/TargetIPSpace";
     private static final String BLACKWATCH_API_RESOURCE_TYPE_TAG = "aws:BlackWatchAPI/ResourceType";
     private static final String BLACKWATCH_API_PLACEMENT_TAGS = "aws:BlackWatchAPI/PlacementTags";
-    private static final String BLACKWATCH_API_UPDATE_MITIGATION_ACTION_NAME = "UpdateBlackWatchMitigation";
 
     // Constants used for generating ARN
-    private static final String VENDOR = "lookout";
-    private static final String SEPARATOR = "-";
+    private static final String ARN_VENDOR = "lookout";
+    private static final String ARN_SEPARATOR = "-";
 
-    private static Map<Class<?>, RequestInfoFunction<Object>> requestInfoParsers;
+    private static final ConcurrentHashMap<Class<?>, RequestInfoFunction<Object>> requestInfoParsers =
+            initRequestInfoParsers();
 
     private final String ownerAccountId;
 
@@ -168,16 +167,16 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         Validate.notEmpty(region);
         Validate.notEmpty(ownerAccountId);
         this.ownerAccountId = ownerAccountId;
-        String partition="";
+        String partition = "";
         try {
             partition = RIPHelper.getRegion(region).getArnPartition();
             LOG.info("Region: " + region + ", arn partition: " + partition);
         } catch (RegionNotFoundException e) {
-            LOG.error("Region " + region +" doesn't exist");
+            LOG.error("Region " + region + " doesn't exist");
         } catch (RegionIsInTestException e) {
-            LOG.error("Region " + region +" is still under testing");
+            LOG.error("Region " + region + " is still under testing");
         }
-        this.arnPrefix = "arn:" + partition + ":" + VENDOR + ":" + region + ":" + ownerAccountId + ":";
+        this.arnPrefix = "arn:" + partition + ":" + ARN_VENDOR + ":" + region + ":" + ownerAccountId + ":";
 
         this.regionalMitigationPolicy = generateRegionalMitigationPolicy(
                 regionalMitigationsRoleAllowlist,
@@ -210,7 +209,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      * in an authorizationInfo.
      */
     @Override
-    public List<AuthorizationInfo> getAuthorizationInfoList(final Context context, final Object request)
+    public List<AuthorizationInfo> getAuthorizationInfoList(Context context, Object request)
             throws AccessDeniedException {
         RequestInfo requestInfo = getRequestInfo(context.getOperation().toString(), request);
         if (requestInfo == null) {
@@ -221,20 +220,19 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
         LOG.debug("Action: " + requestInfo.getAction() + " ; " + "Resource (ARN): " + resourceName);
 
-        List<AuthorizationInfo> authInfoList = new LinkedList<AuthorizationInfo>();
-
-        // authorizationInfo object will be created for every ip address in the destination IP List
-        if (requestInfo.getDestinationIPInfoObject() != null) {
-            for (String ip : requestInfo.getDestinationIPInfoObject().getDestinationIPList()) {
+        List<AuthorizationInfo> authInfoList = new LinkedList<>();
+        if (requestInfo.getDestinationIPInfoObject().isPresent()) {
+            DestinationIPInfo destinationIPInfo = requestInfo.getDestinationIPInfoObject().get();
+            for (String ip : destinationIPInfo.getDestinationIPList()) {
                 authInfoList.add(getAuthorizationInfo(
                         requestInfo,
                         resourceName,
-                        ip,
-                        requestInfo.getDestinationIPInfoObject().getResourceType()));
+                        Optional.of(ip),
+                        Optional.of(destinationIPInfo.getResourceType())));
             }
         } else {
             // if getDestinationIPList() is empty; implies ResourceType is neither IPAddress or IPAddressList
-            authInfoList.add(getAuthorizationInfo(requestInfo, resourceName, null, null));
+            authInfoList.add(getAuthorizationInfo(requestInfo, resourceName, Optional.empty(), Optional.empty()));
         }
 
         return authInfoList;
@@ -242,18 +240,14 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
     /**
      * Constructs one BasicAuthorizationInfo object to be added to AuthorizationInfoList in getAuthorizationInfoList()
-     * @param requestInfo
-     * @param resourceName
      * @param ip - applicable only for IPAddress and IPAddressList Resource Type
-     * @return BasicAuthorizationInfo object
      */
     private BasicAuthorizationInfo getAuthorizationInfo(
-            final RequestInfo requestInfo,
-            final String resourceName,
-            final String ip,
-            final String resourceType) {
+            RequestInfo requestInfo,
+            String resourceName,
+            Optional<String> ip,
+            Optional<String> resourceType) {
         BasicAuthorizationInfo authorizationInfo = new BasicAuthorizationInfo();
-        Map<String, Object> actionContext = new HashMap<String, Object>();
 
         // Action that need to be authorized
         try {
@@ -271,21 +265,20 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         // associated with this authorization call
         authorizationInfo.setResourceOwner(ownerAccountId);
 
+        Map<String, Object> requestContext = new HashMap<>();
+
         // destination ip to be evaluated against IPSpace listed in IAM policy
         // https://sim.amazon.com/issues/BLACKWATCH-2900
-        if (ip != null) {
-            actionContext.put(BLACKWATCH_API_CUSTOM_CONTEXT_TAG, ip);
-        }
+        ip.ifPresent(ipValue -> requestContext.put(BLACKWATCH_API_TARGET_IP_SPACE_TAG, ipValue));
 
-        if (requestInfo.getPlacementTags() != null) {
-            // PlacementTags is a multivalued condition key. IAM policies that use it should use ForAllValues and
-            // ForAnyValue condition operators.
-            // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_multi-value-conditions.html#reference_policies_multi-key-or-value-conditions
-            actionContext.put(BLACKWATCH_API_PLACEMENT_TAGS, requestInfo.getPlacementTags());
-        }
+        // PlacementTags is a multivalued condition key. IAM policies that use it should use ForAllValues and
+        // ForAnyValue condition operators.
+        // https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_multi-value-conditions.html#reference_policies_multi-key-or-value-conditions
+        requestInfo.getPlacementTags().ifPresent(placementTags ->
+                requestContext.put(BLACKWATCH_API_PLACEMENT_TAGS, placementTags));
 
-        if (requestInfo.getPlacementTags() != null &&
-                requestInfo.getPlacementTags().contains(BlackWatchTargetConfig.REGIONAL_PLACEMENT_TAG)) {
+        if (requestInfo.getPlacementTags().isPresent() &&
+                requestInfo.getPlacementTags().get().contains(BlackWatchTargetConfig.REGIONAL_PLACEMENT_TAG)) {
             LOG.debug("Applying additional IAM policy to deny REGIONAL mitigation unless the caller IAM role is " +
                     "explicitly allowlisted: " + toJson(regionalMitigationPolicy));
             authorizationInfo.setPolicies(singletonList(regionalMitigationPolicy));
@@ -295,8 +288,8 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
 
         // if applyBWmitigation and updateBWmitigation is called we are interested in the resourcetype as well, in all
         // other cases it will be null
-        actionContext.put(BLACKWATCH_API_RESOURCE_TYPE_TAG, resourceType);
-        authorizationInfo.setRequestContext(actionContext);
+        requestContext.put(BLACKWATCH_API_RESOURCE_TYPE_TAG, resourceType.orElse(null));
+        authorizationInfo.setRequestContext(requestContext);
 
         return authorizationInfo;
     }
@@ -372,11 +365,12 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         }
     }
 
-    static {
-        requestInfoParsers = new ConcurrentHashMap<>();
+    private static ConcurrentHashMap<Class<?>, RequestInfoFunction<Object>> initRequestInfoParsers() {
+        ConcurrentHashMap<Class<?>, RequestInfoFunction<Object>> parsersByRequestType = new ConcurrentHashMap<>();
 
         // All MitigationModificationRequests share authorization policy
         addRequestInfoParser(
+                parsersByRequestType,
                 MitigationModificationRequest.class,
                 (action, request) -> {
                     String mitigationTemplate = request.getMitigationTemplate();
@@ -395,15 +389,17 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                         throw new AccessDeniedException("Missing serviceName");
                     }
 
-                    return generateMitigationRequestInfo(action,
+                    return generateMitigationRequestInfo(
+                            action,
                             WRITE_OPERATION_PREFIX,
                             serviceName,
-                            deviceName.name(),
-                            mitigationTemplate);
+                            Optional.of(deviceName.name()),
+                            Optional.of(mitigationTemplate));
                 });
 
         // abort deployment authorization policy
         addRequestInfoParser(
+                parsersByRequestType,
                 AbortDeploymentRequest.class,
                 (action, request) -> {
                     String mitigationTemplate = request.getMitigationTemplate();
@@ -422,79 +418,82 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                         throw new AccessDeniedException("Missing serviceName");
                     }
 
-                    return generateMitigationRequestInfo(action,
+                    return generateMitigationRequestInfo(
+                            action,
                             WRITE_OPERATION_PREFIX,
                             serviceName,
-                            deviceName.name(),
-                            mitigationTemplate);
+                            Optional.of(deviceName.name()),
+                            Optional.of(mitigationTemplate));
                 });
 
         addRequestInfoParser(
+                parsersByRequestType,
                 GetRequestStatusRequest.class,
                 (action, request) ->
                         generateMitigationRequestInfo(
                                 action,
                                 READ_OPERATION_PREFIX,
                                 request.getServiceName(),
-                                request.getDeviceName(),
-                                null));
+                                Optional.ofNullable(request.getDeviceName())));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 ListActiveMitigationsForServiceRequest.class,
                 (action, request) ->
                         generateMitigationRequestInfo(
                                 action,
                                 READ_OPERATION_PREFIX,
                                 request.getServiceName(),
-                                request.getDeviceName(),
-                                null));
+                                Optional.ofNullable(request.getDeviceName())));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 GetMitigationInfoRequest.class,
                 (action, request) ->
                         generateMitigationRequestInfo(
                                 action,
                                 READ_OPERATION_PREFIX,
                                 request.getServiceName(),
-                                request.getDeviceName(),
-                                null));
+                                Optional.ofNullable(request.getDeviceName())));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 GetMitigationDefinitionRequest.class,
                 (action, request) ->
                         generateMitigationRequestInfo(
                                 action,
                                 READ_OPERATION_PREFIX,
                                 request.getServiceName(),
-                                request.getDeviceName(),
-                                null));
+                                Optional.ofNullable(request.getDeviceName())));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 GetMitigationHistoryRequest.class,
                 (action, request) ->
                         generateMitigationRequestInfo(
                                 action,
                                 READ_OPERATION_PREFIX,
                                 request.getServiceName(),
-                                request.getDeviceName(),
-                                null));
+                                Optional.ofNullable(request.getDeviceName())));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 GetLocationDeploymentHistoryRequest.class,
                 (action, request) ->
                         generateMitigationRequestInfo(
                                 action,
                                 READ_OPERATION_PREFIX,
                                 request.getServiceName(),
-                                request.getDeviceName(),
-                                null));
+                                Optional.ofNullable(request.getDeviceName())));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 GetLocationHostStatusRequest.class,
                 (action, request) ->
                         generateHostStatusRequestInfo(action, READ_OPERATION_PREFIX, request.getLocation()));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 GetLocationOperationalStatusRequest.class,
                 (action, request) ->
                         new RequestInfo(
@@ -502,16 +501,19 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                                 getBlackWatchAPIRelativeId()));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 RequestHostStatusChangeRequest.class,
                 (action, request) ->
                         generateHostStatusRequestInfo(action, WRITE_OPERATION_PREFIX, request.getLocation()));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 ListBlackWatchMitigationsRequest.class,
                 (action, request) ->
                         generateListBlackWatchMitigationRequestInfo(action, READ_OPERATION_PREFIX));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 DeactivateBlackWatchMitigationRequest.class,
                 (action, request) ->
                         new RequestInfo(
@@ -519,6 +521,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                                 getBlackWatchAPIRelativeId()));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 ChangeBlackWatchMitigationOwnerARNRequest.class,
                 (action, request) ->
                         new RequestInfo(
@@ -526,52 +529,71 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                                 getBlackWatchAPIRelativeId()));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 ApplyBlackWatchMitigationRequest.class,
                 (action, request) ->
                         generateApplyBlackWatchMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, request));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 UpdateBlackWatchMitigationRequest.class,
                 (action, request) ->
                         generateUpdateBlackWatchMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, request));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 ListBlackWatchLocationsRequest.class,
                 (action, request) ->
                         generateLocationStateRequestInfo(action, READ_OPERATION_PREFIX));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 UpdateBlackWatchLocationStateRequest.class,
                 (action, request) ->
                         generateLocationStateRequestInfo(action, WRITE_OPERATION_PREFIX));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 UpdateLocationStateRequest.class,
                 (action, request) ->
                         generateLocationStateRequestInfo(action, WRITE_OPERATION_PREFIX));
 
         addRequestInfoParser(
+                parsersByRequestType,
                 ChangeBlackWatchMitigationStateRequest.class,
                 (action, request) ->
                         new RequestInfo(
                                 generateActionName(action, WRITE_OPERATION_PREFIX),
                                 getBlackWatchAPIRelativeId()));
+
+        return parsersByRequestType;
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> void addRequestInfoParser(Class<T> clazz, RequestInfoFunction<T> function) {
-        if (requestInfoParsers.containsKey(clazz)) {
+    private static <T> void addRequestInfoParser(
+            ConcurrentHashMap<Class<?>, RequestInfoFunction<Object>> parsersByRequestType,
+            Class<T> clazz,
+            RequestInfoFunction<T> function) {
+        if (parsersByRequestType.containsKey(clazz)) {
             throw new IllegalArgumentException("Class " + clazz.getName() + " was already registered");
         }
-        requestInfoParsers.put(clazz, (RequestInfoFunction<Object>) function);
+        parsersByRequestType.put(clazz, (RequestInfoFunction<Object>) function);
     }
 
     private static RequestInfo generateMitigationRequestInfo(
             String action,
             String prefix,
             String serviceName,
-            String deviceName,
-            String mitigationTemplate) {
+            Optional<String> deviceName) {
+        return generateMitigationRequestInfo(action, prefix, serviceName, deviceName, Optional.empty());
+    }
+
+    private static RequestInfo generateMitigationRequestInfo(
+            String action,
+            String prefix,
+            String serviceName,
+            Optional<String> deviceName,
+            Optional<String> mitigationTemplate) {
         return new RequestInfo(
                 generateActionName(action, prefix),
                 getMitigationRelativeId(serviceName, deviceName, mitigationTemplate));
@@ -622,26 +644,16 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         }
     }
 
-    private static Set<String> getPlacementTags(final BlackWatchTargetConfig targetConfig) {
-        if (targetConfig != null && targetConfig.getGlobal_deployment() != null) {
-            return targetConfig.getGlobal_deployment().getPlacement_tags();
-        }
-        return null;
+    private static Optional<ImmutableSet<String>> getPlacementTags(BlackWatchTargetConfig targetConfig) {
+        return Optional.ofNullable(targetConfig.getGlobal_deployment())
+                .flatMap(it -> Optional.ofNullable(it.getPlacement_tags()))
+                .map(ImmutableSet::copyOf);
     }
 
     private static RequestInfo generateLocationStateRequestInfo(String action, String prefix) {
         return new RequestInfo(
                 generateActionName(action, prefix),
                 getBlackWatchAPIRelativeId());
-    }
-
-    private static RequestInfo generateMetadataRequestInfo(String action, String prefix, String metadataType) {
-        Validate.notNull(metadataType);
-        Validate.notNull(prefix);
-
-        return new RequestInfo(
-                generateActionName(action, prefix),
-                "metadata" + "/" + metadataType);
     }
 
     private static RequestInfoFunction<Object> getRequestInfoFunction(Object request) {
@@ -673,130 +685,118 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      * serviceName+deviceName combinations. E.g., different sets of users may be authorized for applying
      * ratelimit and count filters on routers.
      */
-    static String getMitigationRelativeId(String serviceName, String deviceName, String mitigationTemplate) {
-        if (deviceName == null) {
-            /*
-              for some request types deviceName is not a required field. In those cases deviceName is
-              set to ANY_DEVICE, granting authorization for all devices, or none.
-             */
-            deviceName = DeviceName.ANY_DEVICE.name();
-        }
-
-        if (mitigationTemplate == null) {
-            mitigationTemplate = ANY_TEMPLATE;
-        }
-        StringBuilder relativeidBuilder = new StringBuilder();
-        relativeidBuilder.append(mitigationTemplate)
+    static String getMitigationRelativeId(
+            String serviceName,
+            Optional<String> deviceName,
+            Optional<String> mitigationTemplate) {
+        return new StringBuilder()
+                .append(mitigationTemplate.orElse(ANY_TEMPLATE))
                 .append("/")
                 .append(serviceName)
-                .append(SEPARATOR)
-                .append(deviceName);
-
-        return relativeidBuilder.toString();
+                .append(ARN_SEPARATOR)
+                /*
+                  for some request types deviceName is not a required field. In those cases deviceName is
+                  set to ANY_DEVICE, granting authorization for all devices, or none.
+                 */
+                .append(deviceName.orElse(DeviceName.ANY_DEVICE.name()))
+                .toString();
     }
 
     /**
      * locationName is included in the relative identifier as:
      * LOCATION/locationName
-     *
      * locationName should be non-null
      */
     static String getLocationRelativeId(String locationName) {
-        StringBuilder relativeidBuilder = new StringBuilder();
-        relativeidBuilder.append("LOCATION")
+        return new StringBuilder()
+                .append("LOCATION")
                 .append("/")
-                .append(locationName);
-
-        return relativeidBuilder.toString();
+                .append(locationName)
+                .toString();
     }
 
     /**
      * the relative identifier:
      * BLACKWATCH_MITIGATION/MITIGATION_STATE
-     *
      */
     static String getBlackWatchAPIRelativeId() {
-        StringBuilder relativeidBuilder = new StringBuilder();
-        relativeidBuilder.append(BLACKWATCH_API_RESOURCE_PREFIX)
-                .append("/")
-                .append(BLACKWATCH_MITIGATION_RESOURCE_PREFIX);
-
-        return relativeidBuilder.toString();
+        return BLACKWATCH_API_RESOURCE_PREFIX + "/" + BLACKWATCH_MITIGATION_RESOURCE_PREFIX;
     }
 
     /**
      * Generate action name with the following structure:
      * action: <vendor>:prefix-<operationname>
      */
-    static String generateActionName(final String operationName, String prefix) {
+    static String generateActionName(String operationName, String prefix) {
         Validate.notNull(operationName);
         Validate.notNull(prefix);
 
-        StringBuilder actionName = new StringBuilder();
-        actionName.append(VENDOR)
+        return new StringBuilder()
+                .append(ARN_VENDOR)
                 .append(":")
                 .append(prefix)
-                .append(SEPARATOR)
-                .append(operationName);
-        return actionName.toString();
+                .append(ARN_SEPARATOR)
+                .append(operationName)
+                .toString();
     }
 
     /**
      * Function to extract destination IPs from the request context for ApplyBlackWatchMitigation
      * @return List of destination ips fetched from the request
      */
-    static DestinationIPInfo getApplyBlackWatchMitigationDestinationIPList(
-            final ApplyBlackWatchMitigationRequest request,
-            final BlackWatchTargetConfig targetConfig) {
-        List<String> destinationIpList = new ArrayList<String>();
+    static Optional<DestinationIPInfo> getApplyBlackWatchMitigationDestinationIPList(
+            ApplyBlackWatchMitigationRequest request,
+            BlackWatchTargetConfig targetConfig) {
+        List<String> destinationIpList = new ArrayList<>();
 
         // If ResourceType is IPAddress
         if (BlackWatchMitigationResourceType.IPAddress.name().equals(request.getResourceType())) {
             putDestinationIpToList(request.getResourceId(), destinationIpList);
 
-            return new DestinationIPInfo(BlackWatchMitigationResourceType.IPAddress.name(), destinationIpList);
+            return Optional.of(new DestinationIPInfo(
+                    BlackWatchMitigationResourceType.IPAddress.name(),
+                    ImmutableList.copyOf(destinationIpList)));
         } else if (BlackWatchMitigationResourceType.IPAddressList.name().equals(request.getResourceType())) {
             // If ResourceType is IPAddressList we need to extract destinations from mitigation json
-            if (targetConfig != null) {
-                if (!(CollectionUtils.isEmpty(targetConfig.getDestinations()))) {
-                    for (String ip : targetConfig.getDestinations()) {
-                        putDestinationIpToList(ip, destinationIpList);
-                    }
+            if (!CollectionUtils.isEmpty(targetConfig.getDestinations())) {
+                for (String ip : targetConfig.getDestinations()) {
+                    putDestinationIpToList(ip, destinationIpList);
                 }
             }
 
-            return new DestinationIPInfo(BlackWatchMitigationResourceType.IPAddressList.name(), destinationIpList);
+            return Optional.of(new DestinationIPInfo(
+                    BlackWatchMitigationResourceType.IPAddressList.name(),
+                    ImmutableList.copyOf(destinationIpList)));
         }
 
-        return null;
+        return Optional.empty();
     }
 
     /**
      * Function to extract destination IPs from the request context for UpdateBlackWatchMitigation
      * @return List of destination ips fetched from the request
      */
-    static DestinationIPInfo getUpdateBlackWatchMitigationDestinationIPList(final BlackWatchTargetConfig targetConfig) {
-        List<String> destinationIpList = new ArrayList<String>();
-        if (targetConfig != null) {
-            if(!(CollectionUtils.isEmpty(targetConfig.getDestinations()))) {
-                for (String ip : targetConfig.getDestinations()) {
-                    putDestinationIpToList(ip, destinationIpList);
-                }
-
-                return new DestinationIPInfo(BlackWatchMitigationResourceType.IPAddressList.name(), destinationIpList);
+    static Optional<DestinationIPInfo> getUpdateBlackWatchMitigationDestinationIPList(
+            BlackWatchTargetConfig targetConfig) {
+        List<String> destinationIpList = new ArrayList<>();
+        if (!CollectionUtils.isEmpty(targetConfig.getDestinations())) {
+            for (String ip : targetConfig.getDestinations()) {
+                putDestinationIpToList(ip, destinationIpList);
             }
 
-            return null;
+            return Optional.of(new DestinationIPInfo(
+                    BlackWatchMitigationResourceType.IPAddressList.name(),
+                    ImmutableList.copyOf(destinationIpList)));
         }
 
-        return null;
+        return Optional.empty();
     }
 
     /**
      * For a given CIDR, finds the lowest and highest address and adds them to destinationIpList. If CIDR is x.x.x.x/32,
      * x.x.x.x is added to list(same for ipv6 /128)
      */
-    static void putDestinationIpToList(final String ip, List<String> destinationIpList) {
+    static void putDestinationIpToList(String ip, List<String> destinationIpList) {
         CIDRUtils cidr;
         try {
             cidr = new CIDRUtils(ip);
@@ -812,25 +812,27 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         destinationIpList.addAll(tmpIPList);
     }
 
-    @Data
+    @Value
     @AllArgsConstructor
-    @RequiredArgsConstructor
     static class DestinationIPInfo {
         private final String resourceType;
-        private List<String> destinationIPList;
+        private final ImmutableList<String> destinationIPList;
     }
 
-    @Data
+    @Value
     @AllArgsConstructor
-    @RequiredArgsConstructor
-    static class RequestInfo {
+    private static class RequestInfo {
         private final String action;
         private final String relativeArn;
-        private @Nullable DestinationIPInfo destinationIPInfoObject;
-        private @Nullable Set<String> placementTags;
+        private final Optional<DestinationIPInfo> destinationIPInfoObject;
+        private final Optional<ImmutableSet<String>> placementTags;
+
+        public RequestInfo(String action, String relativeArn) {
+            this(action, relativeArn, Optional.empty(), Optional.empty());
+        }
     }
 
-    interface RequestInfoFunction<T> {
+    private interface RequestInfoFunction<T> {
         RequestInfo getRequestInfo(String action, T request);
     }
 }
