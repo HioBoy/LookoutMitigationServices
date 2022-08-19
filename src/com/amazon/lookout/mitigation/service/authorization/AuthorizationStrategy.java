@@ -118,7 +118,13 @@ import static java.util.Collections.singletonList;
 
 @ThreadSafe
 public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
+    /**
+     * Some APIs do not concern with MitigationTemplate. In such cases we use ANY_TEMPLATE constant in the ARN.
+     */
+    protected static final String ANY_TEMPLATE = "ANY_TEMPLATE";
+
     private static final Log LOG = LogFactory.getLog(AuthorizationStrategy.class);
+
     /**
      * Some operations such as GetRequestStatus are not write operations but
      * are only relevant when they follow write operations such as CreateMitigation,
@@ -139,8 +145,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     private static final String VENDOR = "lookout";
     private static final String SEPARATOR = "-";
 
-    // Some APIs do not concern with MitigationTemplate. In such cases we use ANY_TEMPLATE constant in the ARN.
-    protected static final String ANY_TEMPLATE = "ANY_TEMPLATE";
+    private static Map<Class<?>, RequestInfoFunction<Object>> requestInfoParsers;
 
     private final String ownerAccountId;
 
@@ -179,6 +184,62 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 ownerAccountId);
     }
 
+    @Override
+    public String getStrategyName() {
+        return this.getClass().getName();
+    }
+
+    /**
+     * (non-Javadoc)
+     * @see {@link com.amazon.coral.service.AbstractAwsAuthorizationStrategy#getAuthorizationInfoList(
+     * com.amazon.coral.service.Context, java.lang.Object)
+     *
+     * LookoutMitigationService authorization scheme authorizes clients by ServiceName+DeviceName combinations
+     * for each operation/API. Lookout creates IAM users for each ServiceName+DeviceName+[Read|Write] combination,
+     * and grants those users permissions to the respective ServiceName+DeviceName+[Read|Write] combination
+     * through IAM policies. Optionally, permissions may be MitigationTemplate specific too. [Read|Write]
+     * distinguishes read and write credentials respectively. The requests to LookoutMitigationService are
+     * supposed to be then signed by credentials of appropriate IAM user depending of course on the requested
+     * API and parameters. The credentials of the above IAM users are maintained and distributed through ODIN.
+     *
+     * The serviceName+deviceName information, and optionally serviceName+deviceName+mitigationTemplate, is
+     * encoded in the resourceName. Whereas [Read|Write] information is included in the actionName along with the
+     * operationName. Typically, IAM users with write permissions also have read permissions.
+     *
+     * getAuthorizationInfoList looks into the incoming request and operation and returns resourceName and actionName
+     * in an authorizationInfo.
+     */
+    @Override
+    public List<AuthorizationInfo> getAuthorizationInfoList(final Context context, final Object request)
+            throws AccessDeniedException {
+        RequestInfo requestInfo = getRequestInfo(context.getOperation().toString(), request);
+        if (requestInfo == null) {
+            throw new RuntimeException("Failed getting request info for request " + request);
+        }
+
+        String resourceName = arnPrefix + requestInfo.getRelativeArn();
+
+        LOG.debug("Action: " + requestInfo.getAction() + " ; " + "Resource (ARN): " + resourceName);
+
+        List<AuthorizationInfo> authInfoList = new LinkedList<AuthorizationInfo>();
+
+        // authorizationInfo object will be created for every ip address in the destination IP List
+        if (requestInfo.getDestinationIPInfoObject() != null) {
+            for (String ip : requestInfo.getDestinationIPInfoObject().getDestinationIPList()) {
+                authInfoList.add(getAuthorizationInfo(
+                        requestInfo,
+                        resourceName,
+                        ip,
+                        requestInfo.getDestinationIPInfoObject().getResourceType()));
+            }
+        } else {
+            // if getDestinationIPList() is empty; implies ResourceType is neither IPAddress or IPAddressList
+            authInfoList.add(getAuthorizationInfo(requestInfo, resourceName, null, null));
+        }
+
+        return authInfoList;
+    }
+
     /**
      * Constructs one BasicAuthorizationInfo object to be added to AuthorizationInfoList in getAuthorizationInfoList()
      * @param requestInfo
@@ -186,8 +247,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      * @param ip - applicable only for IPAddress and IPAddressList Resource Type
      * @return BasicAuthorizationInfo object
      */
-    private BasicAuthorizationInfo getAuthorizationInfo(final RequestInfo requestInfo, final String resourceName,
-                                                        final String ip, final String resourceType) {
+    private BasicAuthorizationInfo getAuthorizationInfo(
+            final RequestInfo requestInfo,
+            final String resourceName,
+            final String ip,
+            final String resourceType) {
         BasicAuthorizationInfo authorizationInfo = new BasicAuthorizationInfo();
         Map<String, Object> actionContext = new HashMap<String, Object>();
 
@@ -308,78 +372,191 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         }
     }
 
-    /**
-     * (non-Javadoc)
-     * @see {@link com.amazon.coral.service.AbstractAwsAuthorizationStrategy#getAuthorizationInfoList(
-     * com.amazon.coral.service.Context, java.lang.Object)
-     *
-     * LookoutMitigationService authorization scheme authorizes clients by ServiceName+DeviceName combinations
-     * for each operation/API. Lookout creates IAM users for each ServiceName+DeviceName+[Read|Write] combination,
-     * and grants those users permissions to the respective ServiceName+DeviceName+[Read|Write] combination
-     * through IAM policies. Optionally, permissions may be MitigationTemplate specific too. [Read|Write]
-     * distinguishes read and write credentials respectively. The requests to LookoutMitigationService are
-     * supposed to be then signed by credentials of appropriate IAM user depending of course on the requested
-     * API and parameters. The credentials of the above IAM users are maintained and distributed through ODIN.
-     *
-     * The serviceName+deviceName information, and optionally serviceName+deviceName+mitigationTemplate, is
-     * encoded in the resourceName. Whereas [Read|Write] information is included in the actionName along with the
-     * operationName. Typically, IAM users with write permissions also have read permissions.
-     *
-     * getAuthorizationInfoList looks into the incoming request and operation and returns resourceName and actionName
-     * in an authorizationInfo.
-     */
-    @Override
-    public List<AuthorizationInfo> getAuthorizationInfoList(final Context context, final Object request)
-            throws AccessDeniedException {
+    static {
+        requestInfoParsers = new ConcurrentHashMap<>();
 
-        RequestInfo requestInfo = getRequestInfo(context.getOperation().toString(), request);
-        if (requestInfo == null) {
-            throw new RuntimeException("Failed getting request info for request " + request);
-        }
+        // All MitigationModificationRequests share authorization policy
+        addRequestInfoParser(
+                MitigationModificationRequest.class,
+                (action, request) -> {
+                    String mitigationTemplate = request.getMitigationTemplate();
+                    if (StringUtils.isEmpty(mitigationTemplate)) {
+                        throw new AccessDeniedException("Missing mitigationTemplate");
+                    }
 
-        String resourceName = arnPrefix + requestInfo.getRelativeArn();
+                    DeviceName deviceName =
+                            MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate);
+                    if (deviceName == null) {
+                        throw new AccessDeniedException("Unrecognized template " + mitigationTemplate);
+                    }
 
-        LOG.debug("Action: " + requestInfo.getAction() + " ; " + "Resource (ARN): " + resourceName);
+                    String serviceName = request.getServiceName();
+                    if (StringUtils.isEmpty(serviceName)) {
+                        throw new AccessDeniedException("Missing serviceName");
+                    }
 
-        List<AuthorizationInfo> authInfoList = new LinkedList<AuthorizationInfo>();
+                    return generateMitigationRequestInfo(action,
+                            WRITE_OPERATION_PREFIX,
+                            serviceName,
+                            deviceName.name(),
+                            mitigationTemplate);
+                });
 
-        // authorizationInfo object will be created for every ip address in the destination IP List
-        if (requestInfo.getDestinationIPInfoObject() != null) {
-            for (String ip : requestInfo.getDestinationIPInfoObject().getDestinationIPList()) {
-                authInfoList.add(getAuthorizationInfo(requestInfo, resourceName, ip,
-                        requestInfo.getDestinationIPInfoObject().getResourceType()));
-            }
-        } else {
-            // if getDestinationIPList() is empty; implies ResourceType is neither IPAddress or IPAddressList
-            authInfoList.add(getAuthorizationInfo(requestInfo, resourceName, null, null));
-        }
+        // abort deployment authorization policy
+        addRequestInfoParser(
+                AbortDeploymentRequest.class,
+                (action, request) -> {
+                    String mitigationTemplate = request.getMitigationTemplate();
+                    if (StringUtils.isEmpty(mitigationTemplate)) {
+                        throw new AccessDeniedException("Missing mitigationTemplate");
+                    }
 
-        return authInfoList;
+                    DeviceName deviceName =
+                            MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate);
+                    if (deviceName == null) {
+                        throw new AccessDeniedException("Unrecognized template " + mitigationTemplate);
+                    }
+
+                    String serviceName = request.getServiceName();
+                    if (StringUtils.isEmpty(serviceName)) {
+                        throw new AccessDeniedException("Missing serviceName");
+                    }
+
+                    return generateMitigationRequestInfo(action,
+                            WRITE_OPERATION_PREFIX,
+                            serviceName,
+                            deviceName.name(),
+                            mitigationTemplate);
+                });
+
+        addRequestInfoParser(
+                GetRequestStatusRequest.class,
+                (action, request) ->
+                        generateMitigationRequestInfo(
+                                action,
+                                READ_OPERATION_PREFIX,
+                                request.getServiceName(),
+                                request.getDeviceName(),
+                                null));
+
+        addRequestInfoParser(
+                ListActiveMitigationsForServiceRequest.class,
+                (action, request) ->
+                        generateMitigationRequestInfo(
+                                action,
+                                READ_OPERATION_PREFIX,
+                                request.getServiceName(),
+                                request.getDeviceName(),
+                                null));
+
+        addRequestInfoParser(
+                GetMitigationInfoRequest.class,
+                (action, request) ->
+                        generateMitigationRequestInfo(
+                                action,
+                                READ_OPERATION_PREFIX,
+                                request.getServiceName(),
+                                request.getDeviceName(),
+                                null));
+
+        addRequestInfoParser(
+                GetMitigationDefinitionRequest.class,
+                (action, request) ->
+                        generateMitigationRequestInfo(
+                                action,
+                                READ_OPERATION_PREFIX,
+                                request.getServiceName(),
+                                request.getDeviceName(),
+                                null));
+
+        addRequestInfoParser(
+                GetMitigationHistoryRequest.class,
+                (action, request) ->
+                        generateMitigationRequestInfo(
+                                action,
+                                READ_OPERATION_PREFIX,
+                                request.getServiceName(),
+                                request.getDeviceName(),
+                                null));
+
+        addRequestInfoParser(
+                GetLocationDeploymentHistoryRequest.class,
+                (action, request) ->
+                        generateMitigationRequestInfo(
+                                action,
+                                READ_OPERATION_PREFIX,
+                                request.getServiceName(),
+                                request.getDeviceName(),
+                                null));
+
+        addRequestInfoParser(
+                GetLocationHostStatusRequest.class,
+                (action, request) ->
+                        generateHostStatusRequestInfo(action, READ_OPERATION_PREFIX, request.getLocation()));
+
+        addRequestInfoParser(
+                GetLocationOperationalStatusRequest.class,
+                (action, request) ->
+                        new RequestInfo(
+                                generateActionName(action, READ_OPERATION_PREFIX),
+                                getBlackWatchAPIRelativeId()));
+
+        addRequestInfoParser(
+                RequestHostStatusChangeRequest.class,
+                (action, request) ->
+                        generateHostStatusRequestInfo(action, WRITE_OPERATION_PREFIX, request.getLocation()));
+
+        addRequestInfoParser(
+                ListBlackWatchMitigationsRequest.class,
+                (action, request) ->
+                        generateListBlackWatchMitigationRequestInfo(action, READ_OPERATION_PREFIX));
+
+        addRequestInfoParser(
+                DeactivateBlackWatchMitigationRequest.class,
+                (action, request) ->
+                        new RequestInfo(
+                                generateActionName(action, WRITE_OPERATION_PREFIX),
+                                getBlackWatchAPIRelativeId()));
+
+        addRequestInfoParser(
+                ChangeBlackWatchMitigationOwnerARNRequest.class,
+                (action, request) ->
+                        new RequestInfo(
+                                generateActionName(action, WRITE_OPERATION_PREFIX),
+                                getBlackWatchAPIRelativeId()));
+
+        addRequestInfoParser(
+                ApplyBlackWatchMitigationRequest.class,
+                (action, request) ->
+                        generateApplyBlackWatchMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, request));
+
+        addRequestInfoParser(
+                UpdateBlackWatchMitigationRequest.class,
+                (action, request) ->
+                        generateUpdateBlackWatchMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, request));
+
+        addRequestInfoParser(
+                ListBlackWatchLocationsRequest.class,
+                (action, request) ->
+                        generateLocationStateRequestInfo(action, READ_OPERATION_PREFIX));
+
+        addRequestInfoParser(
+                UpdateBlackWatchLocationStateRequest.class,
+                (action, request) ->
+                        generateLocationStateRequestInfo(action, WRITE_OPERATION_PREFIX));
+
+        addRequestInfoParser(
+                UpdateLocationStateRequest.class,
+                (action, request) ->
+                        generateLocationStateRequestInfo(action, WRITE_OPERATION_PREFIX));
+
+        addRequestInfoParser(
+                ChangeBlackWatchMitigationStateRequest.class,
+                (action, request) ->
+                        new RequestInfo(
+                                generateActionName(action, WRITE_OPERATION_PREFIX),
+                                getBlackWatchAPIRelativeId()));
     }
-
-    @Data
-    @AllArgsConstructor
-    @RequiredArgsConstructor
-    static class DestinationIPInfo {
-        private final String resourceType;
-        private List<String> destinationIPList;
-    }
-
-    @Data
-    @AllArgsConstructor
-    @RequiredArgsConstructor
-    static class RequestInfo {
-        private final String action;
-        private final String relativeArn;
-        private @Nullable DestinationIPInfo destinationIPInfoObject;
-        private @Nullable Set<String> placementTags;
-    }
-
-    interface RequestInfoFunction<T> {
-        public RequestInfo getRequestInfo(String action, T request);
-    }
-
-    private static Map<Class<?>, RequestInfoFunction<Object>> requestInfoParsers;
 
     @SuppressWarnings("unchecked")
     private static <T> void addRequestInfoParser(Class<T> clazz, RequestInfoFunction<T> function) {
@@ -390,7 +567,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
     }
 
     private static RequestInfo generateMitigationRequestInfo(
-            String action, String prefix, String serviceName, String deviceName, String mitigationTemplate) {
+            String action,
+            String prefix,
+            String serviceName,
+            String deviceName,
+            String mitigationTemplate) {
         return new RequestInfo(
                 generateActionName(action, prefix),
                 getMitigationRelativeId(serviceName, deviceName, mitigationTemplate));
@@ -408,10 +589,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 getBlackWatchAPIRelativeId());
     }
 
-    private static RequestInfo generateApplyBlackWatchMitigationRequestInfo(String action, String prefix,
-                                                                            ApplyBlackWatchMitigationRequest request) {
+    private static RequestInfo generateApplyBlackWatchMitigationRequestInfo(
+            String action,
+            String prefix,
+            ApplyBlackWatchMitigationRequest request) {
         BlackWatchTargetConfig targetConfig = parseTargetConfig(request.getMitigationSettingsJSON());
-
         return new RequestInfo(
                 generateActionName(action, prefix),
                 getBlackWatchAPIRelativeId(),
@@ -419,10 +601,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 getPlacementTags(targetConfig));
     }
 
-    private static RequestInfo generateUpdateBlackWatchMitigationRequestInfo(String action, String prefix,
-                                                                             UpdateBlackWatchMitigationRequest request) {
+    private static RequestInfo generateUpdateBlackWatchMitigationRequestInfo(
+            String action,
+            String prefix,
+            UpdateBlackWatchMitigationRequest request) {
         BlackWatchTargetConfig targetConfig = parseTargetConfig(request.getMitigationSettingsJSON());
-
         return new RequestInfo(
                 generateActionName(action, prefix),
                 getBlackWatchAPIRelativeId(),
@@ -461,153 +644,6 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 "metadata" + "/" + metadataType);
     }
 
-    static {
-        requestInfoParsers = new ConcurrentHashMap<>();
-
-        // All MitigationModificationRequests share authorization policy
-        addRequestInfoParser(
-                MitigationModificationRequest.class,
-                (action, request) -> {
-                    String mitigationTemplate = request.getMitigationTemplate();
-                    if (StringUtils.isEmpty(mitigationTemplate)) {
-                        throw new AccessDeniedException("Missing mitigationTemplate");
-                    }
-
-                    DeviceName deviceName = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate);
-                    if (deviceName == null) {
-                        throw new AccessDeniedException("Unrecognized template " + mitigationTemplate);
-                    }
-
-                    String serviceName = request.getServiceName();
-                    if (StringUtils.isEmpty(serviceName)) {
-                        throw new AccessDeniedException("Missing serviceName");
-                    }
-
-                    return generateMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, serviceName, deviceName.name(),
-                            mitigationTemplate);
-                });
-
-        // abort deployment authorization policy
-        addRequestInfoParser(
-                AbortDeploymentRequest.class,
-                (action, request) -> {
-                    String mitigationTemplate = request.getMitigationTemplate();
-                    if (StringUtils.isEmpty(mitigationTemplate)) {
-                        throw new AccessDeniedException("Missing mitigationTemplate");
-                    }
-                    DeviceName deviceName = MitigationTemplateToDeviceMapper.getDeviceNameForTemplate(mitigationTemplate);
-                    if (deviceName == null) {
-                        throw new AccessDeniedException("Unrecognized template " + mitigationTemplate);
-                    }
-                    String serviceName = request.getServiceName();
-                    if (StringUtils.isEmpty(serviceName)) {
-                        throw new AccessDeniedException("Missing serviceName");
-                    }
-                    return generateMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, serviceName, deviceName.name(),
-                            mitigationTemplate);
-                });
-
-        addRequestInfoParser(
-                GetRequestStatusRequest.class,
-                (action, request) ->
-                        generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(),
-                                request.getDeviceName(), null));
-
-        addRequestInfoParser(
-                ListActiveMitigationsForServiceRequest.class,
-                (action, request) ->
-                        generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(),
-                                request.getDeviceName(), null));
-
-        addRequestInfoParser(
-                GetMitigationInfoRequest.class,
-                (action, request) ->
-                        generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(),
-                                request.getDeviceName(), null));
-
-        addRequestInfoParser(
-                GetMitigationDefinitionRequest.class,
-                (action, request) ->
-                        generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(),
-                                request.getDeviceName(), null));
-
-        addRequestInfoParser(
-                GetMitigationHistoryRequest.class,
-                (action, request) ->
-                        generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(),
-                                request.getDeviceName(), null));
-
-        addRequestInfoParser(
-                GetLocationDeploymentHistoryRequest.class,
-                (action, request) ->
-                        generateMitigationRequestInfo(action, READ_OPERATION_PREFIX, request.getServiceName(),
-                                request.getDeviceName(), null));
-
-        addRequestInfoParser(
-                GetLocationHostStatusRequest.class,
-                (action, request) ->
-                        generateHostStatusRequestInfo(action, READ_OPERATION_PREFIX, request.getLocation()));
-
-        addRequestInfoParser(
-                GetLocationOperationalStatusRequest.class,
-                (action, request) ->
-                        new RequestInfo(generateActionName(action, READ_OPERATION_PREFIX),
-                                getBlackWatchAPIRelativeId()));
-
-        addRequestInfoParser(
-                RequestHostStatusChangeRequest.class,
-                (action, request) ->
-                        generateHostStatusRequestInfo(action, WRITE_OPERATION_PREFIX, request.getLocation()));
-
-        addRequestInfoParser(
-                ListBlackWatchMitigationsRequest.class,
-                (action, request) ->
-                        generateListBlackWatchMitigationRequestInfo(action, READ_OPERATION_PREFIX));
-
-        addRequestInfoParser(
-                DeactivateBlackWatchMitigationRequest.class,
-                (action, request) ->
-                        new RequestInfo(generateActionName(action, WRITE_OPERATION_PREFIX),
-                                getBlackWatchAPIRelativeId()));
-
-        addRequestInfoParser(
-                ChangeBlackWatchMitigationOwnerARNRequest.class,
-                (action, request) ->
-                        new RequestInfo(generateActionName(action, WRITE_OPERATION_PREFIX),
-                                getBlackWatchAPIRelativeId()));
-
-        addRequestInfoParser(
-                ApplyBlackWatchMitigationRequest.class,
-                (action, request) ->
-                        generateApplyBlackWatchMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, request));
-
-        addRequestInfoParser(
-                UpdateBlackWatchMitigationRequest.class,
-                (action, request) ->
-                        generateUpdateBlackWatchMitigationRequestInfo(action, WRITE_OPERATION_PREFIX, request));
-
-        addRequestInfoParser(
-                ListBlackWatchLocationsRequest.class,
-                (action, request) ->
-                        generateLocationStateRequestInfo(action, READ_OPERATION_PREFIX));
-
-        addRequestInfoParser(
-                UpdateBlackWatchLocationStateRequest.class,
-                (action, request) ->
-                        generateLocationStateRequestInfo(action, WRITE_OPERATION_PREFIX));
-
-        addRequestInfoParser(
-                UpdateLocationStateRequest.class,
-                (action, request) ->
-                        generateLocationStateRequestInfo(action, WRITE_OPERATION_PREFIX));
-
-        addRequestInfoParser(
-                ChangeBlackWatchMitigationStateRequest.class,
-                (action, request) ->
-                        new RequestInfo(generateActionName(action, WRITE_OPERATION_PREFIX),
-                                getBlackWatchAPIRelativeId()));
-    }
-
     private static RequestInfoFunction<Object> getRequestInfoFunction(Object request) {
         RequestInfoFunction<Object> function = requestInfoParsers.get(request.getClass());
         if (function != null) {
@@ -639,9 +675,9 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
      */
     static String getMitigationRelativeId(String serviceName, String deviceName, String mitigationTemplate) {
         if (deviceName == null) {
-            /**
-             * for some request types deviceName is not a required field. In those cases deviceName is
-             * set to ANY_DEVICE, granting authorization for all devices, or none.
+            /*
+              for some request types deviceName is not a required field. In those cases deviceName is
+              set to ANY_DEVICE, granting authorization for all devices, or none.
              */
             deviceName = DeviceName.ANY_DEVICE.name();
         }
@@ -776,8 +812,25 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         destinationIpList.addAll(tmpIPList);
     }
 
-    @Override
-    public String getStrategyName() {
-        return this.getClass().getName();
+    @Data
+    @AllArgsConstructor
+    @RequiredArgsConstructor
+    static class DestinationIPInfo {
+        private final String resourceType;
+        private List<String> destinationIPList;
+    }
+
+    @Data
+    @AllArgsConstructor
+    @RequiredArgsConstructor
+    static class RequestInfo {
+        private final String action;
+        private final String relativeArn;
+        private @Nullable DestinationIPInfo destinationIPInfoObject;
+        private @Nullable Set<String> placementTags;
+    }
+
+    interface RequestInfoFunction<T> {
+        RequestInfo getRequestInfo(String action, T request);
     }
 }
