@@ -856,6 +856,10 @@ public class RequestValidator {
         if (request.getMitigationSettingsJSON() != null) {
             targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
             errorOnDuplicateRates = true;
+
+            // validate BWiR resource types based on new config
+            BlackWatchMitigationResourceType blackWatchMitigationResourceType = BlackWatchMitigationResourceType.valueOf(resourceType);
+            validateBWIRResourceType(targetConfig, blackWatchMitigationResourceType);
         }
 
         BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS(),
@@ -893,6 +897,22 @@ public class RequestValidator {
         }
     }
 
+    // Validate if the resource type is valid BWIR resource
+    public void validateBWIRResourceType(BlackWatchTargetConfig targetConfig, BlackWatchMitigationResourceType blackWatchMitigationResourceType) {
+        if (targetConfig.getGlobal_deployment() != null &&
+                targetConfig.getGlobal_deployment().getPlacement_tags() != null) {
+
+            if (targetConfig.getGlobal_deployment().getPlacement_tags().contains(BlackWatchTargetConfig.REGIONAL_PLACEMENT_TAG)) {
+                if (!blackWatchMitigationResourceType.equals(BlackWatchMitigationResourceType.IPAddress) &&
+                        !blackWatchMitigationResourceType.equals(BlackWatchMitigationResourceType.IPAddressList) &&
+                        !blackWatchMitigationResourceType.equals(BlackWatchMitigationResourceType.ElasticIP)) {
+                    String message = String.format("Unsupported resource type specified for BWiR:%s", blackWatchMitigationResourceType.name());
+                    throw new IllegalArgumentException(message);
+                }
+            }
+        }
+    }
+
     public BlackWatchTargetConfig validateApplyBlackWatchMitigationRequest(
            @NonNull ApplyBlackWatchMitigationRequest request,
            String userARN) {
@@ -906,19 +926,7 @@ public class RequestValidator {
         BlackWatchTargetConfig targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
 
         // validate BWiR resource types
-
-        if (targetConfig.getGlobal_deployment() != null &&
-                targetConfig.getGlobal_deployment().getPlacement_tags() != null) {
-
-            if (targetConfig.getGlobal_deployment().getPlacement_tags().contains(BlackWatchTargetConfig.REGIONAL_PLACEMENT_TAG)) {
-                if (!blackWatchMitigationResourceType.equals(BlackWatchMitigationResourceType.IPAddress) &&
-                        !blackWatchMitigationResourceType.equals(BlackWatchMitigationResourceType.IPAddressList) &&
-                        !blackWatchMitigationResourceType.equals(BlackWatchMitigationResourceType.ElasticIP)) {
-                    String message = String.format("Unsupported resource type specified for BWiR:%s", blackWatchMitigationResourceType.name());
-                    throw new IllegalArgumentException(message);
-                }
-            }
-        }
+        validateBWIRResourceType(targetConfig, blackWatchMitigationResourceType);
 
         // Merge global PPS/BPS into the target config
         BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
