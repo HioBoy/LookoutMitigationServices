@@ -905,6 +905,21 @@ public class RequestValidator {
         // Parse the mitigation settings JSON
         BlackWatchTargetConfig targetConfig = parseMitigationSettingsJSON(request.getMitigationSettingsJSON());
 
+        // validate BWiR resource types
+
+        if (targetConfig.getGlobal_deployment() != null &&
+                targetConfig.getGlobal_deployment().getPlacement_tags() != null) {
+
+            if (targetConfig.getGlobal_deployment().getPlacement_tags().contains(BlackWatchTargetConfig.REGIONAL_PLACEMENT_TAG)) {
+                if (!blackWatchMitigationResourceType.equals(BlackWatchMitigationResourceType.IPAddress) &&
+                        !blackWatchMitigationResourceType.equals(BlackWatchMitigationResourceType.IPAddressList) &&
+                        !blackWatchMitigationResourceType.equals(BlackWatchMitigationResourceType.ElasticIP)) {
+                    String message = String.format("Unsupported resource type specified for BWiR:%s", blackWatchMitigationResourceType.name());
+                    throw new IllegalArgumentException(message);
+                }
+            }
+        }
+
         // Merge global PPS/BPS into the target config
         BlackWatchTargetConfig.mergeGlobalPpsBps(targetConfig, request.getGlobalPPS(), request.getGlobalBPS());
 

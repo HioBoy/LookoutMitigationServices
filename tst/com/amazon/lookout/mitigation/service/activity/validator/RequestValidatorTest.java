@@ -1439,4 +1439,206 @@ public class RequestValidatorTest {
         validator.validateApplyBlackWatchMitigationRequest(request, userARN);
     }
 
+
+    // Test BWiR resource type validation
+    @Test
+    public void testValidBWiRResourceTypeIPAddress() {
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("IPAddress");
+
+        String json = "{"
+                + "  \"global_deployment\": {"
+                + "    \"placement_tags\": [\"REGIONAL\"]"
+                + "  },"
+                + "  \"mitigation_config\": {"
+                + "    \"global_traffic_shaper\": {"
+                + "      \"default\": {"
+                + "        \"global_pps\": 1000,"
+                + "        \"global_bps\": 9999"
+                + "      }"
+                + "    }"
+                + "  }"
+                + "}";
+
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
+    @Test
+    public void testValidBWiRResourceTypeIPAddressList() {
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("IPAdResourceId123");
+        request.setResourceType("IPAddressList");
+
+        String json = "{"
+                + "  \"global_deployment\": {"
+                + "    \"placement_tags\": [\"REGIONAL\", \"GLOBAL\"]"
+                + "  },"
+                + "  \"mitigation_config\": {"
+                + "    \"global_traffic_shaper\": {"
+                + "      \"default\": {"
+                + "        \"global_pps\": 1000,"
+                + "        \"global_bps\": 9999"
+                + "      }"
+                + "    }"
+                + "  }"
+                + "}";
+
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
+    @Test
+    public void testValidBWiRResourceTypeElasticIP() {
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("ElasticIP");
+
+        String json = "{"
+                + "  \"global_deployment\": {"
+                + "    \"placement_tags\": [\"REGIONAL\"]"
+                + "  },"
+                + "  \"mitigation_config\": {"
+                + "    \"global_traffic_shaper\": {"
+                + "      \"default\": {"
+                + "        \"global_pps\": 1000,"
+                + "        \"global_bps\": 9999"
+                + "      }"
+                + "    }"
+                + "  }"
+                + "}";
+
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
+    @Test
+    public void testInvalidBWiRResourceTypeELB() {
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("ELB");
+
+        String json = "{"
+                + "  \"global_deployment\": {"
+                + "    \"placement_tags\": [\"REGIONAL\"]"
+                + "  },"
+                + "  \"mitigation_config\": {"
+                + "    \"global_traffic_shaper\": {"
+                + "      \"default\": {"
+                + "        \"global_pps\": 1000,"
+                + "        \"global_bps\": 9999"
+                + "      }"
+                + "    }"
+                + "  }"
+                + "}";
+
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+
+        Throwable caughtExcepion = null;
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage()
+                .startsWith("Unsupported resource type specified for BWiR"));
+    }
+
+    @Test
+    public void testInvalidBWiRResourceTypeGLB() {
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("GLB");
+
+        String json = "{"
+                + "  \"global_deployment\": {"
+                + "    \"placement_tags\": [\"REGIONAL\"]"
+                + "  },"
+                + "  \"mitigation_config\": {"
+                + "    \"global_traffic_shaper\": {"
+                + "      \"default\": {"
+                + "        \"global_pps\": 1000,"
+                + "        \"global_bps\": 9999"
+                + "      }"
+                + "    }"
+                + "  }"
+                + "}";
+
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+
+        Throwable caughtExcepion = null;
+        try {
+            validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+        } catch (Exception ex) {
+            caughtExcepion = ex;
+        }
+        assertNotNull(caughtExcepion);
+        assertTrue(caughtExcepion instanceof IllegalArgumentException);
+        assertTrue(caughtExcepion.getMessage()
+                .startsWith("Unsupported resource type specified for BWiR"));
+    }
+
+    @Test
+    public void testValidGlobalResourceType() {
+        ApplyBlackWatchMitigationRequest request = new ApplyBlackWatchMitigationRequest();
+        request.setMitigationActionMetadata(MitigationActionMetadata.builder()
+                .withUser("Username")
+                .withToolName("Toolname")
+                .withDescription("Description")
+                .build());
+        request.setResourceId("ResourceId123");
+        request.setResourceType("GLB");
+
+        String json = "{"
+                + "  \"global_deployment\": {"
+                + "    \"placement_tags\": [\"GLOBAL\"]"
+                + "  },"
+                + "  \"mitigation_config\": {"
+                + "    \"global_traffic_shaper\": {"
+                + "      \"default\": {"
+                + "        \"global_pps\": 1000,"
+                + "        \"global_bps\": 9999"
+                + "      }"
+                + "    }"
+                + "  }"
+                + "}";
+
+        request.setMitigationSettingsJSON(json);
+        String userARN = "arn:aws:iam::005436146250:user/blackwatch";
+        validator.validateApplyBlackWatchMitigationRequest(request, userARN);
+    }
+
 }
