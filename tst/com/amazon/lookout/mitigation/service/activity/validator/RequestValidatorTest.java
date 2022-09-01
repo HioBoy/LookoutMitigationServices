@@ -1,20 +1,20 @@
 package com.amazon.lookout.mitigation.service.activity.validator;
 
+import static com.amazon.lookout.mitigation.service.activity.validator.RequestValidator.REGIONAL_CELL_NAME_PATTERN;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.amazon.blackwatch.bwircellconfig.model.BwirCellConfig;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRegionalCellPlacementRequest;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -24,7 +24,6 @@ import org.junit.Test;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.aws158.commons.packet.PacketAttributesEnumMapping;
 import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig;
-import com.amazon.blackwatch.mitigation.state.model.BlackWatchTargetConfig.MitigationAction;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRequest;
@@ -43,7 +42,6 @@ import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
 import com.amazon.lookout.test.common.util.TestUtils;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import org.junit.rules.ExpectedException;
 
 
@@ -58,11 +56,19 @@ public class RequestValidatorTest {
     private final String toolName = "TestToolName";
     private final String description = "TestDesc";
     private static final String currentRegion = "test-region";
+    private BwirCellConfig bwirCellConfig =
+            spy(new BwirCellConfig(System.getProperty("user.dir") + "/build/private/etc/cells/"));
 
-    private RequestValidator validator = new RequestValidator(currentRegion);
+    private RequestValidator validator = new RequestValidator(currentRegion, bwirCellConfig);
 
     @Rule
     public ExpectedException invalidRegion = ExpectedException.none();
+
+    @Rule
+    public ExpectedException invalidCellNamePattern = ExpectedException.none();
+
+    @Rule
+    public ExpectedException invalidCellName = ExpectedException.none();
     
     @BeforeClass
     public static void setUpOnce() {
@@ -72,8 +78,6 @@ public class RequestValidatorTest {
     @Before
     public void setUpBeforeTest() {
         when(tsdMetrics.newSubMetrics(anyString())).thenReturn(tsdMetrics);
-        validator = new RequestValidator(
-            currentRegion);
     }
     
 
@@ -914,23 +918,38 @@ public class RequestValidatorTest {
     }
 
     @Test
-    public void testValidateUpdateBlackWatchMitigationRegionalCellPlacementWithValidRequest() {
+    public void testValidateUpdateBlackWatchMitigationRegionalCellPlacementWithValidCellNames() {
         UpdateBlackWatchMitigationRegionalCellPlacementRequest request =
                 new UpdateBlackWatchMitigationRegionalCellPlacementRequest();
-        List<String> cellNames = Stream.of("bzg-pdx-c1", "bz-pdx-c2").collect(Collectors.toList());
+        List<String> cellNames = Stream.of("bzg-pdx-c1", "BZG-PDX-C2").collect(Collectors.toList());
         request.setCellNames(cellNames);
 
-        validator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request);
+        validator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request, "gamma", "us-west-2");
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testValidateUpdateBlackWatchMitigationRegionalCellPlacementWithInvalidRequest() {
+    @Test
+    public void testValidateUpdateBlackWatchMitigationRegionalCellPlacementWithInvalidCellNamePattern() {
         UpdateBlackWatchMitigationRegionalCellPlacementRequest request =
                 new UpdateBlackWatchMitigationRegionalCellPlacementRequest();
         List<String> cellNames = Stream.of("bzg-pdx-c1", "bz-pdx1-c2").collect(Collectors.toList());
         request.setCellNames(cellNames);
 
-        validator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request);
+        invalidCellNamePattern.expect(IllegalArgumentException.class);
+        invalidCellNamePattern.expectMessage(String.format(
+                "Unrecognized cellName pattern found: 'bz-pdx1-c2', expected pattern is: '%s'.", REGIONAL_CELL_NAME_PATTERN));
+        validator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request, "gamma", "us-west-2");
+    }
+
+    @Test
+    public void testValidateUpdateBlackWatchMitigationRegionalCellPlacementWithCellNameNotInCellConfig() {
+        UpdateBlackWatchMitigationRegionalCellPlacementRequest request =
+                new UpdateBlackWatchMitigationRegionalCellPlacementRequest();
+        List<String> cellNames = Stream.of("bzg-pdx-c1", "BZG-XYZ-C2").collect(Collectors.toList());
+        request.setCellNames(cellNames);
+
+        invalidCellName.expect(IllegalArgumentException.class);
+        invalidCellName.expectMessage("cellName: 'BZG-XYZ-C2' not found in Bwir cell config");
+        validator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request, "gamma", "us-west-2");
     }
 
     @Test

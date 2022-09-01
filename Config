@@ -45,7 +45,8 @@ package.LookoutMitigationService = {
             BlackWatchLocationStateCommons = 1.0;
             BlackWatchMitigationCommons = 1.0;
             BlackWatchMitigationServiceLocationProvider = 1.0;
-            
+            BlackWatchInRegionCellConfigJava = 1.0;
+
             CoralSpringLauncher = 4.3;
             CoralQueryStringValue = 1.1;
             CoralTibcoValue = 1.1;
@@ -101,6 +102,7 @@ package.LookoutMitigationService = {
             DynamoDBLocal = 1.16.x;
             Log4j-core = 2.8; # For resolves-conflict-dependencies
             JUnit-4-12-migration = 5.x;
+            BlackWatchInRegionCellConfig = 1.0;
         };
     };
 

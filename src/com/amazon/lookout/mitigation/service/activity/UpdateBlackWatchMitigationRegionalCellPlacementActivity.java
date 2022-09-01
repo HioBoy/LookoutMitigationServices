@@ -56,6 +56,12 @@ public class UpdateBlackWatchMitigationRegionalCellPlacementActivity extends Act
     @NonNull
     private final BlackWatchMitigationInfoHandler blackwatchMitigationInfoHandler;
 
+    @NonNull
+    private final String domain;
+
+    @NonNull
+    private final String realm;
+
     @Validated
     @Operation("UpdateBlackWatchMitigationRegionalCellPlacement")
     @Documentation("UpdateBlackWatchMitigationRegionalCellPlacement")
@@ -74,7 +80,7 @@ public class UpdateBlackWatchMitigationRegionalCellPlacementActivity extends Act
                             ReflectionToStringBuilder.toString(request)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
 
-            requestValidator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request);
+            requestValidator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request, domain, realm);
 
             UpdateBlackWatchMitigationRegionalCellPlacementResponse response =
                     blackwatchMitigationInfoHandler.updateBlackWatchMitigationRegionalCellPlacement(

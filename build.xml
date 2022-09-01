@@ -32,9 +32,16 @@
         </coral:generate>
     </target>
 
+    <target name="copy-tst-data">
+        <copy todir="${output.dir}/private">
+            <fileset dir="${bp:testrun.configfarm.etc}">
+                <include name="etc/cells/**/*"/>
+            </fileset>
+        </copy>
+    </target>
 
 
-    <target name="build" depends="standard-build"/>
+    <target name="build" depends="standard-build, copy-tst-data"/>
 
     <target name="set-test-additional-jvmargs" depends="dynamodb-local">
         <property name="tests.additional.jvmargs" value="-enableassertions ${dynamodb-local.system-properties}"/>

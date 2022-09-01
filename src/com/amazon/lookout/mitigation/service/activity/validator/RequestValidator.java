@@ -11,6 +11,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
+
+import com.amazon.blackwatch.bwircellconfig.model.BwirCellConfig;
+import com.amazon.blackwatch.bwircellconfig.model.Cell;
 import com.amazon.blackwatch.host.status.model.HostStatusEnum;
 import com.amazon.blackwatch.mitigation.state.model.MitigationState;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
@@ -105,18 +108,24 @@ public class RequestValidator {
             .map(v -> v.name())
             .collect(ImmutableSet.toImmutableSet());
 
+    static final Pattern REGIONAL_CELL_NAME_PATTERN = Pattern.compile(
+            "bz[g]?-[a-z]{3}-c\\d+",
+            Pattern.CASE_INSENSITIVE);
+
     private final Set<String> deviceNames;
     private final String currentRegion;
-    
-    @ConstructorProperties({"currentRegion"})
+    private final BwirCellConfig bwirCellConfig;
+
+    @ConstructorProperties({"currentRegion", "bwirCellConfig"})
     public RequestValidator(
-            @NonNull String currentRegion) {
+            @NonNull String currentRegion, @NonNull BwirCellConfig bwirCellConfig) {
         this.currentRegion = currentRegion.toLowerCase();
 
         this.deviceNames = new HashSet<>();
         for (DeviceName deviceName : DeviceName.values()) {
             deviceNames.add(deviceName.name());
         }
+        this.bwirCellConfig = bwirCellConfig;
     }
 
     /**
@@ -880,19 +889,26 @@ public class RequestValidator {
     }
 
     public void validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(
-            @NonNull UpdateBlackWatchMitigationRegionalCellPlacementRequest request) {
+            @NonNull UpdateBlackWatchMitigationRegionalCellPlacementRequest request,
+            @NonNull String domain, @NonNull String realm) {
 
-        final Pattern REGIONAL_CELL_NAME_PATTERN = Pattern.compile(
-                "bz[g]?-[a-z]{3}-c\\d+",
-                Pattern.CASE_INSENSITIVE);
+        ImmutableSet<String> bwirCellNames = bwirCellConfig.getCells(domain, realm).stream()
+                .map(Cell::getName)
+                .collect(ImmutableSet.toImmutableSet());
 
         List<String> cellNames = request.getCellNames(); // format - [bz-pdx-c1, bz-pdx-c2]
         // Validate cellNames --> all the Cell names should match REGIONAL_CELL_NAME_PATTERN
         for (String cellName : cellNames) {
             Matcher matcher = REGIONAL_CELL_NAME_PATTERN.matcher(cellName);
-            if (!(matcher.matches())) {
+            if (!matcher.matches()) {
                 throw new IllegalArgumentException(String.format(
-                        "Unrecognized cell name: '%s', expected: '%s'.", cellName, REGIONAL_CELL_NAME_PATTERN));
+                        "Unrecognized cellName pattern found: '%s', expected pattern is: '%s'.",
+                        cellName, REGIONAL_CELL_NAME_PATTERN));
+            }
+
+            if (bwirCellNames.stream().noneMatch(cellName::equalsIgnoreCase)) {
+                throw new IllegalArgumentException(String.format(
+                        "cellName: '%s' not found in Bwir cell config", cellName));
             }
         }
     }

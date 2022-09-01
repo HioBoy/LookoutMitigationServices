@@ -2,6 +2,7 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import static org.junit.Assert.*;
 
+import com.amazon.blackwatch.bwircellconfig.model.BwirCellConfig;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -24,7 +25,7 @@ public class UpdateBlackWatchLocationStateActivityTest extends ActivityTestHelpe
     @Before
     public void setup() {
         requestValidator = spy(new RequestValidator(
-                "/random/path/location/json"));
+                "/random/path/location/json", mock(BwirCellConfig.class)));
         updateBlackWatchLocationStateActivity = 
                 spy(new UpdateBlackWatchLocationStateActivity(requestValidator, locationStateInfoHandler, locationStateLocksDAO));
         

@@ -1,5 +1,6 @@
 package com.amazon.lookout.mitigation.service.activity;
 
+import com.amazon.blackwatch.bwircellconfig.model.BwirCellConfig;
 import com.amazon.lookout.mitigation.exception.ExternalDependencyException;
 import org.junit.Before;
 import org.junit.Test;
@@ -26,7 +27,8 @@ public class RollbackMitigationActivityTest extends ActivityTestHelper {
     @Before
     public void setupMore() {
         requestValidator = spy(new RequestValidator(
-                "/random/path/location/json"));
+                "/random/path/location/json",
+                mock(BwirCellConfig.class)));
         requestCreator = mock(RequestCreator.class);
         rollbackMitigationActivity = new RollbackMitigationActivity(requestValidator,
                 mock(TemplateBasedRequestValidator.class),

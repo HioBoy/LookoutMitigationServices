@@ -7,12 +7,9 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
+import com.amazon.blackwatch.bwircellconfig.model.BwirCellConfig;
 import com.amazonaws.services.dynamodbv2.model.BillingMode;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
-import com.amazonaws.services.dynamodbv2.model.GlobalSecondaryIndex;
-import com.amazonaws.services.dynamodbv2.model.LocalSecondaryIndex;
-import com.amazonaws.services.dynamodbv2.model.Projection;
-import com.amazonaws.services.dynamodbv2.model.ProjectionType;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -153,7 +150,8 @@ public class DDBBasedActivityTestHelper {
         resourceAllocationStateDDBHelper.deleteTable();
         resourceAllocationStateDDBHelper.createTableIfNotExist(BillingMode.PAY_PER_REQUEST);
         
-        requestValidator = new RequestValidator("/random/path/location/json");
+        requestValidator = new RequestValidator("/random/path/location/json",
+                mock(BwirCellConfig.class));
 
         dogfishHelper = mock(DogFishValidationHelper.class);
         blackwatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDDBHelper,

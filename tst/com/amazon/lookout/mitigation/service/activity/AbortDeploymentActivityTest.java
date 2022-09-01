@@ -1,14 +1,12 @@
 package com.amazon.lookout.mitigation.service.activity;
 
+import com.amazon.blackwatch.bwircellconfig.model.BwirCellConfig;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.AbortDeploymentRequest;
-import com.amazon.lookout.mitigation.service.AbortDeploymentResponse;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 
@@ -21,7 +19,8 @@ public class AbortDeploymentActivityTest extends ActivityTestHelper {
     
     @Before
     public void setupMore() {
-        requestValidator = spy(new RequestValidator("/random/path/location/json"));
+        requestValidator = spy(new RequestValidator("/random/path/location/json",
+                mock(BwirCellConfig.class)));
         abortDeploymentActivity = new AbortDeploymentActivity(requestValidator,
                 mock(CurrentRequestsDAO.class));
     }

@@ -1,36 +1,23 @@
 package com.amazon.lookout.mitigation.service.activity;
 
 import static com.amazon.lookout.test.common.util.AssertUtils.assertThrows;
-import static com.google.common.collect.Sets.newHashSet;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anySet;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
+import com.amazon.blackwatch.bwircellconfig.model.BwirCellConfig;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.Mockito;
 
-import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.DeleteMitigationFromAllLocationsRequest;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
-import com.amazon.lookout.mitigation.service.MitigationModificationRequest;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazon.lookout.mitigation.service.activity.validator.template.TemplateBasedRequestValidator;
 import com.amazon.lookout.mitigation.service.constants.DeviceName;
 import com.amazon.lookout.mitigation.service.mitigation.model.MitigationTemplate;
-import com.amazon.lookout.model.RequestType;
 import com.amazon.lookout.test.common.util.TestUtils;
-import com.amazonaws.services.s3.AmazonS3;
 
-import com.amazon.lookout.mitigation.datastore.model.CurrentRequest;
 import com.amazon.lookout.mitigation.RequestCreator;
 
 public class DeleteMitigationFromAllLocationsActivityTest {
@@ -55,7 +42,8 @@ public class DeleteMitigationFromAllLocationsActivityTest {
 
     private DeleteMitigationFromAllLocationsActivity createActivityWithValidators() {
         return new DeleteMitigationFromAllLocationsActivity(
-            new RequestValidator("/random/path/location/json"),
+            new RequestValidator("/random/path/location/json",
+                    mock(BwirCellConfig.class)),
             new TemplateBasedRequestValidator(),
             mock(RequestCreator.class));
     }

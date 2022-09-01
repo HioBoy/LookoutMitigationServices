@@ -40,7 +40,8 @@ public class UpdateBlackWatchMitigationRegionalCellPlacementActivityTest extends
     public void setup() {
         TestUtils.configureLogging();
         updateBlackWatchMitigationRegionalCellPlacementActivity =
-                spy(new UpdateBlackWatchMitigationRegionalCellPlacementActivity(requestValidator, blackwatchMitigationInfoHandler));
+                spy(new UpdateBlackWatchMitigationRegionalCellPlacementActivity(requestValidator,
+                        blackwatchMitigationInfoHandler, "gamma", "us-west-2"));
         request = new UpdateBlackWatchMitigationRegionalCellPlacementRequest();
 
         request.setMitigationId(mitigationId);
@@ -69,7 +70,7 @@ public class UpdateBlackWatchMitigationRegionalCellPlacementActivityTest extends
     public void testUpdateBlackWatchMitigationRegionalCellPlacementActivityWhenRequestValidationFails() {
         doThrow(new IllegalArgumentException()).when(requestValidator)
                 .validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(
-                        isA(UpdateBlackWatchMitigationRegionalCellPlacementRequest.class)
+                        isA(UpdateBlackWatchMitigationRegionalCellPlacementRequest.class), anyString(), anyString()
                 );
 
         updateBlackWatchMitigationRegionalCellPlacementActivity.enact(request);
