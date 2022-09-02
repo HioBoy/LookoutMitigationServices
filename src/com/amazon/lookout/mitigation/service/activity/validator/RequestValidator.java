@@ -897,6 +897,12 @@ public class RequestValidator {
                 .collect(ImmutableSet.toImmutableSet());
 
         List<String> cellNames = request.getCellNames(); // format - [bz-pdx-c1, bz-pdx-c2]
+
+        if (cellNames.size() > 0 && bwirCellNames.isEmpty()) {
+            throw new IllegalArgumentException(String.format("Domain: %s and Realm: %s doesn't contain "
+                    + "any BWIR cells yet, but UpdateCellPlacementRequest contains cells: %s",
+                    domain, realm, cellNames));
+        }
         // Validate cellNames --> all the Cell names should match REGIONAL_CELL_NAME_PATTERN
         for (String cellName : cellNames) {
             Matcher matcher = REGIONAL_CELL_NAME_PATTERN.matcher(cellName);

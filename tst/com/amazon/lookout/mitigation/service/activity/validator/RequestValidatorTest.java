@@ -69,6 +69,9 @@ public class RequestValidatorTest {
 
     @Rule
     public ExpectedException invalidCellName = ExpectedException.none();
+
+    @Rule
+    public ExpectedException notYetLaunchedCells = ExpectedException.none();
     
     @BeforeClass
     public static void setUpOnce() {
@@ -950,6 +953,23 @@ public class RequestValidatorTest {
         invalidCellName.expect(IllegalArgumentException.class);
         invalidCellName.expectMessage("cellName: 'BZG-XYZ-C2' not found in Bwir cell config");
         validator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request, "gamma", "us-west-2");
+    }
+
+    @Test
+    public void testValidateUpdateBlackWatchMitigationRegionalCellPlacementRequestOnNotYetLaunchedCells() {
+        UpdateBlackWatchMitigationRegionalCellPlacementRequest request =
+                new UpdateBlackWatchMitigationRegionalCellPlacementRequest();
+        List<String> cellNames = Stream.of("bza-pdx-c1", "BZA-PDX-C2").collect(Collectors.toList());
+        request.setCellNames(cellNames);
+
+        String domain = "alpha";
+        String realm = "us-west-2";
+
+        notYetLaunchedCells.expect(IllegalArgumentException.class);
+        notYetLaunchedCells.expectMessage(String.format("Domain: %s and Realm: %s doesn't contain "
+                        + "any BWIR cells yet, but UpdateCellPlacementRequest contains cells: %s",
+                domain, realm, cellNames));
+        validator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request, domain, realm);
     }
 
     @Test
