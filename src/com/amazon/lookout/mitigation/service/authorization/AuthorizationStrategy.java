@@ -38,6 +38,7 @@ import com.amazon.balsa.proto.Balsa.Version;
 import com.amazon.lookout.mitigation.service.ChangeBlackWatchMitigationStateRequest;
 import com.amazon.lookout.mitigation.service.GetLocationOperationalStatusRequest;
 import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
+import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRegionalCellPlacementRequest;
 import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
 
 import com.google.common.collect.ImmutableList;
@@ -561,6 +562,14 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         addRequestInfoParser(
                 parsersByRequestType,
                 ChangeBlackWatchMitigationStateRequest.class,
+                (action, request) ->
+                        new RequestInfo(
+                                generateActionName(action, WRITE_OPERATION_PREFIX),
+                                getBlackWatchAPIRelativeId()));
+
+        addRequestInfoParser(
+                parsersByRequestType,
+                UpdateBlackWatchMitigationRegionalCellPlacementRequest.class,
                 (action, request) ->
                         new RequestInfo(
                                 generateActionName(action, WRITE_OPERATION_PREFIX),
