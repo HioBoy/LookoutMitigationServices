@@ -150,6 +150,7 @@ package.LookoutMitigationService = {
             Jackson-dataformat-cbor = 2.12.x;
             AWSPersistenceJavaClient = 1.12.x;
             AWSSecurityTokenServiceJavaClient = 1.12.x;
+            AWSDynamoDBUpdateStreamsExternalJavaClient = 1.12.x;
         };
     };
 
