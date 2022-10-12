@@ -40,6 +40,7 @@ import com.amazon.lookout.mitigation.service.GetLocationOperationalStatusRequest
 import com.amazon.lookout.mitigation.service.RequestHostStatusChangeRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRegionalCellPlacementRequest;
 import com.amazon.lookout.mitigation.service.UpdateLocationStateRequest;
+import com.amazon.lookout.mitigation.service.BadRequest400;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -648,7 +649,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         try {
             return BlackWatchTargetConfig.fromJSONString(mitigationSettingsJson);
         } catch (IOException ex) {
-            throw new IllegalArgumentException("Could not map mitigation JSON to target config: " +
+            throw new BadRequest400("Could not map mitigation JSON to target config: " +
                     ex.getMessage(), ex);
         }
     }
@@ -773,6 +774,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 }
             }
 
+            if (destinationIpList == null || destinationIpList.size() == 0) {
+                LOG.debug("Destination IPAddress is missing");
+                throw new BadRequest400("Destination IPAddress is missing");
+            }
+
             return Optional.of(new DestinationIPInfo(
                     BlackWatchMitigationResourceType.IPAddressList.name(),
                     ImmutableList.copyOf(destinationIpList)));
@@ -793,6 +799,11 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
                 putDestinationIpToList(ip, destinationIpList);
             }
 
+            if (destinationIpList == null || destinationIpList.size() == 0) {
+                LOG.debug("Destination IPAddress is missing");
+                throw new BadRequest400("Destination IPAddress is missing");
+            }
+
             return Optional.of(new DestinationIPInfo(
                     BlackWatchMitigationResourceType.IPAddressList.name(),
                     ImmutableList.copyOf(destinationIpList)));
@@ -810,7 +821,7 @@ public class AuthorizationStrategy extends AbstractAwsAuthorizationStrategy {
         try {
             cidr = new CIDRUtils(ip);
         } catch (Exception ex) {
-            throw new RuntimeException("Exception when determining destination ip: " + ip, ex);
+            throw new BadRequest400("Exception when determining destination ip: " + ip, ex);
         }
 
         Set<String> tmpIPList = new HashSet<>();
