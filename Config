@@ -89,6 +89,7 @@ package.LookoutMitigationService = {
             AwsDynamoDBMetricsHelpersLib = 1.11.x;
             EdgeSetupVLANIptables = 1.0;
             AmazonCACerts = 1.0;
+            AmazonCACertsMVP = 1.0; #Adds internal root CA trust in ADC regions NAWS fabric for EC2 and ECS Fargate
             CacheOut = 1.0;
         };
     };
