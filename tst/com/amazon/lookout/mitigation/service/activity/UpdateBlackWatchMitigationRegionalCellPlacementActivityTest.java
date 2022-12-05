@@ -8,7 +8,6 @@ import com.amazon.lookout.mitigation.service.BadRequest400;
 import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRegionalCellPlacementRequest;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRegionalCellPlacementResponse;
-import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
 import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
 import junitparams.JUnitParamsRunner;
 import org.junit.Before;

@@ -892,6 +892,9 @@ public class RequestValidator {
             @NonNull UpdateBlackWatchMitigationRegionalCellPlacementRequest request,
             @NonNull String domain, @NonNull String realm) {
 
+        // Currently, we use prod-border as the domain for IAD and prod-cn as the domain in China.
+        // So, we need to convert the domain to prod to get cell config data from BWIR cell config.
+        domain = domain.split("-", 2)[0];
         ImmutableSet<String> bwirCellNames = bwirCellConfig.getCells(domain, realm).stream()
                 .map(Cell::getName)
                 .collect(ImmutableSet.toImmutableSet());

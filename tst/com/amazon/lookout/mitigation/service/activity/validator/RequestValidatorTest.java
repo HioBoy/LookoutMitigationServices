@@ -973,6 +973,16 @@ public class RequestValidatorTest {
     }
 
     @Test
+    public void testValidateUpdateBlackWatchMitigationRegionalCellPlacementWithSpecialDomainCase() {
+        UpdateBlackWatchMitigationRegionalCellPlacementRequest request =
+                new UpdateBlackWatchMitigationRegionalCellPlacementRequest();
+        List<String> cellNames = Stream.of("bzg-pdx-c1", "bzg-pdx-c2").collect(Collectors.toList());
+        request.setCellNames(cellNames);
+
+        validator.validateUpdateBlackWatchMitigationRegionalCellPlacementRequest(request, "gamma-border", "us-west-2");
+    }
+
+    @Test
     public void testValidateUpdateBlackWatchMitigationWithJson() {
         UpdateBlackWatchMitigationRequest request = new UpdateBlackWatchMitigationRequest();
         request.setMitigationActionMetadata(MitigationActionMetadata.builder()
