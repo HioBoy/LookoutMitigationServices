@@ -262,6 +262,11 @@ public class RequestValidator {
             LOG.info(msg);
             throw new IllegalArgumentException(msg);
         }
+
+        // Validate the mitigation name, if it is provided
+        if (request.getMitigationName() != null) {
+            validateMitigationName(request.getMitigationName());
+        }
         
         validateMitigationTemplate(request.getMitigationTemplate());
     }

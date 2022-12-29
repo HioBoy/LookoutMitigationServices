@@ -72,6 +72,9 @@ public class GetRequestStatusActivity extends Activity{
             final String location = request.getLocation();
             final DeviceName device = DeviceName.valueOf(request.getDeviceName());
 
+            // Mitigation name is an optional parameter that may be null
+            final String requestMitigationName = request.getMitigationName();
+
             LOG.info(String.format("GetRequestStatusActivity called with RequestId: %s and Request: %s.", requestId, ReflectionToStringBuilder.toString(request)));
             ActivityHelper.initializeRequestExceptionCounts(REQUEST_EXCEPTIONS, tsdMetrics);
             
@@ -79,8 +82,17 @@ public class GetRequestStatusActivity extends Activity{
             requestValidator.validateGetRequestStatusRequest(request);
 
             // Get request
-            final CurrentRequest currentRequest = requestsDao.retrieveRequest(
-                    device, location, jobId);
+            final CurrentRequest currentRequest;
+            if (requestMitigationName != null) {
+                // Strongly-consistent read operation when the mitigation name
+                // is provided
+                currentRequest = requestsDao.retrieveRequest(device, location,
+                        requestMitigationName, jobId);
+            } else {
+                // No mitigation name: use a read operation against the GSI, which
+                // is eventually consistent
+                currentRequest = requestsDao.retrieveRequest(device, location, jobId);
+            }
 
             if (currentRequest == null) {
                 // Do whatever crazy thing old mitigation service does in this case
