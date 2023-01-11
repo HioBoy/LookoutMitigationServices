@@ -136,7 +136,7 @@ public class UpdateLocationStateActivityTest extends ActivityTestHelper {
     /**
      * Test UpdateLocationStateActivity for AdminOut
      * AcquireLock successful
-     * OtherStacks Inservice
+     * Other Stacks are OOS
      */
     @Test(expected = BadRequest400.class)
     public void testUpdateLocationStateAdminOutNoStackInService() throws ExternalDependencyException {
@@ -160,6 +160,53 @@ public class UpdateLocationStateActivityTest extends ActivityTestHelper {
                 .validateOtherStacksInService(eq(location), isA(TSDMetrics.class));
 
         updateLocationStateActivity.enact(request);
+    }
+
+    /**
+     * Test UpdateLocationStateActivity for AdminOut
+     * AcquireLock successful
+     * Other Stacks are OOS
+     */
+    @Test
+    public void testUpdateLocationStateAdminOutNoStackInServiceForBorderEdgeLocation() throws ExternalDependencyException {
+	String borderEdgeLocation = "be-test-1";
+    	UpdateLocationStateRequest borderEdgeLocationRequest = new UpdateLocationStateRequest();
+    	UpdateLocationStateActivity updateBorderEdgeLocationStateActivity =
+	       	spy(new UpdateLocationStateActivity(requestValidator, locationStateInfoHandler, hostnameValidator, locationStateLocksDAO));
+    	LocationState borderEdgeLocationState = LocationState.builder()
+                .locationName(location)
+                .adminIn(true)
+                .inService(true)
+                .build();
+
+        Mockito.doNothing().when(requestValidator).validateUpdateLocationStateRequest(borderEdgeLocationRequest);
+        Mockito.doReturn(requestId).when(updateLocationStateActivity).getRequestId();
+        String changeId = "adminOut";
+        String operationId = "adminOutOperation";
+        //AdminOut Request
+        borderEdgeLocationRequest.setChangeId(changeId);
+        borderEdgeLocationRequest.setOperationId(operationId);
+        borderEdgeLocationRequest.setAdminIn(false);
+        borderEdgeLocationRequest.setLocation(borderEdgeLocation);
+
+        Mockito.doReturn(borderEdgeLocationState).when(locationStateInfoHandler)
+                .getLocationState(eq(borderEdgeLocation), isA(TSDMetrics.class));
+
+        Mockito.doReturn(true).when(locationStateLocksDAO)
+                .acquireWriterLock(eq(DeviceName.BLACKWATCH_BORDER), eq(borderEdgeLocation));
+
+        Mockito.doReturn(false).when(locationStateInfoHandler)
+                .validateOtherStacksInService(eq(borderEdgeLocation), isA(TSDMetrics.class));
+	
+	  List<String> pendingLocks = Arrays.asList(operationId);
+
+        Mockito.doReturn(pendingLocks).when(locationStateInfoHandler)
+                .getPendingOperationLocks(eq(borderEdgeLocation), isA(TSDMetrics.class));
+
+        UpdateLocationStateResponse response = updateLocationStateActivity.enact(borderEdgeLocationRequest);
+
+        assertEquals(requestId, response.getRequestId());
+        assertEquals(pendingLocks, response.getPendingOperations());
     }
 
     /**

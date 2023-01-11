@@ -99,9 +99,9 @@ public class UpdateLocationStateActivity extends Activity {
 
             // Step 2. Creating lock to avoid any concurrent updates
             if (locationStateLocksDAO.acquireWriterLock(DeviceName.BLACKWATCH_BORDER, request.getLocation())) {
-
+		// Execute step 3 only for border case ( Skip step 3 for border edge)
                 // Step 3. Validate if all other stacks are in service and only applicable if setting adminIn = false
-                if (!adminIn && !locationStateInfoHandler.validateOtherStacksInService(location, tsdMetrics)) {
+                if (location.startsWith("br") && !adminIn && !locationStateInfoHandler.validateOtherStacksInService(location, tsdMetrics)) {
                     String msg = String.format("Other stacks not in service for location %s", location);
                     throw new IllegalStateException(msg);
                 }
