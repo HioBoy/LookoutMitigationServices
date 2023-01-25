@@ -380,16 +380,21 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
          * Stack Operational when taking InService -> stack operational when hasExpectedMitigations, InService and routesAnnounced are true
          * Stack Operational when taking Out of Service ->  If any of InService and routesAnnounced is true
          * */
-        if(locationState.getAdminIn()){
-            isOperational = hasExpectedMitigations && locationState.getInService() && areRoutesAnnounced;
+        String location = locationState.getLocationName();
+        if (location.startsWith("BE")) {
+            isOperational = locationState.getInService();
         } else {
-            //when we admin out a location
-            //the isOperation flag will become false only when all conditions are false
-            isOperational = locationState.getInService() || areRoutesAnnounced;
+            if (locationState.getAdminIn()) {
+                isOperational = hasExpectedMitigations && locationState.getInService() && areRoutesAnnounced;
+            } else {
+                //when we admin out a location
+                //the isOperation flag will become false only when all conditions are false
+                isOperational = locationState.getInService() || areRoutesAnnounced;
+            }
+            LOG.info("Location: " + locationState.getLocationName() + "\n\nFlags:\n AdminIn: " + locationState.getAdminIn()
+                    + "\n InService: " + locationState.getInService() + "\n hasExpectedMitigations: " + hasExpectedMitigations
+                    + "\n areRoutesAnnounced: " + areRoutesAnnounced + "\n isOperational: " + isOperational);
         }
-        LOG.info("Location: " + locationState.getLocationName() + "\n\nFlags:\n AdminIn: " + locationState.getAdminIn()
-                + "\n InService: " + locationState.getInService() + "\n hasExpectedMitigations: " + hasExpectedMitigations
-                + "\n areRoutesAnnounced: " + areRoutesAnnounced + "\n isOperational: " + isOperational);
         return isOperational;
     }
 

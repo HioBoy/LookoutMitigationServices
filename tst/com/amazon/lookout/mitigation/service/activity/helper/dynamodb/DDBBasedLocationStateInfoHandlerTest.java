@@ -34,6 +34,7 @@ public class DDBBasedLocationStateInfoHandlerTest {
     private static final String location1 = "brg-test99-1";
     private static final String location2 = "brg-test99-2";
     private static final String location3 = "brg-test99-3";
+    private static final String location4 = "beg-test99-4";
     private LocationState locationState1;
     private LocationState locationState2;
     private LocationState locationState3;
@@ -228,6 +229,20 @@ public class DDBBasedLocationStateInfoHandlerTest {
                 .inService(false)
                 .build();
         assertFalse(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, false, true));
+
+	/*
+         * Test for BE condition, ref SIM https://t.corp.amazon.com/D70547906/overview
+         *
+         **/
+
+        String location = locationState.getLocationName();
+        locationState = LocationState.builder()
+                .locationName(location4)
+                .locationType(LocationType.BPOP_BLACKWATCH15.name())
+                .adminIn(true)
+                .inService(true)
+                .build();
+        assertTrue(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, true, true));
     }
 
     //TODO: Add tests for other methods DDBBasedLocationStateInfoHandler
