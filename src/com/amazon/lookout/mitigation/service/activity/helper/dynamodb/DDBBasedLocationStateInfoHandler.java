@@ -381,8 +381,8 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
          * Stack Operational when taking Out of Service ->  If any of InService and routesAnnounced is true
          * */
         String location = locationState.getLocationName();
-        if (location.startsWith("BE")) {
-            isOperational = locationState.getInService();
+        if (location.toLowerCase().startsWith("BE")) {
+            return locationState.getInService();
         } else {
             if (locationState.getAdminIn()) {
                 isOperational = hasExpectedMitigations && locationState.getInService() && areRoutesAnnounced;

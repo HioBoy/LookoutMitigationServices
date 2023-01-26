@@ -232,10 +232,7 @@ public class DDBBasedLocationStateInfoHandlerTest {
 
 	/*
          * Test for BE condition, ref SIM https://t.corp.amazon.com/D70547906/overview
-         *
          **/
-
-        String location = locationState.getLocationName();
         locationState = LocationState.builder()
                 .locationName(location4)
                 .locationType(LocationType.BPOP_BLACKWATCH15.name())
