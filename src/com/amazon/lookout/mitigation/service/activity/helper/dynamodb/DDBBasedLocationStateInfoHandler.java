@@ -373,28 +373,22 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
         return routeCount != 0;
     }
 
-    public boolean evaluateOperationalFlags(LocationState locationState, boolean areRoutesAnnounced,
-                                             boolean hasExpectedMitigations) {
+    public boolean evaluateOperationalFlags(LocationState locationState, boolean areRoutesAnnounced, boolean hasExpectedMitigations) {
         boolean isOperational;
         /* A weird safe check where conditions to consider stack operational changes on AdminIn value
          * Stack Operational when taking InService -> stack operational when hasExpectedMitigations, InService and routesAnnounced are true
          * Stack Operational when taking Out of Service ->  If any of InService and routesAnnounced is true
          * */
-        String location = locationState.getLocationName();
-        if (location.toLowerCase().startsWith("be")) {
-            return locationState.getInService();
+        if(locationState.getAdminIn()){
+            isOperational = hasExpectedMitigations && locationState.getInService() && areRoutesAnnounced;
         } else {
-            if (locationState.getAdminIn()) {
-                isOperational = hasExpectedMitigations && locationState.getInService() && areRoutesAnnounced;
-            } else {
-                //when we admin out a location
-                //the isOperation flag will become false only when all conditions are false
-                isOperational = locationState.getInService() || areRoutesAnnounced;
-            }
-            LOG.info("Location: " + locationState.getLocationName() + "\n\nFlags:\n AdminIn: " + locationState.getAdminIn()
-                    + "\n InService: " + locationState.getInService() + "\n hasExpectedMitigations: " + hasExpectedMitigations
-                    + "\n areRoutesAnnounced: " + areRoutesAnnounced + "\n isOperational: " + isOperational);
+            //when we admin out a location
+            //the isOperation flag will become false only when all conditions are false
+            isOperational = locationState.getInService() || areRoutesAnnounced;
         }
+        LOG.info("Location: " + locationState.getLocationName() + "\n\nFlags:\n AdminIn: " + locationState.getAdminIn()
+                + "\n InService: " + locationState.getInService() + "\n hasExpectedMitigations: " + hasExpectedMitigations
+                + "\n areRoutesAnnounced: " + areRoutesAnnounced + "\n isOperational: " + isOperational);
         return isOperational;
     }
 
@@ -433,7 +427,11 @@ public class DDBBasedLocationStateInfoHandler implements LocationStateInfoHandle
     public boolean checkIfLocationIsOperational(String location, TSDMetrics tsdMetrics) throws ExternalDependencyException {
         LOG.info("Checking if location: " + location + ", is operational.");
         LocationState locationState = getLocationState(location, tsdMetrics);
-        List<BlackWatchLocation> allStacksAtLocation = getAllBlackWatchLocationsProtectingTheSameNetwork(locationState, tsdMetrics);
-        return isLocationOperational(location, allStacksAtLocation, tsdMetrics);
+        if (location.toLowerCase().startsWith("be")) {
+            return locationState.getInService();
+        }
+        else {
+            List<BlackWatchLocation> allStacksAtLocation = getAllBlackWatchLocationsProtectingTheSameNetwork(locationState, tsdMetrics);
+            return isLocationOperational(location, allStacksAtLocation, tsdMetrics); }
     }
 }

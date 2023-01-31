@@ -1,14 +1,18 @@
 package com.amazon.lookout.mitigation.service.activity.helper.dynamodb;
 
+import amazon.mws.data.Datapoint;
 import com.amazon.aws158.commons.metric.TSDMetrics;
 import com.amazon.blackwatch.location.state.model.LocationOperation;
 import com.amazon.blackwatch.location.state.model.LocationState;
 import com.amazon.blackwatch.location.state.storage.LocationStateDynamoDBHelper;
+import com.amazon.lookout.mitigation.service.constants.DeviceName;
+import com.amazon.lookout.mitigation.ActiveMitigationsHelper;
 import com.amazon.coral.metrics.Metrics;
 import com.amazon.coral.metrics.MetricsFactory;
 import com.amazon.lookout.mitigation.location.type.LocationType;
 import com.amazon.lookout.mitigation.service.BlackWatchLocation;
 import com.amazon.lookout.test.common.util.TestUtils;
+import com.amazon.lookout.mitigation.service.activity.helper.mws.MWSHelper;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -28,6 +32,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.isA;
+
 
 public class DDBBasedLocationStateInfoHandlerTest {
 
@@ -42,7 +48,9 @@ public class DDBBasedLocationStateInfoHandlerTest {
     List<LocationState> allLocations;
 
     private final LocationStateDynamoDBHelper locationStateDynamoDBHelper = Mockito.mock(LocationStateDynamoDBHelper.class);
+    private MWSHelper mwsHelper;
 
+    private ActiveMitigationsHelper activeMitigationsHelper;
     private DDBBasedLocationStateInfoHandler ddbBasedLocationStateInfoHandler;
 
     private static MetricsFactory metricsFactory = Mockito.mock(MetricsFactory.class);
@@ -95,7 +103,15 @@ public class DDBBasedLocationStateInfoHandlerTest {
                 .build();
         Mockito.doReturn(locationState3).when(locationStateDynamoDBHelper).getLocationState(eq(location3));
 
-        allLocations = Arrays.asList(locationState1, locationState2, locationState3);
+        LocationState locationState4 = LocationState.builder()
+                .locationName(location4)
+                .locationType(LocationType.BPOP_BLACKWATCH15.name())
+                .adminIn(true)
+                .inService(true)
+                .operationLocks(operationsLocks)
+                .build();
+
+        allLocations = Arrays.asList(locationState1, locationState2, locationState3, locationState4);
         Mockito.doReturn(allLocations).when(locationStateDynamoDBHelper).getAllLocationStates(anyInt());
 
         ddbBasedLocationStateInfoHandler = new DDBBasedLocationStateInfoHandler(locationStateDynamoDBHelper);
@@ -229,18 +245,43 @@ public class DDBBasedLocationStateInfoHandlerTest {
                 .inService(false)
                 .build();
         assertFalse(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, false, true));
+    }
 
-	/*
-         * Test for BE condition, ref SIM https://t.corp.amazon.com/D70547906/overview
-         **/
-        locationState = LocationState.builder()
+    @Test
+    public void testCheckIfLocationIsOperational () {
+        LocationState borderEdgelocationState = LocationState.builder()
                 .locationName(location4)
                 .locationType(LocationType.BPOP_BLACKWATCH15.name())
                 .adminIn(true)
                 .inService(true)
                 .build();
-        assertTrue(ddbBasedLocationStateInfoHandler.evaluateOperationalFlags(locationState, true, true));
-    }
+        Mockito.doReturn(borderEdgelocationState).when(locationStateDynamoDBHelper).getLocationState(eq(location4));
+        assertTrue(ddbBasedLocationStateInfoHandler.checkIfLocationIsOperational(location4, tsdMetrics));
 
+        LocationState bwitLocationState = LocationState.builder()
+                .locationName(location1)
+                .locationType(LocationType.TC_BLACKWATCH15.name())
+                .adminIn(true)
+                .inService(true)
+                .build();
+        List<Datapoint> datapoints = new ArrayList<>();
+        Datapoint datapoint1 = new Datapoint();
+        datapoint1.setValue(20.0);
+        datapoints.add(datapoint1);
+        Datapoint datapoint2 = new Datapoint();
+        datapoint2.setValue(20.0);
+        datapoints.add(datapoint2);
+        mwsHelper = Mockito.mock(MWSHelper.class);
+        activeMitigationsHelper = Mockito.mock(ActiveMitigationsHelper.class);
+        Mockito.doReturn(datapoints).when(mwsHelper)
+                .getBGPTotalAnnouncements(eq(location1), isA(TSDMetrics.class));
+
+        Mockito.doReturn(true).when(activeMitigationsHelper)
+                .hasExpectedMitigations(eq(DeviceName.BLACKWATCH_BORDER), Mockito.anyListOf(BlackWatchLocation.class), eq(location1));
+
+        Mockito.doReturn(bwitLocationState).when(locationStateDynamoDBHelper).getLocationState(eq(location1));
+        ddbBasedLocationStateInfoHandler = new DDBBasedLocationStateInfoHandler(locationStateDynamoDBHelper, activeMitigationsHelper, mwsHelper);
+        assertTrue(ddbBasedLocationStateInfoHandler.checkIfLocationIsOperational(location1, tsdMetrics));
+    }
     //TODO: Add tests for other methods DDBBasedLocationStateInfoHandler
 }
