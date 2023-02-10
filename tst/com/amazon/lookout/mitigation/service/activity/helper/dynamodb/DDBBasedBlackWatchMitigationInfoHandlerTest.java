@@ -133,6 +133,9 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
     private static MitigationActionMetadata testMetadata;
     private static Map<BlackWatchMitigationResourceType, BlackWatchResourceTypeValidator> resourceTypeValidatorMap
         = new HashMap<BlackWatchMitigationResourceType, BlackWatchResourceTypeValidator>();
+    private static Map<String, Integer> mitigationLimitbyOwner = ImmutableMap.of("MitigationUI", 10,
+                                                                                "bwapi_cust_bam", 10,
+                                                                                "testOwnerARN", 2);
     
     private static final Map<String, Set<String>> recordedResourcesMap = new HashMap<String, Set<String>>();
     private static final MitigationStateSetting setting = new MitigationStateSetting();
@@ -166,7 +169,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
             handleActiveBWAPIMitigations, acceptMitigationsAtMasterRegion);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, resourceTypeHelpers,  4, testBamAndEc2OwnerArnPrefix, "us-east-1");
+                resourceTypeValidatorMap, resourceTypeHelpers,  4, testBamAndEc2OwnerArnPrefix, "us-east-1", mitigationLimitbyOwner);
     }
     
     @BeforeClass
@@ -222,7 +225,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 resourceAllocationStateDDBHelper, metricsFactory);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, resourceTypeValidatorMap,
-                resourceTypeHelpers, 4, testBamAndEc2OwnerArnPrefix, "us-east-1");
+                resourceTypeHelpers, 4, testBamAndEc2OwnerArnPrefix, "us-east-1", mitigationLimitbyOwner);
 
         BlackWatchMitigationResourceType testblackWatchIPAddressResourceType = BlackWatchMitigationResourceType.valueOf(testIPAddressResourceType);
 
@@ -1223,7 +1226,25 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
         assertNotNull(response);
         assertTrue(response.isNewMitigationCreated());
     }
-    
+
+
+    @Test
+    public void testApplyBlackWatchMitigationUserExceeded() {
+
+        ApplyBlackWatchMitigationResponse response = blackWatchMitigationInfoHandler.applyBlackWatchMitigation(
+                "1.2.3.4", testIPAddressResourceType, 10, testMetadata, parseJSON(testValidJSON),
+                "ARN-1222", tsdMetrics, false, false);
+        assertNotNull(response);
+        assertTrue(response.isNewMitigationCreated());
+
+        mitigationStateDynamoDBHelper.batchUpdateState(Arrays.asList(mitigationState1, mitigationState2));
+
+        thrown.expect(MitigationLimitByOwnerExceeded400.class);
+        blackWatchMitigationInfoHandler.applyBlackWatchMitigation("2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+                testIPAddressResourceType, 10, testMetadata, parseJSON(testValidJSON),
+                testOwnerARN1, tsdMetrics, false, false);
+    }
+
     @Test
     public void testApplyBlackWatchMitigationInvalidIPAddressListMissing() {
         //Non existent json
@@ -1317,7 +1338,7 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 "IPList-ABCD", testIPAddressListResourceType, 10, testMetadata,
                 parseJSON(String.format(ipListTemplate, "\"1.2.3.4\"")), "ARN-1222", tsdMetrics, false, false);
     }
-    
+
     @Test
     public void testApplyBlackWatchMitigationValidIPAddressDogFishFailed() {
         //Not found IP Address
@@ -1349,7 +1370,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 dogfishProvider, endpointMap, handleActiveBWAPIMitigations, acceptMitigationsAtMasterRegion);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, resourceTypeHelpers, 4, testOwnerARN1, "us-east-1");
+                resourceTypeValidatorMap, resourceTypeHelpers, 4, testOwnerARN1, "us-east-1",
+                mitigationLimitbyOwner);
         DogfishIPPrefix prefix = new DogfishIPPrefix();
         prefix.setRegion("NotActive");
         thrown.expect(IllegalArgumentException.class);
@@ -1367,7 +1389,8 @@ public class DDBBasedBlackWatchMitigationInfoHandlerTest {
                 dogfishProvider, endpointMap, handleActiveBWAPIMitigations, acceptMitigationsAtMasterRegion);
         blackWatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDynamoDBHelper, 
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishValidator, 
-                resourceTypeValidatorMap, resourceTypeHelpers, 4, testOwnerARN1, "us-east-1");
+                resourceTypeValidatorMap, resourceTypeHelpers, 4, testOwnerARN1, "us-east-1",
+                mitigationLimitbyOwner);
         DogfishIPPrefix prefix = new DogfishIPPrefix();
         prefix.setRegion(testMasterRegion);
         thrown.expect(IllegalArgumentException.class);

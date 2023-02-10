@@ -26,6 +26,7 @@ import com.amazon.lookout.mitigation.service.BlackWatchMitigationDefinition;
 import com.amazon.lookout.mitigation.service.LocationMitigationStateSettings;
 import com.amazon.lookout.mitigation.service.MitigationActionMetadata;
 import com.amazon.lookout.mitigation.service.MitigationNotOwnedByRequestor400;
+import com.amazon.lookout.mitigation.service.MitigationLimitByOwnerExceeded400;
 import com.amazon.lookout.mitigation.service.StatusCodeSummary;
 import com.amazon.lookout.mitigation.service.FailureDetails;
 import com.amazon.lookout.mitigation.service.UpdateBlackWatchMitigationRegionalCellPlacementResponse;
@@ -77,6 +78,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
     private final int parallelScanSegments;
     private final String bamAndEc2OwnerArnPrefix;
     private final String realm;
+    private final Map<String, Integer> mitigationLimitByOwner;
 
     private static final String DEFAULT_SHAPER_NAME = "default";
 
@@ -86,7 +88,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
 
     private static final int MAX_UPDATE_RETRIES = 3;
     private static final int UPDATE_RETRY_SLEEP_MILLIS = 100;
-    private static final long REFRESH_PERIOD_MILLIS = TimeUnit.MINUTES.toMillis(1);
+    private static final long REFRESH_PERIOD_MILLIS = TimeUnit.SECONDS.toMillis(10);
 
     // External clients (BAM) depend on the precise wording of this message,
     // avoid changing it if possible
@@ -96,7 +98,16 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
 
     private List<MitigationState> mitigationStateList;
     private long lastUpdateTimestamp = 0;
-    
+
+    private List<MitigationState> updateMitigationStateList() {
+        if (lastUpdateTimestamp + REFRESH_PERIOD_MILLIS < System.currentTimeMillis()) {
+            LOG.debug("Updating the mitigation state list...");
+            mitigationStateList = mitigationStateDynamoDBHelper.getAllMitigationStates(parallelScanSegments);
+            lastUpdateTimestamp = System.currentTimeMillis();
+        }
+        return mitigationStateList;
+    }
+
     private LocationMitigationStateSettings convertMitSSToLocMSS(MitigationStateSetting mitigationSettings) {
         return LocationMitigationStateSettings.builder()
                 .withBPS(mitigationSettings.getBPS())
@@ -105,7 +116,15 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 .withJobStatus(mitigationSettings.getConfigDeploymentJobStatus())
                 .build();
     }
-    
+
+    public long getMitigationsByOwner(String owner) {
+        updateMitigationStateList();
+        return mitigationStateList.stream()
+                .filter(ms -> ms.getState().equals(State.Active.name()))
+                .filter(ms -> ms.getOwnerARN().contains(owner))
+                .count();
+    }
+
     //TODO: 
     // we need change this method when we decide the strategy for nextToken
     // 1. need pass nextToken as a parameter, parse it and use the parsed result in the db scan request
@@ -532,6 +551,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
         Validate.notNull(userARN);
         Validate.notNull(tsdMetrics);
         validateBypassConfigValidation(userARN, bypassConfigValidations);
+        validateUserMitigationLimitExceed(userARN);
 
         try (TSDMetrics subMetrics = tsdMetrics.newSubMetrics("DDBBasedBlackWatchMitigationInfoHandler"
                 + ".applyBlackWatchMitigation")) {
@@ -647,13 +667,7 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                 if (userARN.startsWith(bamAndEc2OwnerArnPrefix) && ipAddress != null) {
                     final String ipAddressToCheck = ipAddress;
 
-                    if (lastUpdateTimestamp + REFRESH_PERIOD_MILLIS < System.currentTimeMillis()) {
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug("Updating the mitigation state list...");
-                        }
-                        mitigationStateList = mitigationStateDynamoDBHelper.getAllMitigationStates(2);
-                        lastUpdateTimestamp = System.currentTimeMillis();
-                    }
+                    updateMitigationStateList();
 
                     Optional<MitigationState> mitigationStateWithSupersetPrefix = mitigationStateList.stream()
                             .filter(ms -> ms.getState().equals(State.Active.name()))
@@ -743,6 +757,19 @@ public class DDBBasedBlackWatchMitigationInfoHandler implements BlackWatchMitiga
                     "even after retrying for %d times, please try calling this API again", MAX_UPDATE_RETRIES);
             throw new IllegalArgumentException(message);
         }
+    }
+
+    private void validateUserMitigationLimitExceed(String userArn) {
+        mitigationLimitByOwner.entrySet().stream().forEach((userKey) -> {
+                    if (userArn.contains(userKey.getKey())) {
+                        long mitigationCount = getMitigationsByOwner(userKey.getKey());
+                        if (mitigationCount >= userKey.getValue()) {
+                            throw new MitigationLimitByOwnerExceeded400(String.format("Owner: %s (ARN:%s) has Exceeded "
+                                    + "permitted limit: %d Existing Active Mitigation Count: %d",
+                                    userKey.getKey(), userArn, userKey.getValue(), mitigationCount));
+                        }
+                    }
+                });
     }
 
     private void validateBypassConfigValidation(String userArn, boolean bypassConfigValidations) {

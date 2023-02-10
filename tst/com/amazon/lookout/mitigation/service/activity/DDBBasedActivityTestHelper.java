@@ -2,10 +2,7 @@ package com.amazon.lookout.mitigation.service.activity;
 
 import static org.mockito.Mockito.*;
 
-import java.util.Arrays;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.amazon.blackwatch.bwircellconfig.model.BwirCellConfig;
 import com.amazonaws.services.dynamodbv2.model.BillingMode;
@@ -69,6 +66,7 @@ public class DDBBasedActivityTestHelper {
     protected static final String realm = "us-east-1";
     protected static final String domain = "test";
     protected static final int parallelScanSegments = 3;
+    protected static final Map<String, Integer> mitigationsbyOwner = ImmutableMap.of(userArn, 10);
     
     static {
         mitigationActionMetadata.setDescription("desc");
@@ -156,7 +154,7 @@ public class DDBBasedActivityTestHelper {
         dogfishHelper = mock(DogFishValidationHelper.class);
         blackwatchMitigationInfoHandler = new DDBBasedBlackWatchMitigationInfoHandler(mitigationStateDDBHelper,
                 resourceAllocationStateDDBHelper, resourceAllocationHelper, dogfishHelper, resourceTypeValidatorMap,
-                resourceTypeHelpers, parallelScanSegments, userArn, realm);
+                resourceTypeHelpers, parallelScanSegments, userArn, realm, mitigationsbyOwner);
     }
     
     protected <T extends Activity> T setupActivity(T activity) {

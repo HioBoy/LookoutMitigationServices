@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.Set;
 
 import com.amazon.coral.metrics.MetricsFactory;
+import com.amazonaws.services.dynamodbv2.model.LimitExceededException;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 
@@ -26,6 +27,7 @@ import com.amazon.lookout.mitigation.service.InternalServerError500;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationRequest;
 import com.amazon.lookout.mitigation.service.ApplyBlackWatchMitigationResponse;
 import com.amazon.lookout.mitigation.service.MitigationNotOwnedByRequestor400;
+import com.amazon.lookout.mitigation.service.MitigationLimitByOwnerExceeded400;
 import com.amazon.lookout.mitigation.service.activity.helper.ActivityHelper;
 import com.amazon.lookout.mitigation.service.activity.helper.BlackWatchMitigationInfoHandler;
 import com.amazon.lookout.mitigation.service.activity.validator.RequestValidator;
@@ -39,7 +41,7 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
     private static final Log LOG = LogFactory.getLog(ApplyBlackWatchMitigationActivity.class);
 
     private enum ApplyBlackWatchMitigationExceptions {
-        BadRequest, InternalError
+        BadRequest, InternalError, LimitExceeded,
     }
 
     // Maintain a Set<String> for all the exceptions to allow passing it to the
@@ -129,6 +131,12 @@ public class ApplyBlackWatchMitigationActivity extends Activity {
             tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX
                     + ApplyBlackWatchMitigationExceptions.BadRequest.name(), 1);
             throw new BadRequest400(msg, ex);
+        } catch (MitigationLimitByOwnerExceeded400 limitError) {
+            String msg = "Limit Exceeded Error in ApplyBlackWatchMitigationActivity for requestId: "
+                    + requestId + ", reason: " + limitError.getMessage();
+            tsdMetrics.addCount(ActivityHelper.EXCEPTION_COUNT_METRIC_PREFIX
+                    + ApplyBlackWatchMitigationExceptions.LimitExceeded.name(), 1);
+            throw new MitigationLimitByOwnerExceeded400(msg, limitError);
         } catch (Exception internalError) {
             String msg = "Internal error in ApplyBlackWatchMitigationActivity for requestId: "
                     + requestId + ", reason: " + internalError.getMessage();
