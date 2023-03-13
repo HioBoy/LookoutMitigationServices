@@ -91,11 +91,13 @@ public class UpdateBlackWatchLocationStateActivity extends Activity {
                 String locationType = request.getLocationType();
                 String changeId = request.getChangeId();
                 String operationId = request.getOperationId();
+                String curBuildState = request.getCurBuildState();
+                String newBuildState = request.getNewBuildState();
                 //overrideLocks is set to true because this API is exposed only to BLACKWATCH developers for forced operation
                 boolean overrideLocks = true;
 
                 // Step 2. Update AdminIn state for this location
-                locationStateInfoHandler.updateBlackWatchLocationAdminIn(location, adminIn, reason, locationType, operationId, changeId, overrideLocks, tsdMetrics);
+                locationStateInfoHandler.updateBlackWatchLocationAdminIn(location, adminIn, reason, locationType, operationId, changeId, overrideLocks, tsdMetrics, curBuildState, newBuildState);
             }
             // Step 3. Create the response object to return back to the client.
             UpdateBlackWatchLocationStateResponse response = new UpdateBlackWatchLocationStateResponse();

@@ -14,7 +14,7 @@ public interface LocationStateInfoHandler {
     public BlackWatchLocation convertLocationState(LocationState in);
     public List<BlackWatchLocation> getAllBlackWatchLocations(TSDMetrics tsdMetrics);
     public void updateBlackWatchLocationAdminIn(String location, boolean adminIn, String reason, String locationType,
-                                                String operationId, String changeId, boolean forced, TSDMetrics tsdMetrics);
+                                                String operationId, String changeId, boolean forced, TSDMetrics tsdMetrics, String curBuildState, String newBuildState);
     public LocationState requestHostStatusChange(String location, String hostName, HostStatusEnum requestedStatus,
                                                  String changeReason, String changeUser, String changeHost,
                                                  List<String> relatedLinks, boolean createMissingHost,
